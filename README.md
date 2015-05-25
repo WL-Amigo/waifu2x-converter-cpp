@@ -39,6 +39,10 @@ These are hints for building :
 
 
 
+## Usage
+
+Usage of this program can be seen by executing this with `--help` option.
+
 
 
 (My native language is not English, then I'm sorry for my broken English.)
