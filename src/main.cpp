@@ -165,12 +165,21 @@ int main(int argc, char** argv) {
 			cv::Size imageSize = image.size();
 			imageSize.width *= 2;
 			imageSize.height *= 2;
-			cv::resize(image, image, imageSize, 0, 0, INTER_NEAREST);
-			cv::cvtColor(image, imageYUV, COLOR_RGB2YUV);
+			cv::Mat image2xNearest;
+			cv::resize(image, image2xNearest, imageSize, 0, 0, INTER_NEAREST);
+			cv::cvtColor(image2xNearest, imageYUV, COLOR_RGB2YUV);
 			std::vector<cv::Mat> imageSplit;
 			cv::Mat imageY;
 			cv::split(imageYUV, imageSplit);
 			imageSplit[0].copyTo(imageY);
+
+			// generate bicubic scaled image and
+			// convert RGB -> YUV and split
+			imageSplit.clear();
+			cv::Mat image2xBicubic;
+			cv::resize(image,image2xBicubic,imageSize,0,0,INTER_CUBIC);
+			cv::cvtColor(image2xBicubic, imageYUV, COLOR_RGB2YUV);
+			cv::split(imageYUV, imageSplit);
 
 			std::unique_ptr<std::vector<cv::Mat> > inputPlanes =
 					std::unique_ptr<std::vector<cv::Mat> >(
