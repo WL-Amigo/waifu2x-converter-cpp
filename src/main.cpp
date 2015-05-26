@@ -27,10 +27,12 @@ int main(int argc, char** argv) {
 	TCLAP::CmdLine cmd("waifu2x reimplementation using OpenCV", ' ', "1.0.0");
 
 	TCLAP::ValueArg<std::string> cmdInputFile("i", "input_file",
-			"path to input image file (you should input full path)", true, "", "string", cmd);
+			"path to input image file (you should input full path)", true, "",
+			"string", cmd);
 
 	TCLAP::ValueArg<std::string> cmdOutputFile("o", "output_file",
-			"path to output image file (you should input full path)", false, "(auto)", "string", cmd);
+			"path to output image file (you should input full path)", false,
+			"(auto)", "string", cmd);
 
 	std::vector<std::string> cmdModeConstraintV;
 	cmdModeConstraintV.push_back("noise");
@@ -54,6 +56,10 @@ int main(int argc, char** argv) {
 			"path to custom model directory (don't append last / )", false,
 			"models", "string", cmd);
 
+	TCLAP::ValueArg<int> cmdNumberOfJobs("j", "jobs",
+			"number of threads launching at the same time", false, 4, "integer",
+			cmd);
+
 	// definition of command line argument : end
 
 	// parse command line arguments
@@ -69,8 +75,6 @@ int main(int argc, char** argv) {
 	cv::Mat image = cv::imread(cmdInputFile.getValue(), cv::IMREAD_COLOR);
 	image.convertTo(image, CV_32F, 1.0 / 255.0);
 
-
-
 	// ===== Noise Reduction Phase =====
 	if (cmdMode.getValue() == "noise" || cmdMode.getValue() == "noise_scale") {
 		std::string modelFileName(cmdModelPath.getValue());
@@ -80,6 +84,11 @@ int main(int argc, char** argv) {
 
 		if (!w2xc::modelUtility::generateModelFromJSON(modelFileName, models))
 			std::exit(-1);
+
+		// set njob
+		for (auto&& model : models) {
+			model->setNumberOfJobs(cmdNumberOfJobs.getValue());
+		}
 
 		cv::Mat imageYUV;
 		cv::cvtColor(image, imageYUV, COLOR_RGB2YUV);
@@ -117,8 +126,6 @@ int main(int argc, char** argv) {
 
 	} // noise reduction phase : end
 
-
-
 	// ===== scaling phase =====
 
 	if (cmdMode.getValue() == "scale" || cmdMode.getValue() == "noise_scale") {
@@ -139,6 +146,11 @@ int main(int argc, char** argv) {
 
 		if (!w2xc::modelUtility::generateModelFromJSON(modelFileName, models))
 			std::exit(-1);
+
+		// set njob
+		for (auto&& model : models) {
+			model->setNumberOfJobs(cmdNumberOfJobs.getValue());
+		}
 
 		std::cout << "start scaling" << std::endl;
 
@@ -203,12 +215,12 @@ int main(int argc, char** argv) {
 
 	image.convertTo(image, CV_8U, 255.0);
 	std::string outputFileName = cmdOutputFile.getValue();
-	if(outputFileName == "(auto)"){
+	if (outputFileName == "(auto)") {
 		outputFileName = cmdInputFile.getValue();
 		int tailDot = outputFileName.find_last_of('.');
 		outputFileName.erase(tailDot, outputFileName.length());
-		outputFileName = outputFileName + "(" + cmdMode.getValue() + ")(x" +
-				std::to_string(cmdScaleRatio.getValue()) + ").png";
+		outputFileName = outputFileName + "(" + cmdMode.getValue() + ")(x"
+				+ std::to_string(cmdScaleRatio.getValue()) + ").png";
 	}
 	cv::imwrite(outputFileName, image);
 
