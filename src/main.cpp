@@ -219,8 +219,17 @@ int main(int argc, char** argv) {
 		outputFileName = cmdInputFile.getValue();
 		int tailDot = outputFileName.find_last_of('.');
 		outputFileName.erase(tailDot, outputFileName.length());
-		outputFileName = outputFileName + "(" + cmdMode.getValue() + ")(x"
-				+ std::to_string(cmdScaleRatio.getValue()) + ").png";
+		outputFileName = outputFileName + "(" + cmdMode.getValue() + ")";
+		std::string &mode = cmdMode.getValue();
+		if(mode.find("noise") != mode.npos){
+			outputFileName = outputFileName + "(Level" + std::to_string(cmdNRLevel.getValue())
+			+ ")";
+		}
+		if(mode.find("scale") != mode.npos){
+			outputFileName = outputFileName + "(x" + std::to_string(cmdScaleRatio.getValue())
+			+ ")";
+		}
+		outputFileName += ".png";
 	}
 	cv::imwrite(outputFileName, image);
 
