@@ -2,6 +2,14 @@
 
 This is a reimplementation of waifu2x ([original](https://github.com/nagadomi/waifu2x)) converter function, in C++, using OpenCV.
 This is also a reimplementation of [waifu2x python version](https://marcan.st/transf/waifu2x.py) by [Hector Martin](https://marcan.st/blog/).
+You can use this as command-line tool of image noise reduction or/and scaling.
+
+
+## Prebuilt binaly-form release
+
+Please see [releases](https://github.com/WL-Amigo/waifu2x-converter-cpp/releases) of this repository.
+There is only for-windows binaly, now. Sorry.
+
 
 ## Dependencies
 
@@ -9,15 +17,16 @@ This is also a reimplementation of [waifu2x python version](https://marcan.st/tr
 
  * Ubuntu
  * Mac OS X?
- * Windows?
+ * Windows
  
-(This program probably can be built under MacOSX and Windows, because OpenCV and other libraries support these OS)
+(This program probably can be built under MacOSX, because OpenCV and other libraries support OS X)
 
 ### Libraries
 
  * [OpenCV](http://opencv.org/)(C++, version 3.0.0 rc1)
 
 This programs also depends on libraries shown below, but these are already included in this repository.
+*CUDA Support in OpenCV is optional, since not required. (in version 1.0.0, CUDA Support is not used.)*
 
  * [picojson](https://github.com/kazuho/picojson)
  * [TCLAP(Templatized C++ Command Line Parser Library)](http://tclap.sourceforge.net/)
