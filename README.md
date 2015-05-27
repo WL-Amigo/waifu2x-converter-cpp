@@ -5,10 +5,10 @@ This is also a reimplementation of [waifu2x python version](https://marcan.st/tr
 You can use this as command-line tool of image noise reduction or/and scaling.
 
 
-## Prebuilt binaly-form release
+## Prebuilt binary-form release
 
 Please see [releases](https://github.com/WL-Amigo/waifu2x-converter-cpp/releases) of this repository.
-There is only for-windows binaly, now. Sorry.
+There is only for-windows binary, now. Sorry.
 
 
 ## Dependencies
