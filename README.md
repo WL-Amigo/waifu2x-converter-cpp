@@ -10,6 +10,13 @@ You can use this as command-line tool of image noise reduction or/and scaling.
 Please see [releases](https://github.com/WL-Amigo/waifu2x-converter-cpp/releases) of this repository.
 There is only for-windows binary, now. Sorry.
 
+### works using waifu2x-converter
+
+ * (waifu2x_win_koroshell)[http://inatsuka.com/extra/koroshell/]
+   - waifu2x-converter GUI frontend that is easy to use, and so cute. You need only drag&drop to convert your image. (and also you can set converting mode, noise reduction level, scale ratio, etc..., on GUI)
+   - Both waifu2x-converter x86 and x64 are included this package, and GUI see your windows architecture(x86|x64) and selects automatically which to use. 
+   - For windows only.
+
 
 ## Dependencies
 
