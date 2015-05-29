@@ -2,4 +2,6 @@
 appendix/*~
 appendix/waifu2x-nocuda/*~
 appendix/waifu2x-nocuda/lib/*~
+src/*.o
+waifu2x-converter-cpp
 

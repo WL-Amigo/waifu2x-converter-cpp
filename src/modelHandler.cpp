@@ -12,6 +12,15 @@
 // #include <iostream> in modelHandler.hpp
 #include <fstream>
 #include <thread>
+#include <time.h>
+
+static double
+getsec()
+{
+	struct timespec ts;
+	clock_gettime(CLOCK_MONOTONIC_RAW, &ts);
+	return ts.tv_sec + ts.tv_nsec/1000000000.0;
+}
 
 namespace w2xc {
 
@@ -21,6 +30,51 @@ int Model::getNInputPlanes() {
 
 int Model::getNOutputPlanes() {
 	return nOutputPlanes;
+}
+
+static void
+filter2(std::vector<cv::Mat> &inputPlanes,
+	std::vector<cv::Mat> &outputPlanes,
+	int nOutputPlanes,
+	std::vector<double> &biases,
+	std::vector<cv::Mat> &weightMatrices)
+{
+	cv::ocl::setUseOpenCL(false); // disable OpenCL Support(temporary)
+
+	int nInputPlanes = inputPlanes.size();
+	outputPlanes.clear();
+	for (int i = 0; i < nOutputPlanes; i++) {
+		outputPlanes.push_back(cv::Mat::zeros(inputPlanes[0].size(), CV_32FC1));
+	}
+
+	cv::Size ipSize = inputPlanes[0].size();
+	// filter processing
+	// input : inputPlanes
+	// kernel : weightMatrices
+	for (int opIndex = 0;
+	     opIndex < nOutputPlanes;
+	     opIndex++)
+	{
+		int wMatIndex = nInputPlanes * opIndex;
+		cv::Mat &uIntermediatePlane = outputPlanes[opIndex];
+
+		for (int ipIndex = 0; ipIndex < nInputPlanes; ipIndex++) {
+			cv::Mat &uInputPlane = inputPlanes[ipIndex];
+			cv::Mat &weightMatrix = weightMatrices[wMatIndex + ipIndex];
+			cv::Mat filterOutput = cv::Mat(ipSize, CV_32FC1);
+
+			cv::filter2D(uInputPlane, filterOutput, -1, weightMatrix,
+					cv::Point(-1, -1), 0.0, cv::BORDER_REPLICATE);
+			cv::add(uIntermediatePlane, filterOutput, uIntermediatePlane);
+		}
+
+		cv::add(uIntermediatePlane, biases[opIndex], uIntermediatePlane);
+		cv::UMat moreThanZero = cv::UMat(ipSize,CV_32FC1,0.0);
+		cv::UMat lessThanZero = cv::UMat(ipSize,CV_32FC1,0.0);
+		cv::max(uIntermediatePlane, 0.0, moreThanZero);
+		cv::min(uIntermediatePlane, 0.0, lessThanZero);
+		cv::scaleAdd(lessThanZero, 0.1, moreThanZero, uIntermediatePlane);
+	} // for index
 }
 
 bool Model::filter(std::vector<cv::Mat> &inputPlanes,
@@ -39,6 +93,7 @@ bool Model::filter(std::vector<cv::Mat> &inputPlanes,
 		outputPlanes.push_back(cv::Mat::zeros(inputPlanes[0].size(), CV_32FC1));
 	}
 
+	double t0 = getsec();
 	// filter job issuing
 	std::vector<std::thread> workerThreads;
 	int worksPerThread = nOutputPlanes / nJob;
@@ -64,6 +119,36 @@ bool Model::filter(std::vector<cv::Mat> &inputPlanes,
 	// wait for finishing jobs
 	for (auto& th : workerThreads) {
 		th.join();
+	}
+	double t1 = getsec();
+
+	std::vector<cv::Mat> output2;
+	filter2(inputPlanes, output2, nOutputPlanes, biases, weights);
+	double t2 = getsec();
+
+	printf("%d %d %f %f\n", nInputPlanes, nOutputPlanes, t1-t0, t2-t1);
+
+	cv::Size ipSize = inputPlanes[0].size();
+	/* 3x3 = 9 fma */
+	double ops = ipSize.width * ipSize.height * 9.0 * 2.0 * nOutputPlanes * nInputPlanes;
+	printf("orig : %f [Gflops]\n", (ops/(1000.0*1000.0*1000.0)) / (t1-t0));
+	printf("ver2 : %f [Gflops]\n", (ops/(1000.0*1000.0*1000.0)) / (t2-t1));
+
+	for (int i = 0; i < nOutputPlanes; i++) {
+		cv::Mat &m0 = outputPlanes[i];
+		cv::Mat &m1 = output2[i];
+
+		for (int my=0; my<m0.size[1]; my++) {
+			const float *p0 = (float*)m0.ptr(my);
+			const float *p1 = (float*)m1.ptr(my);
+
+			for (int mx=0; mx<m0.size[0]; mx++) {
+				if (p0[mx] != p1[mx]) {
+					printf("%f %f @ %d-(%d,%d)\n",p0[mx], p1[mx], i, mx, my);
+					exit(1);
+				}
+			}
+		}
 	}
 
 	return true;
