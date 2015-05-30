@@ -32,18 +32,98 @@ int Model::getNOutputPlanes() {
 	return nOutputPlanes;
 }
 
-static float
+template <bool border> inline
+float
 get_data(float *p, int hsz, int wsz, int step, int yi, int xi)
 {
-	yi = std::min(hsz-1, yi);
-	yi = std::max(0, yi);
+	if (border) {
+		yi = std::min(hsz-1, yi);
+		yi = std::max(0, yi);
 
-	xi = std::min(wsz-1, xi);
-	xi = std::max(0, xi);
+		xi = std::min(wsz-1, xi);
+		xi = std::max(0, xi);
 
-	char *p1 = (char*)p;
+		char *p1 = (char*)p;
+		return ((float*)(p1 + yi*step))[xi];
+	} else {
+		char *p1 = (char*)p;
+		return ((float*)(p1 + yi*step))[xi];
+	}
+}
 
-	return ((float*)(p1 + yi*step))[xi];
+template <bool border> void
+filter_1elem(std::vector<cv::Mat> &inputPlanes,
+	     int nInputPlanes,
+	     std::vector<cv::Mat> &outputPlanes,
+	     int nOutputPlanes,
+	     float *biases,
+	     int hsz, int wsz, int yi, int xi,
+	     float *weight,
+	     float *intermediate)
+{
+
+	for (int ipIndex = 0; ipIndex < nInputPlanes; ipIndex++) {
+		cv::Mat &uInputPlane = inputPlanes[ipIndex];
+
+		float *in = (float*)uInputPlane.ptr(0);
+		int in_step = uInputPlane.step[0];
+		float i00 = get_data<border>(in, hsz, wsz, in_step, yi-1, xi-1);
+		float i01 = get_data<border>(in, hsz, wsz, in_step, yi-1, xi  );
+		float i02 = get_data<border>(in, hsz, wsz, in_step, yi-1, xi+1);
+
+		float i10 = get_data<border>(in, hsz, wsz, in_step, yi  , xi-1);
+		float i11 = get_data<border>(in, hsz, wsz, in_step, yi  , xi  );
+		float i12 = get_data<border>(in, hsz, wsz, in_step, yi  , xi+1);
+
+		float i20 = get_data<border>(in, hsz, wsz, in_step, yi+1, xi-1);
+		float i21 = get_data<border>(in, hsz, wsz, in_step, yi+1, xi  );
+		float i22 = get_data<border>(in, hsz, wsz, in_step, yi+1, xi+1);
+
+		float *w = weight + (ipIndex * nOutputPlanes) * 9;
+
+		for (int opIndex = 0;
+		     opIndex < nOutputPlanes;
+		     opIndex++)
+		{
+			float v = 0;
+
+			v += w[0] * i00;
+			v += w[1] * i01;
+			v += w[2] * i02;
+
+			v += w[3] * i10;
+			v += w[4] * i11;
+			v += w[5] * i12;
+
+			v += w[6] * i20;
+			v += w[7] * i21;
+			v += w[8] * i22;
+
+			w += 9;
+
+			if (ipIndex == 0) {
+				intermediate[opIndex] = v;
+			} else {
+				intermediate[opIndex] += v;
+			}
+		}
+	}
+
+	for (int opIndex = 0; opIndex < nOutputPlanes; opIndex++) {
+		float bv = biases[opIndex];
+		cv::Mat &uIntermediatePlane = outputPlanes[opIndex];
+		float *out = (float*)uIntermediatePlane.ptr(yi);
+
+		float v = intermediate[opIndex];
+		v += bv;
+		float mtz = std::max(v, 0.0f);
+		float ltz = std::min(v, 0.0f);
+
+		v = ltz*0.1f + mtz;
+
+		out[xi] = v;
+	}
+
 }
 
 static void
@@ -70,7 +150,11 @@ filter2(std::vector<cv::Mat> &inputPlanes,
 	// kernel : weightMatrices
 
 	float *weight = (float*)malloc(sizeof(float)*nInputPlanes*nOutputPlanes*3*3);
-	float *intermediate = (float*)malloc(sizeof(float)*nOutputPlanes);
+	float *fbiases = (float*)malloc(sizeof(float) * biases.size());
+
+	for (int i=0; i<(int)biases.size(); i++) {
+		fbiases[i] = biases[i];
+	}
 
 	for (int oi=0; oi<nOutputPlanes; oi++) {
 		for (int ii=0; ii<nInputPlanes; ii++) {
@@ -95,83 +179,23 @@ filter2(std::vector<cv::Mat> &inputPlanes,
 		}
 	}
 
-//#pragma omp parallel for
 	for (int yi=0; yi<hsz; yi++) {
+		float *intermediate = (float*)malloc(sizeof(float)*nOutputPlanes);
+
 		for (int xi=0; xi<wsz; xi++) {
-			for (int ipIndex = 0; ipIndex < nInputPlanes; ipIndex++) {
-				cv::Mat &uInputPlane = inputPlanes[ipIndex];
-
-				float *in = (float*)uInputPlane.ptr(0);
-				int in_step = uInputPlane.step[0];
-				float i00 = get_data(in, hsz, wsz, in_step, yi-1, xi-1);
-				float i01 = get_data(in, hsz, wsz, in_step, yi-1, xi  );
-				float i02 = get_data(in, hsz, wsz, in_step, yi-1, xi+1);
-
-				float i10 = get_data(in, hsz, wsz, in_step, yi  , xi-1);
-				float i11 = get_data(in, hsz, wsz, in_step, yi  , xi  );
-				float i12 = get_data(in, hsz, wsz, in_step, yi  , xi+1);
-
-				float i20 = get_data(in, hsz, wsz, in_step, yi+1, xi-1);
-				float i21 = get_data(in, hsz, wsz, in_step, yi+1, xi  );
-				float i22 = get_data(in, hsz, wsz, in_step, yi+1, xi+1);
-
-				for (int opIndex = 0;
-				     opIndex < nOutputPlanes;
-				     opIndex++)
-				{
-					float *w = weight + (ipIndex*nOutputPlanes + opIndex)*9;
-					cv::Mat &uIntermediatePlane = outputPlanes[opIndex];
-
-					float v = 0;
-
-					v += w[0] * i00;
-					v += w[1] * i01;
-					v += w[2] * i02;
-
-					v += w[3] * i10;
-					v += w[4] * i11;
-					v += w[5] * i12;
-
-					v += w[6] * i20;
-					v += w[7] * i21;
-					v += w[8] * i22;
-
-					if (ipIndex == 0) {
-						intermediate[opIndex] = v;
-					} else {
-						intermediate[opIndex] += v;
-					}
-				}
-			}
-
-			for (int opIndex = 0; opIndex < nOutputPlanes; opIndex++) {
-				float bv = (float)biases[opIndex];
-				cv::Mat &uIntermediatePlane = outputPlanes[opIndex];
-				float *out = (float*)uIntermediatePlane.ptr(yi);
-
-				float v = intermediate[opIndex];
-				v += bv;
-				float mtz = std::max(v, 0.0f);
-				float ltz = std::min(v, 0.0f);
-
-				v = ltz*0.1f + mtz;
-
-				out[xi] = v;
+			if (yi == 0 || xi ==0 || yi == (hsz-1) || xi == (wsz-1)) {
+				filter_1elem<true>(inputPlanes, nInputPlanes, outputPlanes, nOutputPlanes,
+						   fbiases, hsz, wsz, yi, xi, weight, intermediate);
+			} else {
+				filter_1elem<false>(inputPlanes, nInputPlanes, outputPlanes, nOutputPlanes,
+						    fbiases, hsz, wsz, yi, xi, weight, intermediate);
 			}
 		}
-
-/*
-		cv::add(uIntermediatePlane, biases[opIndex], uIntermediatePlane);
-		cv::UMat moreThanZero = cv::UMat(ipSize,CV_32FC1,0.0);
-		cv::UMat lessThanZero = cv::UMat(ipSize,CV_32FC1,0.0);
-		cv::max(uIntermediatePlane, 0.0, moreThanZero);
-		cv::min(uIntermediatePlane, 0.0, lessThanZero);
-		cv::scaleAdd(lessThanZero, 0.1, moreThanZero, uIntermediatePlane);
-*/
+		free(intermediate);
 	} // for index
 
+	free(fbiases);
 	free(weight);
-	free(intermediate);
 
 }
 
