@@ -15,6 +15,7 @@
 #include <time.h>
 
 #define VEC_WIDTH 8U
+#define UNROLL 2U
 
 static double
 getsec()
@@ -53,13 +54,35 @@ get_data(float *p, int hsz, int wsz, int step, int yi, int xi)
 	}
 }
 
+template <bool border> inline
+float *
+get_data_address(float *p, int hsz, int wsz, int step, int yi, int xi)
+{
+	if (border) {
+		yi = std::min(hsz-1, yi);
+		yi = std::max(0, yi);
+
+		xi = std::min(wsz-1, xi);
+		xi = std::max(0, xi);
+
+		char *p1 = (char*)p;
+		return &((float*)(p1 + yi*step))[xi];
+	} else {
+		char *p1 = (char*)p;
+		return &((float*)(p1 + yi*step))[xi];
+	}
+}
+
 template <bool border> void
 filter_1elem(std::vector<cv::Mat> &inputPlanes,
 	     int nInputPlanes,
 	     std::vector<cv::Mat> &outputPlanes,
 	     int nOutputPlanes,
 	     float *biases,
-	     int hsz, int wsz, int yi, int xi,
+	     unsigned long hsz,
+	     unsigned long wsz,
+	     unsigned long yi,
+	     unsigned long xi,
 	     float *weight,
 	     float *intermediate)
 {
@@ -128,41 +151,49 @@ filter_1elem(std::vector<cv::Mat> &inputPlanes,
 		__m256 i22 = _mm256_set1_ps(get_data<border>(in, hsz, wsz, in_step, yi+1, xi+1));
 
 		float *w = weight + (ipIndex * nOutputPlanes) * 9;
+		if (ipIndex != nInputPlanes - 1) {
+			cv::Mat &uInputPlane = inputPlanes[ipIndex+1];
+			float *in = (float*)uInputPlane.ptr(0);
+
+			_mm_prefetch(get_data_address<border>(in, hsz, wsz, in_step, yi-1, xi  ), _MM_HINT_T0);
+			_mm_prefetch(get_data_address<border>(in, hsz, wsz, in_step, yi  , xi  ), _MM_HINT_T0);
+			_mm_prefetch(get_data_address<border>(in, hsz, wsz, in_step, yi+1, xi  ), _MM_HINT_T0);
+		}
 
 		for (unsigned int opIndex = 0;
 		     opIndex < (unsigned int)nOutputPlanes;
-		     opIndex += VEC_WIDTH)
+		     opIndex += VEC_WIDTH*UNROLL)
 		{
-			__m256 v;
+#define APPLY_FILTER(e,off)						\
+			__m256 v##e;					\
+			v##e = _mm256_setzero_ps();		\
+									\
+			v##e = _mm256_fmadd_ps(_mm256_loadu_ps(&w[0*VEC_WIDTH]), i00, v##e); \
+			v##e = _mm256_fmadd_ps(_mm256_loadu_ps(&w[1*VEC_WIDTH]), i01, v##e); \
+			v##e = _mm256_fmadd_ps(_mm256_loadu_ps(&w[2*VEC_WIDTH]), i02, v##e); \
+									\
+			v##e = _mm256_fmadd_ps(_mm256_loadu_ps(&w[3*VEC_WIDTH]), i10, v##e); \
+			v##e = _mm256_fmadd_ps(_mm256_loadu_ps(&w[4*VEC_WIDTH]), i11, v##e); \
+			v##e = _mm256_fmadd_ps(_mm256_loadu_ps(&w[5*VEC_WIDTH]), i12, v##e); \
+									\
+			v##e = _mm256_fmadd_ps(_mm256_loadu_ps(&w[6*VEC_WIDTH]), i20, v##e); \
+			v##e = _mm256_fmadd_ps(_mm256_loadu_ps(&w[7*VEC_WIDTH]), i21, v##e); \
+			v##e = _mm256_fmadd_ps(_mm256_loadu_ps(&w[8*VEC_WIDTH]), i22, v##e); \
+									\
+			w += 9 * VEC_WIDTH;				\
+									\
 
-			v = _mm256_setzero_ps();
-
-			//if (ipIndex == 0) {
-			//	v = _mm256_setzero_ps();
-			//} else {
-			//	v = _mm256_loadu_ps(&intermediate[opIndex]);
-			//}
-
-			v = _mm256_fmadd_ps(_mm256_loadu_ps(&w[0*VEC_WIDTH]), i00, v);
-			v = _mm256_fmadd_ps(_mm256_loadu_ps(&w[1*VEC_WIDTH]), i01, v);
-			v = _mm256_fmadd_ps(_mm256_loadu_ps(&w[2*VEC_WIDTH]), i02, v);
-
-			v = _mm256_fmadd_ps(_mm256_loadu_ps(&w[3*VEC_WIDTH]), i10, v);
-			v = _mm256_fmadd_ps(_mm256_loadu_ps(&w[4*VEC_WIDTH]), i11, v);
-			v = _mm256_fmadd_ps(_mm256_loadu_ps(&w[5*VEC_WIDTH]), i12, v);
-
-			v = _mm256_fmadd_ps(_mm256_loadu_ps(&w[6*VEC_WIDTH]), i20, v);
-			v = _mm256_fmadd_ps(_mm256_loadu_ps(&w[7*VEC_WIDTH]), i21, v);
-			v = _mm256_fmadd_ps(_mm256_loadu_ps(&w[8*VEC_WIDTH]), i22, v);
-
-			w += 9 * VEC_WIDTH;
+			APPLY_FILTER(0, 0);
+			APPLY_FILTER(1, 8);
 
 			if (ipIndex == 0) {
-				_mm256_storeu_ps(&intermediate[opIndex], v);
-			} else {
-				__m256 prev = _mm256_loadu_ps(&intermediate[opIndex]);
-
-				_mm256_storeu_ps(&intermediate[opIndex], _mm256_add_ps(prev,v));
+				_mm256_storeu_ps(&intermediate[opIndex+0], v0);
+				_mm256_storeu_ps(&intermediate[opIndex+8], v1);
+			} else {					\
+				__m256 prev0 = _mm256_loadu_ps(&intermediate[opIndex+0]);
+				__m256 prev1 = _mm256_loadu_ps(&intermediate[opIndex+8]);
+				_mm256_storeu_ps(&intermediate[opIndex+0], _mm256_add_ps(prev0,v0));
+				_mm256_storeu_ps(&intermediate[opIndex+8], _mm256_add_ps(prev1,v1));
 			}
 		}
 #endif
@@ -271,7 +302,7 @@ bool
 Model::filter_CV(std::vector<cv::Mat> &inputPlanes,
 		 std::vector<cv::Mat> &outputPlanes)
 {
-	if (inputPlanes.size() != nInputPlanes) {
+	if ((int)inputPlanes.size() != nInputPlanes) {
 		std::cerr << "Error : Model-filter : \n"
 				"number of input planes mismatch." << std::endl;
 		std::cerr << inputPlanes.size() << ","
@@ -355,7 +386,7 @@ bool Model::filter_AVX(std::vector<cv::Mat> &inputPlanes,
 
 				float r = std::max(r0, r1);
 
-				if (r > 0.1f) {
+				if (r > 0.1f && d > 0.0000001f) {
 					printf("d=%.20f %.20f %.20f @ %d-(%d,%d)\n",r, p0[mx], p1[mx], i, mx, my);
 					exit(1);
 				}
@@ -381,7 +412,7 @@ bool Model::filter_AVX(std::vector<cv::Mat> &inputPlanes,
 
 bool Model::filter(std::vector<cv::Mat> &inputPlanes,
 		   std::vector<cv::Mat> &outputPlanes) {
-	if (nOutputPlanes % VEC_WIDTH) {
+	if (nOutputPlanes % (VEC_WIDTH*UNROLL)) {
 		return filter_CV(inputPlanes, outputPlanes);
 	} else {
 		return filter_AVX(inputPlanes, outputPlanes);
@@ -440,8 +471,9 @@ bool Model::filterWorker(std::vector<cv::Mat> &inputPlanes,
 	// filter processing
 	// input : inputPlanes
 	// kernel : weightMatrices
-	for (int opIndex = beginningIndex; opIndex < (beginningIndex + nWorks);
-			opIndex++) {
+	for (int opIndex = beginningIndex;
+	     opIndex < (int)(beginningIndex + nWorks);
+	     opIndex++) {
 		cv::ocl::setUseOpenCL(false); // disable OpenCL Support(temporary)
 
 		int wMatIndex = nInputPlanes * opIndex;
