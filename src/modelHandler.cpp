@@ -68,6 +68,9 @@ filter_1elem(std::vector<cv::Mat> &inputPlanes,
 
 		float *in = (float*)uInputPlane.ptr(0);
 		int in_step = uInputPlane.step[0];
+
+#if 0
+
 		float i00 = get_data<border>(in, hsz, wsz, in_step, yi-1, xi-1);
 		float i01 = get_data<border>(in, hsz, wsz, in_step, yi-1, xi  );
 		float i02 = get_data<border>(in, hsz, wsz, in_step, yi-1, xi+1);
@@ -80,15 +83,16 @@ filter_1elem(std::vector<cv::Mat> &inputPlanes,
 		float i21 = get_data<border>(in, hsz, wsz, in_step, yi+1, xi  );
 		float i22 = get_data<border>(in, hsz, wsz, in_step, yi+1, xi+1);
 
+		float *w_base = weight + (ipIndex * nOutputPlanes) * 9;
+
 		for (unsigned int opIndex = 0;
 		     opIndex < (unsigned int)nOutputPlanes;
-		     opIndex++)
+		     opIndex ++)
 		{
 			int oi_0 = opIndex % VEC_WIDTH;
 			int oi_1 = (opIndex / VEC_WIDTH) * VEC_WIDTH;
 
-			float *w = weight + (ipIndex * nOutputPlanes + oi_1) * 9 + oi_0;
-
+			float *w = w_base + oi_1*9 + oi_0;
 			float v = 0;
 
 			v += w[0*VEC_WIDTH] * i00;
@@ -103,14 +107,65 @@ filter_1elem(std::vector<cv::Mat> &inputPlanes,
 			v += w[7*VEC_WIDTH] * i21;
 			v += w[8*VEC_WIDTH] * i22;
 
-			w += 9;
-
 			if (ipIndex == 0) {
 				intermediate[opIndex] = v;
 			} else {
 				intermediate[opIndex] += v;
 			}
 		}
+
+#else
+		__m256 i00 = _mm256_set1_ps(get_data<border>(in, hsz, wsz, in_step, yi-1, xi-1));
+		__m256 i01 = _mm256_set1_ps(get_data<border>(in, hsz, wsz, in_step, yi-1, xi  ));
+		__m256 i02 = _mm256_set1_ps(get_data<border>(in, hsz, wsz, in_step, yi-1, xi+1));
+
+		__m256 i10 = _mm256_set1_ps(get_data<border>(in, hsz, wsz, in_step, yi  , xi-1));
+		__m256 i11 = _mm256_set1_ps(get_data<border>(in, hsz, wsz, in_step, yi  , xi  ));
+		__m256 i12 = _mm256_set1_ps(get_data<border>(in, hsz, wsz, in_step, yi  , xi+1));
+
+		__m256 i20 = _mm256_set1_ps(get_data<border>(in, hsz, wsz, in_step, yi+1, xi-1));
+		__m256 i21 = _mm256_set1_ps(get_data<border>(in, hsz, wsz, in_step, yi+1, xi  ));
+		__m256 i22 = _mm256_set1_ps(get_data<border>(in, hsz, wsz, in_step, yi+1, xi+1));
+
+		float *w = weight + (ipIndex * nOutputPlanes) * 9;
+
+		for (unsigned int opIndex = 0;
+		     opIndex < (unsigned int)nOutputPlanes;
+		     opIndex += VEC_WIDTH)
+		{
+			__m256 v;
+
+			v = _mm256_setzero_ps();
+
+			//if (ipIndex == 0) {
+			//	v = _mm256_setzero_ps();
+			//} else {
+			//	v = _mm256_loadu_ps(&intermediate[opIndex]);
+			//}
+
+			v = _mm256_fmadd_ps(_mm256_loadu_ps(&w[0*VEC_WIDTH]), i00, v);
+			v = _mm256_fmadd_ps(_mm256_loadu_ps(&w[1*VEC_WIDTH]), i01, v);
+			v = _mm256_fmadd_ps(_mm256_loadu_ps(&w[2*VEC_WIDTH]), i02, v);
+
+			v = _mm256_fmadd_ps(_mm256_loadu_ps(&w[3*VEC_WIDTH]), i10, v);
+			v = _mm256_fmadd_ps(_mm256_loadu_ps(&w[4*VEC_WIDTH]), i11, v);
+			v = _mm256_fmadd_ps(_mm256_loadu_ps(&w[5*VEC_WIDTH]), i12, v);
+
+			v = _mm256_fmadd_ps(_mm256_loadu_ps(&w[6*VEC_WIDTH]), i20, v);
+			v = _mm256_fmadd_ps(_mm256_loadu_ps(&w[7*VEC_WIDTH]), i21, v);
+			v = _mm256_fmadd_ps(_mm256_loadu_ps(&w[8*VEC_WIDTH]), i22, v);
+
+			w += 9 * VEC_WIDTH;
+
+			if (ipIndex == 0) {
+				_mm256_storeu_ps(&intermediate[opIndex], v);
+			} else {
+				__m256 prev = _mm256_loadu_ps(&intermediate[opIndex]);
+
+				_mm256_storeu_ps(&intermediate[opIndex], _mm256_add_ps(prev,v));
+			}
+		}
+#endif
 	}
 
 	for (int opIndex = 0; opIndex < nOutputPlanes; opIndex++) {
@@ -186,7 +241,7 @@ filter_AVX_impl(std::vector<cv::Mat> &inputPlanes,
 		}
 	}
 
-//#pragma omp parallel for
+#pragma omp parallel for
 	for (int yi=0; yi<hsz; yi++) {
 		float *intermediate = (float*)malloc(sizeof(float)*nOutputPlanes);
 
@@ -255,7 +310,7 @@ Model::filter_CV(std::vector<cv::Mat> &inputPlanes,
 	return true;
 }
 
-#define COMPARE_RESULT
+//#define COMPARE_RESULT
 
 bool Model::filter_AVX(std::vector<cv::Mat> &inputPlanes,
 		       std::vector<cv::Mat> &outputPlanes)
@@ -289,8 +344,15 @@ bool Model::filter_AVX(std::vector<cv::Mat> &inputPlanes,
 			const float *p1 = (float*)m1.ptr(my);
 
 			for (int mx=0; mx<m0.size[0]; mx++) {
-				if (p0[mx] != p1[mx]) {
-					printf("%f %f @ %d-(%d,%d)\n",p0[mx], p1[mx], i, mx, my);
+				float d = fabs(p0[mx] - p1[mx]);
+
+				float r0 = d/fabs(p0[mx]);
+				float r1 = d/fabs(p1[mx]);
+
+				float r = std::max(r0, r1);
+
+				if (r > 0.1f) {
+					printf("d=%.20f %.20f %.20f @ %d-(%d,%d)\n",r, p0[mx], p1[mx], i, mx, my);
 					exit(1);
 				}
 			}

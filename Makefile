@@ -1,6 +1,6 @@
 OPENCV=$(HOME)/usr
 
-CXXFLAGS=-I$(OPENCV)/include -I$(CURDIR)/include -std=c++11 -pthread -Wall -fopenmp -MMD -g -save-temps -O2
+CXXFLAGS=-I$(OPENCV)/include -I$(CURDIR)/include -std=c++11 -pthread -Wall -fopenmp -MMD -g -save-temps -O2 -march=native
 LDFLAGS=-L$(OPENCV)/lib -pthread -Wl,-rpath,$(OPENCV)/lib -g
 LDLIBS=-lopencv_core -lopencv_imgproc -lopencv_imgcodecs -lopencv_features2d -fopenmp
 
