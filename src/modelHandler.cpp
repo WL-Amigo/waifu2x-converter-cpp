@@ -65,9 +65,13 @@ filter2(std::vector<cv::Mat> &inputPlanes,
 	int wsz = ipSize.width;
 	int hsz = ipSize.height;
 
+	printf("%d %d\n", nOutputPlanes, nInputPlanes);
+
 	// filter processing
 	// input : inputPlanes
 	// kernel : weightMatrices
+
+//#pragma omp parallel for
 	for (int opIndex = 0;
 	     opIndex < nOutputPlanes;
 	     opIndex++)
@@ -78,7 +82,7 @@ filter2(std::vector<cv::Mat> &inputPlanes,
 		for (int ipIndex = 0; ipIndex < nInputPlanes; ipIndex++) {
 			cv::Mat &uInputPlane = inputPlanes[ipIndex];
 			cv::Mat &weightMatrix = weightMatrices[wMatIndex + ipIndex];
-			cv::Mat filterOutput = cv::Mat(ipSize, CV_32FC1);
+			 //cv::Mat filterOutput = cv::Mat(ipSize, CV_32FC1);
 			//cv::filter2D(uInputPlane, filterOutput, -1, weightMatrix,
 			//		cv::Point(-1, -1), 0.0, cv::BORDER_REPLICATE);
 			//cv::add(uIntermediatePlane, filterOutput, uIntermediatePlane);
@@ -92,7 +96,6 @@ filter2(std::vector<cv::Mat> &inputPlanes,
 
 			for (int yi=0; yi<hsz; yi++) {
 				float *out = (float*)uIntermediatePlane.ptr(yi);
-				float *inter = (float*)filterOutput.ptr(yi);
 
 				for (int xi=0; xi<wsz; xi++) {
 					float v = 0;
@@ -113,12 +116,29 @@ filter2(std::vector<cv::Mat> &inputPlanes,
 			}
 		}
 
+		float bv = (float)biases[opIndex];
+		for (int yi=0; yi<hsz; yi++) {
+			float *interm = (float*)uIntermediatePlane.ptr(yi);
+
+			for (int xi=0; xi<wsz; xi++) {
+				float v = interm[xi];
+				v += bv;
+				float mtz = std::max(v, 0.0f);
+				float ltz = std::min(v, 0.0f);
+
+				v = ltz*0.1f + mtz;
+
+				interm[xi] = v;
+			}
+		}
+/*
 		cv::add(uIntermediatePlane, biases[opIndex], uIntermediatePlane);
 		cv::UMat moreThanZero = cv::UMat(ipSize,CV_32FC1,0.0);
 		cv::UMat lessThanZero = cv::UMat(ipSize,CV_32FC1,0.0);
 		cv::max(uIntermediatePlane, 0.0, moreThanZero);
 		cv::min(uIntermediatePlane, 0.0, lessThanZero);
 		cv::scaleAdd(lessThanZero, 0.1, moreThanZero, uIntermediatePlane);
+*/
 	} // for index
 }
 
@@ -165,7 +185,15 @@ bool Model::filter(std::vector<cv::Mat> &inputPlanes,
 	for (auto& th : workerThreads) {
 		th.join();
 	}
+
 	double t1 = getsec();
+
+	/* 3x3 = 9 fma */
+	cv::Size ipSize = inputPlanes[0].size();
+	double ops = ipSize.width * ipSize.height * 9.0 * 2.0 * nOutputPlanes * nInputPlanes;
+	printf("orig : %f [Gflops]\n", (ops/(1000.0*1000.0*1000.0)) / (t1-t0));
+	printf("%d %d\n", nInputPlanes, nOutputPlanes);
+	return true;
 
 	std::vector<cv::Mat> output2;
 	filter2(inputPlanes, output2, nOutputPlanes, biases, weights);
@@ -173,10 +201,6 @@ bool Model::filter(std::vector<cv::Mat> &inputPlanes,
 
 	printf("%d %d %f %f\n", nInputPlanes, nOutputPlanes, t1-t0, t2-t1);
 
-	cv::Size ipSize = inputPlanes[0].size();
-	/* 3x3 = 9 fma */
-	double ops = ipSize.width * ipSize.height * 9.0 * 2.0 * nOutputPlanes * nInputPlanes;
-	printf("orig : %f [Gflops]\n", (ops/(1000.0*1000.0*1000.0)) / (t1-t0));
 	printf("ver2 : %f [Gflops]\n", (ops/(1000.0*1000.0*1000.0)) / (t2-t1));
 
 	for (int i = 0; i < nOutputPlanes; i++) {
