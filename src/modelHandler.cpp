@@ -65,11 +65,35 @@ filter2(std::vector<cv::Mat> &inputPlanes,
 	int wsz = ipSize.width;
 	int hsz = ipSize.height;
 
-	printf("%d %d\n", nOutputPlanes, nInputPlanes);
-
 	// filter processing
 	// input : inputPlanes
 	// kernel : weightMatrices
+
+	float *weight = (float*)malloc(sizeof(float)*nInputPlanes*nOutputPlanes*3*3);
+	float *intermediate = (float*)malloc(sizeof(float)*nOutputPlanes);
+
+	for (int oi=0; oi<nOutputPlanes; oi++) {
+		for (int ii=0; ii<nInputPlanes; ii++) {
+			int mi = oi*nInputPlanes+ii;
+			cv::Mat &wm = weightMatrices[mi];
+			const float *src0 = (float*)wm.ptr(0);
+			const float *src1 = (float*)wm.ptr(1);
+			const float *src2 = (float*)wm.ptr(2);
+
+			float *dst = weight + (mi*9);
+			dst[0] = src0[0];
+			dst[1] = src0[1];
+			dst[2] = src0[2];
+
+			dst[3] = src1[0];
+			dst[4] = src1[1];
+			dst[5] = src1[2];
+
+			dst[6] = src2[0];
+			dst[7] = src2[1];
+			dst[8] = src2[2];
+		}
+	}
 
 //#pragma omp parallel for
 	for (int opIndex = 0;
@@ -81,8 +105,8 @@ filter2(std::vector<cv::Mat> &inputPlanes,
 
 		for (int ipIndex = 0; ipIndex < nInputPlanes; ipIndex++) {
 			cv::Mat &uInputPlane = inputPlanes[ipIndex];
-			cv::Mat &weightMatrix = weightMatrices[wMatIndex + ipIndex];
-			 //cv::Mat filterOutput = cv::Mat(ipSize, CV_32FC1);
+			//cv::Mat &weightMatrix = weightMatrices[wMatIndex + ipIndex];
+			//cv::Mat filterOutput = cv::Mat(ipSize, CV_32FC1);
 			//cv::filter2D(uInputPlane, filterOutput, -1, weightMatrix,
 			//		cv::Point(-1, -1), 0.0, cv::BORDER_REPLICATE);
 			//cv::add(uIntermediatePlane, filterOutput, uIntermediatePlane);
@@ -90,26 +114,37 @@ filter2(std::vector<cv::Mat> &inputPlanes,
 			float *in = (float*)uInputPlane.ptr(0);
 			int in_step = uInputPlane.step[0];
 
-			float *c0 = (float*)weightMatrix.ptr(0);
-			float *c1 = (float*)weightMatrix.ptr(1);
-			float *c2 = (float*)weightMatrix.ptr(2);
+			float *w = weight + (opIndex * nInputPlanes + ipIndex)*9;
 
 			for (int yi=0; yi<hsz; yi++) {
 				float *out = (float*)uIntermediatePlane.ptr(yi);
 
 				for (int xi=0; xi<wsz; xi++) {
 					float v = 0;
-					v += c0[0] * get_data(in, hsz, wsz, in_step, yi-1, xi-1);
-					v += c0[1] * get_data(in, hsz, wsz, in_step, yi-1, xi  );
-					v += c0[2] * get_data(in, hsz, wsz, in_step, yi-1, xi+1);
 
-					v += c1[0] * get_data(in, hsz, wsz, in_step, yi  , xi-1);
-					v += c1[1] * get_data(in, hsz, wsz, in_step, yi  , xi  );
-					v += c1[2] * get_data(in, hsz, wsz, in_step, yi  , xi+1);
+					float i00 = get_data(in, hsz, wsz, in_step, yi-1, xi-1);
+					float i01 = get_data(in, hsz, wsz, in_step, yi-1, xi  );
+					float i02 = get_data(in, hsz, wsz, in_step, yi-1, xi+1);
 
-					v += c2[0] * get_data(in, hsz, wsz, in_step, yi+1, xi-1);
-					v += c2[1] * get_data(in, hsz, wsz, in_step, yi+1, xi  );
-					v += c2[2] * get_data(in, hsz, wsz, in_step, yi+1, xi+1);
+					float i10 = get_data(in, hsz, wsz, in_step, yi  , xi-1);
+					float i11 = get_data(in, hsz, wsz, in_step, yi  , xi  );
+					float i12 = get_data(in, hsz, wsz, in_step, yi  , xi+1);
+
+					float i20 = get_data(in, hsz, wsz, in_step, yi+1, xi-1);
+					float i21 = get_data(in, hsz, wsz, in_step, yi+1, xi  );
+					float i22 = get_data(in, hsz, wsz, in_step, yi+1, xi+1);
+
+					v += w[0] * i00;
+					v += w[1] * i01;
+					v += w[2] * i02;
+
+					v += w[3] * i10;
+					v += w[4] * i11;
+					v += w[5] * i12;
+
+					v += w[6] * i20;
+					v += w[7] * i21;
+					v += w[8] * i22;
 
 					out[xi] += v;
 				}
@@ -140,6 +175,10 @@ filter2(std::vector<cv::Mat> &inputPlanes,
 		cv::scaleAdd(lessThanZero, 0.1, moreThanZero, uIntermediatePlane);
 */
 	} // for index
+
+	free(weight);
+	free(intermediate);
+
 }
 
 bool Model::filter(std::vector<cv::Mat> &inputPlanes,
@@ -193,7 +232,6 @@ bool Model::filter(std::vector<cv::Mat> &inputPlanes,
 	double ops = ipSize.width * ipSize.height * 9.0 * 2.0 * nOutputPlanes * nInputPlanes;
 	printf("orig : %f [Gflops]\n", (ops/(1000.0*1000.0*1000.0)) / (t1-t0));
 	printf("%d %d\n", nInputPlanes, nOutputPlanes);
-	return true;
 
 	std::vector<cv::Mat> output2;
 	filter2(inputPlanes, output2, nOutputPlanes, biases, weights);
