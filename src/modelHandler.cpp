@@ -80,7 +80,7 @@ filter2(std::vector<cv::Mat> &inputPlanes,
 			const float *src1 = (float*)wm.ptr(1);
 			const float *src2 = (float*)wm.ptr(2);
 
-			float *dst = weight + (mi*9);
+			float *dst = weight + ((ii*nOutputPlanes + oi)*9);
 			dst[0] = src0[0];
 			dst[1] = src0[1];
 			dst[2] = src0[2];
@@ -119,7 +119,7 @@ filter2(std::vector<cv::Mat> &inputPlanes,
 				     opIndex < nOutputPlanes;
 				     opIndex++)
 				{
-					float *w = weight + (opIndex * nInputPlanes + ipIndex)*9;
+					float *w = weight + (ipIndex*nOutputPlanes + opIndex)*9;
 					cv::Mat &uIntermediatePlane = outputPlanes[opIndex];
 
 					float v = 0;
