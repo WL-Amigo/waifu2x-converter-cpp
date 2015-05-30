@@ -168,19 +168,23 @@ filter_1elem(std::vector<cv::Mat> &inputPlanes,
 #endif
 	}
 
-	for (int opIndex = 0; opIndex < nOutputPlanes; opIndex++) {
-		float bv = biases[opIndex];
-		cv::Mat &uIntermediatePlane = outputPlanes[opIndex];
-		float *out = (float*)uIntermediatePlane.ptr(yi);
+	for (int opIndex = 0; opIndex < nOutputPlanes; opIndex+=VEC_WIDTH) {
+		__m256 bv = _mm256_loadu_ps(&biases[opIndex]);
+		__m256 v = _mm256_loadu_ps(&intermediate[opIndex]);
+		v = _mm256_add_ps(v, bv);
+		__m256 mtz = _mm256_max_ps(v, _mm256_setzero_ps());
+		__m256 ltz = _mm256_min_ps(v, _mm256_setzero_ps());
 
-		float v = intermediate[opIndex];
-		v += bv;
-		float mtz = std::max(v, 0.0f);
-		float ltz = std::min(v, 0.0f);
+		v = _mm256_add_ps(_mm256_mul_ps(ltz, _mm256_set1_ps(0.1f)), mtz);
 
-		v = ltz*0.1f + mtz;
+		float result[8];
+		_mm256_storeu_ps(result, v);
 
-		out[xi] = v;
+		for (int i=0; i<8; i++) {
+			cv::Mat &uIntermediatePlane = outputPlanes[opIndex+i];
+			float *out = (float*)uIntermediatePlane.ptr(yi);
+			out[xi] = result[i];
+		}
 	}
 
 }
