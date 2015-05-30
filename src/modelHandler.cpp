@@ -12,7 +12,7 @@
 // #include <iostream> in modelHandler.hpp
 #include <fstream>
 #include <thread>
-#include <time.h>
+#include "sec.hpp"
 
 #define VEC_WIDTH 8U
 #define UNROLL 2U
@@ -49,14 +49,6 @@ unpack_mat(std::vector<cv::Mat> &outputPlanes,
 			}
 		}
 	}
-}
-
-static double
-getsec()
-{
-	struct timespec ts;
-	clock_gettime(CLOCK_MONOTONIC_RAW, &ts);
-	return ts.tv_sec + ts.tv_nsec/1000000000.0;
 }
 
 namespace w2xc {
@@ -222,22 +214,21 @@ filter_1elem(const float *packed_input,
 
 static void
 filter_AVX_impl(const float *packed_input,
-		std::vector<cv::Mat> &inputPlanes,
 		float *packed_output,
 		std::vector<cv::Mat> &outputPlanes,
+		int nInputPlanes,
 		int nOutputPlanes,
 		std::vector<double> &biases,
-		std::vector<cv::Mat> &weightMatrices)
+		std::vector<cv::Mat> &weightMatrices,
+		cv::Size ipSize)
 {
 	cv::ocl::setUseOpenCL(false); // disable OpenCL Support(temporary)
 
-	int nInputPlanes = inputPlanes.size();
 	outputPlanes.clear();
 	for (int i = 0; i < nOutputPlanes; i++) {
-		outputPlanes.push_back(cv::Mat::zeros(inputPlanes[0].size(), CV_32FC1));
+		outputPlanes.push_back(cv::Mat::zeros(ipSize, CV_32FC1));
 	}
 
-	cv::Size ipSize = inputPlanes[0].size();
 	int wsz = ipSize.width;
 	int hsz = ipSize.height;
 
@@ -351,7 +342,7 @@ Model::filter_CV(std::vector<cv::Mat> &inputPlanes,
 	return true;
 }
 
-#define COMPARE_RESULT
+//#define COMPARE_RESULT
 
 bool Model::filter_AVX(const float *packed_input,
 		       std::vector<cv::Mat> &inputPlanes,
@@ -371,7 +362,8 @@ bool Model::filter_AVX(const float *packed_input,
 	printf("%d %d\n", nInputPlanes, nOutputPlanes);
 
 	std::vector<cv::Mat> output2;
-	filter_AVX_impl(packed_input, inputPlanes, packed_output, output2, nOutputPlanes, biases, weights);
+	filter_AVX_impl(packed_input, packed_output, output2, nInputPlanes, nOutputPlanes, biases, weights,
+			inputPlanes[0].size());
 	double t2 = getsec();
 
 	printf("%d %d %f %f\n", nInputPlanes, nOutputPlanes, t1-t0, t2-t1);
@@ -406,10 +398,11 @@ bool Model::filter_AVX(const float *packed_input,
 	double ops = ipSize.width * ipSize.height * 9.0 * 2.0 * nOutputPlanes * nInputPlanes;
 
 	double t1 = getsec();
-	filter_AVX_impl(packed_input, inputPlanes, packed_output, outputPlanes, nOutputPlanes, biases, weights);
+	filter_AVX_impl(packed_input, packed_output, outputPlanes,
+			nInputPlanes, nOutputPlanes, biases, weights, ipSize);
 	double t2 = getsec();
 
-	printf("ver2 : %f [Gflops]\n", (ops/(1000.0*1000.0*1000.0)) / (t2-t1));
+	printf("ver2 : %f [Gflops], %f[msec]\n", (ops/(1000.0*1000.0*1000.0)) / (t2-t1), (t2-t1)*1000);
 #endif
 
 	return true;

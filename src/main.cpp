@@ -16,6 +16,7 @@
 #include <cmath>
 #include "picojson.h"
 #include "tclap/CmdLine.h"
+#include "sec.hpp"
 
 #include "modelHandler.hpp"
 
@@ -109,10 +110,15 @@ int main(int argc, char** argv) {
 				<< std::to_string(cmdNRLevel.getValue()) << ")" << std::endl;
 
 		for (int index = 0; index < models.size(); index++) {
-			std::cout << "Iteration #" << (index + 1) << "..." << std::endl;
+			std::cout << "Iteration #" << (index + 1) << "..." ;
+			double t0 = getsec();
 			if (!models[index]->filter(*inputPlanes, *outputPlanes)) {
 				std::exit(-1);
 			}
+			double t1 = getsec();
+
+			std::cout << "(" << (t1-t0)*1000 << "[ms])" << std::endl;
+
 			if (index != models.size() - 1) {
 				inputPlanes = std::move(outputPlanes);
 				outputPlanes = std::unique_ptr<std::vector<cv::Mat> >(
