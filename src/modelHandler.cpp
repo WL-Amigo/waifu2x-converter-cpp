@@ -79,9 +79,8 @@ filter2(std::vector<cv::Mat> &inputPlanes,
 			cv::Mat &uInputPlane = inputPlanes[ipIndex];
 			cv::Mat &weightMatrix = weightMatrices[wMatIndex + ipIndex];
 			cv::Mat filterOutput = cv::Mat(ipSize, CV_32FC1);
-			cv::filter2D(uInputPlane, filterOutput, -1, weightMatrix,
-					cv::Point(-1, -1), 0.0, cv::BORDER_REPLICATE);
-
+			//cv::filter2D(uInputPlane, filterOutput, -1, weightMatrix,
+			//		cv::Point(-1, -1), 0.0, cv::BORDER_REPLICATE);
 			//cv::add(uIntermediatePlane, filterOutput, uIntermediatePlane);
 
 			float *in = (float*)uInputPlane.ptr(0);
@@ -96,30 +95,6 @@ filter2(std::vector<cv::Mat> &inputPlanes,
 				float *inter = (float*)filterOutput.ptr(yi);
 
 				for (int xi=0; xi<wsz; xi++) {
-					if (opIndex == 0 &&
-					    ipIndex == 0 &&
-					    yi == 0 &&
-					    xi == 0 && 0)
-					{
-						printf("%f %f %f\n", c0[0], c0[1], c0[2]);
-						printf("%f %f %f\n", c1[0], c1[1], c1[2]);
-						printf("%f %f %f\n", c2[0], c2[1], c2[2]);
-
-						float v0 = get_data(in, hsz, wsz, in_step, yi-1, xi-1);
-						float v1 = get_data(in, hsz, wsz, in_step, yi-1, xi  );
-						float v2 = get_data(in, hsz, wsz, in_step, yi-1, xi+1);
-
-						printf("%f %f %f\n", v0, v1, v2);
-						printf("%f %f %f\n",
-						       get_data(in, hsz, wsz, in_step, yi  , xi-1),
-						       get_data(in, hsz, wsz, in_step, yi  , xi  ),
-						       get_data(in, hsz, wsz, in_step, yi  , xi+1));
-						printf("%f %f %f\n",
-						       get_data(in, hsz, wsz, in_step, yi+1, xi-1),
-						       get_data(in, hsz, wsz, in_step, yi+1, xi  ),
-						       get_data(in, hsz, wsz, in_step, yi+1, xi+1));
-					}
-
 					float v = 0;
 					v += c0[0] * get_data(in, hsz, wsz, in_step, yi-1, xi-1);
 					v += c0[1] * get_data(in, hsz, wsz, in_step, yi-1, xi  );
@@ -132,11 +107,6 @@ filter2(std::vector<cv::Mat> &inputPlanes,
 					v += c2[0] * get_data(in, hsz, wsz, in_step, yi+1, xi-1);
 					v += c2[1] * get_data(in, hsz, wsz, in_step, yi+1, xi  );
 					v += c2[2] * get_data(in, hsz, wsz, in_step, yi+1, xi+1);
-
-					if (v != inter[xi]) {
-						printf("%d %d %d %d %.20f %.20f\n", opIndex, ipIndex, yi, xi, v, inter[xi]);
-						abort();
-					}
 
 					out[xi] += v;
 				}
