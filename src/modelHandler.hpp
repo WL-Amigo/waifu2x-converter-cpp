@@ -44,7 +44,9 @@ private:
 
 	bool filter_CV(std::vector<cv::Mat> &inputPlanes,
 		       std::vector<cv::Mat> &outputPlanes);
-	bool filter_AVX(std::vector<cv::Mat> &inputPlanes,
+	bool filter_AVX(const float *packed_input,
+			std::vector<cv::Mat> &inputPlanes,
+			float *packed_output,
 			std::vector<cv::Mat> &outputPlanes);
 
 public:

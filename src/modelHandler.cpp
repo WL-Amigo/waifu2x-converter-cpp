@@ -17,6 +17,40 @@
 #define VEC_WIDTH 8U
 #define UNROLL 2U
 
+static void
+pack_mat(float *out,
+	 std::vector<cv::Mat> &inputPlanes,
+	 int w, int h, int nplane)
+{
+	for (int i=0; i<nplane; i++) {
+		for (int yi=0; yi<h; yi++) {
+			const float *mat_line = (float*)inputPlanes[i].ptr(yi);
+			float *packed_line = out + i + (yi * nplane * w);
+
+			for (int xi=0; xi<w; xi++) {
+				packed_line[xi*nplane] = mat_line[xi];
+			}
+		}
+	}
+}
+
+static void
+unpack_mat(std::vector<cv::Mat> &outputPlanes,
+	   const float *in,
+	   int w, int h, int nplane)
+{
+	for (int i=0; i<nplane; i++) {
+		for (int yi=0; yi<h; yi++) {
+			float *mat_line = (float*)outputPlanes[i].ptr(yi);
+			const float *packed_line = in + i + (yi * nplane * w);
+
+			for (int xi=0; xi<w; xi++) {
+				mat_line[xi] = packed_line[xi*nplane];
+			}
+		}
+	}
+}
+
 static double
 getsec()
 {
@@ -37,7 +71,7 @@ int Model::getNOutputPlanes() {
 
 template <bool border> inline
 float
-get_data(float *p, int hsz, int wsz, int step, int yi, int xi)
+get_data(const float *p, int hsz, int wsz, int step, int yi, int xi, int num_plane, int plane)
 {
 	if (border) {
 		yi = std::min(hsz-1, yi);
@@ -47,36 +81,17 @@ get_data(float *p, int hsz, int wsz, int step, int yi, int xi)
 		xi = std::max(0, xi);
 
 		char *p1 = (char*)p;
-		return ((float*)(p1 + yi*step))[xi];
+		return ((float*)(p1 + yi*step))[xi*num_plane + plane];
 	} else {
 		char *p1 = (char*)p;
-		return ((float*)(p1 + yi*step))[xi];
-	}
-}
-
-template <bool border> inline
-float *
-get_data_address(float *p, int hsz, int wsz, int step, int yi, int xi)
-{
-	if (border) {
-		yi = std::min(hsz-1, yi);
-		yi = std::max(0, yi);
-
-		xi = std::min(wsz-1, xi);
-		xi = std::max(0, xi);
-
-		char *p1 = (char*)p;
-		return &((float*)(p1 + yi*step))[xi];
-	} else {
-		char *p1 = (char*)p;
-		return &((float*)(p1 + yi*step))[xi];
+		return ((float*)(p1 + yi*step))[xi*num_plane + plane];
 	}
 }
 
 template <bool border> void
-filter_1elem(std::vector<cv::Mat> &inputPlanes,
+filter_1elem(const float *packed_input,
 	     int nInputPlanes,
-	     std::vector<cv::Mat> &outputPlanes,
+	     float *packed_output,
 	     int nOutputPlanes,
 	     float *biases,
 	     unsigned long hsz,
@@ -86,25 +101,23 @@ filter_1elem(std::vector<cv::Mat> &inputPlanes,
 	     float *weight,
 	     float *intermediate)
 {
-	for (int ipIndex = 0; ipIndex < nInputPlanes; ipIndex++) {
-		cv::Mat &uInputPlane = inputPlanes[ipIndex];
+	const float *in = packed_input;
+	size_t in_step = wsz * sizeof(float) * nInputPlanes;
 
-		float *in = (float*)uInputPlane.ptr(0);
-		int in_step = uInputPlane.step[0];
+	for (int ipIndex = 0; ipIndex < nInputPlanes; ipIndex++) {
 
 #if 0
+		float i00 = get_data<border>(in, hsz, wsz, in_step, yi-1, xi-1, ipIndex);
+		float i01 = get_data<border>(in, hsz, wsz, in_step, yi-1, xi  , ipIndex);
+		float i02 = get_data<border>(in, hsz, wsz, in_step, yi-1, xi+1, ipIndex);
 
-		float i00 = get_data<border>(in, hsz, wsz, in_step, yi-1, xi-1);
-		float i01 = get_data<border>(in, hsz, wsz, in_step, yi-1, xi  );
-		float i02 = get_data<border>(in, hsz, wsz, in_step, yi-1, xi+1);
+		float i10 = get_data<border>(in, hsz, wsz, in_step, yi  , xi-1, ipIndex);
+		float i11 = get_data<border>(in, hsz, wsz, in_step, yi  , xi  , ipIndex);
+		float i12 = get_data<border>(in, hsz, wsz, in_step, yi  , xi+1, ipIndex);
 
-		float i10 = get_data<border>(in, hsz, wsz, in_step, yi  , xi-1);
-		float i11 = get_data<border>(in, hsz, wsz, in_step, yi  , xi  );
-		float i12 = get_data<border>(in, hsz, wsz, in_step, yi  , xi+1);
-
-		float i20 = get_data<border>(in, hsz, wsz, in_step, yi+1, xi-1);
-		float i21 = get_data<border>(in, hsz, wsz, in_step, yi+1, xi  );
-		float i22 = get_data<border>(in, hsz, wsz, in_step, yi+1, xi+1);
+		float i20 = get_data<border>(in, hsz, wsz, in_step, yi+1, xi-1, ipIndex);
+		float i21 = get_data<border>(in, hsz, wsz, in_step, yi+1, xi  , ipIndex);
+		float i22 = get_data<border>(in, hsz, wsz, in_step, yi+1, xi+1, ipIndex);
 
 		float *w_base = weight + (ipIndex * nOutputPlanes) * 9;
 
@@ -138,27 +151,20 @@ filter_1elem(std::vector<cv::Mat> &inputPlanes,
 		}
 
 #else
-		__m256 i00 = _mm256_set1_ps(get_data<border>(in, hsz, wsz, in_step, yi-1, xi-1));
-		__m256 i01 = _mm256_set1_ps(get_data<border>(in, hsz, wsz, in_step, yi-1, xi  ));
-		__m256 i02 = _mm256_set1_ps(get_data<border>(in, hsz, wsz, in_step, yi-1, xi+1));
+		__m256 i00 = _mm256_set1_ps(get_data<border>(in, hsz, wsz, in_step, yi-1, xi-1, nInputPlanes, ipIndex));
+		__m256 i01 = _mm256_set1_ps(get_data<border>(in, hsz, wsz, in_step, yi-1, xi  , nInputPlanes, ipIndex));
+		__m256 i02 = _mm256_set1_ps(get_data<border>(in, hsz, wsz, in_step, yi-1, xi+1, nInputPlanes, ipIndex));
 
-		__m256 i10 = _mm256_set1_ps(get_data<border>(in, hsz, wsz, in_step, yi  , xi-1));
-		__m256 i11 = _mm256_set1_ps(get_data<border>(in, hsz, wsz, in_step, yi  , xi  ));
-		__m256 i12 = _mm256_set1_ps(get_data<border>(in, hsz, wsz, in_step, yi  , xi+1));
+		__m256 i10 = _mm256_set1_ps(get_data<border>(in, hsz, wsz, in_step, yi  , xi-1, nInputPlanes, ipIndex));
+		__m256 i11 = _mm256_set1_ps(get_data<border>(in, hsz, wsz, in_step, yi  , xi  , nInputPlanes, ipIndex));
+		__m256 i12 = _mm256_set1_ps(get_data<border>(in, hsz, wsz, in_step, yi  , xi+1, nInputPlanes, ipIndex));
 
-		__m256 i20 = _mm256_set1_ps(get_data<border>(in, hsz, wsz, in_step, yi+1, xi-1));
-		__m256 i21 = _mm256_set1_ps(get_data<border>(in, hsz, wsz, in_step, yi+1, xi  ));
-		__m256 i22 = _mm256_set1_ps(get_data<border>(in, hsz, wsz, in_step, yi+1, xi+1));
+		__m256 i20 = _mm256_set1_ps(get_data<border>(in, hsz, wsz, in_step, yi+1, xi-1, nInputPlanes, ipIndex));
+		__m256 i21 = _mm256_set1_ps(get_data<border>(in, hsz, wsz, in_step, yi+1, xi  , nInputPlanes, ipIndex));
+		__m256 i22 = _mm256_set1_ps(get_data<border>(in, hsz, wsz, in_step, yi+1, xi+1, nInputPlanes, ipIndex));
 
 		float *w = weight + (ipIndex * nOutputPlanes) * 9;
-		if (ipIndex != nInputPlanes - 1) {
-			cv::Mat &uInputPlane = inputPlanes[ipIndex+1];
-			float *in = (float*)uInputPlane.ptr(0);
 
-			_mm_prefetch(get_data_address<border>(in, hsz, wsz, in_step, yi-1, xi  ), _MM_HINT_T0);
-			_mm_prefetch(get_data_address<border>(in, hsz, wsz, in_step, yi  , xi  ), _MM_HINT_T0);
-			_mm_prefetch(get_data_address<border>(in, hsz, wsz, in_step, yi+1, xi  ), _MM_HINT_T0);
-		}
 
 		for (unsigned int opIndex = 0;
 		     opIndex < (unsigned int)nOutputPlanes;
@@ -199,6 +205,7 @@ filter_1elem(std::vector<cv::Mat> &inputPlanes,
 #endif
 	}
 
+	float *out = packed_output + (yi*wsz + xi)*nOutputPlanes;
 	for (int opIndex = 0; opIndex < nOutputPlanes; opIndex+=VEC_WIDTH) {
 		__m256 bv = _mm256_loadu_ps(&biases[opIndex]);
 		__m256 v = _mm256_loadu_ps(&intermediate[opIndex]);
@@ -208,20 +215,15 @@ filter_1elem(std::vector<cv::Mat> &inputPlanes,
 
 		v = _mm256_add_ps(_mm256_mul_ps(ltz, _mm256_set1_ps(0.1f)), mtz);
 
-		float result[8];
-		_mm256_storeu_ps(result, v);
-
-		for (int i=0; i<8; i++) {
-			cv::Mat &uIntermediatePlane = outputPlanes[opIndex+i];
-			float *out = (float*)uIntermediatePlane.ptr(yi);
-			out[xi] = result[i];
-		}
+		_mm256_storeu_ps(&out[opIndex], v);
 	}
 
 }
 
 static void
-filter_AVX_impl(std::vector<cv::Mat> &inputPlanes,
+filter_AVX_impl(const float *packed_input,
+		std::vector<cv::Mat> &inputPlanes,
+		float *packed_output,
 		std::vector<cv::Mat> &outputPlanes,
 		int nOutputPlanes,
 		std::vector<double> &biases,
@@ -282,15 +284,19 @@ filter_AVX_impl(std::vector<cv::Mat> &inputPlanes,
 
 		for (int xi=0; xi<wsz; xi++) {
 			if (yi == 0 || xi ==0 || yi == (hsz-1) || xi == (wsz-1)) {
-				filter_1elem<true>(inputPlanes, nInputPlanes, outputPlanes, nOutputPlanes,
+				filter_1elem<true>(packed_input, nInputPlanes,
+						   packed_output, nOutputPlanes,
 						   fbiases, hsz, wsz, yi, xi, weight, intermediate);
 			} else {
-				filter_1elem<false>(inputPlanes, nInputPlanes, outputPlanes, nOutputPlanes,
+				filter_1elem<false>(packed_input, nInputPlanes,
+						    packed_output, nOutputPlanes,
 						    fbiases, hsz, wsz, yi, xi, weight, intermediate);
 			}
 		}
 		free(intermediate);
 	} // for index
+
+	unpack_mat(outputPlanes, packed_output, wsz, hsz, nOutputPlanes);
 
 	free(fbiases);
 	free(weight);
@@ -345,9 +351,11 @@ Model::filter_CV(std::vector<cv::Mat> &inputPlanes,
 	return true;
 }
 
-//#define COMPARE_RESULT
+#define COMPARE_RESULT
 
-bool Model::filter_AVX(std::vector<cv::Mat> &inputPlanes,
+bool Model::filter_AVX(const float *packed_input,
+		       std::vector<cv::Mat> &inputPlanes,
+		       float *packed_output,
 		       std::vector<cv::Mat> &outputPlanes)
 {
 #ifdef COMPARE_RESULT
@@ -363,7 +371,7 @@ bool Model::filter_AVX(std::vector<cv::Mat> &inputPlanes,
 	printf("%d %d\n", nInputPlanes, nOutputPlanes);
 
 	std::vector<cv::Mat> output2;
-	filter_AVX_impl(inputPlanes, output2, nOutputPlanes, biases, weights);
+	filter_AVX_impl(packed_input, inputPlanes, packed_output, output2, nOutputPlanes, biases, weights);
 	double t2 = getsec();
 
 	printf("%d %d %f %f\n", nInputPlanes, nOutputPlanes, t1-t0, t2-t1);
@@ -398,11 +406,10 @@ bool Model::filter_AVX(std::vector<cv::Mat> &inputPlanes,
 	double ops = ipSize.width * ipSize.height * 9.0 * 2.0 * nOutputPlanes * nInputPlanes;
 
 	double t1 = getsec();
-	filter_AVX_impl(inputPlanes, outputPlanes, nOutputPlanes, biases, weights);
+	filter_AVX_impl(packed_input, inputPlanes, packed_output, outputPlanes, nOutputPlanes, biases, weights);
 	double t2 = getsec();
 
 	printf("ver2 : %f [Gflops]\n", (ops/(1000.0*1000.0*1000.0)) / (t2-t1));
-
 #endif
 
 	return true;
@@ -415,7 +422,22 @@ bool Model::filter(std::vector<cv::Mat> &inputPlanes,
 	if (nOutputPlanes % (VEC_WIDTH*UNROLL)) {
 		return filter_CV(inputPlanes, outputPlanes);
 	} else {
-		return filter_AVX(inputPlanes, outputPlanes);
+		int ninput = nInputPlanes;
+		int noutput = nOutputPlanes;
+
+		cv::Size sz = inputPlanes[0].size();
+		int w = sz.width;
+		int h = sz.height;
+		float *packed_input = (float*)malloc(sizeof(float) * w * h * ninput);
+		float *packed_output = (float*)malloc(sizeof(float) * w * h * noutput);
+
+		pack_mat(packed_input, inputPlanes, w, h, ninput);
+		bool ret = filter_AVX(packed_input, inputPlanes, packed_output, outputPlanes);
+
+		free(packed_input);
+		free(packed_output);
+
+		return ret;
 	}
 }
 
