@@ -14,6 +14,8 @@
 #include <thread>
 #include <time.h>
 
+#define VEC_WIDTH 8U
+
 static double
 getsec()
 {
@@ -61,7 +63,6 @@ filter_1elem(std::vector<cv::Mat> &inputPlanes,
 	     float *weight,
 	     float *intermediate)
 {
-
 	for (int ipIndex = 0; ipIndex < nInputPlanes; ipIndex++) {
 		cv::Mat &uInputPlane = inputPlanes[ipIndex];
 
@@ -79,25 +80,28 @@ filter_1elem(std::vector<cv::Mat> &inputPlanes,
 		float i21 = get_data<border>(in, hsz, wsz, in_step, yi+1, xi  );
 		float i22 = get_data<border>(in, hsz, wsz, in_step, yi+1, xi+1);
 
-		float *w = weight + (ipIndex * nOutputPlanes) * 9;
-
-		for (int opIndex = 0;
-		     opIndex < nOutputPlanes;
+		for (unsigned int opIndex = 0;
+		     opIndex < (unsigned int)nOutputPlanes;
 		     opIndex++)
 		{
+			int oi_0 = opIndex % VEC_WIDTH;
+			int oi_1 = (opIndex / VEC_WIDTH) * VEC_WIDTH;
+
+			float *w = weight + (ipIndex * nOutputPlanes + oi_1) * 9 + oi_0;
+
 			float v = 0;
 
-			v += w[0] * i00;
-			v += w[1] * i01;
-			v += w[2] * i02;
+			v += w[0*VEC_WIDTH] * i00;
+			v += w[1*VEC_WIDTH] * i01;
+			v += w[2*VEC_WIDTH] * i02;
 
-			v += w[3] * i10;
-			v += w[4] * i11;
-			v += w[5] * i12;
+			v += w[3*VEC_WIDTH] * i10;
+			v += w[4*VEC_WIDTH] * i11;
+			v += w[5*VEC_WIDTH] * i12;
 
-			v += w[6] * i20;
-			v += w[7] * i21;
-			v += w[8] * i22;
+			v += w[6*VEC_WIDTH] * i20;
+			v += w[7*VEC_WIDTH] * i21;
+			v += w[8*VEC_WIDTH] * i22;
 
 			w += 9;
 
@@ -127,11 +131,11 @@ filter_1elem(std::vector<cv::Mat> &inputPlanes,
 }
 
 static void
-filter2(std::vector<cv::Mat> &inputPlanes,
-	std::vector<cv::Mat> &outputPlanes,
-	int nOutputPlanes,
-	std::vector<double> &biases,
-	std::vector<cv::Mat> &weightMatrices)
+filter_AVX_impl(std::vector<cv::Mat> &inputPlanes,
+		std::vector<cv::Mat> &outputPlanes,
+		int nOutputPlanes,
+		std::vector<double> &biases,
+		std::vector<cv::Mat> &weightMatrices)
 {
 	cv::ocl::setUseOpenCL(false); // disable OpenCL Support(temporary)
 
@@ -164,21 +168,25 @@ filter2(std::vector<cv::Mat> &inputPlanes,
 			const float *src1 = (float*)wm.ptr(1);
 			const float *src2 = (float*)wm.ptr(2);
 
-			float *dst = weight + ((ii*nOutputPlanes + oi)*9);
-			dst[0] = src0[0];
-			dst[1] = src0[1];
-			dst[2] = src0[2];
+			int oi_0 = oi % VEC_WIDTH;
+			int oi_1 = (oi / VEC_WIDTH) * VEC_WIDTH;
 
-			dst[3] = src1[0];
-			dst[4] = src1[1];
-			dst[5] = src1[2];
+			float *dst = weight + ((ii*nOutputPlanes + oi_1) * 9) + oi_0;
+			dst[0*VEC_WIDTH] = src0[0];
+			dst[1*VEC_WIDTH] = src0[1];
+			dst[2*VEC_WIDTH] = src0[2];
 
-			dst[6] = src2[0];
-			dst[7] = src2[1];
-			dst[8] = src2[2];
+			dst[3*VEC_WIDTH] = src1[0];
+			dst[4*VEC_WIDTH] = src1[1];
+			dst[5*VEC_WIDTH] = src1[2];
+
+			dst[6*VEC_WIDTH] = src2[0];
+			dst[7*VEC_WIDTH] = src2[1];
+			dst[8*VEC_WIDTH] = src2[2];
 		}
 	}
 
+//#pragma omp parallel for
 	for (int yi=0; yi<hsz; yi++) {
 		float *intermediate = (float*)malloc(sizeof(float)*nOutputPlanes);
 
@@ -199,9 +207,11 @@ filter2(std::vector<cv::Mat> &inputPlanes,
 
 }
 
-bool Model::filter(std::vector<cv::Mat> &inputPlanes,
-		std::vector<cv::Mat> &outputPlanes) {
 
+bool
+Model::filter_CV(std::vector<cv::Mat> &inputPlanes,
+		 std::vector<cv::Mat> &outputPlanes)
+{
 	if (inputPlanes.size() != nInputPlanes) {
 		std::cerr << "Error : Model-filter : \n"
 				"number of input planes mismatch." << std::endl;
@@ -215,7 +225,6 @@ bool Model::filter(std::vector<cv::Mat> &inputPlanes,
 		outputPlanes.push_back(cv::Mat::zeros(inputPlanes[0].size(), CV_32FC1));
 	}
 
-	double t0 = getsec();
 	// filter job issuing
 	std::vector<std::thread> workerThreads;
 	int worksPerThread = nOutputPlanes / nJob;
@@ -243,6 +252,18 @@ bool Model::filter(std::vector<cv::Mat> &inputPlanes,
 		th.join();
 	}
 
+	return true;
+}
+
+#define COMPARE_RESULT
+
+bool Model::filter_AVX(std::vector<cv::Mat> &inputPlanes,
+		       std::vector<cv::Mat> &outputPlanes)
+{
+#ifdef COMPARE_RESULT
+	double t0 = getsec();
+	filter_CV(inputPlanes, outputPlanes);
+
 	double t1 = getsec();
 
 	/* 3x3 = 9 fma */
@@ -252,7 +273,7 @@ bool Model::filter(std::vector<cv::Mat> &inputPlanes,
 	printf("%d %d\n", nInputPlanes, nOutputPlanes);
 
 	std::vector<cv::Mat> output2;
-	filter2(inputPlanes, output2, nOutputPlanes, biases, weights);
+	filter_AVX_impl(inputPlanes, output2, nOutputPlanes, biases, weights);
 	double t2 = getsec();
 
 	printf("%d %d %f %f\n", nInputPlanes, nOutputPlanes, t1-t0, t2-t1);
@@ -275,8 +296,30 @@ bool Model::filter(std::vector<cv::Mat> &inputPlanes,
 			}
 		}
 	}
+#else
+	cv::Size ipSize = inputPlanes[0].size();
+	double ops = ipSize.width * ipSize.height * 9.0 * 2.0 * nOutputPlanes * nInputPlanes;
+
+	double t1 = getsec();
+	filter_AVX_impl(inputPlanes, outputPlanes, nOutputPlanes, biases, weights);
+	double t2 = getsec();
+
+	printf("ver2 : %f [Gflops]\n", (ops/(1000.0*1000.0*1000.0)) / (t2-t1));
+
+#endif
 
 	return true;
+
+}
+
+
+bool Model::filter(std::vector<cv::Mat> &inputPlanes,
+		   std::vector<cv::Mat> &outputPlanes) {
+	if (nOutputPlanes % VEC_WIDTH) {
+		return filter_CV(inputPlanes, outputPlanes);
+	} else {
+		return filter_AVX(inputPlanes, outputPlanes);
+	}
 }
 
 bool Model::loadModelFromJSONObject(picojson::object &jsonObj) {

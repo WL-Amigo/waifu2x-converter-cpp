@@ -42,6 +42,11 @@ private:
 			std::vector<cv::Mat> &outputPlanes,
 			unsigned int beginningIndex, unsigned int nWorks);
 
+	bool filter_CV(std::vector<cv::Mat> &inputPlanes,
+		       std::vector<cv::Mat> &outputPlanes);
+	bool filter_AVX(std::vector<cv::Mat> &inputPlanes,
+			std::vector<cv::Mat> &outputPlanes);
+
 public:
 	// ctor and dtor
 	Model(picojson::object &jsonObj) {
