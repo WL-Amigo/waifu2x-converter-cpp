@@ -39,6 +39,8 @@ bool Model::filter(std::vector<cv::Mat> &inputPlanes,
 		outputPlanes.push_back(cv::Mat::zeros(inputPlanes[0].size(), CV_32FC1));
 	}
 
+	int nJob = modelUtility::getInstance().getNumberOfJobs();
+
 	// filter job issuing
 	std::vector<std::thread> workerThreads;
 	int worksPerThread = nOutputPlanes / nJob;
@@ -160,6 +162,15 @@ void Model::setNumberOfJobs(int setNJob) {
 	nJob = setNJob;
 }
 
+modelUtility * modelUtility::instance = nullptr;
+
+modelUtility& modelUtility::getInstance(){
+	if(instance == nullptr){
+		instance = new modelUtility();
+	}
+	return *instance;
+}
+
 bool modelUtility::generateModelFromJSON(const std::string &fileName,
 		std::vector<std::unique_ptr<Model> > &models) {
 
@@ -187,6 +198,16 @@ bool modelUtility::generateModelFromJSON(const std::string &fileName,
 	}
 
 	return true;
+}
+
+bool modelUtility::setNumberOfJobs(int setNJob){
+	if(setNJob < 1)return false;
+	nJob = setNJob;
+	return true;
+};
+
+int modelUtility::getNumberOfJobs(){
+	return nJob;
 }
 
 // for debugging
