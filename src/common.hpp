@@ -32,3 +32,18 @@ unpack_mat(std::vector<cv::Mat> &outputPlanes,
 	}
 }
 
+static void
+unpack_mat1(cv::Mat &outputMat,
+            const float *in,
+            int w, int h)
+{
+    for (int yi=0; yi<h; yi++) {
+        float *mat_line = (float*)outputMat.ptr(yi);
+        const float *packed_line = in + (yi * w);
+
+        for (int xi=0; xi<w; xi++) {
+            mat_line[xi] = packed_line[xi];
+        }
+    }
+}
+

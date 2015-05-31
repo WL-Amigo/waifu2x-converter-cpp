@@ -17,6 +17,7 @@
 #include "picojson.h"
 #include "tclap/CmdLine.h"
 #include "sec.hpp"
+#include "common.hpp"
 
 #include "modelHandler.hpp"
 
@@ -109,24 +110,32 @@ int main(int argc, char** argv) {
 		std::cout << "start noise reduction (level "
 				<< std::to_string(cmdNRLevel.getValue()) << ")" << std::endl;
 
+		cv::Size filterSize = imageY.size();
+		int filterWidth = filterSize.width;
+		int filterHeight = filterSize.height;
+
+		float *packed_input = (float*)malloc(sizeof(float) * filterWidth * filterHeight);
+		pack_mat(packed_input, *inputPlanes, filterWidth, filterHeight, 1);
+
 		for (int index = 0; index < models.size(); index++) {
+			float *packed_output = (float*)malloc(sizeof(float) * filterWidth * filterHeight *
+							      models[index]->getNOutputPlanes());
+
 			std::cout << "Iteration #" << (index + 1) << "..." ;
 			double t0 = getsec();
-			if (!models[index]->filter(*inputPlanes, *outputPlanes)) {
+			if (!models[index]->filter(packed_input, packed_output, filterSize)) {
 				std::exit(-1);
 			}
 			double t1 = getsec();
 
 			std::cout << "(" << (t1-t0)*1000 << "[ms])" << std::endl;
 
-			if (index != models.size() - 1) {
-				inputPlanes = std::move(outputPlanes);
-				outputPlanes = std::unique_ptr<std::vector<cv::Mat> >(
-						new std::vector<cv::Mat>());
-			}
+			free(packed_input);
+			packed_input = packed_output;
 		}
 
-		outputPlanes->at(0).copyTo(imageSplit[0]);
+		unpack_mat1(imageSplit[0], packed_input, filterWidth, filterHeight);
+		free(packed_input);
 		cv::merge(imageSplit, imageYUV);
 		cv::cvtColor(imageYUV, image, COLOR_YUV2RGB);
 
@@ -197,25 +206,33 @@ int main(int argc, char** argv) {
 			inputPlanes->clear();
 			inputPlanes->push_back(imageY);
 
+			cv::Size filterSize = imageY.size();
+			int filterWidth = filterSize.width;
+			int filterHeight = filterSize.height;
+
+			float *packed_input = (float*)malloc(sizeof(float) * filterWidth * filterHeight);
+			pack_mat(packed_input, *inputPlanes, filterWidth, filterHeight, 1);
+
 			for (int index = 0; index < models.size(); index++) {
+				float *packed_output = (float*)malloc(sizeof(float) * filterWidth * filterHeight *
+								      models[index]->getNOutputPlanes());
+
 				std::cout << "Iteration #" << (index + 1) << "...";
 
 				double t0 = getsec();
-				if (!models[index]->filter(*inputPlanes, *outputPlanes)) {
+				if (!models[index]->filter(packed_input, packed_output, filterSize)) {
 					std::exit(-1);
 				}
 				double t1 = getsec();
 
 				std::cout << "(" << (t1-t0)*1000 << "[ms])" << std::endl;
 
-				if (index != models.size() - 1) {
-					inputPlanes = std::move(outputPlanes);
-					outputPlanes = std::unique_ptr<std::vector<cv::Mat> >(
-							new std::vector<cv::Mat>());
-				}
+				free(packed_input);
+				packed_input = packed_output;
 			}
 
-			outputPlanes->at(0).copyTo(imageSplit[0]);
+			unpack_mat1(imageSplit[0], packed_input, filterWidth, filterHeight);
+			free(packed_input);
 			cv::merge(imageSplit, imageYUV);
 			cv::cvtColor(imageYUV, image, COLOR_YUV2RGB);
 

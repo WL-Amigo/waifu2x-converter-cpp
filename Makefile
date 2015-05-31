@@ -9,7 +9,13 @@ waifu2x-converter-cpp: $(OBJS)
 	g++ $(LDFLAGS) -o $@ $^ $(LDLIBS)
 
 run: waifu2x-converter-cpp
+	./waifu2x-converter-cpp -i ~/test/a.png --model_dir models
+
+run8: waifu2x-converter-cpp
 	./waifu2x-converter-cpp -j 8 -i ~/test/a.png --model_dir models
+
+run4: waifu2x-converter-cpp
+	./waifu2x-converter-cpp -j 4 -i ~/test/a.png --model_dir models
 
 run1: waifu2x-converter-cpp
 	./waifu2x-converter-cpp -j 1 -i ~/test/a.png --model_dir models

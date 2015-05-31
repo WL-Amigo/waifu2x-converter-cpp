@@ -13,6 +13,7 @@
 #include <fstream>
 #include <thread>
 #include "sec.hpp"
+#include "common.hpp"
 
 #define VEC_WIDTH 8U
 #define UNROLL 2U
@@ -122,7 +123,6 @@ filter_1elem(const float *packed_input,
 		__m256 i22 = _mm256_set1_ps(get_data<border>(in, hsz, wsz, in_step, yi+1, xi+1, nInputPlanes, ipIndex));
 
 		float *w = weight + (ipIndex * nOutputPlanes) * 9;
-
 
 		for (unsigned int opIndex = 0;
 		     opIndex < (unsigned int)nOutputPlanes;
@@ -380,35 +380,20 @@ bool Model::filter_AVX(const float *packed_input,
 }
 
 
-bool Model::filter(std::vector<cv::Mat> &inputPlanes,
-		   std::vector<cv::Mat> &outputPlanes) {
+bool Model::filter(float *packed_input,
+		   float *packed_output,
+		   cv::Size size)
+{
 	int ninput = nInputPlanes;
 	int noutput = nOutputPlanes;
-	cv::Size sz = inputPlanes[0].size();
-	int w = sz.width;
-	int h = sz.height;
-	float *packed_input = (float*)malloc(sizeof(float) * w * h * ninput);
-	float *packed_output = (float*)malloc(sizeof(float) * w * h * noutput);
 
 	bool ret;
 
-	pack_mat(packed_input, inputPlanes, w, h, ninput);
-
-	outputPlanes.clear();
-	for (int i = 0; i < nOutputPlanes; i++) {
-		outputPlanes.push_back(cv::Mat::zeros(sz, CV_32FC1));
-	}
-
 	if (nOutputPlanes % (VEC_WIDTH*UNROLL)) {
-		ret = filter_CV(packed_input, packed_output, sz);
+		ret = filter_CV(packed_input, packed_output, size);
 	} else {
-		ret = filter_AVX(packed_input, packed_output, sz);
+		ret = filter_AVX(packed_input, packed_output, size);
 	}
-
-	unpack_mat(outputPlanes, packed_output, w, h, noutput);
-
-	free(packed_input);
-	free(packed_output);
 
 	return ret;
 }

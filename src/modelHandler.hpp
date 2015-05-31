@@ -96,8 +96,10 @@ public:
 	void setNumberOfJobs(int setNJob);
 
 	// public operation function
-	bool filter(std::vector<cv::Mat> &inputPlanes,
-			std::vector<cv::Mat> &outputPlanes);
+	bool filter(float *packed_input,
+		    float *packed_output,
+		    cv::Size size);
+
 
 };
 
