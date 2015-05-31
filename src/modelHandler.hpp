@@ -42,12 +42,13 @@ private:
 			std::vector<cv::Mat> &outputPlanes,
 			unsigned int beginningIndex, unsigned int nWorks);
 
-	bool filter_CV(std::vector<cv::Mat> &inputPlanes,
-		       std::vector<cv::Mat> &outputPlanes);
+	bool filter_CV(const float *packed_input,
+		       float *packed_output,
+		       cv::Size size);
+
 	bool filter_AVX(const float *packed_input,
-			std::vector<cv::Mat> &inputPlanes,
 			float *packed_output,
-			std::vector<cv::Mat> &outputPlanes);
+			cv::Size size);
 
 public:
 	// ctor and dtor

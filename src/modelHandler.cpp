@@ -215,20 +215,13 @@ filter_1elem(const float *packed_input,
 static void
 filter_AVX_impl(const float *packed_input,
 		float *packed_output,
-		std::vector<cv::Mat> &outputPlanes,
 		int nInputPlanes,
 		int nOutputPlanes,
 		std::vector<double> &biases,
 		std::vector<cv::Mat> &weightMatrices,
-		cv::Size ipSize)
+		cv::Size ipSize,
+		int nJob)
 {
-	cv::ocl::setUseOpenCL(false); // disable OpenCL Support(temporary)
-
-	outputPlanes.clear();
-	for (int i = 0; i < nOutputPlanes; i++) {
-		outputPlanes.push_back(cv::Mat::zeros(ipSize, CV_32FC1));
-	}
-
 	int wsz = ipSize.width;
 	int hsz = ipSize.height;
 
@@ -269,47 +262,68 @@ filter_AVX_impl(const float *packed_input,
 		}
 	}
 
-#pragma omp parallel for
-	for (int yi=0; yi<hsz; yi++) {
-		float *intermediate = (float*)malloc(sizeof(float)*nOutputPlanes);
+	int per_job = hsz / nJob;
 
-		for (int xi=0; xi<wsz; xi++) {
-			if (yi == 0 || xi ==0 || yi == (hsz-1) || xi == (wsz-1)) {
-				filter_1elem<true>(packed_input, nInputPlanes,
-						   packed_output, nOutputPlanes,
-						   fbiases, hsz, wsz, yi, xi, weight, intermediate);
-			} else {
-				filter_1elem<false>(packed_input, nInputPlanes,
-						    packed_output, nOutputPlanes,
-						    fbiases, hsz, wsz, yi, xi, weight, intermediate);
-			}
-		}
-		free(intermediate);
-	} // for index
+	std::vector<std::thread> workerThreads;
 
-	unpack_mat(outputPlanes, packed_output, wsz, hsz, nOutputPlanes);
+	for (int ji=0; ji<nJob; ji++) {
+		auto t = std::thread([&](int ji) {
+				float *intermediate = (float*)malloc(sizeof(float)*nOutputPlanes);
+
+				int start = per_job * ji, end;
+
+				if (ji == nJob-1) {
+					end = hsz;
+				} else {
+					end = per_job * (ji+1);
+				}
+
+				for (int yi=start; yi<end; yi++) {
+					for (int xi=0; xi<wsz; xi++) {
+						if (yi == 0 || xi ==0 || yi == (hsz-1) || xi == (wsz-1)) {
+							filter_1elem<true>(packed_input, nInputPlanes,
+									   packed_output, nOutputPlanes,
+									   fbiases, hsz, wsz, yi, xi, weight, intermediate);
+						} else {
+							filter_1elem<false>(packed_input, nInputPlanes,
+									    packed_output, nOutputPlanes,
+									    fbiases, hsz, wsz, yi, xi, weight, intermediate);
+						}
+					}
+				}
+
+				free(intermediate);
+			}, ji
+			);
+
+		workerThreads.push_back(std::move(t));
+	}
+
+	for (auto& th : workerThreads) {
+		th.join();
+	}
 
 	free(fbiases);
 	free(weight);
-
 }
 
 
 bool
-Model::filter_CV(std::vector<cv::Mat> &inputPlanes,
-		 std::vector<cv::Mat> &outputPlanes)
+Model::filter_CV(const float *packed_input,
+		 float *packed_output,
+		 cv::Size size)
 {
-	if ((int)inputPlanes.size() != nInputPlanes) {
-		std::cerr << "Error : Model-filter : \n"
-				"number of input planes mismatch." << std::endl;
-		std::cerr << inputPlanes.size() << ","
-				<< nInputPlanes << std::endl;
-		return false;
+	std::vector<cv::Mat> outputPlanes;
+	std::vector<cv::Mat> inputPlanes;
+
+	for (int i = 0; i < nInputPlanes; i++) {
+		inputPlanes.push_back(cv::Mat::zeros(size, CV_32FC1));
 	}
+	unpack_mat(inputPlanes, packed_input, size.width, size.height, nInputPlanes);
 
 	outputPlanes.clear();
 	for (int i = 0; i < nOutputPlanes; i++) {
-		outputPlanes.push_back(cv::Mat::zeros(inputPlanes[0].size(), CV_32FC1));
+		outputPlanes.push_back(cv::Mat::zeros(size, CV_32FC1));
 	}
 
 	// filter job issuing
@@ -339,67 +353,57 @@ Model::filter_CV(std::vector<cv::Mat> &inputPlanes,
 		th.join();
 	}
 
+	pack_mat(packed_output, outputPlanes, size.width, size.height, nOutputPlanes);
+
 	return true;
 }
 
 //#define COMPARE_RESULT
 
 bool Model::filter_AVX(const float *packed_input,
-		       std::vector<cv::Mat> &inputPlanes,
 		       float *packed_output,
-		       std::vector<cv::Mat> &outputPlanes)
+		       cv::Size size)
 {
 #ifdef COMPARE_RESULT
-	double t0 = getsec();
-	filter_CV(inputPlanes, outputPlanes);
+	float *packed_output_cv = (float*)malloc(sizeof(float) * size.width * size.height * nOutputPlanes);
 
+	double t0 = getsec();
+	filter_CV(packed_input, packed_output_cv, size);
 	double t1 = getsec();
 
 	/* 3x3 = 9 fma */
-	cv::Size ipSize = inputPlanes[0].size();
-	double ops = ipSize.width * ipSize.height * 9.0 * 2.0 * nOutputPlanes * nInputPlanes;
-	printf("orig : %f [Gflops]\n", (ops/(1000.0*1000.0*1000.0)) / (t1-t0));
-	printf("%d %d\n", nInputPlanes, nOutputPlanes);
-
+	double ops = size.width * size.height * 9.0 * 2.0 * nOutputPlanes * nInputPlanes;
 	std::vector<cv::Mat> output2;
-	filter_AVX_impl(packed_input, packed_output, output2, nInputPlanes, nOutputPlanes, biases, weights,
-			inputPlanes[0].size());
+	filter_AVX_impl(packed_input, packed_output,
+			nInputPlanes, nOutputPlanes, biases, weights, size, nJob);
 	double t2 = getsec();
 
 	printf("%d %d %f %f\n", nInputPlanes, nOutputPlanes, t1-t0, t2-t1);
-
 	printf("ver2 : %f [Gflops]\n", (ops/(1000.0*1000.0*1000.0)) / (t2-t1));
+	printf("orig : %f [Gflops]\n", (ops/(1000.0*1000.0*1000.0)) / (t1-t0));
 
-	for (int i = 0; i < nOutputPlanes; i++) {
-		cv::Mat &m0 = outputPlanes[i];
-		cv::Mat &m1 = output2[i];
+	for (int i=0; i<size.width * size.height * nOutputPlanes; i++) {
+		float v0 = packed_output_cv[i];
+		float v1 = packed_output[i];
+		float d = fabs(v0 - v1);
 
-		for (int my=0; my<m0.size[1]; my++) {
-			const float *p0 = (float*)m0.ptr(my);
-			const float *p1 = (float*)m1.ptr(my);
+		float r0 = d/fabs(v0);
+		float r1 = d/fabs(v1);
 
-			for (int mx=0; mx<m0.size[0]; mx++) {
-				float d = fabs(p0[mx] - p1[mx]);
+		float r = std::max(r0, r1);
 
-				float r0 = d/fabs(p0[mx]);
-				float r1 = d/fabs(p1[mx]);
-
-				float r = std::max(r0, r1);
-
-				if (r > 0.1f && d > 0.0000001f) {
-					printf("d=%.20f %.20f %.20f @ %d-(%d,%d)\n",r, p0[mx], p1[mx], i, mx, my);
-					exit(1);
-				}
-			}
+		if (r > 0.1f && d > 0.0000001f) {
+			printf("d=%.20f %.20f %.20f @ \n",r, v0, v1, i);
+			exit(1);
 		}
+
 	}
 #else
-	cv::Size ipSize = inputPlanes[0].size();
-	double ops = ipSize.width * ipSize.height * 9.0 * 2.0 * nOutputPlanes * nInputPlanes;
+	double ops = size.width * size.height * 9.0 * 2.0 * nOutputPlanes * nInputPlanes;
 
 	double t1 = getsec();
-	filter_AVX_impl(packed_input, packed_output, outputPlanes,
-			nInputPlanes, nOutputPlanes, biases, weights, ipSize);
+	filter_AVX_impl(packed_input, packed_output,
+			nInputPlanes, nOutputPlanes, biases, weights, size, nJob);
 	double t2 = getsec();
 
 	printf("ver2 : %f [Gflops], %f[msec]\n", (ops/(1000.0*1000.0*1000.0)) / (t2-t1), (t2-t1)*1000);
@@ -412,26 +416,35 @@ bool Model::filter_AVX(const float *packed_input,
 
 bool Model::filter(std::vector<cv::Mat> &inputPlanes,
 		   std::vector<cv::Mat> &outputPlanes) {
-	if (nOutputPlanes % (VEC_WIDTH*UNROLL)) {
-		return filter_CV(inputPlanes, outputPlanes);
-	} else {
-		int ninput = nInputPlanes;
-		int noutput = nOutputPlanes;
+	int ninput = nInputPlanes;
+	int noutput = nOutputPlanes;
+	cv::Size sz = inputPlanes[0].size();
+	int w = sz.width;
+	int h = sz.height;
+	float *packed_input = (float*)malloc(sizeof(float) * w * h * ninput);
+	float *packed_output = (float*)malloc(sizeof(float) * w * h * noutput);
 
-		cv::Size sz = inputPlanes[0].size();
-		int w = sz.width;
-		int h = sz.height;
-		float *packed_input = (float*)malloc(sizeof(float) * w * h * ninput);
-		float *packed_output = (float*)malloc(sizeof(float) * w * h * noutput);
+	bool ret;
 
-		pack_mat(packed_input, inputPlanes, w, h, ninput);
-		bool ret = filter_AVX(packed_input, inputPlanes, packed_output, outputPlanes);
+	pack_mat(packed_input, inputPlanes, w, h, ninput);
 
-		free(packed_input);
-		free(packed_output);
-
-		return ret;
+	outputPlanes.clear();
+	for (int i = 0; i < nOutputPlanes; i++) {
+		outputPlanes.push_back(cv::Mat::zeros(sz, CV_32FC1));
 	}
+
+	if (nOutputPlanes % (VEC_WIDTH*UNROLL)) {
+		ret = filter_CV(packed_input, packed_output, sz);
+	} else {
+		ret = filter_AVX(packed_input, packed_output, sz);
+	}
+
+	unpack_mat(outputPlanes, packed_output, w, h, noutput);
+
+	free(packed_input);
+	free(packed_output);
+
+	return ret;
 }
 
 bool Model::loadModelFromJSONObject(picojson::object &jsonObj) {
