@@ -47,22 +47,52 @@ filter_1elem(const float *packed_input,
 		in2p = inp;
 	}
 
-	float *in0 = (float*)in0p;
-	float *in1 = (float*)in1p;
-	float *in2 = (float*)in2p;
+	float *in01 = (float*)in0p, *in00, *in02;
+	float *in11 = (float*)in1p, *in10, *in12;
+	float *in21 = (float*)in2p, *in20, *in22;
+
+	in0 += xi * num_plane;
+	in1 += xi * num_plane;
+	in2 += xi * num_plane;
 
 	for (int ipIndex = 0; ipIndex < nInputPlanes; ipIndex++) {
-		__m256 i00 = _mm256_set1_ps(get_data<border>(in0, wsz, xi-1, nInputPlanes, ipIndex));
-		__m256 i01 = _mm256_set1_ps(get_data<border>(in0, wsz, xi  , nInputPlanes, ipIndex));
-		__m256 i02 = _mm256_set1_ps(get_data<border>(in0, wsz, xi+1, nInputPlanes, ipIndex));
+		__m256 i01 = _mm256_broadcast_ss(in01);
+		__m256 i11 = _mm256_broadcast_ss(in11);
+		__m256 i21 = _mm256_broadcast_ss(in21);
 
-		__m256 i10 = _mm256_set1_ps(get_data<border>(in1, wsz, xi-1, nInputPlanes, ipIndex));
-		__m256 i11 = _mm256_set1_ps(get_data<border>(in1, wsz, xi  , nInputPlanes, ipIndex));
-		__m256 i12 = _mm256_set1_ps(get_data<border>(in1, wsz, xi+1, nInputPlanes, ipIndex));
+		__m256 i00, i10, i20;
 
-		__m256 i20 = _mm256_set1_ps(get_data<border>(in2, wsz, xi-1, nInputPlanes, ipIndex));
-		__m256 i21 = _mm256_set1_ps(get_data<border>(in2, wsz, xi  , nInputPlanes, ipIndex));
-		__m256 i22 = _mm256_set1_ps(get_data<border>(in2, wsz, xi+1, nInputPlanes, ipIndex));
+		if (border && xi == 0) {
+			i00 = i01;
+			i10 = i11;
+			i20 = i21;
+		} else {
+			i00 = _mm256_broadcast_ss(in01-num_plane);
+			i10 = _mm256_broadcast_ss(in11-num_plane);
+			i20 = _mm256_broadcast_ss(in21-num_plane);
+		}
+
+		if (border && xi == wsz -1) {
+			i00 = i01;
+			i10 = i11;
+			i20 = i21;
+		} else {
+			i00 = _mm256_broadcast_ss(in01+num_plane);
+			i10 = _mm256_broadcast_ss(in11+num_plane);
+			i20 = _mm256_broadcast_ss(in21+num_plane);
+		}
+
+		in00++;
+		in01++;
+		in02++;
+
+		in10++;
+		in11++;
+		in12++;
+
+		in20++;
+		in21++;
+		in22++;
 
 		const float *w = weight + (ipIndex * nOutputPlanes) * 9;
 
