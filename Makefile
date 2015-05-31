@@ -13,8 +13,8 @@ src/modelHandler_OpenCL.cpp: src/modelHandler_OpenCL.cl.h
 waifu2x-converter-cpp: $(OBJS)
 	g++ $(LDFLAGS) -o $@ $^ $(LDLIBS)
 
-INPUT=./b.png
-#INPUT=~/test/a.png
+#INPUT=./b.png
+INPUT=~/test/a.png
 
 run: waifu2x-converter-cpp
 	./waifu2x-converter-cpp -i $(INPUT) --model_dir models

@@ -36,14 +36,14 @@ filter_1elem(const float *packed_input,
 
 	inp += in_step*yi;
 	char *in0p = inp - in_step;
-	if (border && yi == 0) {
+	if (yi == 0) {
 		in0p = inp;
 	}
 
 	char *in1p = inp;
 	char *in2p = inp + in_step;
 
-	if (border && yi == hsz-1) {
+	if (yi == hsz-1) {
 		in2p = inp;
 	}
 
@@ -176,7 +176,7 @@ filter_AVX_impl(const float *packed_input,
 
 				for (int yi=start; yi<end; yi++) {
 					for (int xi=0; xi<wsz; xi++) {
-						if (yi == 0 || xi ==0 || yi == (hsz-1) || xi == (wsz-1)) {
+						if (xi ==0 || xi == (wsz-1)) {
 							filter_1elem<true>(packed_input, nInputPlanes,
 									   packed_output, nOutputPlanes,
 									   fbiases, hsz, wsz, yi, xi, weight, intermediate);
