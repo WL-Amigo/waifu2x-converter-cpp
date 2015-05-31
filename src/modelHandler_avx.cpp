@@ -98,53 +98,93 @@ filter_1elem(const float *packed_input,
 
 		for (unsigned int opIndex = 0;
 		     opIndex < (unsigned int)nOutputPlanes;
-		     opIndex += VEC_WIDTH)
+		     opIndex += VEC_WIDTH*UNROLL)
 		{
-			__m256 v0, v1;
-			v0 = _mm256_setzero_ps();
-			v1 = _mm256_setzero_ps();
+			__m256 v00, v01, v10, v11;
+			v00 = _mm256_setzero_ps();
+			v01 = _mm256_setzero_ps();
 
-			v0 = _mm256_fmadd_ps(_mm256_loadu_ps(&w[0*VEC_WIDTH]), i00, v0);
-			v1 = _mm256_fmadd_ps(_mm256_loadu_ps(&w[0*VEC_WIDTH]), i01, v1);
+			v00 = _mm256_fmadd_ps(_mm256_loadu_ps(&w[0*VEC_WIDTH]), i00, v00);
+			v01 = _mm256_fmadd_ps(_mm256_loadu_ps(&w[0*VEC_WIDTH]), i01, v01);
 
-			v0 = _mm256_fmadd_ps(_mm256_loadu_ps(&w[1*VEC_WIDTH]), i01, v0);
-			v1 = _mm256_fmadd_ps(_mm256_loadu_ps(&w[1*VEC_WIDTH]), i02, v1);
+			v00 = _mm256_fmadd_ps(_mm256_loadu_ps(&w[1*VEC_WIDTH]), i01, v00);
+			v01 = _mm256_fmadd_ps(_mm256_loadu_ps(&w[1*VEC_WIDTH]), i02, v01);
 
-			v0 = _mm256_fmadd_ps(_mm256_loadu_ps(&w[2*VEC_WIDTH]), i02, v0);
-			v1 = _mm256_fmadd_ps(_mm256_loadu_ps(&w[2*VEC_WIDTH]), i03, v1);
-
-
-
-			v0 = _mm256_fmadd_ps(_mm256_loadu_ps(&w[3*VEC_WIDTH]), i10, v0);
-			v1 = _mm256_fmadd_ps(_mm256_loadu_ps(&w[3*VEC_WIDTH]), i11, v1);
-
-			v0 = _mm256_fmadd_ps(_mm256_loadu_ps(&w[4*VEC_WIDTH]), i11, v0);
-			v1 = _mm256_fmadd_ps(_mm256_loadu_ps(&w[4*VEC_WIDTH]), i12, v1);
-
-			v0 = _mm256_fmadd_ps(_mm256_loadu_ps(&w[5*VEC_WIDTH]), i12, v0);
-			v1 = _mm256_fmadd_ps(_mm256_loadu_ps(&w[5*VEC_WIDTH]), i13, v1);
+			v00 = _mm256_fmadd_ps(_mm256_loadu_ps(&w[2*VEC_WIDTH]), i02, v00);
+			v01 = _mm256_fmadd_ps(_mm256_loadu_ps(&w[2*VEC_WIDTH]), i03, v01);
 
 
-			v0 = _mm256_fmadd_ps(_mm256_loadu_ps(&w[6*VEC_WIDTH]), i20, v0);
-			v1 = _mm256_fmadd_ps(_mm256_loadu_ps(&w[6*VEC_WIDTH]), i21, v1);
+			v00 = _mm256_fmadd_ps(_mm256_loadu_ps(&w[3*VEC_WIDTH]), i10, v00);
+			v01 = _mm256_fmadd_ps(_mm256_loadu_ps(&w[3*VEC_WIDTH]), i11, v01);
 
-			v0 = _mm256_fmadd_ps(_mm256_loadu_ps(&w[7*VEC_WIDTH]), i21, v0);
-			v1 = _mm256_fmadd_ps(_mm256_loadu_ps(&w[7*VEC_WIDTH]), i22, v1);
+			v00 = _mm256_fmadd_ps(_mm256_loadu_ps(&w[4*VEC_WIDTH]), i11, v00);
+			v01 = _mm256_fmadd_ps(_mm256_loadu_ps(&w[4*VEC_WIDTH]), i12, v01);
 
-			v0 = _mm256_fmadd_ps(_mm256_loadu_ps(&w[8*VEC_WIDTH]), i22, v0);
-			v1 = _mm256_fmadd_ps(_mm256_loadu_ps(&w[8*VEC_WIDTH]), i23, v1);
+			v00 = _mm256_fmadd_ps(_mm256_loadu_ps(&w[5*VEC_WIDTH]), i12, v00);
+			v01 = _mm256_fmadd_ps(_mm256_loadu_ps(&w[5*VEC_WIDTH]), i13, v01);
+
+
+			v00 = _mm256_fmadd_ps(_mm256_loadu_ps(&w[6*VEC_WIDTH]), i20, v00);
+			v01 = _mm256_fmadd_ps(_mm256_loadu_ps(&w[6*VEC_WIDTH]), i21, v01);
+
+			v00 = _mm256_fmadd_ps(_mm256_loadu_ps(&w[7*VEC_WIDTH]), i21, v00);
+			v01 = _mm256_fmadd_ps(_mm256_loadu_ps(&w[7*VEC_WIDTH]), i22, v01);
+
+			v00 = _mm256_fmadd_ps(_mm256_loadu_ps(&w[8*VEC_WIDTH]), i22, v00);
+			v01 = _mm256_fmadd_ps(_mm256_loadu_ps(&w[8*VEC_WIDTH]), i23, v01);
 
 			w += 9 * VEC_WIDTH;
 
-			if (ipIndex == 0) {
-				_mm256_storeu_ps(&intermediate0[opIndex+0], v0);
-				_mm256_storeu_ps(&intermediate1[opIndex+0], v1);
-			} else {					\
-				__m256 prev0 = _mm256_loadu_ps(&intermediate0[opIndex+0]);
-				__m256 prev1 = _mm256_loadu_ps(&intermediate1[opIndex+0]);
+			v10 = _mm256_setzero_ps();
+			v11 = _mm256_setzero_ps();
 
-				_mm256_storeu_ps(&intermediate0[opIndex+0], _mm256_add_ps(prev0,v0));
-				_mm256_storeu_ps(&intermediate1[opIndex+0], _mm256_add_ps(prev1,v1));
+			v10 = _mm256_fmadd_ps(_mm256_loadu_ps(&w[0*VEC_WIDTH]), i00, v10);
+			v11 = _mm256_fmadd_ps(_mm256_loadu_ps(&w[0*VEC_WIDTH]), i01, v11);
+
+			v10 = _mm256_fmadd_ps(_mm256_loadu_ps(&w[1*VEC_WIDTH]), i01, v10);
+			v11 = _mm256_fmadd_ps(_mm256_loadu_ps(&w[1*VEC_WIDTH]), i02, v11);
+
+			v10 = _mm256_fmadd_ps(_mm256_loadu_ps(&w[2*VEC_WIDTH]), i02, v10);
+			v11 = _mm256_fmadd_ps(_mm256_loadu_ps(&w[2*VEC_WIDTH]), i03, v11);
+
+
+			v10 = _mm256_fmadd_ps(_mm256_loadu_ps(&w[3*VEC_WIDTH]), i10, v10);
+			v11 = _mm256_fmadd_ps(_mm256_loadu_ps(&w[3*VEC_WIDTH]), i11, v11);
+
+			v10 = _mm256_fmadd_ps(_mm256_loadu_ps(&w[4*VEC_WIDTH]), i11, v10);
+			v11 = _mm256_fmadd_ps(_mm256_loadu_ps(&w[4*VEC_WIDTH]), i12, v11);
+
+			v10 = _mm256_fmadd_ps(_mm256_loadu_ps(&w[5*VEC_WIDTH]), i12, v10);
+			v11 = _mm256_fmadd_ps(_mm256_loadu_ps(&w[5*VEC_WIDTH]), i13, v11);
+
+
+			v10 = _mm256_fmadd_ps(_mm256_loadu_ps(&w[6*VEC_WIDTH]), i20, v10);
+			v11 = _mm256_fmadd_ps(_mm256_loadu_ps(&w[6*VEC_WIDTH]), i21, v11);
+
+			v10 = _mm256_fmadd_ps(_mm256_loadu_ps(&w[7*VEC_WIDTH]), i21, v10);
+			v11 = _mm256_fmadd_ps(_mm256_loadu_ps(&w[7*VEC_WIDTH]), i22, v11);
+
+			v10 = _mm256_fmadd_ps(_mm256_loadu_ps(&w[8*VEC_WIDTH]), i22, v10);
+			v11 = _mm256_fmadd_ps(_mm256_loadu_ps(&w[8*VEC_WIDTH]), i23, v11);
+
+			w += 9 * VEC_WIDTH;
+
+
+			if (ipIndex == 0) {
+				_mm256_storeu_ps(&intermediate0[opIndex+0], v00);
+				_mm256_storeu_ps(&intermediate1[opIndex+0], v01);
+				_mm256_storeu_ps(&intermediate0[opIndex+8], v10);
+				_mm256_storeu_ps(&intermediate1[opIndex+8], v11);
+			} else {					\
+				__m256 prev00 = _mm256_loadu_ps(&intermediate0[opIndex+0]);
+				__m256 prev01 = _mm256_loadu_ps(&intermediate1[opIndex+0]);
+				__m256 prev10 = _mm256_loadu_ps(&intermediate0[opIndex+8]);
+				__m256 prev11 = _mm256_loadu_ps(&intermediate1[opIndex+8]);
+
+				_mm256_storeu_ps(&intermediate0[opIndex+0], _mm256_add_ps(prev00,v00));
+				_mm256_storeu_ps(&intermediate1[opIndex+0], _mm256_add_ps(prev01,v01));
+				_mm256_storeu_ps(&intermediate0[opIndex+8], _mm256_add_ps(prev10,v10));
+				_mm256_storeu_ps(&intermediate1[opIndex+8], _mm256_add_ps(prev11,v11));
 			}
 		}
 	}

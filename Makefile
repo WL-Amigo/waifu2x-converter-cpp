@@ -17,16 +17,16 @@ INPUT=./b.png
 #INPUT=~/test/a.png
 
 run: waifu2x-converter-cpp
-	./waifu2x-converter-cpp -i $(INPUT) --model_dir models
+	perf stat ./waifu2x-converter-cpp -i $(INPUT) --model_dir models
 
 run8: waifu2x-converter-cpp
-	./waifu2x-converter-cpp -m scale -j 8 -i $(INPUT) --model_dir models
+	perf stat ./waifu2x-converter-cpp -j 8 -i $(INPUT) --model_dir models
 
 run4: waifu2x-converter-cpp
-	./waifu2x-converter-cpp -j 4 -i $(INPUT) --model_dir models
+	perf stat ./waifu2x-converter-cpp -j 4 -i $(INPUT) --model_dir models
 
 run1: waifu2x-converter-cpp
-	./waifu2x-converter-cpp -j 1 -i $(INPUT) --model_dir models
+	perf stat ./waifu2x-converter-cpp -j 1 -i $(INPUT) --model_dir models
 
 src/modelHandler_avx.o: src/modelHandler_avx.cpp
 	g++ -c $(CXXFLAGS) -mfma -o $@ $<
