@@ -2,9 +2,9 @@ OPENCV=$(HOME)/usr
 
 CXXFLAGS=-I$(OPENCV)/include -I$(CURDIR)/include -std=c++11 -pthread -Wall -MMD -save-temps -O2 -g
 LDFLAGS=-L$(OPENCV)/lib -pthread -Wl,-rpath,$(OPENCV)/lib -g
-LDLIBS=-lopencv_core -lopencv_imgproc -lopencv_imgcodecs -lopencv_features2d
+LDLIBS=-lopencv_core -lopencv_imgproc -lopencv_imgcodecs -lopencv_features2d -lOpenCL
 
-OBJS=src/main.o src/modelHandler.o src/modelHandler_avx.o
+OBJS=src/main.o src/modelHandler.o src/modelHandler_avx.o src/modelHandler_OpenCL.o
 waifu2x-converter-cpp: $(OBJS)
 	g++ $(LDFLAGS) -o $@ $^ $(LDLIBS)
 

@@ -21,6 +21,8 @@
 
 namespace w2xc {
 
+bool initOpenCL();
+
 class Model {
 
 private:
