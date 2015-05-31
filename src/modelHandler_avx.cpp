@@ -47,13 +47,13 @@ filter_1elem(const float *packed_input,
 		in2p = inp;
 	}
 
-	float *in01 = (float*)in0p, *in00, *in02;
-	float *in11 = (float*)in1p, *in10, *in12;
-	float *in21 = (float*)in2p, *in20, *in22;
+	float *in01 = (float*)in0p;
+	float *in11 = (float*)in1p;
+	float *in21 = (float*)in2p;
 
-	in0 += xi * num_plane;
-	in1 += xi * num_plane;
-	in2 += xi * num_plane;
+	in01 += xi * nInputPlanes;
+	in11 += xi * nInputPlanes;
+	in21 += xi * nInputPlanes;
 
 	for (int ipIndex = 0; ipIndex < nInputPlanes; ipIndex++) {
 		__m256 i01 = _mm256_broadcast_ss(in01);
@@ -61,38 +61,31 @@ filter_1elem(const float *packed_input,
 		__m256 i21 = _mm256_broadcast_ss(in21);
 
 		__m256 i00, i10, i20;
+		__m256 i02, i12, i22;
 
 		if (border && xi == 0) {
 			i00 = i01;
 			i10 = i11;
 			i20 = i21;
 		} else {
-			i00 = _mm256_broadcast_ss(in01-num_plane);
-			i10 = _mm256_broadcast_ss(in11-num_plane);
-			i20 = _mm256_broadcast_ss(in21-num_plane);
+			i00 = _mm256_broadcast_ss(in01-nInputPlanes);
+			i10 = _mm256_broadcast_ss(in11-nInputPlanes);
+			i20 = _mm256_broadcast_ss(in21-nInputPlanes);
 		}
 
 		if (border && xi == wsz -1) {
-			i00 = i01;
-			i10 = i11;
-			i20 = i21;
+			i02 = i01;
+			i12 = i11;
+			i22 = i21;
 		} else {
-			i00 = _mm256_broadcast_ss(in01+num_plane);
-			i10 = _mm256_broadcast_ss(in11+num_plane);
-			i20 = _mm256_broadcast_ss(in21+num_plane);
+			i02 = _mm256_broadcast_ss(in01+nInputPlanes);
+			i12 = _mm256_broadcast_ss(in11+nInputPlanes);
+			i22 = _mm256_broadcast_ss(in21+nInputPlanes);
 		}
 
-		in00++;
 		in01++;
-		in02++;
-
-		in10++;
 		in11++;
-		in12++;
-
-		in20++;
 		in21++;
-		in22++;
 
 		const float *w = weight + (ipIndex * nOutputPlanes) * 9;
 
