@@ -73,6 +73,9 @@ int main(int argc, char** argv) {
 	cv::Mat image = cv::imread(cmdInputFile.getValue(), cv::IMREAD_COLOR);
 	image.convertTo(image, CV_32F, 1.0 / 255.0);
 
+	// set number of jobs for processing models
+	w2xc::modelUtility::getInstance().setNumberOfJobs(cmdNumberOfJobs.getValue());
+
 	// ===== Noise Reduction Phase =====
 	if (cmdMode.getValue() == "noise" || cmdMode.getValue() == "noise_scale") {
 		std::string modelFileName(cmdModelPath.getValue());
@@ -82,11 +85,6 @@ int main(int argc, char** argv) {
 
 		if (!w2xc::modelUtility::generateModelFromJSON(modelFileName, models))
 			std::exit(-1);
-
-		// set njob
-		for (auto&& model : models) {
-			model->setNumberOfJobs(cmdNumberOfJobs.getValue());
-		}
 
 		cv::Mat imageYUV;
 		cv::cvtColor(image, imageYUV, cv::COLOR_RGB2YUV);
@@ -144,11 +142,6 @@ int main(int argc, char** argv) {
 
 		if (!w2xc::modelUtility::generateModelFromJSON(modelFileName, models))
 			std::exit(-1);
-
-		// set njob
-		for (auto&& model : models) {
-			model->setNumberOfJobs(cmdNumberOfJobs.getValue());
-		}
 
 		std::cout << "start scaling" << std::endl;
 

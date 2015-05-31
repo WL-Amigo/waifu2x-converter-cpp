@@ -29,7 +29,6 @@ private:
 	std::vector<cv::Mat> weights;
 	std::vector<double> biases;
 	int kernelSize;
-	int nJob;
 
 	Model() {
 	}
@@ -69,8 +68,6 @@ public:
 							"stop." << std::endl;
 			std::exit(-1);
 		}
-
-		nJob = 4;
 	}
 	;
 	~Model() {
@@ -85,7 +82,6 @@ public:
 	int getNOutputPlanes();
 
 	// setter function
-	void setNumberOfJobs(int setNJob);
 
 	// public operation function
 	bool filter(std::vector<cv::Mat> &inputPlanes,

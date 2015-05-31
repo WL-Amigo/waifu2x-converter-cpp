@@ -158,10 +158,6 @@ bool Model::filterWorker(std::vector<cv::Mat> &inputPlanes,
 	return true;
 }
 
-void Model::setNumberOfJobs(int setNJob) {
-	nJob = setNJob;
-}
-
 modelUtility * modelUtility::instance = nullptr;
 
 modelUtility& modelUtility::getInstance(){
