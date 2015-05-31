@@ -18,6 +18,7 @@
 #include "tclap/CmdLine.h"
 
 #include "modelHandler.hpp"
+#include "convertRoutine.hpp"
 
 int main(int argc, char** argv) {
 
@@ -93,30 +94,8 @@ int main(int argc, char** argv) {
 		cv::split(imageYUV, imageSplit);
 		imageSplit[0].copyTo(imageY);
 
-		std::unique_ptr<std::vector<cv::Mat> > inputPlanes = std::unique_ptr<
-				std::vector<cv::Mat> >(new std::vector<cv::Mat>());
-		std::unique_ptr<std::vector<cv::Mat> > outputPlanes = std::unique_ptr<
-				std::vector<cv::Mat> >(new std::vector<cv::Mat>());
+		w2xc::convertWithModels(imageY, imageSplit[0], models);
 
-		inputPlanes->clear();
-		inputPlanes->push_back(imageY);
-
-		std::cout << "start noise reduction (level "
-				<< std::to_string(cmdNRLevel.getValue()) << ")" << std::endl;
-
-		for (int index = 0; index < models.size(); index++) {
-			std::cout << "Iteration #" << (index + 1) << "..." << std::endl;
-			if (!models[index]->filter(*inputPlanes, *outputPlanes)) {
-				std::exit(-1);
-			}
-			if (index != models.size() - 1) {
-				inputPlanes = std::move(outputPlanes);
-				outputPlanes = std::unique_ptr<std::vector<cv::Mat> >(
-						new std::vector<cv::Mat>());
-			}
-		}
-
-		outputPlanes->at(0).copyTo(imageSplit[0]);
 		cv::merge(imageSplit, imageYUV);
 		cv::cvtColor(imageYUV, image, cv::COLOR_YUV2RGB);
 
@@ -172,29 +151,12 @@ int main(int argc, char** argv) {
 			cv::cvtColor(image2xBicubic, imageYUV, cv::COLOR_RGB2YUV);
 			cv::split(imageYUV, imageSplit);
 
-			std::unique_ptr<std::vector<cv::Mat> > inputPlanes =
-					std::unique_ptr<std::vector<cv::Mat> >(
-							new std::vector<cv::Mat>());
-			std::unique_ptr<std::vector<cv::Mat> > outputPlanes =
-					std::unique_ptr<std::vector<cv::Mat> >(
-							new std::vector<cv::Mat>());
+			if(!w2xc::convertWithModels(imageY, imageSplit[0], models)){
+				std::cerr << "w2xc::convertWithModels : something error has occured.\n"
+						"stop." << std::endl;
+				std::exit(1);
+			};
 
-			inputPlanes->clear();
-			inputPlanes->push_back(imageY);
-
-			for (int index = 0; index < models.size(); index++) {
-				std::cout << "Iteration #" << (index + 1) << "..." << std::endl;
-				if (!models[index]->filter(*inputPlanes, *outputPlanes)) {
-					std::exit(-1);
-				}
-				if (index != models.size() - 1) {
-					inputPlanes = std::move(outputPlanes);
-					outputPlanes = std::unique_ptr<std::vector<cv::Mat> >(
-							new std::vector<cv::Mat>());
-				}
-			}
-
-			outputPlanes->at(0).copyTo(imageSplit[0]);
 			cv::merge(imageSplit, imageYUV);
 			cv::cvtColor(imageYUV, image, cv::COLOR_YUV2RGB);
 
