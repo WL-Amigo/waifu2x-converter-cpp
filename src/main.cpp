@@ -89,7 +89,7 @@ int main(int argc, char** argv) {
 		}
 
 		cv::Mat imageYUV;
-		cv::cvtColor(image, imageYUV, COLOR_RGB2YUV);
+		cv::cvtColor(image, imageYUV, cv::COLOR_RGB2YUV);
 		std::vector<cv::Mat> imageSplit;
 		cv::Mat imageY;
 		cv::split(imageYUV, imageSplit);
@@ -120,7 +120,7 @@ int main(int argc, char** argv) {
 
 		outputPlanes->at(0).copyTo(imageSplit[0]);
 		cv::merge(imageSplit, imageYUV);
-		cv::cvtColor(imageYUV, image, COLOR_YUV2RGB);
+		cv::cvtColor(imageYUV, image, cv::COLOR_YUV2RGB);
 
 	} // noise reduction phase : end
 
@@ -164,8 +164,8 @@ int main(int argc, char** argv) {
 			imageSize.width *= 2;
 			imageSize.height *= 2;
 			cv::Mat image2xNearest;
-			cv::resize(image, image2xNearest, imageSize, 0, 0, INTER_NEAREST);
-			cv::cvtColor(image2xNearest, imageYUV, COLOR_RGB2YUV);
+			cv::resize(image, image2xNearest, imageSize, 0, 0, cv::INTER_NEAREST);
+			cv::cvtColor(image2xNearest, imageYUV, cv::COLOR_RGB2YUV);
 			std::vector<cv::Mat> imageSplit;
 			cv::Mat imageY;
 			cv::split(imageYUV, imageSplit);
@@ -175,8 +175,8 @@ int main(int argc, char** argv) {
 			// convert RGB -> YUV and split
 			imageSplit.clear();
 			cv::Mat image2xBicubic;
-			cv::resize(image,image2xBicubic,imageSize,0,0,INTER_CUBIC);
-			cv::cvtColor(image2xBicubic, imageYUV, COLOR_RGB2YUV);
+			cv::resize(image,image2xBicubic,imageSize,0,0,cv::INTER_CUBIC);
+			cv::cvtColor(image2xBicubic, imageYUV, cv::COLOR_RGB2YUV);
 			cv::split(imageYUV, imageSplit);
 
 			std::unique_ptr<std::vector<cv::Mat> > inputPlanes =
@@ -203,7 +203,7 @@ int main(int argc, char** argv) {
 
 			outputPlanes->at(0).copyTo(imageSplit[0]);
 			cv::merge(imageSplit, imageYUV);
-			cv::cvtColor(imageYUV, image, COLOR_YUV2RGB);
+			cv::cvtColor(imageYUV, image, cv::COLOR_YUV2RGB);
 
 		} // 2x scaling : end
 
@@ -215,7 +215,7 @@ int main(int argc, char** argv) {
 			lastImageSize.height =
 					static_cast<int>(static_cast<double>(lastImageSize.height
 							* shrinkRatio));
-			cv::resize(image, image, lastImageSize, 0, 0, INTER_LINEAR);
+			cv::resize(image, image, lastImageSize, 0, 0, cv::INTER_LINEAR);
 		}
 
 	}
