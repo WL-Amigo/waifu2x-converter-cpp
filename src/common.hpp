@@ -1,3 +1,6 @@
+#define VEC_WIDTH 8U
+#define UNROLL 2U
+
 static void
 pack_mat(float *out,
 	 std::vector<cv::Mat> &inputPlanes,

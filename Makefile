@@ -1,10 +1,10 @@
 OPENCV=$(HOME)/usr
 
-CXXFLAGS=-I$(OPENCV)/include -I$(CURDIR)/include -std=c++11 -pthread -Wall -fopenmp -MMD -save-temps -O2 -march=native -g
+CXXFLAGS=-I$(OPENCV)/include -I$(CURDIR)/include -std=c++11 -pthread -Wall -MMD -save-temps -O2 -g
 LDFLAGS=-L$(OPENCV)/lib -pthread -Wl,-rpath,$(OPENCV)/lib -g
-LDLIBS=-lopencv_core -lopencv_imgproc -lopencv_imgcodecs -lopencv_features2d -fopenmp
+LDLIBS=-lopencv_core -lopencv_imgproc -lopencv_imgcodecs -lopencv_features2d
 
-OBJS=src/main.o src/modelHandler.o
+OBJS=src/main.o src/modelHandler.o src/modelHandler_avx.o
 waifu2x-converter-cpp: $(OBJS)
 	g++ $(LDFLAGS) -o $@ $^ $(LDLIBS)
 
@@ -19,6 +19,9 @@ run4: waifu2x-converter-cpp
 
 run1: waifu2x-converter-cpp
 	./waifu2x-converter-cpp -j 1 -i ~/test/a.png --model_dir models
+
+src/modelHandler_avx.o: src/modelHandler_avx.cpp
+	g++ -c $(CXXFLAGS) -mfma -o $@ $<
 
 -include $(OBJS:.o=.d)
 
