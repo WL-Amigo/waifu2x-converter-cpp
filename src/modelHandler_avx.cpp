@@ -9,11 +9,11 @@ float
 get_data(const float *p, int hsz, int wsz, int step, int yi, int xi, int num_plane, int plane)
 {
 	if (border) {
-		yi = std::min(hsz-1, yi);
-		yi = std::max(0, yi);
+		yi = (std::min)(hsz-1, yi);
+		yi = (std::max)(0, yi);
 
-		xi = std::min(wsz-1, xi);
-		xi = std::max(0, xi);
+		xi = (std::min)(wsz-1, xi);
+		xi = (std::max)(0, xi);
 
 		char *p1 = (char*)p;
 		return ((float*)(p1 + yi*step))[xi*num_plane + plane];

@@ -1,0 +1,35 @@
+# -*- mode: makefile -*-
+OPENCV="c:/OpenCV/build"
+OPENCL="C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v6.5"
+
+CXXFLAGS=-I$(OPENCL)/include -I$(OPENCV)/include -I$(CURDIR)/include -O2 /EHsc /wd4819 /DNONMINMAX
+LDFLAGS=/LIBPATH:$(OPENCV)/x64/vc12/staticlib /LIBPATH:$(OPENCL)/lib/x64
+LDLIBS=opencv_core300.lib opencv_imgproc300.lib opencv_imgcodecs300.lib opencv_features2d300.lib OpenCL.lib ippicvmt.lib libjpeg.lib libpng.lib libtiff.lib libjasper.lib opencv_hal300.lib IlmImf.lib zlib.lib libwebp.lib user32.lib
+
+OBJS=src/main.obj src/modelHandler.obj src/modelHandler_avx.obj src/modelHandler_OpenCL.obj
+
+CXX=cl
+
+%.obj: %.cpp
+	$(CXX) -c $(CXXFLAGS) /Fo:$@ $<
+
+waifu2x-converter-cpp.exe: $(OBJS)
+	$(CXX) /Fe:$@ $^ /link $(LDFLAGS)  $(LDLIBS)
+
+run: waifu2x-converter-cpp.exe
+	./waifu2x-converter-cpp -i ./a.png --model_dir models
+
+run8: waifu2x-converter-cpp.exe
+	./waifu2x-converter-cpp -j 8 -i ./a.png --model_dir models
+
+run4: waifu2x-converter-cpp.exe
+	./waifu2x-converter-cpp -j 4 -i ./a.png --model_dir models
+
+run1: waifu2x-converter-cpp.exe
+	./waifu2x-converter-cpp -j 1 -i ./a.png --model_dir models
+
+src/modelHandler_avx.obj: src/modelHandler_avx.cpp
+	$(CXX) -c $(CXXFLAGS) /arch:AVX2 /Fo:$@ $<
+
+clean:
+	del $(OBJS) waifu2x-converter-cpp

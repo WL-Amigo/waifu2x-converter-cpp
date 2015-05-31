@@ -230,8 +230,8 @@ bool Model::filterWorker(std::vector<cv::Mat> &inputPlanes,
 		cv::add(uIntermediatePlane, biases[opIndex], uIntermediatePlane);
 		cv::UMat moreThanZero = cv::UMat(ipSize,CV_32FC1,0.0);
 		cv::UMat lessThanZero = cv::UMat(ipSize,CV_32FC1,0.0);
-		cv::max(uIntermediatePlane, 0.0, moreThanZero);
-		cv::min(uIntermediatePlane, 0.0, lessThanZero);
+		(cv::max)(uIntermediatePlane, 0.0, moreThanZero);
+		(cv::min)(uIntermediatePlane, 0.0, lessThanZero);
 		cv::scaleAdd(lessThanZero, 0.1, moreThanZero, uIntermediatePlane);
 		outputPlane = uIntermediatePlane.getMat(cv::ACCESS_READ);
 		outputPlane.copyTo(outputPlanes[opIndex]);
