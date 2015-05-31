@@ -73,6 +73,8 @@ int main(int argc, char** argv) {
 		std::exit(-1);
 	}
 
+	w2xc::initOpenCL();
+
 	// load image file
 	cv::Mat image = cv::imread(cmdInputFile.getValue(), cv::IMREAD_COLOR);
 	image.convertTo(image, CV_32F, 1.0 / 255.0);

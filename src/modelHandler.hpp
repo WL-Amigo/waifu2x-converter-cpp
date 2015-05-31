@@ -22,6 +22,7 @@
 namespace w2xc {
 
 bool initOpenCL();
+extern bool have_OpenCL;
 
 class Model {
 
