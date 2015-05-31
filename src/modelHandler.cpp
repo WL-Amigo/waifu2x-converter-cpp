@@ -210,7 +210,7 @@ bool Model::filter(float *packed_input,
 		unroll = UNROLL;
 	}
 
-	if (nOutputPlanes % (vec_width*unroll)) {
+	if (nOutputPlanes % (vec_width*unroll) || (size.width&1)) {
 		ret = filter_CV(packed_input, packed_output, size);
 	} else {
 		ret = filter_AVX_OpenCL(packed_input, packed_output, size, have_OpenCL);
