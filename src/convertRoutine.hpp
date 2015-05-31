@@ -24,7 +24,8 @@ namespace w2xc {
  */
 bool convertWithModels(cv::Mat &inputPlanes,
 		cv::Mat &outputPlanes,
-		std::vector<std::unique_ptr<Model> > &models);
+		std::vector<std::unique_ptr<Model> > &models,
+		bool blockSplitting = true);
 
 }
 

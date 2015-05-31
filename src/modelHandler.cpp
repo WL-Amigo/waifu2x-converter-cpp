@@ -206,6 +206,24 @@ int modelUtility::getNumberOfJobs(){
 	return nJob;
 }
 
+bool modelUtility::setBlockSize(cv::Size size){
+	if(size.width < 0 || size.height < 0)return false;
+	blockSplittingSize = size;
+	return true;
+}
+
+bool modelUtility::setBlockSizeExp2Square(int exp){
+	if(exp < 0)return false;
+	int length = std::pow(2, exp);
+	blockSplittingSize = cv::Size(length, length);
+	return true;
+}
+
+cv::Size modelUtility::getBlockSize(){
+	return blockSplittingSize;
+}
+
+
 // for debugging
 
 void Model::printWeightMatrix() {
