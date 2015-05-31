@@ -1,4 +1,6 @@
 # -*- mode: makefile -*-
+all: waifu2x-converter-cpp.exe
+
 OPENCV="c:/OpenCV/build"
 OPENCL="C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v6.5"
 
@@ -13,23 +15,36 @@ CXX=cl
 %.obj: %.cpp
 	$(CXX) -c $(CXXFLAGS) /Fo:$@ $<
 
+src/modelHandler_OpenCL.obj: src/modelHandler_OpenCL.cl.h
+
 waifu2x-converter-cpp.exe: $(OBJS)
 	$(CXX) /Fe:$@ $^ /link $(LDFLAGS)  $(LDLIBS)
 
+INPUT=./a.png
+
 run: waifu2x-converter-cpp.exe
-	./waifu2x-converter-cpp -i ./a.png --model_dir models
+	./waifu2x-converter-cpp -i $(INPUT) --model_dir models
 
 run8: waifu2x-converter-cpp.exe
-	./waifu2x-converter-cpp -j 8 -i ./a.png --model_dir models
+	./waifu2x-converter-cpp -j 8 -i $(INPUT) --model_dir models
 
 run4: waifu2x-converter-cpp.exe
-	./waifu2x-converter-cpp -j 4 -i ./a.png --model_dir models
+	./waifu2x-converter-cpp -j 4 -i $(INPUT) --model_dir models
 
 run1: waifu2x-converter-cpp.exe
-	./waifu2x-converter-cpp -j 1 -i ./a.png --model_dir models
+	./waifu2x-converter-cpp -j 1 -i $(INPUT) --model_dir models
+
+conv.exe: conv.c
+	cl conv.c
 
 src/modelHandler_avx.obj: src/modelHandler_avx.cpp
 	$(CXX) -c $(CXXFLAGS) /arch:AVX2 /Fo:$@ $<
 
-clean:
-	del $(OBJS) waifu2x-converter-cpp
+src/modelHandler_OpenCL.cl.h:src/modelHandler_OpenCL.cl conv.exe
+	conv.exe $< $@
+
+rm.exe: rm.c
+	cl /Fe:$@ $<
+
+clean: rm.exe
+	rm $(OBJS) waifu2x-converter-cpp

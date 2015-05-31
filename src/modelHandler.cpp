@@ -15,15 +15,6 @@
 #include "sec.hpp"
 #include "common.hpp"
 
-extern void filter_AVX_impl(const float *packed_input,
-			    float *packed_output,
-			    int nInputPlanes,
-			    int nOutputPlanes,
-			    std::vector<double> &biases,
-			    std::vector<cv::Mat> &weightMatrices,
-			    cv::Size ipSize,
-			    int nJob);
-
 namespace w2xc {
 
 int Model::getNInputPlanes() {
@@ -84,12 +75,55 @@ Model::filter_CV(const float *packed_input,
 	return true;
 }
 
-//#define COMPARE_RESULT
+#define COMPARE_RESULT
 
-bool Model::filter_AVX(const float *packed_input,
-		       float *packed_output,
-		       cv::Size size)
+bool Model::filter_AVX_OpenCL(const float *packed_input,
+			      float *packed_output,
+			      cv::Size size,
+			      bool OpenCL)
 {
+	int vec_width;
+
+	if (have_OpenCL) {
+		vec_width = GPU_VEC_WIDTH;
+	} else {
+		vec_width = VEC_WIDTH;
+	}
+
+	float *weight_flat = (float*)malloc(sizeof(float)*nInputPlanes*nOutputPlanes*3*3);
+	float *fbiases_flat = (float*)malloc(sizeof(float) * biases.size());
+
+	for (int i=0; i<(int)biases.size(); i++) {
+		fbiases_flat[i] = biases[i];
+	}
+
+	for (int oi=0; oi<nOutputPlanes; oi++) {
+		for (int ii=0; ii<nInputPlanes; ii++) {
+			int mi = oi*nInputPlanes+ii;
+			cv::Mat &wm = weights[mi];
+			const float *src0 = (float*)wm.ptr(0);
+			const float *src1 = (float*)wm.ptr(1);
+			const float *src2 = (float*)wm.ptr(2);
+
+			int oi_0 = oi % vec_width;
+			int oi_1 = (oi / vec_width) * vec_width;
+
+			float *dst = weight_flat + ((ii*nOutputPlanes + oi_1) * 9) + oi_0;
+			dst[0*vec_width] = src0[0];
+			dst[1*vec_width] = src0[1];
+			dst[2*vec_width] = src0[2];
+
+			dst[3*vec_width] = src1[0];
+			dst[4*vec_width] = src1[1];
+			dst[5*vec_width] = src1[2];
+
+			dst[6*vec_width] = src2[0];
+			dst[7*vec_width] = src2[1];
+			dst[8*vec_width] = src2[2];
+		}
+	}
+
+
 #ifdef COMPARE_RESULT
 	float *packed_output_cv = (float*)malloc(sizeof(float) * size.width * size.height * nOutputPlanes);
 
@@ -100,13 +134,20 @@ bool Model::filter_AVX(const float *packed_input,
 	/* 3x3 = 9 fma */
 	double ops = size.width * size.height * 9.0 * 2.0 * nOutputPlanes * nInputPlanes;
 	std::vector<cv::Mat> output2;
-	filter_AVX_impl(packed_input, packed_output,
-			nInputPlanes, nOutputPlanes, biases, weights, size, nJob);
+	if (OpenCL) {
+		filter_OpenCL_impl(packed_input, packed_output,
+				   nInputPlanes, nOutputPlanes, fbiases_flat, weight_flat, size, nJob);
+	} else {
+		filter_AVX_impl(packed_input, packed_output,
+				nInputPlanes, nOutputPlanes, fbiases_flat, weight_flat, size, nJob);
+	}
+
 	double t2 = getsec();
 
 	printf("%d %d %f %f\n", nInputPlanes, nOutputPlanes, t1-t0, t2-t1);
 	printf("ver2 : %f [Gflops]\n", (ops/(1000.0*1000.0*1000.0)) / (t2-t1));
 	printf("orig : %f [Gflops]\n", (ops/(1000.0*1000.0*1000.0)) / (t1-t0));
+	int error_count = 0;
 
 	for (int i=0; i<size.width * size.height * nOutputPlanes; i++) {
 		float v0 = packed_output_cv[i];
@@ -116,38 +157,63 @@ bool Model::filter_AVX(const float *packed_input,
 		float r0 = d/fabs(v0);
 		float r1 = d/fabs(v1);
 
-		float r = std::max(r0, r1);
+		float r = (std::max)(r0, r1);
 
 		if (r > 0.1f && d > 0.0000001f) {
-			printf("d=%.20f %.20f %.20f @ \n",r, v0, v1, i);
-			exit(1);
+			printf("d=%.20f %.20f %.20f @ %d \n",r, v0, v1, i);
+			error_count++;
+
+			if (error_count >= 4) {
+				exit(1);
+			}
 		}
 
 	}
+
+	if (error_count != 0) {
+		exit(1);
+	}
 #else
-	//double t1 = getsec();
-	filter_AVX_impl(packed_input, packed_output,
-			nInputPlanes, nOutputPlanes, biases, weights, size, nJob);
-	//double t2 = getsec();
-	//double ops = size.width * size.height * 9.0 * 2.0 * nOutputPlanes * nInputPlanes;
-	//printf("ver2 : %f [Gflops], %f[msec]\n", (ops/(1000.0*1000.0*1000.0)) / (t2-t1), (t2-t1)*1000);
+	double t1 = getsec();
+	if (OpenCL) {
+		filter_OpenCL_impl(packed_input, packed_output,
+				   nInputPlanes, nOutputPlanes, fbiases_flat, weight_flat, size, nJob);
+	} else {
+		filter_AVX_impl(packed_input, packed_output,
+				nInputPlanes, nOutputPlanes, fbiases_flat, weight_flat, size, nJob);
+	}
+	double t2 = getsec();
+	double ops = size.width * size.height * 9.0 * 2.0 * nOutputPlanes * nInputPlanes;
+	printf("ver2 : %f [Gflops], %f[msec]\n", (ops/(1000.0*1000.0*1000.0)) / (t2-t1), (t2-t1)*1000);
 #endif
+
+	free(fbiases_flat);
+	free(weight_flat);
 
 	return true;
 
 }
-
 
 bool Model::filter(float *packed_input,
 		   float *packed_output,
 		   cv::Size size)
 {
 	bool ret;
+	int vec_width;
+	int unroll;
 
-	if (nOutputPlanes % (VEC_WIDTH*UNROLL)) {
+	if (have_OpenCL) {
+		vec_width = GPU_VEC_WIDTH;
+		unroll = 1;
+	} else {
+		vec_width = VEC_WIDTH;
+		unroll = UNROLL;
+	}
+
+	if (nOutputPlanes % (vec_width*unroll)) {
 		ret = filter_CV(packed_input, packed_output, size);
 	} else {
-		ret = filter_AVX(packed_input, packed_output, size);
+		ret = filter_AVX_OpenCL(packed_input, packed_output, size, have_OpenCL);
 	}
 
 	return ret;

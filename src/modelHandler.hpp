@@ -24,6 +24,24 @@ namespace w2xc {
 bool initOpenCL();
 extern bool have_OpenCL;
 
+extern void filter_AVX_impl(const float *packed_input,
+			    float *packed_output,
+			    int nInputPlanes,
+			    int nOutputPlanes,
+                            const float *biases,
+                            const float *weight,
+			    cv::Size ipSize,
+			    int nJob);
+
+extern void filter_OpenCL_impl(const float *packed_input,
+                               float *packed_output,
+                               int nInputPlanes,
+                               int nOutputPlanes,
+                               const float *biases,
+                               const float *weight,
+                               cv::Size ipSize,
+                               int nJob);
+
 class Model {
 
 private:
@@ -49,9 +67,10 @@ private:
 		       float *packed_output,
 		       cv::Size size);
 
-	bool filter_AVX(const float *packed_input,
-			float *packed_output,
-			cv::Size size);
+	bool filter_AVX_OpenCL(const float *packed_input,
+                               float *packed_output,
+                               cv::Size size,
+                               bool OpenCL);
 
 public:
 	// ctor and dtor

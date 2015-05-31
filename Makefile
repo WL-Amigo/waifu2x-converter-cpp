@@ -1,3 +1,5 @@
+all: waifu2x-converter-cpp
+
 OPENCV=$(HOME)/usr
 
 CXXFLAGS=-I$(OPENCV)/include -I$(CURDIR)/include -std=c++11 -pthread -Wall -MMD -save-temps -O2 -g

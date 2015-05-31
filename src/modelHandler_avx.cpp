@@ -28,12 +28,12 @@ filter_1elem(const float *packed_input,
 	     int nInputPlanes,
 	     float *packed_output,
 	     int nOutputPlanes,
-	     float *biases,
+	     const float *biases,
 	     unsigned long hsz,
 	     unsigned long wsz,
 	     unsigned long yi,
 	     unsigned long xi,
-	     float *weight,
+	     const float *weight,
 	     float *intermediate)
 {
 	const float *in = packed_input;
@@ -98,7 +98,7 @@ filter_1elem(const float *packed_input,
 		__m256 i21 = _mm256_set1_ps(get_data<border>(in, hsz, wsz, in_step, yi+1, xi  , nInputPlanes, ipIndex));
 		__m256 i22 = _mm256_set1_ps(get_data<border>(in, hsz, wsz, in_step, yi+1, xi+1, nInputPlanes, ipIndex));
 
-		float *w = weight + (ipIndex * nOutputPlanes) * 9;
+		const float *w = weight + (ipIndex * nOutputPlanes) * 9;
 
 		for (unsigned int opIndex = 0;
 		     opIndex < (unsigned int)nOutputPlanes;
@@ -154,13 +154,14 @@ filter_1elem(const float *packed_input,
 
 }
 
+namespace w2xc {
 void
 filter_AVX_impl(const float *packed_input,
 		float *packed_output,
 		int nInputPlanes,
 		int nOutputPlanes,
-		std::vector<double> &biases,
-		std::vector<cv::Mat> &weightMatrices,
+		const float *fbiases,
+		const float *weight,
 		cv::Size ipSize,
 		int nJob)
 {
@@ -171,38 +172,6 @@ filter_AVX_impl(const float *packed_input,
 	// input : inputPlanes
 	// kernel : weightMatrices
 
-	float *weight = (float*)malloc(sizeof(float)*nInputPlanes*nOutputPlanes*3*3);
-	float *fbiases = (float*)malloc(sizeof(float) * biases.size());
-
-	for (int i=0; i<(int)biases.size(); i++) {
-		fbiases[i] = biases[i];
-	}
-
-	for (int oi=0; oi<nOutputPlanes; oi++) {
-		for (int ii=0; ii<nInputPlanes; ii++) {
-			int mi = oi*nInputPlanes+ii;
-			cv::Mat &wm = weightMatrices[mi];
-			const float *src0 = (float*)wm.ptr(0);
-			const float *src1 = (float*)wm.ptr(1);
-			const float *src2 = (float*)wm.ptr(2);
-
-			int oi_0 = oi % VEC_WIDTH;
-			int oi_1 = (oi / VEC_WIDTH) * VEC_WIDTH;
-
-			float *dst = weight + ((ii*nOutputPlanes + oi_1) * 9) + oi_0;
-			dst[0*VEC_WIDTH] = src0[0];
-			dst[1*VEC_WIDTH] = src0[1];
-			dst[2*VEC_WIDTH] = src0[2];
-
-			dst[3*VEC_WIDTH] = src1[0];
-			dst[4*VEC_WIDTH] = src1[1];
-			dst[5*VEC_WIDTH] = src1[2];
-
-			dst[6*VEC_WIDTH] = src2[0];
-			dst[7*VEC_WIDTH] = src2[1];
-			dst[8*VEC_WIDTH] = src2[2];
-		}
-	}
 
 #if 1
 	int per_job = hsz / nJob;
@@ -268,7 +237,5 @@ filter_AVX_impl(const float *packed_input,
 	}
 
 #endif
-
-	free(fbiases);
-	free(weight);
+}
 }

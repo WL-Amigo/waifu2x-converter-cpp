@@ -1,5 +1,6 @@
 #define VEC_WIDTH 8U
 #define UNROLL 2U
+#define GPU_VEC_WIDTH 16
 
 static void
 pack_mat(float *out,
