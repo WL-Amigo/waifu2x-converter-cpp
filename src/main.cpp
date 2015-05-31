@@ -19,8 +19,6 @@
 
 #include "modelHandler.hpp"
 
-using namespace cv;
-
 int main(int argc, char** argv) {
 
 	// definition of command line arguments
