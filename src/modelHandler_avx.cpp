@@ -133,6 +133,18 @@ filter_1elem(const float *packed_input,
 			v00 = _mm256_fmadd_ps(_mm256_loadu_ps(&w[8*VEC_WIDTH]), i22, v00);
 			v01 = _mm256_fmadd_ps(_mm256_loadu_ps(&w[8*VEC_WIDTH]), i23, v01);
 
+			if (ipIndex == 0) {
+				_mm256_storeu_ps(&intermediate0[opIndex+0], v00);
+				_mm256_storeu_ps(&intermediate1[opIndex+0], v01);
+			} else {					\
+				__m256 prev00 = _mm256_loadu_ps(&intermediate0[opIndex+0]);
+				__m256 prev01 = _mm256_loadu_ps(&intermediate1[opIndex+0]);
+
+				_mm256_storeu_ps(&intermediate0[opIndex+0], _mm256_add_ps(prev00,v00));
+				_mm256_storeu_ps(&intermediate1[opIndex+0], _mm256_add_ps(prev01,v01));
+			}
+
+
 			w += 9 * VEC_WIDTH;
 
 			v10 = _mm256_setzero_ps();
@@ -171,18 +183,12 @@ filter_1elem(const float *packed_input,
 
 
 			if (ipIndex == 0) {
-				_mm256_storeu_ps(&intermediate0[opIndex+0], v00);
-				_mm256_storeu_ps(&intermediate1[opIndex+0], v01);
 				_mm256_storeu_ps(&intermediate0[opIndex+8], v10);
 				_mm256_storeu_ps(&intermediate1[opIndex+8], v11);
 			} else {					\
-				__m256 prev00 = _mm256_loadu_ps(&intermediate0[opIndex+0]);
-				__m256 prev01 = _mm256_loadu_ps(&intermediate1[opIndex+0]);
 				__m256 prev10 = _mm256_loadu_ps(&intermediate0[opIndex+8]);
 				__m256 prev11 = _mm256_loadu_ps(&intermediate1[opIndex+8]);
 
-				_mm256_storeu_ps(&intermediate0[opIndex+0], _mm256_add_ps(prev00,v00));
-				_mm256_storeu_ps(&intermediate1[opIndex+0], _mm256_add_ps(prev01,v01));
 				_mm256_storeu_ps(&intermediate0[opIndex+8], _mm256_add_ps(prev10,v10));
 				_mm256_storeu_ps(&intermediate1[opIndex+8], _mm256_add_ps(prev11,v11));
 			}
