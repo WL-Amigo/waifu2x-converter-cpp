@@ -22,71 +22,71 @@ bool have_OpenCL = false;
 bool
 initOpenCL()
 {
-        return false;
-	std::vector<cl::Platform> pls;
-	cl::Platform::get(&pls);
-
-	if (pls.empty()) {
 		return false;
-	}
+		std::vector<cl::Platform> pls;
+		cl::Platform::get(&pls);
 
-	for (int i=0; i<pls.size(); i++) {
-		std::string name = pls[i].getInfo<CL_PLATFORM_NAME>();
-
-		if (strncmp(name.c_str(), "Intel", 5) == 0) {
-			continue;
+		if (pls.empty()) {
+				return false;
 		}
 
-		cl_context_properties properties[] =
-			{ CL_CONTEXT_PLATFORM, (cl_context_properties)(pls[i])(), 0};
+		for (int i=0; i<pls.size(); i++) {
+				std::string name = pls[i].getInfo<CL_PLATFORM_NAME>();
 
-		cl::Context cand_context(CL_DEVICE_TYPE_GPU, properties);
-		std::vector<cl::Device> devices = cand_context.getInfo<CL_CONTEXT_DEVICES>();
+				if (strncmp(name.c_str(), "Intel", 5) == 0) {
+						continue;
+				}
 
-		if (!devices.empty()) {
-			platform = pls[i];
-			dev = devices[0];
-			context = cand_context;
+				cl_context_properties properties[] =
+						{ CL_CONTEXT_PLATFORM, (cl_context_properties)(pls[i])(), 0};
 
-			have_OpenCL = true;
-			break;
+				cl::Context cand_context(CL_DEVICE_TYPE_GPU, properties);
+				std::vector<cl::Device> devices = cand_context.getInfo<CL_CONTEXT_DEVICES>();
+
+				if (!devices.empty()) {
+						platform = pls[i];
+						dev = devices[0];
+						context = cand_context;
+
+						have_OpenCL = true;
+						break;
+				}
 		}
-	}
 
-	if (!have_OpenCL) {
-		return false;
-	}
+		if (!have_OpenCL) {
+				return false;
+		}
 
-        cl::Program::Sources src(1, std::make_pair(prog,strlen(prog)));
-        cl::Program prog = cl::Program(context, src);
+		cl::Program::Sources src(1, std::make_pair(prog,strlen(prog)));
+		cl::Program prog = cl::Program(context, src);
 
-        std::vector<cl::Device> devs;
-        devs.push_back(dev);
+		std::vector<cl::Device> devs;
+		devs.push_back(dev);
 
-        cl_int err = prog.build(devs, "-DVEC_WIDTH=" S(GPU_VEC_WIDTH));
-        if (err != CL_SUCCESS) {
-            std::string log = prog.getBuildInfo<CL_PROGRAM_BUILD_LOG>(devs[0]);
-            puts(log.c_str());
-            have_OpenCL = false;
-            return false;
-        }
+		cl_int err = prog.build(devs, "-DVEC_WIDTH=" S(GPU_VEC_WIDTH));
+		if (err != CL_SUCCESS) {
+				std::string log = prog.getBuildInfo<CL_PROGRAM_BUILD_LOG>(devs[0]);
+				puts(log.c_str());
+				have_OpenCL = false;
+				return false;
+		}
 
-        ker = cl::Kernel(prog, "filter", &err);
-        if (err != CL_SUCCESS) {
-            have_OpenCL = false;
-            return false;
-        }
+		ker = cl::Kernel(prog, "filter", &err);
+		if (err != CL_SUCCESS) {
+				have_OpenCL = false;
+				return false;
+		}
 
-        queue = cl::CommandQueue(context, dev, 0, &err);
-        if (err != CL_SUCCESS) {
-            have_OpenCL = false;
-            return false;
-        }
+		queue = cl::CommandQueue(context, dev, 0, &err);
+		if (err != CL_SUCCESS) {
+				have_OpenCL = false;
+				return false;
+		}
 
-        printf("use GPU: %s\n",
-               dev.getInfo<CL_DEVICE_NAME>().c_str());
+		printf("use GPU: %s\n",
+			   dev.getInfo<CL_DEVICE_NAME>().c_str());
 
-        return true;
+		return true;
 
 }
 

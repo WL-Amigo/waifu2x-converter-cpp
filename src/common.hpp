@@ -1,5 +1,5 @@
 #define VEC_WIDTH 8U
-#define UNROLL 2U
+#define UNROLL 1U
 #define GPU_VEC_WIDTH 16
 
 static void
