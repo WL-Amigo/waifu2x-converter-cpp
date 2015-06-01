@@ -73,6 +73,7 @@ int main(int argc, char** argv) {
 	// load image file
 	cv::Mat image = cv::imread(cmdInputFile.getValue(), cv::IMREAD_COLOR);
 	image.convertTo(image, CV_32F, 1.0 / 255.0);
+	cv::cvtColor(image, image, cv::COLOR_RGB2YUV);
 
 	// set number of jobs for processing models
 	w2xc::modelUtility::getInstance().setNumberOfJobs(cmdNumberOfJobs.getValue());
@@ -87,18 +88,15 @@ int main(int argc, char** argv) {
 		if (!w2xc::modelUtility::generateModelFromJSON(modelFileName, models))
 			std::exit(-1);
 
-		cv::Mat imageYUV;
-		cv::cvtColor(image, imageYUV, cv::COLOR_RGB2YUV);
 		std::vector<cv::Mat> imageSplit;
 		cv::Mat imageY;
-		cv::split(imageYUV, imageSplit);
+		cv::split(image, imageSplit);
 		imageSplit[0].copyTo(imageY);
 
 		w2xc::convertWithModels(imageY, imageSplit[0], models);
 
-		cv::merge(imageSplit, imageYUV);
-		cv::cvtColor(imageYUV, image, cv::COLOR_YUV2RGB);
-
+		cv::merge(imageSplit, image);
+		
 	} // noise reduction phase : end
 
 	// ===== scaling phase =====
@@ -131,25 +129,21 @@ int main(int argc, char** argv) {
 			std::cout << "#" << std::to_string(nIteration + 1)
 					<< " 2x scaling..." << std::endl;
 
-			cv::Mat imageYUV;
 			cv::Size imageSize = image.size();
 			imageSize.width *= 2;
 			imageSize.height *= 2;
 			cv::Mat image2xNearest;
 			cv::resize(image, image2xNearest, imageSize, 0, 0, cv::INTER_NEAREST);
-			cv::cvtColor(image2xNearest, imageYUV, cv::COLOR_RGB2YUV);
 			std::vector<cv::Mat> imageSplit;
 			cv::Mat imageY;
-			cv::split(imageYUV, imageSplit);
+			cv::split(image2xNearest, imageSplit);
 			imageSplit[0].copyTo(imageY);
 
-			// generate bicubic scaled image and
-			// convert RGB -> YUV and split
+			// generate bicubic scaled image and split
 			imageSplit.clear();
 			cv::Mat image2xBicubic;
 			cv::resize(image,image2xBicubic,imageSize,0,0,cv::INTER_CUBIC);
-			cv::cvtColor(image2xBicubic, imageYUV, cv::COLOR_RGB2YUV);
-			cv::split(imageYUV, imageSplit);
+			cv::split(image2xBicubic, imageSplit);
 
 			if(!w2xc::convertWithModels(imageY, imageSplit[0], models)){
 				std::cerr << "w2xc::convertWithModels : something error has occured.\n"
@@ -157,8 +151,7 @@ int main(int argc, char** argv) {
 				std::exit(1);
 			};
 
-			cv::merge(imageSplit, imageYUV);
-			cv::cvtColor(imageYUV, image, cv::COLOR_YUV2RGB);
+			cv::merge(imageSplit, image);
 
 		} // 2x scaling : end
 
@@ -175,6 +168,7 @@ int main(int argc, char** argv) {
 
 	}
 
+	cv::cvtColor(image, image, cv::COLOR_YUV2RGB);
 	image.convertTo(image, CV_8U, 255.0);
 	std::string outputFileName = cmdOutputFile.getValue();
 	if (outputFileName == "(auto)") {
@@ -199,4 +193,3 @@ int main(int argc, char** argv) {
 
 	return 0;
 }
-
