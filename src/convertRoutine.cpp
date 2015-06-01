@@ -24,7 +24,7 @@ bool convertWithModels(cv::Mat &inputPlane, cv::Mat &outputPlane,
 	cv::Size blockSize = modelUtility::getInstance().getBlockSize();
 	bool requireSplitting = (inputPlane.size().width * inputPlane.size().height)
 			> blockSize.width * blockSize.height * 3 / 2;
-//	bool requireSplitting = false;
+	requireSplitting = true;
 	if (blockSplitting && requireSplitting) {
 		return convertWithModelsBlockSplit(inputPlane, outputPlane, models);
 	} else {
@@ -98,10 +98,10 @@ static bool convertWithModelsBlockSplit(cv::Mat &inputPlane,
 
 	// calcurate split rows/cols
 	unsigned int splitColumns = static_cast<unsigned int>(std::ceil(
-			static_cast<float>(tempMat.size().width)
+			static_cast<float>(outputSize.width)
 					/ static_cast<float>(blockSize.width - 2 * nModel)));
 	unsigned int splitRows = static_cast<unsigned int>(std::ceil(
-			static_cast<float>(tempMat.size().height)
+			static_cast<float>(outputSize.height)
 					/ static_cast<float>(blockSize.height - 2 * nModel)));
 
 	// start to convert
