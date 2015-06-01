@@ -24,7 +24,7 @@ bool convertWithModels(cv::Mat &inputPlane, cv::Mat &outputPlane,
 	cv::Size blockSize = modelUtility::getInstance().getBlockSize();
 	bool requireSplitting = (inputPlane.size().width * inputPlane.size().height)
 			> blockSize.width * blockSize.height * 3 / 2;
-	requireSplitting = true;
+//	requireSplitting = true;
 	if (blockSplitting && requireSplitting) {
 		return convertWithModelsBlockSplit(inputPlane, outputPlane, models);
 	} else {
