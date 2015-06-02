@@ -76,7 +76,7 @@ Model::filter_CV(const float *packed_input,
 	return true;
 }
 
-//#define COMPARE_RESULT
+#define COMPARE_RESULT
 #define DUMP_FLOPS
 
 bool Model::filter_AVX_OpenCL(const float *packed_input,
@@ -99,7 +99,7 @@ bool Model::filter_AVX_OpenCL(const float *packed_input,
 #error "fix cpuid"
 #endif
 
-	if (have_OpenCL) {
+	if (OpenCL) {
 		vec_width = GPU_VEC_WIDTH;
 	} else {
 		vec_width = VEC_WIDTH;
@@ -263,22 +263,17 @@ bool Model::filter(float *packed_input,
 		   cv::Size size)
 {
 	bool ret;
-	int vec_width;
-	int unroll;
-
-	if (have_OpenCL) {
-		vec_width = GPU_VEC_WIDTH;
-		unroll = 1;
-	} else {
-		vec_width = VEC_WIDTH;
-		unroll = UNROLL;
-	}
 
 	bool avx_available = true;
+	bool gpu_available = have_OpenCL;
 
-	if (nOutputPlanes % (vec_width*unroll)) {
+	if (nOutputPlanes % GPU_VEC_WIDTH) {
+		gpu_available = false;
+	}
+
+	if (nOutputPlanes % (VEC_WIDTH*UNROLL)) {
 		if (nOutputPlanes == 1) {
-			if (nInputPlanes % vec_width) {
+			if (nInputPlanes % VEC_WIDTH) {
 				avx_available = false;
 			}
 		} else {
@@ -290,8 +285,10 @@ bool Model::filter(float *packed_input,
 		avx_available = false;
 	}
 
-	if (avx_available) {
-		ret = filter_AVX_OpenCL(packed_input, packed_output, size, have_OpenCL);
+	if (gpu_available) {
+		ret = filter_AVX_OpenCL(packed_input, packed_output, size, true);
+	} else if (avx_available) {
+		ret = filter_AVX_OpenCL(packed_input, packed_output, size, false);
 	} else {
 		ret = filter_CV(packed_input, packed_output, size);
 	}
