@@ -33,6 +33,15 @@ extern void filter_AVX_impl(const float *packed_input,
 			    cv::Size ipSize,
 			    int nJob);
 
+extern void filter_FMA_impl(const float *packed_input,
+			    float *packed_output,
+			    int nInputPlanes,
+			    int nOutputPlanes,
+                            const float *biases,
+                            const float *weight,
+			    cv::Size ipSize,
+			    int nJob);
+
 extern void filter_OpenCL_impl(const float *packed_input,
                                float *packed_output,
                                int nInputPlanes,

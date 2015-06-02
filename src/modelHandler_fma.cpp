@@ -5,11 +5,13 @@
 #include "common.hpp"
 #include "sec.hpp"
 
+#define HAVE_FMA
+
 #include "modelHandler_avx_func.hpp"
 
 namespace w2xc {
 void
-filter_AVX_impl(const float *packed_input,
+filter_FMA_impl(const float *packed_input,
 		float *packed_output,
 		int nInputPlanes,
 		int nOutputPlanes,
@@ -18,14 +20,14 @@ filter_AVX_impl(const float *packed_input,
 		cv::Size ipSize,
 		int nJob)
 {
-	filter_AVX_impl0<false>(packed_input,
-				packed_output,
-				nInputPlanes,
-				nOutputPlanes,
-				fbiases,
-				weight,
-				ipSize,
-				nJob);
+	filter_AVX_impl0<true>(packed_input,
+			       packed_output,
+			       nInputPlanes,
+			       nOutputPlanes,
+			       fbiases,
+			       weight,
+			       ipSize,
+			       nJob);
 }
 
 

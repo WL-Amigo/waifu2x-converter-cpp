@@ -1,8 +1,17 @@
+#ifndef COMMON_HPP
+#define COMMON_HPP
+
+#ifdef __GNUC__
+#define UNUSED __attribute__((unused))
+#else
+#define UNUSED
+#endif
+
 #define VEC_WIDTH 8U
 #define UNROLL 2U
 #define GPU_VEC_WIDTH 16
 
-static void
+static void UNUSED
 pack_mat(float *out,
 	 std::vector<cv::Mat> &inputPlanes,
 	 int w, int h, int nplane)
@@ -20,7 +29,7 @@ pack_mat(float *out,
 	}
 }
 
-static void
+static void UNUSED
 unpack_mat(std::vector<cv::Mat> &outputPlanes,
 	   const float *in,
 	   int w, int h, int nplane)
@@ -38,7 +47,7 @@ unpack_mat(std::vector<cv::Mat> &outputPlanes,
 	}
 }
 
-static void
+static void UNUSED
 unpack_mat1(cv::Mat &outputMat,
             const float *in,
             int w, int h)
@@ -54,3 +63,5 @@ unpack_mat1(cv::Mat &outputMat,
     }
 }
 
+
+#endif

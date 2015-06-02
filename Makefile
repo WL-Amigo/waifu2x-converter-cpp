@@ -7,7 +7,7 @@ CXXFLAGS=-I$(OPENCV)/include -I$(CURDIR)/include -std=c++11 -pthread -Wall -MMD 
 LDFLAGS=-L$(OPENCV)/lib -pthread -Wl,-rpath,$(OPENCV)/lib $(DEBUG)
 LDLIBS=-lopencv_core -lopencv_imgproc -lopencv_imgcodecs -lopencv_features2d -lOpenCL -fopenmp
 
-OBJS=src/main.o src/modelHandler.o src/modelHandler_avx.o src/modelHandler_OpenCL.o
+OBJS=src/main.o src/modelHandler.o src/modelHandler_avx.o src/modelHandler_fma.o src/modelHandler_OpenCL.o
 
 src/modelHandler_OpenCL.cpp: src/modelHandler_OpenCL.cl.h
 
@@ -33,6 +33,9 @@ run1: waifu2x-converter-cpp
 	perf stat ./waifu2x-converter-cpp -m scale -j 1 -i $(INPUT) --model_dir models
 
 src/modelHandler_avx.o: src/modelHandler_avx.cpp
+	g++ -c $(CXXFLAGS) -mavx -o $@ $<
+
+src/modelHandler_fma.o: src/modelHandler_fma.cpp
 	g++ -c $(CXXFLAGS) -mfma -o $@ $<
 
 -include $(OBJS:.o=.d)

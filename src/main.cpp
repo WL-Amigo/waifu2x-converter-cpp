@@ -148,7 +148,6 @@ int main(int argc, char** argv) {
 	// ===== scaling phase =====
 
 	if (cmdMode.getValue() == "scale" || cmdMode.getValue() == "noise_scale") {
-
 		// calculate iteration times of 2x scaling and shrink ratio which will use at last
 		int iterTimesTwiceScaling = static_cast<int>(std::ceil(
 				std::log2(cmdScaleRatio.getValue())));
@@ -158,7 +157,6 @@ int main(int argc, char** argv) {
 			shrinkRatio = cmdScaleRatio.getValue()
 					/ std::pow(2.0, static_cast<double>(iterTimesTwiceScaling));
 		}
-
 		std::string modelFileName(cmdModelPath.getValue());
 		modelFileName = modelFileName + "/scale2.0x_model.json";
 		std::vector<std::unique_ptr<w2xc::Model> > models;
@@ -234,7 +232,6 @@ int main(int argc, char** argv) {
 				free(packed_input);
 				packed_input = packed_output;
 			}
-
 			unpack_mat1(imageSplit[0], packed_input, filterWidth, filterHeight);
 			free(packed_input);
 			cv::merge(imageSplit, imageYUV);
@@ -252,7 +249,6 @@ int main(int argc, char** argv) {
 							* shrinkRatio));
 			cv::resize(image, image, lastImageSize, 0, 0, INTER_LINEAR);
 		}
-
 	}
 
 	image.convertTo(image, CV_8U, 255.0);

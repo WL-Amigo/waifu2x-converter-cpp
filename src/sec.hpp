@@ -1,7 +1,9 @@
+#include "common.hpp"
+
 #ifdef _WIN32
 #include <windows.h>
 
-static double
+static double UNUSED
 getsec(void)
 {
     LARGE_INTEGER c;
@@ -18,7 +20,7 @@ getsec(void)
 #include <time.h>
 #include <unistd.h>
 
-static double
+static double UNUSED
 getsec(void)
 {
     struct timespec ts;

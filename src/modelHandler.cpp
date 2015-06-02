@@ -12,6 +12,7 @@
 // #include <iostream> in modelHandler.hpp
 #include <fstream>
 #include <thread>
+#include <cpuid.h>
 #include "sec.hpp"
 #include "common.hpp"
 
@@ -84,6 +85,19 @@ bool Model::filter_AVX_OpenCL(const float *packed_input,
 			      bool OpenCL)
 {
 	int vec_width;
+
+#ifdef __GNUC__
+	unsigned int eax=0, ebx=0, ecx=0, edx=0;
+	__get_cpuid(1, &eax, &ebx, &ecx, &edx);
+
+	bool have_fma = false;
+
+	if (ecx & (1<<12)) {
+		have_fma = true;
+	}
+#else
+#error "fix cpuid"
+#endif
 
 	if (have_OpenCL) {
 		vec_width = GPU_VEC_WIDTH;
@@ -169,8 +183,13 @@ bool Model::filter_AVX_OpenCL(const float *packed_input,
 			filter_OpenCL_impl(packed_input, packed_output,
 					   nInputPlanes, nOutputPlanes, fbiases_flat, weight_flat, size, nJob);
 		} else {
-			filter_AVX_impl(packed_input, packed_output,
-					nInputPlanes, nOutputPlanes, fbiases_flat, weight_flat, size, nJob);
+			if (have_fma) {
+				filter_FMA_impl(packed_input, packed_output,
+						nInputPlanes, nOutputPlanes, fbiases_flat, weight_flat, size, nJob);
+			} else {
+				filter_AVX_impl(packed_input, packed_output,
+						nInputPlanes, nOutputPlanes, fbiases_flat, weight_flat, size, nJob);
+			}
 		}
 
 		double t2 = getsec();
@@ -216,8 +235,13 @@ bool Model::filter_AVX_OpenCL(const float *packed_input,
 			filter_OpenCL_impl(packed_input, packed_output,
 					   nInputPlanes, nOutputPlanes, fbiases_flat, weight_flat, size, nJob);
 		} else {
-			filter_AVX_impl(packed_input, packed_output,
-					nInputPlanes, nOutputPlanes, fbiases_flat, weight_flat, size, nJob);
+			if (have_fma) {
+				filter_FMA_impl(packed_input, packed_output,
+						nInputPlanes, nOutputPlanes, fbiases_flat, weight_flat, size, nJob);
+			} else {
+				filter_AVX_impl(packed_input, packed_output,
+						nInputPlanes, nOutputPlanes, fbiases_flat, weight_flat, size, nJob);
+			}
 		}
 		double t2 = getsec();
 		sum += t2 - t1;
