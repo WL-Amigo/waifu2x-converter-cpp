@@ -104,18 +104,21 @@ bool Model::filter_AVX_OpenCL(const float *packed_input,
 			const float *src1 = (float*)wm.ptr(1);
 			const float *src2 = (float*)wm.ptr(2);
 
-			float *dst = weight_flat + 9 * ii;
-			dst[0] = src0[0];
-			dst[1] = src0[1];
-			dst[2] = src0[2];
+			int ii_0 = ii % vec_width;
+			int ii_1 = (ii / vec_width) * vec_width;
 
-			dst[3] = src1[0];
-			dst[4] = src1[1];
-			dst[5] = src1[2];
+			float *dst = weight_flat + ii_1 * 9  + ii_0;
+			dst[0 * vec_width] = src0[0];
+			dst[1 * vec_width] = src0[1];
+			dst[2 * vec_width] = src0[2];
 
-			dst[6] = src2[0];
-			dst[7] = src2[1];
-			dst[8] = src2[2];
+			dst[3 * vec_width] = src1[0];
+			dst[4 * vec_width] = src1[1];
+			dst[5 * vec_width] = src1[2];
+
+			dst[6 * vec_width] = src2[0];
+			dst[7 * vec_width] = src2[1];
+			dst[8 * vec_width] = src2[2];
 		}
 	} else {
 		for (int oi=0; oi<nOutputPlanes; oi++) {
@@ -249,7 +252,11 @@ bool Model::filter(float *packed_input,
 	bool avx_available = true;
 
 	if (nOutputPlanes % (vec_width*unroll)) {
-		if (nOutputPlanes != 1) {
+		if (nOutputPlanes == 1) {
+			if (nInputPlanes % vec_width) {
+				avx_available = false;
+			}
+		} else {
 			avx_available = false;
 		}
 	}

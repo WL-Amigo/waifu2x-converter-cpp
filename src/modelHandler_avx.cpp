@@ -261,25 +261,26 @@ filter_1elem_output1(const float *packed_input,
 	in11 += xi * nInputPlanes;
 	in21 += xi * nInputPlanes;
 
-	float sum = 0;
+	__m256 sum = _mm256_setzero_ps();
+	const float *w = weight;
 
-	for (int ipIndex = 0; ipIndex < nInputPlanes; ipIndex++) {
-		float i00, i01, i02;
-		float i10, i11, i12;
-		float i20, i21, i22;
+	for (int ipIndex = 0; ipIndex < nInputPlanes; ipIndex+=VEC_WIDTH) {
+		__m256 i00, i01, i02;
+		__m256 i10, i11, i12;
+		__m256 i20, i21, i22;
 
-		i01 = in01[0];
-		i11 = in11[0];
-		i21 = in21[0];
+		i01 = _mm256_loadu_ps(&in01[0]);
+		i11 = _mm256_loadu_ps(&in11[0]);
+		i21 = _mm256_loadu_ps(&in21[0]);
 
 		if (border && xi == 0) {
 			i00 = i01;
 			i10 = i11;
 			i20 = i21;
 		} else {
-			i00 = in01[-nInputPlanes];
-			i10 = in11[-nInputPlanes];
-			i20 = in21[-nInputPlanes];
+			i00 = _mm256_loadu_ps(&in01[-nInputPlanes]);
+			i10 = _mm256_loadu_ps(&in11[-nInputPlanes]);
+			i20 = _mm256_loadu_ps(&in21[-nInputPlanes]);
 		}
 
 		if (border && xi == wsz-1) {
@@ -287,23 +288,42 @@ filter_1elem_output1(const float *packed_input,
 			i12 = i11;
 			i22 = i21;
 		} else {
-			i02 = in01[+nInputPlanes];
-			i12 = in11[+nInputPlanes];
-			i22 = in21[+nInputPlanes];
+			i02 = _mm256_loadu_ps(&in01[+nInputPlanes]);
+			i12 = _mm256_loadu_ps(&in11[+nInputPlanes]);
+			i22 = _mm256_loadu_ps(&in21[+nInputPlanes]);
 		}
 
-		in01++;
-		in11++;
-		in21++;
+		in01+=VEC_WIDTH;
+		in11+=VEC_WIDTH;
+		in21+=VEC_WIDTH;
 
-		const float *w = weight + ipIndex * 9;
+		__m256 v;
 
-		sum += i00*w[0] + i01*w[1] + i02*w[2] +
-			i10*w[3] + i11*w[4] + i12*w[5] +
-			i20*w[6] + i21*w[7] + i22*w[8];
+		v = _mm256_mul_ps(_mm256_loadu_ps(&w[0*VEC_WIDTH]), i00);
+		v = _mm256_fmadd_ps(_mm256_loadu_ps(&w[1*VEC_WIDTH]), i01, v);
+		v = _mm256_fmadd_ps(_mm256_loadu_ps(&w[2*VEC_WIDTH]), i02, v);
+
+		v = _mm256_fmadd_ps(_mm256_loadu_ps(&w[3*VEC_WIDTH]), i10, v);
+		v = _mm256_fmadd_ps(_mm256_loadu_ps(&w[4*VEC_WIDTH]), i11, v);
+		v = _mm256_fmadd_ps(_mm256_loadu_ps(&w[5*VEC_WIDTH]), i12, v);
+
+		v = _mm256_fmadd_ps(_mm256_loadu_ps(&w[6*VEC_WIDTH]), i20, v);
+		v = _mm256_fmadd_ps(_mm256_loadu_ps(&w[7*VEC_WIDTH]), i21, v);
+		v = _mm256_fmadd_ps(_mm256_loadu_ps(&w[8*VEC_WIDTH]), i22, v);
+
+		sum = _mm256_add_ps(v, sum);
+
+		w += 9 * VEC_WIDTH;
 	}
 
-	float v = sum;
+	sum = _mm256_hadd_ps(sum, sum);
+	sum = _mm256_hadd_ps(sum, sum);
+
+	float v0 = _mm_cvtss_f32(_mm256_extractf128_ps(sum,0));
+	float v1 = _mm_cvtss_f32(_mm256_extractf128_ps(sum,1));
+
+	float v = v0 + v1;
+
 	float *out0 = packed_output + (yi*wsz + xi);
 
 	float bv = biases[0];
