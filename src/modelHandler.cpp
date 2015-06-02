@@ -218,7 +218,7 @@ bool Model::filter_AVX_OpenCL(const float *packed_input,
 				printf("d=%.20f %.20f %.20f @ (%d,%d,%d,%d) \n",r, v0, v1, xpos, ypos, plane, i);
 				error_count++;
 
-				if (error_count >= 4) {
+				if (error_count >= 8) {
 					exit(1);
 				}
 			}
