@@ -1,28 +1,15 @@
 #include <thread>
 #include <immintrin.h>
+#include <atomic>
 #include "modelHandler.hpp"
 #include "common.hpp"
 #include "sec.hpp"
 
-#define BLOCK_SIZE_HOR 64
+#define BLOCK_SIZE_HOR 256
 #define BLOCK_SIZE_VER 16
 
-template <bool border> inline
-float
-get_data(const float *p, int wsz, int xi, int num_plane, int plane)
-{
-	if (border) {
-		xi = (std::min)(wsz-1, xi);
-		xi = (std::max)(0, xi);
-
-		return p[xi * num_plane + plane];
-	} else {
-		return p[xi * num_plane + plane];
-	}
-}
-
 template <bool border> void
-filter_1elem(const float *packed_input,
+filter_2elem(const float *packed_input,
 	     int nInputPlanes,
 	     float *packed_output,
 	     int nOutputPlanes,
@@ -222,6 +209,114 @@ filter_1elem(const float *packed_input,
 
 }
 
+
+
+template <bool border> inline
+float
+get_data(const float *p, int wsz, int xi, int num_plane, int plane)
+{
+	if (border) {
+		xi = (std::min)(wsz-1, xi);
+		xi = (std::max)(0, xi);
+
+		return p[xi * num_plane + plane];
+	} else {
+		return p[xi * num_plane + plane];
+	}
+}
+
+template <bool border> void
+filter_1elem_output1(const float *packed_input,
+		     int nInputPlanes,
+		     float *packed_output,
+		     const float *biases,
+		     unsigned long hsz,
+		     unsigned long wsz,
+		     unsigned long yi,
+		     unsigned long xi,
+		     const float *weight,
+		     float *intermediate0)
+{
+	size_t in_step = wsz * sizeof(float) * nInputPlanes;
+	char *inp = (char*)packed_input;
+
+	inp += in_step*yi;
+	char *in0p = inp - in_step;
+	if (yi == 0) {
+		in0p = inp;
+	}
+
+	char *in1p = inp;
+	char *in2p = inp + in_step;
+
+	if (yi == hsz-1) {
+		in2p = inp;
+	}
+
+	float *in01 = (float*)in0p;
+	float *in11 = (float*)in1p;
+	float *in21 = (float*)in2p;
+
+	in01 += xi * nInputPlanes;
+	in11 += xi * nInputPlanes;
+	in21 += xi * nInputPlanes;
+
+	float sum = 0;
+
+	for (int ipIndex = 0; ipIndex < nInputPlanes; ipIndex++) {
+		float i00, i01, i02;
+		float i10, i11, i12;
+		float i20, i21, i22;
+
+		i01 = in01[0];
+		i11 = in11[0];
+		i21 = in21[0];
+
+		if (border && xi == 0) {
+			i00 = i01;
+			i10 = i11;
+			i20 = i21;
+		} else {
+			i00 = in01[-nInputPlanes];
+			i10 = in11[-nInputPlanes];
+			i20 = in21[-nInputPlanes];
+		}
+
+		if (border && xi == wsz-1) {
+			i02 = i01;
+			i12 = i11;
+			i22 = i21;
+		} else {
+			i02 = in01[+nInputPlanes];
+			i12 = in11[+nInputPlanes];
+			i22 = in21[+nInputPlanes];
+		}
+
+		in01++;
+		in11++;
+		in21++;
+
+		const float *w = weight + ipIndex * 9;
+
+		sum += i00*w[0] + i01*w[1] + i02*w[2] +
+			i10*w[3] + i11*w[4] + i12*w[5] +
+			i20*w[6] + i21*w[7] + i22*w[8];
+	}
+
+	float v = sum;
+	float *out0 = packed_output + (yi*wsz + xi);
+
+	float bv = biases[0];
+	v += bv;
+	float mtz = std::max(v, 0.0f);
+	float ltz = std::min(v, 0.0f);
+
+	v = ltz * 0.1f + mtz;
+
+	*out0 = v;
+}
+
+
 #define CEIL_DIV(a,b) (((a)+(b-1))/(b))
 
 namespace w2xc {
@@ -242,29 +337,27 @@ filter_AVX_impl(const float *packed_input,
 	// input : inputPlanes
 	// kernel : weightMatrices
 
-	int per_job = hsz / nJob;
-
 	std::vector<std::thread> workerThreads;
 
 	unsigned int num_block_hor = CEIL_DIV(wsz, BLOCK_SIZE_HOR);
-	unsigned int num_block_ver = CEIL_DIV(wsz, BLOCK_SIZE_VER);
+	unsigned int num_block_ver = CEIL_DIV(hsz, BLOCK_SIZE_VER);
 
 	unsigned int total_block = num_block_hor * num_block_ver;
-	unsigned int block_per_job = CEIL_DIV(total_block , nJob);
+
+	std::atomic<unsigned int> block_counter(0U);
 
 	for (int ji=0; ji<nJob; ji++) {
-		auto t = std::thread([&](int ji) {
+		auto t = std::thread([&]() {
 				float *intermediate = (float*)malloc(sizeof(float)*nOutputPlanes*2);
 
-				int start = block_per_job * ji, end;
+				while (1) {
+					unsigned int bi = block_counter++;
 
-				if (ji == nJob-1) {
-					end = total_block;
-				} else {
-					end = start + block_per_job;
-				}
+					if (bi >= total_block) {
+						free(intermediate);
+						return;
+					}
 
-				for (int bi=start; bi<end; bi++) {
 					unsigned int block_x = bi % num_block_hor;
 					unsigned int block_y = bi / num_block_hor;
 
@@ -274,23 +367,37 @@ filter_AVX_impl(const float *packed_input,
 					unsigned int x_start = block_x * BLOCK_SIZE_HOR;
 					unsigned int x_end = std::min(x_start + BLOCK_SIZE_HOR, wsz);
 
-					for (unsigned int yi=y_start; yi<y_end; yi++) {
-						for (unsigned int xi=x_start; xi<x_end; xi+=2) {
-							if (xi ==0 || xi+1 == (wsz-1)) {
-								filter_1elem<true>(packed_input, nInputPlanes,
-										   packed_output, nOutputPlanes,
-										   fbiases, hsz, wsz, yi, xi, weight, intermediate);
-							} else {
-								filter_1elem<false>(packed_input, nInputPlanes,
-										    packed_output, nOutputPlanes,
-										    fbiases, hsz, wsz, yi, xi, weight, intermediate);
+					if (nOutputPlanes == 1) {
+						for (unsigned int yi=y_start; yi<y_end; yi++) {
+							for (unsigned int xi=x_start; xi<x_end; xi++) {
+								if (xi ==0 || xi == (wsz-1)) {
+									filter_1elem_output1<true>(packed_input, nInputPlanes,
+												   packed_output,
+												   fbiases, hsz, wsz, yi, xi, weight, intermediate);
+								} else {
+									filter_1elem_output1<false>(packed_input, nInputPlanes,
+												    packed_output,
+												    fbiases, hsz, wsz, yi, xi, weight, intermediate);
+								}
+							}
+						}
+					} else {
+						for (unsigned int yi=y_start; yi<y_end; yi++) {
+							for (unsigned int xi=x_start; xi<x_end; xi+=2) {
+								if (xi ==0 || xi+1 == (wsz-1)) {
+									filter_2elem<true>(packed_input, nInputPlanes,
+											   packed_output, nOutputPlanes,
+											   fbiases, hsz, wsz, yi, xi, weight, intermediate);
+								} else {
+									filter_2elem<false>(packed_input, nInputPlanes,
+											    packed_output, nOutputPlanes,
+											    fbiases, hsz, wsz, yi, xi, weight, intermediate);
+								}
 							}
 						}
 					}
 				}
-
-				free(intermediate);
-			}, ji
+			}
 			);
 
 		workerThreads.push_back(std::move(t));

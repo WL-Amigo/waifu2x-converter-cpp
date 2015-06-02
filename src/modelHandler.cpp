@@ -97,95 +97,131 @@ bool Model::filter_AVX_OpenCL(const float *packed_input,
 		fbiases_flat[i] = biases[i];
 	}
 
-	for (int oi=0; oi<nOutputPlanes; oi++) {
+	if (nOutputPlanes == 1) {
 		for (int ii=0; ii<nInputPlanes; ii++) {
-			int mi = oi*nInputPlanes+ii;
-			cv::Mat &wm = weights[mi];
+			cv::Mat &wm = weights[ii];
 			const float *src0 = (float*)wm.ptr(0);
 			const float *src1 = (float*)wm.ptr(1);
 			const float *src2 = (float*)wm.ptr(2);
 
-			int oi_0 = oi % vec_width;
-			int oi_1 = (oi / vec_width) * vec_width;
+			float *dst = weight_flat + 9 * ii;
+			dst[0] = src0[0];
+			dst[1] = src0[1];
+			dst[2] = src0[2];
 
-			float *dst = weight_flat + ((ii*nOutputPlanes + oi_1) * 9) + oi_0;
-			dst[0*vec_width] = src0[0];
-			dst[1*vec_width] = src0[1];
-			dst[2*vec_width] = src0[2];
+			dst[3] = src1[0];
+			dst[4] = src1[1];
+			dst[5] = src1[2];
 
-			dst[3*vec_width] = src1[0];
-			dst[4*vec_width] = src1[1];
-			dst[5*vec_width] = src1[2];
-
-			dst[6*vec_width] = src2[0];
-			dst[7*vec_width] = src2[1];
-			dst[8*vec_width] = src2[2];
+			dst[6] = src2[0];
+			dst[7] = src2[1];
+			dst[8] = src2[2];
 		}
-	}
-
-
-#ifdef COMPARE_RESULT
-	float *packed_output_cv = (float*)malloc(sizeof(float) * size.width * size.height * nOutputPlanes);
-
-	double t0 = getsec();
-	filter_CV(packed_input, packed_output_cv, size);
-	double t1 = getsec();
-
-	/* 3x3 = 9 fma */
-	double ops = size.width * size.height * 9.0 * 2.0 * nOutputPlanes * nInputPlanes;
-	std::vector<cv::Mat> output2;
-	if (OpenCL) {
-		filter_OpenCL_impl(packed_input, packed_output,
-				   nInputPlanes, nOutputPlanes, fbiases_flat, weight_flat, size, nJob);
 	} else {
-		filter_AVX_impl(packed_input, packed_output,
-				nInputPlanes, nOutputPlanes, fbiases_flat, weight_flat, size, nJob);
-	}
+		for (int oi=0; oi<nOutputPlanes; oi++) {
+			for (int ii=0; ii<nInputPlanes; ii++) {
+				int mi = oi*nInputPlanes+ii;
+				cv::Mat &wm = weights[mi];
+				const float *src0 = (float*)wm.ptr(0);
+				const float *src1 = (float*)wm.ptr(1);
+				const float *src2 = (float*)wm.ptr(2);
 
-	double t2 = getsec();
+				int oi_0 = oi % vec_width;
+				int oi_1 = (oi / vec_width) * vec_width;
 
-	printf("%d %d %f %f\n", nInputPlanes, nOutputPlanes, t1-t0, t2-t1);
-	printf("ver2 : %f [Gflops]\n", (ops/(1000.0*1000.0*1000.0)) / (t2-t1));
-	printf("orig : %f [Gflops]\n", (ops/(1000.0*1000.0*1000.0)) / (t1-t0));
-	int error_count = 0;
+				float *dst = weight_flat + ((ii*nOutputPlanes + oi_1) * 9) + oi_0;
+				dst[0*vec_width] = src0[0];
+				dst[1*vec_width] = src0[1];
+				dst[2*vec_width] = src0[2];
 
-	for (int i=0; i<size.width * size.height * nOutputPlanes; i++) {
-		float v0 = packed_output_cv[i];
-		float v1 = packed_output[i];
-		float d = fabs(v0 - v1);
+				dst[3*vec_width] = src1[0];
+				dst[4*vec_width] = src1[1];
+				dst[5*vec_width] = src1[2];
 
-		float r0 = d/fabs(v0);
-		float r1 = d/fabs(v1);
-
-		float r = (std::max)(r0, r1);
-
-		if (r > 0.1f && d > 0.0000001f) {
-			printf("d=%.20f %.20f %.20f @ %d \n",r, v0, v1, i);
-			error_count++;
-
-			if (error_count >= 4) {
-				exit(1);
+				dst[6*vec_width] = src2[0];
+				dst[7*vec_width] = src2[1];
+				dst[8*vec_width] = src2[2];
 			}
 		}
-
 	}
 
-	if (error_count != 0) {
-		exit(1);
+	bool compare_result = false;
+
+#ifdef COMPARE_RESULT
+	if (nOutputPlanes == 1) {
+		compare_result = true;
 	}
-#else
-	//double t1 = getsec();
-	if (OpenCL) {
-		filter_OpenCL_impl(packed_input, packed_output,
-				   nInputPlanes, nOutputPlanes, fbiases_flat, weight_flat, size, nJob);
-	} else {
-		filter_AVX_impl(packed_input, packed_output,
-				nInputPlanes, nOutputPlanes, fbiases_flat, weight_flat, size, nJob);
-	}
-	//double t2 = getsec();
-	//double ops = size.width * size.height * 9.0 * 2.0 * nOutputPlanes * nInputPlanes;
-	//printf("ver2 : %f [Gflops], %f[msec]\n", (ops/(1000.0*1000.0*1000.0)) / (t2-t1), (t2-t1)*1000);
 #endif
+
+	if (compare_result) {
+		float *packed_output_cv = (float*)malloc(sizeof(float) * size.width * size.height * nOutputPlanes);
+
+		double t0 = getsec();
+		filter_CV(packed_input, packed_output_cv, size);
+		double t1 = getsec();
+
+		/* 3x3 = 9 fma */
+		double ops = size.width * size.height * 9.0 * 2.0 * nOutputPlanes * nInputPlanes;
+		std::vector<cv::Mat> output2;
+		if (OpenCL) {
+			filter_OpenCL_impl(packed_input, packed_output,
+					   nInputPlanes, nOutputPlanes, fbiases_flat, weight_flat, size, nJob);
+		} else {
+			filter_AVX_impl(packed_input, packed_output,
+					nInputPlanes, nOutputPlanes, fbiases_flat, weight_flat, size, nJob);
+		}
+
+		double t2 = getsec();
+
+		printf("%d %d %f %f\n", nInputPlanes, nOutputPlanes, t1-t0, t2-t1);
+		printf("ver2 : %f [Gflops]\n", (ops/(1000.0*1000.0*1000.0)) / (t2-t1));
+		printf("orig : %f [Gflops]\n", (ops/(1000.0*1000.0*1000.0)) / (t1-t0));
+		int error_count = 0;
+
+		for (int i=0; i<size.width * size.height * nOutputPlanes; i++) {
+			float v0 = packed_output_cv[i];
+			float v1 = packed_output[i];
+			float d = fabs(v0 - v1);
+
+			float r0 = d/fabs(v0);
+			float r1 = d/fabs(v1);
+
+			float r = (std::max)(r0, r1);
+
+			if (r > 0.1f && d > 0.0000001f) {
+				int plane = i % nOutputPlanes;
+				int pixpos = i / nOutputPlanes;
+				int xpos = pixpos % size.width;
+				int ypos = pixpos / size.width;
+
+				printf("d=%.20f %.20f %.20f @ (%d,%d,%d,%d) \n",r, v0, v1, xpos, ypos, plane, i);
+				error_count++;
+
+				if (error_count >= 4) {
+					exit(1);
+				}
+			}
+
+		}
+
+		if (error_count != 0) {
+			exit(1);
+		}
+	} else {
+		static double sum = 0;
+		double t1 = getsec();
+		if (OpenCL) {
+			filter_OpenCL_impl(packed_input, packed_output,
+					   nInputPlanes, nOutputPlanes, fbiases_flat, weight_flat, size, nJob);
+		} else {
+			filter_AVX_impl(packed_input, packed_output,
+					nInputPlanes, nOutputPlanes, fbiases_flat, weight_flat, size, nJob);
+		}
+		double t2 = getsec();
+		sum += t2 - t1;
+		double ops = size.width * size.height * 9.0 * 2.0 * nOutputPlanes * nInputPlanes;
+		printf("ver2 : %f [Gflops], %f[msec], total= %f[msec]\n", (ops/(1000.0*1000.0*1000.0)) / (t2-t1), (t2-t1)*1000, sum);
+	}
 
 	free(fbiases_flat);
 	free(weight_flat);
@@ -210,10 +246,22 @@ bool Model::filter(float *packed_input,
 		unroll = UNROLL;
 	}
 
-	if (nOutputPlanes % (vec_width*unroll) || (size.width&1)) {
-		ret = filter_CV(packed_input, packed_output, size);
-	} else {
+	bool avx_available = true;
+
+	if (nOutputPlanes % (vec_width*unroll)) {
+		if (nOutputPlanes != 1) {
+			avx_available = false;
+		}
+	}
+
+	if (size.width&1) {
+		avx_available = false;
+	}
+
+	if (avx_available) {
 		ret = filter_AVX_OpenCL(packed_input, packed_output, size, have_OpenCL);
+	} else {
+		ret = filter_CV(packed_input, packed_output, size);
 	}
 
 	return ret;
