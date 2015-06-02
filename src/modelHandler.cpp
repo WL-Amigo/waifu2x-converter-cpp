@@ -90,8 +90,8 @@ bool Model::filter_AVX_OpenCL(const float *packed_input,
 		vec_width = VEC_WIDTH;
 	}
 
-	float *weight_flat = (float*)malloc(sizeof(float)*nInputPlanes*nOutputPlanes*3*3);
-	float *fbiases_flat = (float*)malloc(sizeof(float) * biases.size());
+	float *weight_flat = (float*)_mm_malloc(sizeof(float)*nInputPlanes*nOutputPlanes*3*3, 64);
+	float *fbiases_flat = (float*)_mm_malloc(sizeof(float) * biases.size(), 64);
 
 	for (int i=0; i<(int)biases.size(); i++) {
 		fbiases_flat[i] = biases[i];
@@ -223,11 +223,13 @@ bool Model::filter_AVX_OpenCL(const float *packed_input,
 		double t2 = getsec();
 		sum += t2 - t1;
 		double ops = size.width * size.height * 9.0 * 2.0 * nOutputPlanes * nInputPlanes;
+#ifdef DUMP_FLOPS
 		printf("ver2 : %f [Gflops], %f[msec], total= %f[msec]\n", (ops/(1000.0*1000.0*1000.0)) / (t2-t1), (t2-t1)*1000, sum);
+#endif
 	}
 
-	free(fbiases_flat);
-	free(weight_flat);
+	_mm_free(fbiases_flat);
+	_mm_free(weight_flat);
 
 	return true;
 

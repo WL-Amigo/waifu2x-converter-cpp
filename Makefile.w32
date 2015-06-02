@@ -20,7 +20,7 @@ src/modelHandler_OpenCL.obj: src/modelHandler_OpenCL.cl.h
 waifu2x-converter-cpp.exe: $(OBJS)
 	$(CXX) /Fe:$@ $^ /link $(LDFLAGS)  $(LDLIBS)
 
-INPUT=./a.png
+INPUT=./b.png
 
 run: waifu2x-converter-cpp.exe
 	./waifu2x-converter-cpp -i $(INPUT) --model_dir models

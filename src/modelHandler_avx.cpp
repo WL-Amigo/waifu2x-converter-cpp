@@ -328,8 +328,8 @@ filter_1elem_output1(const float *packed_input,
 
 	float bv = biases[0];
 	v += bv;
-	float mtz = std::max(v, 0.0f);
-	float ltz = std::min(v, 0.0f);
+	float mtz = (std::max)(v, 0.0f);
+	float ltz = (std::min)(v, 0.0f);
 
 	v = ltz * 0.1f + mtz;
 
@@ -368,13 +368,13 @@ filter_AVX_impl(const float *packed_input,
 
 	for (int ji=0; ji<nJob; ji++) {
 		auto t = std::thread([&]() {
-				float *intermediate = (float*)malloc(sizeof(float)*nOutputPlanes*2);
+				float *intermediate = (float*)_mm_malloc(sizeof(float)*nOutputPlanes*2, 64);
 
 				while (1) {
 					unsigned int bi = block_counter++;
 
 					if (bi >= total_block) {
-						free(intermediate);
+						_mm_free(intermediate);
 						return;
 					}
 
@@ -382,10 +382,10 @@ filter_AVX_impl(const float *packed_input,
 					unsigned int block_y = bi / num_block_hor;
 
 					unsigned int y_start = block_y * BLOCK_SIZE_VER;
-					unsigned int y_end = std::min(y_start + BLOCK_SIZE_VER, hsz);
+					unsigned int y_end = (std::min)(y_start + BLOCK_SIZE_VER, hsz);
 
 					unsigned int x_start = block_x * BLOCK_SIZE_HOR;
-					unsigned int x_end = std::min(x_start + BLOCK_SIZE_HOR, wsz);
+					unsigned int x_end = (std::min)(x_start + BLOCK_SIZE_HOR, wsz);
 
 					if (nOutputPlanes == 1) {
 						for (unsigned int yi=y_start; yi<y_end; yi++) {

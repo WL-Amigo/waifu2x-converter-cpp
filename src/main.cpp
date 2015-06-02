@@ -25,6 +25,8 @@ using namespace cv;
 
 int main(int argc, char** argv) {
 
+	double time_start = getsec();
+
 	// definition of command line arguments
 	TCLAP::CmdLine cmd("waifu2x reimplementation using OpenCV", ' ', "1.0.0");
 
@@ -273,7 +275,9 @@ int main(int argc, char** argv) {
 	}
 	cv::imwrite(outputFileName, image);
 
-	std::cout << "process successfully done!" << std::endl;
+	double time_end = getsec();
+
+	std::cout << "process successfully done! (" << (time_end - time_start) << "[ms])" << std::endl;
 
 	return 0;
 }
