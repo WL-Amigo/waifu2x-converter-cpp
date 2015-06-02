@@ -174,7 +174,7 @@ bool Model::filter_AVX_OpenCL(const float *packed_input,
 		exit(1);
 	}
 #else
-	double t1 = getsec();
+	//double t1 = getsec();
 	if (OpenCL) {
 		filter_OpenCL_impl(packed_input, packed_output,
 				   nInputPlanes, nOutputPlanes, fbiases_flat, weight_flat, size, nJob);
@@ -182,9 +182,9 @@ bool Model::filter_AVX_OpenCL(const float *packed_input,
 		filter_AVX_impl(packed_input, packed_output,
 				nInputPlanes, nOutputPlanes, fbiases_flat, weight_flat, size, nJob);
 	}
-	double t2 = getsec();
-	double ops = size.width * size.height * 9.0 * 2.0 * nOutputPlanes * nInputPlanes;
-	printf("ver2 : %f [Gflops], %f[msec]\n", (ops/(1000.0*1000.0*1000.0)) / (t2-t1), (t2-t1)*1000);
+	//double t2 = getsec();
+	//double ops = size.width * size.height * 9.0 * 2.0 * nOutputPlanes * nInputPlanes;
+	//printf("ver2 : %f [Gflops], %f[msec]\n", (ops/(1000.0*1000.0*1000.0)) / (t2-t1), (t2-t1)*1000);
 #endif
 
 	free(fbiases_flat);

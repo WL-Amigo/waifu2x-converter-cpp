@@ -4,6 +4,9 @@
 #include "common.hpp"
 #include "sec.hpp"
 
+#define BLOCK_SIZE_HOR 64
+#define BLOCK_SIZE_VER 16
+
 template <bool border> inline
 float
 get_data(const float *p, int wsz, int xi, int num_plane, int plane)
@@ -219,6 +222,8 @@ filter_1elem(const float *packed_input,
 
 }
 
+#define CEIL_DIV(a,b) (((a)+(b-1))/(b))
+
 namespace w2xc {
 void
 filter_AVX_impl(const float *packed_input,
@@ -230,8 +235,8 @@ filter_AVX_impl(const float *packed_input,
 		cv::Size ipSize,
 		int nJob)
 {
-	int wsz = ipSize.width;
-	int hsz = ipSize.height;
+	unsigned int wsz = ipSize.width;
+	unsigned int hsz = ipSize.height;
 
 	// filter processing
 	// input : inputPlanes
@@ -241,28 +246,45 @@ filter_AVX_impl(const float *packed_input,
 
 	std::vector<std::thread> workerThreads;
 
+	unsigned int num_block_hor = CEIL_DIV(wsz, BLOCK_SIZE_HOR);
+	unsigned int num_block_ver = CEIL_DIV(wsz, BLOCK_SIZE_VER);
+
+	unsigned int total_block = num_block_hor * num_block_ver;
+	unsigned int block_per_job = CEIL_DIV(total_block , nJob);
+
 	for (int ji=0; ji<nJob; ji++) {
 		auto t = std::thread([&](int ji) {
 				float *intermediate = (float*)malloc(sizeof(float)*nOutputPlanes*2);
 
-				int start = per_job * ji, end;
+				int start = block_per_job * ji, end;
 
 				if (ji == nJob-1) {
-					end = hsz;
+					end = total_block;
 				} else {
-					end = per_job * (ji+1);
+					end = start + block_per_job;
 				}
 
-				for (int yi=start; yi<end; yi++) {
-					for (int xi=0; xi<wsz; xi+=2) {
-						if (xi ==0 || xi+1 == (wsz-1)) {
-							filter_1elem<true>(packed_input, nInputPlanes,
-									   packed_output, nOutputPlanes,
-									   fbiases, hsz, wsz, yi, xi, weight, intermediate);
-						} else {
-							filter_1elem<false>(packed_input, nInputPlanes,
-									    packed_output, nOutputPlanes,
-									    fbiases, hsz, wsz, yi, xi, weight, intermediate);
+				for (int bi=start; bi<end; bi++) {
+					unsigned int block_x = bi % num_block_hor;
+					unsigned int block_y = bi / num_block_hor;
+
+					unsigned int y_start = block_y * BLOCK_SIZE_VER;
+					unsigned int y_end = std::min(y_start + BLOCK_SIZE_VER, hsz);
+
+					unsigned int x_start = block_x * BLOCK_SIZE_HOR;
+					unsigned int x_end = std::min(x_start + BLOCK_SIZE_HOR, wsz);
+
+					for (unsigned int yi=y_start; yi<y_end; yi++) {
+						for (unsigned int xi=x_start; xi<x_end; xi+=2) {
+							if (xi ==0 || xi+1 == (wsz-1)) {
+								filter_1elem<true>(packed_input, nInputPlanes,
+										   packed_output, nOutputPlanes,
+										   fbiases, hsz, wsz, yi, xi, weight, intermediate);
+							} else {
+								filter_1elem<false>(packed_input, nInputPlanes,
+										    packed_output, nOutputPlanes,
+										    fbiases, hsz, wsz, yi, xi, weight, intermediate);
+							}
 						}
 					}
 				}
