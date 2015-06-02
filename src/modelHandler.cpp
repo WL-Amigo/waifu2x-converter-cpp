@@ -12,7 +12,11 @@
 // #include <iostream> in modelHandler.hpp
 #include <fstream>
 #include <thread>
+#ifdef __GNUC__
 #include <cpuid.h>
+#else
+#include <intrin.h>
+#endif
 #include "sec.hpp"
 #include "common.hpp"
 
@@ -77,7 +81,7 @@ Model::filter_CV(const float *packed_input,
 }
 
 //#define COMPARE_RESULT
-#define DUMP_FLOPS
+//#define DUMP_FLOPS
 
 bool Model::filter_AVX_OpenCL(const float *packed_input,
 			      float *packed_output,
@@ -85,19 +89,24 @@ bool Model::filter_AVX_OpenCL(const float *packed_input,
 			      bool OpenCL)
 {
 	int vec_width;
+	unsigned int eax=0, ebx=0, ecx=0, edx=0;
+	bool have_fma = false;
+
 
 #ifdef __GNUC__
-	unsigned int eax=0, ebx=0, ecx=0, edx=0;
 	__get_cpuid(1, &eax, &ebx, &ecx, &edx);
-
-	bool have_fma = false;
+#else
+	int cpuInfo[4];
+	__cpuid(cpuInfo, 1);
+	eax = cpuInfo[0];
+	ebx = cpuInfo[1];
+	ecx = cpuInfo[2];
+	edx = cpuInfo[3];
+#endif
 
 	if (ecx & (1<<12)) {
 		have_fma = true;
 	}
-#else
-#error "fix cpuid"
-#endif
 
 	if (have_OpenCL) {
 		vec_width = GPU_VEC_WIDTH;
