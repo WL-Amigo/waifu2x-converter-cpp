@@ -76,6 +76,7 @@ Model::filter_CV(const float *packed_input,
 }
 
 //#define COMPARE_RESULT
+#define DUMP_FLOPS
 
 bool Model::filter_AVX_OpenCL(const float *packed_input,
 			      float *packed_output,
@@ -151,9 +152,7 @@ bool Model::filter_AVX_OpenCL(const float *packed_input,
 	bool compare_result = false;
 
 #ifdef COMPARE_RESULT
-	if (nOutputPlanes == 1) {
-		compare_result = true;
-	}
+	compare_result = true;
 #endif
 
 	if (compare_result) {

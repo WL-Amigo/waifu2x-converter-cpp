@@ -8,6 +8,7 @@ pack_mat(float *out,
 	 int w, int h, int nplane)
 {
 	for (int i=0; i<nplane; i++) {
+#pragma omp parallel for
 		for (int yi=0; yi<h; yi++) {
 			const float *mat_line = (float*)inputPlanes[i].ptr(yi);
 			float *packed_line = out + i + (yi * nplane * w);
@@ -25,6 +26,7 @@ unpack_mat(std::vector<cv::Mat> &outputPlanes,
 	   int w, int h, int nplane)
 {
 	for (int i=0; i<nplane; i++) {
+#pragma omp parallel for
 		for (int yi=0; yi<h; yi++) {
 			float *mat_line = (float*)outputPlanes[i].ptr(yi);
 			const float *packed_line = in + i + (yi * nplane * w);
@@ -41,6 +43,7 @@ unpack_mat1(cv::Mat &outputMat,
             const float *in,
             int w, int h)
 {
+#pragma omp parallel for
     for (int yi=0; yi<h; yi++) {
         float *mat_line = (float*)outputMat.ptr(yi);
         const float *packed_line = in + (yi * w);
