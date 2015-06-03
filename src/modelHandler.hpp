@@ -21,6 +21,36 @@
 
 namespace w2xc {
 
+bool initOpenCL();
+extern bool have_OpenCL;
+
+extern void filter_AVX_impl(const float *packed_input,
+			    float *packed_output,
+			    int nInputPlanes,
+			    int nOutputPlanes,
+                            const float *biases,
+                            const float *weight,
+			    cv::Size ipSize,
+			    int nJob);
+
+extern void filter_FMA_impl(const float *packed_input,
+			    float *packed_output,
+			    int nInputPlanes,
+			    int nOutputPlanes,
+                            const float *biases,
+                            const float *weight,
+			    cv::Size ipSize,
+			    int nJob);
+
+extern void filter_OpenCL_impl(const float *packed_input,
+                               float *packed_output,
+                               int nInputPlanes,
+                               int nOutputPlanes,
+                               const float *biases,
+                               const float *weight,
+                               cv::Size ipSize,
+                               int nJob);
+
 class Model {
 
 private:
@@ -42,6 +72,15 @@ private:
 			std::vector<cv::Mat> &weightMatrices,
 			std::vector<cv::Mat> &outputPlanes, unsigned int beginningIndex,
 			unsigned int nWorks);
+
+	bool filter_CV(const float *packed_input,
+		       float *packed_output,
+		       cv::Size size);
+
+	bool filter_AVX_OpenCL(const float *packed_input,
+                               float *packed_output,
+                               cv::Size size,
+                               bool OpenCL);
 
 public:
 	// ctor and dtor
@@ -84,8 +123,10 @@ public:
 	// setter function
 
 	// public operation function
-	bool filter(std::vector<cv::Mat> &inputPlanes,
-			std::vector<cv::Mat> &outputPlanes);
+	bool filter(float *packed_input,
+		    float *packed_output,
+		    cv::Size size);
+
 
 };
 

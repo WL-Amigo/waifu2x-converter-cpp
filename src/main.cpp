@@ -16,11 +16,15 @@
 #include <cmath>
 #include "picojson.h"
 #include "tclap/CmdLine.h"
+#include "sec.hpp"
+#include "common.hpp"
 
 #include "modelHandler.hpp"
 #include "convertRoutine.hpp"
 
 int main(int argc, char** argv) {
+
+	double time_start = getsec();
 
 	// definition of command line arguments
 	TCLAP::CmdLine cmd("waifu2x reimplementation using OpenCV", ' ', "1.0.0");
@@ -70,6 +74,8 @@ int main(int argc, char** argv) {
 		std::exit(-1);
 	}
 
+	w2xc::initOpenCL();
+
 	// load image file
 	cv::Mat image = cv::imread(cmdInputFile.getValue(), cv::IMREAD_COLOR);
 	image.convertTo(image, CV_32F, 1.0 / 255.0);
@@ -104,7 +110,6 @@ int main(int argc, char** argv) {
 	// ===== scaling phase =====
 
 	if (cmdMode.getValue() == "scale" || cmdMode.getValue() == "noise_scale") {
-
 		// calculate iteration times of 2x scaling and shrink ratio which will use at last
 		int iterTimesTwiceScaling = static_cast<int>(std::ceil(
 				std::log2(cmdScaleRatio.getValue())));
@@ -114,7 +119,6 @@ int main(int argc, char** argv) {
 			shrinkRatio = cmdScaleRatio.getValue()
 					/ std::pow(2.0, static_cast<double>(iterTimesTwiceScaling));
 		}
-
 		std::string modelFileName(cmdModelPath.getValue());
 		modelFileName = modelFileName + "/scale2.0x_model.json";
 		std::vector<std::unique_ptr<w2xc::Model> > models;
@@ -172,7 +176,6 @@ int main(int argc, char** argv) {
 							* shrinkRatio));
 			cv::resize(image, image, lastImageSize, 0, 0, cv::INTER_LINEAR);
 		}
-
 	}
 
 	image.convertTo(image, CV_8U, 255.0);
@@ -195,7 +198,9 @@ int main(int argc, char** argv) {
 	}
 	cv::imwrite(outputFileName, image);
 
-	std::cout << "process successfully done!" << std::endl;
+	double time_end = getsec();
+
+	std::cout << "process successfully done! (" << (time_end - time_start) << "[ms])" << std::endl;
 
 	return 0;
 }

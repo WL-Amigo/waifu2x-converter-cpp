@@ -9,6 +9,8 @@
  */
 
 #include "convertRoutine.hpp"
+#include "common.hpp"
+#include "sec.hpp"
 
 namespace w2xc {
 
@@ -63,19 +65,33 @@ static bool convertWithModelsBasic(cv::Mat &inputPlane, cv::Mat &outputPlane,
 	inputPlanes->clear();
 	inputPlanes->push_back(inputPlane);
 
+	cv::Size filterSize = inputPlane.size();
+	int filterWidth = filterSize.width;
+	int filterHeight = filterSize.height;
+
+	float *packed_input = (float*)malloc(sizeof(float) * filterWidth * filterHeight);
+	pack_mat(packed_input, *inputPlanes, filterWidth, filterHeight, 1);
+
 	for (int index = 0; index < models.size(); index++) {
-		std::cout << "Iteration #" << (index + 1) << "..." << std::endl;
-		if (!models[index]->filter(*inputPlanes, *outputPlanes)) {
+		float *packed_output = (float*)malloc(sizeof(float) * filterWidth * filterHeight *
+						      models[index]->getNOutputPlanes());
+		std::cout << "Iteration #" << (index + 1) << "..." ;
+		double t0 = getsec();
+		if (!models[index]->filter(packed_input, packed_output, filterSize)) {
 			std::exit(-1);
 		}
-		if (index != models.size() - 1) {
-			inputPlanes = std::move(outputPlanes);
-			outputPlanes = std::unique_ptr<std::vector<cv::Mat> >(
-					new std::vector<cv::Mat>());
-		}
+		double t1 = getsec();
+
+		std::cout << "(" << (t1-t0)*1000 << "[ms])" << std::endl;
+
+		free(packed_input);
+		packed_input = packed_output;
 	}
 
-	outputPlanes->at(0).copyTo(outputPlane);
+	outputPlane = cv::Mat::zeros(filterSize, CV_32FC1);
+
+	unpack_mat1(outputPlane, packed_input, filterWidth, filterHeight);
+	free(packed_input);
 
 	return true;
 
