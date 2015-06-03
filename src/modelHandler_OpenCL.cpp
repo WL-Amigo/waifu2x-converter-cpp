@@ -148,11 +148,13 @@ filter_OpenCL_impl(const float *packed_input,
 
         cl::Event event;
 
+        int vec_width = std::min(GPU_VEC_WIDTH, nOutputPlanes);
+
         err = queue.enqueueNDRangeKernel(
                 ker,
                 cl::NullRange,
-                cl::NDRange(h*GPU_VEC_WIDTH),
-                cl::NDRange(GPU_VEC_WIDTH),
+                cl::NDRange(h*vec_width),
+                cl::NDRange(vec_width),
                 NULL,
                 &event);
 

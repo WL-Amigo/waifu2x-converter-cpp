@@ -49,9 +49,6 @@ filter(__global const float * __restrict__ packed_input,
     local_mem += sizeof(float) * nOutputPlanes;
 
     unsigned int vec_width = min((int)VEC_WIDTH, (int)nOutputPlanes);
-    if (lid >= vec_width) {
-        return;
-    }
 
     for (int xi=0; xi<wsz; xi++) {
         for (int ipIndex = 0; ipIndex < nInputPlanes; ipIndex++) {
