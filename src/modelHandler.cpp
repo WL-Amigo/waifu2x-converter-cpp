@@ -12,7 +12,11 @@
 // #include <iostream> in modelHandler.hpp
 #include <fstream>
 #include <thread>
+#ifdef __GNUC__
 #include <cpuid.h>
+#else
+#include <intrin.h>
+#endif
 #include "sec.hpp"
 #include "common.hpp"
 
@@ -43,6 +47,8 @@ Model::filter_CV(const float *packed_input,
 	for (int i = 0; i < nOutputPlanes; i++) {
 		outputPlanes.push_back(cv::Mat::zeros(size, CV_32FC1));
 	}
+
+	int nJob = modelUtility::getInstance().getNumberOfJobs();
 
 	// filter job issuing
 	std::vector<std::thread> workerThreads;
@@ -85,19 +91,24 @@ bool Model::filter_AVX_OpenCL(const float *packed_input,
 			      bool OpenCL)
 {
 	int vec_width;
+	unsigned int eax=0, ebx=0, ecx=0, edx=0;
+	bool have_fma = false;
+	int nJob = modelUtility::getInstance().getNumberOfJobs();
 
 #ifdef __GNUC__
-	unsigned int eax=0, ebx=0, ecx=0, edx=0;
 	__get_cpuid(1, &eax, &ebx, &ecx, &edx);
-
-	bool have_fma = false;
+#else
+	int cpuInfo[4];
+	__cpuid(cpuInfo, 1);
+	eax = cpuInfo[0];
+	ebx = cpuInfo[1];
+	ecx = cpuInfo[2];
+	edx = cpuInfo[3];
+#endif
 
 	if (ecx & (1<<12)) {
 		have_fma = true;
 	}
-#else
-#error "fix cpuid"
-#endif
 
 	if (OpenCL) {
 		vec_width = GPU_VEC_WIDTH;
@@ -343,16 +354,16 @@ bool Model::filterWorker(std::vector<cv::Mat> &inputPlanes,
 		std::vector<cv::Mat> &weightMatrices,
 		std::vector<cv::Mat> &outputPlanes, unsigned int beginningIndex,
 		unsigned int nWorks) {
+	cv::ocl::setUseOpenCL(false); // disable OpenCL Support(temporary)
 
 	cv::Size ipSize = inputPlanes[0].size();
 	// filter processing
 	// input : inputPlanes
 	// kernel : weightMatrices
+
 	for (int opIndex = beginningIndex;
 	     opIndex < (int)(beginningIndex + nWorks);
 	     opIndex++) {
-		cv::ocl::setUseOpenCL(false); // disable OpenCL Support(temporary)
-
 		int wMatIndex = nInputPlanes * opIndex;
 		cv::Mat outputPlane = cv::Mat::zeros(ipSize, CV_32FC1);
 		cv::UMat uIntermediatePlane = outputPlane.getUMat(cv::ACCESS_WRITE); // all zero matrix
@@ -384,8 +395,13 @@ bool Model::filterWorker(std::vector<cv::Mat> &inputPlanes,
 	return true;
 }
 
-void Model::setNumberOfJobs(int setNJob) {
-	nJob = setNJob;
+modelUtility * modelUtility::instance = nullptr;
+
+modelUtility& modelUtility::getInstance(){
+	if(instance == nullptr){
+		instance = new modelUtility();
+	}
+	return *instance;
 }
 
 bool modelUtility::generateModelFromJSON(const std::string &fileName,
@@ -416,6 +432,34 @@ bool modelUtility::generateModelFromJSON(const std::string &fileName,
 
 	return true;
 }
+
+bool modelUtility::setNumberOfJobs(int setNJob){
+	if(setNJob < 1)return false;
+	nJob = setNJob;
+	return true;
+};
+
+int modelUtility::getNumberOfJobs(){
+	return nJob;
+}
+
+bool modelUtility::setBlockSize(cv::Size size){
+	if(size.width < 0 || size.height < 0)return false;
+	blockSplittingSize = size;
+	return true;
+}
+
+bool modelUtility::setBlockSizeExp2Square(int exp){
+	if(exp < 0)return false;
+	int length = std::pow(2, exp);
+	blockSplittingSize = cv::Size(length, length);
+	return true;
+}
+
+cv::Size modelUtility::getBlockSize(){
+	return blockSplittingSize;
+}
+
 
 // for debugging
 

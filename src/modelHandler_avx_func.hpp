@@ -20,7 +20,7 @@ MADD<false>(__m256 v0, __m256 v1, __m256 v2)
 
 
 template <bool border, bool ip0, bool have_fma>
-static inline void
+static void
 apply_filter(unsigned long xi, unsigned long wsz,
 	     const float *in01,
 	     const float *in11,

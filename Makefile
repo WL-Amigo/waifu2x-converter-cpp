@@ -3,11 +3,11 @@ all: waifu2x-converter-cpp
 OPENCV=$(HOME)/usr
 
 DEBUG= # -g
-CXXFLAGS=-I$(OPENCV)/include -I$(CURDIR)/include -std=c++11 -pthread -Wall -MMD -save-temps -O2 $(DEBUG) -fopenmp
+CXXFLAGS=-I$(OPENCV)/include -I$(CURDIR)/include -std=c++11 -pthread -Wall -MMD -save-temps -O2 $(DEBUG) -fopenmp -g
 LDFLAGS=-L$(OPENCV)/lib -pthread -Wl,-rpath,$(OPENCV)/lib $(DEBUG)
 LDLIBS=-lopencv_core -lopencv_imgproc -lopencv_imgcodecs -lopencv_features2d -lOpenCL -fopenmp
 
-OBJS=src/main.o src/modelHandler.o src/modelHandler_avx.o src/modelHandler_fma.o src/modelHandler_OpenCL.o
+OBJS=src/main.o src/modelHandler.o src/modelHandler_avx.o src/modelHandler_fma.o src/modelHandler_OpenCL.o src/convertRoutine.o
 
 src/modelHandler_OpenCL.cpp: src/modelHandler_OpenCL.cl.h
 
