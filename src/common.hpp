@@ -9,7 +9,9 @@
 
 #define VEC_WIDTH 8U
 #define UNROLL 2U
-#define GPU_VEC_WIDTH 16
+#define GPU_VEC_WIDTH 64
+
+#define ALIGN_UP(v,a) (((v+(a-1))/(a))*(a))
 
 static void UNUSED
 pack_mat(float *out,

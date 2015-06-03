@@ -111,7 +111,7 @@ bool Model::filter_AVX_OpenCL(const float *packed_input,
 	}
 
 	if (OpenCL) {
-		vec_width = GPU_VEC_WIDTH;
+		vec_width = std::min(GPU_VEC_WIDTH, nOutputPlanes);
 	} else {
 		vec_width = VEC_WIDTH;
 	}
@@ -278,7 +278,11 @@ bool Model::filter(float *packed_input,
 	bool avx_available = true;
 	bool gpu_available = have_OpenCL;
 
-	if (nOutputPlanes % GPU_VEC_WIDTH) {
+	if (nOutputPlanes > GPU_VEC_WIDTH && nOutputPlanes % GPU_VEC_WIDTH) {
+		gpu_available = false;
+	}
+
+	if (nOutputPlanes == 1) {
 		gpu_available = false;
 	}
 

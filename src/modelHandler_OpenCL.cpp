@@ -140,15 +140,19 @@ filter_OpenCL_impl(const float *packed_input,
         ker.setArg(ai++, h);
         ker.setArg(ai++, w);
         ker.setArg(ai++, cl_weight);
-        ker.setArg(ai++, sizeof(float) * nOutputPlanes, NULL);
+
+        size_t local_size = 0;
+        local_size += sizeof(float) * ALIGN_UP(nOutputPlanes, VEC_WIDTH);
+
+        ker.setArg(ai++, local_size, NULL);
 
         cl::Event event;
 
         err = queue.enqueueNDRangeKernel(
                 ker,
                 cl::NullRange,
-                cl::NDRange(w*GPU_VEC_WIDTH, h),
-                cl::NDRange(GPU_VEC_WIDTH, 1),
+                cl::NDRange(h*GPU_VEC_WIDTH),
+                cl::NDRange(GPU_VEC_WIDTH),
                 NULL,
                 &event);
 
