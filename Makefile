@@ -21,7 +21,7 @@ run: waifu2x-converter-cpp
 	perf stat ./waifu2x-converter-cpp -i $(INPUT) --model_dir models
 
 run8: waifu2x-converter-cpp
-	perf stat ./waifu2x-converter-cpp -m scale -j 8 -i $(INPUT) --model_dir models
+	perf stat ./waifu2x-converter-cpp -j 8 -i $(INPUT) --model_dir models
 
 run8r: waifu2x-converter-cpp
 	perf record ./waifu2x-converter-cpp -m scale -j 8 -i $(INPUT) --model_dir models

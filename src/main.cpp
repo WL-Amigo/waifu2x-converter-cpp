@@ -200,7 +200,7 @@ int main(int argc, char** argv) {
 
 	double time_end = getsec();
 
-	std::cout << "process successfully done! (" << (time_end - time_start) << "[ms])" << std::endl;
+	std::cout << "process successfully done! (" << (time_end - time_start) << "[sec])" << std::endl;
 
 	return 0;
 }
