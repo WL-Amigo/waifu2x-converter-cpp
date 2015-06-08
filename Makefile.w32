@@ -9,7 +9,7 @@ CXXFLAGS=-I$(OPENCL)/include -I$(OPENCV)/include -I$(CURDIR)/include -O2 /EHsc /
 
 LDFLAGS=/LIBPATH:$(OPENCV)/x64/vc12/staticlib /LIBPATH:$(OPENCL)/lib/x64
 #LDFLAGS=/LIBPATH:$(OPENCV)/x86/vc12/staticlib /LIBPATH:$(OPENCL)/lib/Win32
-LDLIBS=opencv_core300.lib opencv_imgproc300.lib opencv_imgcodecs300.lib opencv_features2d300.lib OpenCL.lib ippicvmt.lib libjpeg.lib libpng.lib libtiff.lib libjasper.lib opencv_hal300.lib IlmImf.lib zlib.lib libwebp.lib user32.lib
+LDLIBS=opencv_core300.lib opencv_imgproc300.lib opencv_imgcodecs300.lib opencv_features2d300.lib OpenCL.lib ippicvmt.lib libjpeg.lib libpng.lib libtiff.lib libjasper.lib opencv_hal300.lib IlmImf.lib zlib.lib libwebp.lib user32.lib opencv_core300.lib opencv_imgproc300.lib 
 
 OBJS=src/main.obj src/modelHandler.obj src/modelHandler_avx.obj src/modelHandler_fma.obj src/modelHandler_OpenCL.obj
 
