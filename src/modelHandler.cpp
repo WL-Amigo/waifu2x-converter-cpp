@@ -82,7 +82,7 @@ Model::filter_CV(const float *packed_input,
 	return true;
 }
 
-#define COMPARE_RESULT
+//#define COMPARE_RESULT
 #define DUMP_FLOPS
 
 bool Model::filter_AVX_OpenCL(const float *packed_input,
@@ -240,8 +240,6 @@ bool Model::filter_AVX_OpenCL(const float *packed_input,
 			exit(1);
 		}
 	} else {
-		static double sum = 0;
-		double t1 = getsec();
 		if (OpenCL) {
 			filter_OpenCL_impl(packed_input, packed_output,
 					   nInputPlanes, nOutputPlanes, fbiases_flat, weight_flat, size, nJob);
@@ -254,12 +252,6 @@ bool Model::filter_AVX_OpenCL(const float *packed_input,
 						nInputPlanes, nOutputPlanes, fbiases_flat, weight_flat, size, nJob);
 			}
 		}
-		double t2 = getsec();
-		sum += t2 - t1;
-		double ops = size.width * size.height * 9.0 * 2.0 * nOutputPlanes * nInputPlanes;
-#ifdef DUMP_FLOPS
-		printf("ver2 : %f [Gflops], %f[msec], total= %f[msec]\n", (ops/(1000.0*1000.0*1000.0)) / (t2-t1), (t2-t1)*1000, sum);
-#endif
 	}
 
 	_mm_free(fbiases_flat);

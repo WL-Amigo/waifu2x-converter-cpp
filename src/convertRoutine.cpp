@@ -81,8 +81,12 @@ static bool convertWithModelsBasic(cv::Mat &inputPlane, cv::Mat &outputPlane,
 			std::exit(-1);
 		}
 		double t1 = getsec();
+		int nOutputPlanes = models[index]->getNOutputPlanes();
+		int nInputPlanes = models[index]->getNInputPlanes();
+		double ops = filterSize.width * filterSize.height * 9.0 * 2.0 * nOutputPlanes * nInputPlanes;
+		double gflops = (ops/(1000.0*1000.0*1000.0)) / (t1-t0);
 
-		std::cout << "(" << (t1-t0)*1000 << "[ms])" << std::endl;
+		std::cout << "(" << (t1-t0)*1000 << "[ms], " << gflops << "[GFLOPS])" << std::endl;
 
 		free(packed_input);
 		packed_input = packed_output;

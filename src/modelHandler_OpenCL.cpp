@@ -1,7 +1,13 @@
 #define CLLIB_EXTERN
+
+#ifdef _WIN32
 #include <windows.h>
+#else
+#include <dlfcn.h>
+#endif
 #include "modelHandler.hpp"
 #include "common.hpp"
+#include "sec.hpp"
 #include "CLlib.h"
 
 static cl_platform_id platform;
@@ -21,13 +27,24 @@ static const char prog[] =
 namespace w2xc {
 
 
+#ifdef _WIN32
 static HMODULE handle;
+#else
+static void *handle;
+#endif
 
 static int
 cllib_init(void)
 {
-        /* g620s */
+#ifdef _WIN32
         handle = LoadLibrary("OpenCL.dll");
+#else
+        handle = dlopen("libOpenCL.so.1", RTLD_LAZY);
+
+#define GetProcAddress dlsym
+
+#endif
+
         if (!handle) {
                 return -1;
         }
@@ -132,6 +149,7 @@ initOpenCL()
         }
 
         err = clBuildProgram(program, 1, &dev, "-DVEC_WIDTH=" S(GPU_VEC_WIDTH), nullptr, nullptr);
+
         if (err != CL_SUCCESS) {
                 size_t log_len;
                 clGetProgramBuildInfo(program, dev, CL_PROGRAM_BUILD_LOG, 0, nullptr, &log_len);
@@ -248,7 +266,6 @@ filter_OpenCL_impl(const float *packed_input,
         }
 
         err = clWaitForEvents(1, &event);
-
         if (err != CL_SUCCESS) {
                 printf("wait ndrange error : %d\n", err);
                 exit(1);
