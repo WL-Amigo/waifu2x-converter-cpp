@@ -81,6 +81,22 @@ filter(__global const float * __restrict__ packed_input,
     __local float *local_21 = local_mem; local_mem += nInputPlanes;
     __local float *local_22 = local_mem; local_mem += nInputPlanes;
 
+    if (lid < nInputPlanes) {
+        __global float *in01 = in01_base;
+        __global float *in11 = in11_base;
+        __global float *in21 = in21_base;
+
+        float v01 = in01[lid];
+        float v11 = in11[lid];
+        float v21 = in21[lid];
+
+        local_01[lid] = local_02[lid] = v01;
+        local_11[lid] = local_12[lid] = v11;
+        local_21[lid] = local_22[lid] = v21;
+    }
+
+    barrier(CLK_LOCAL_MEM_FENCE);
+
     for (int xi=0; xi<wsz; xi++) {
         float v = 0;
 
@@ -88,26 +104,24 @@ filter(__global const float * __restrict__ packed_input,
         __global float *in11 = in11_base + xi * nInputPlanes;
         __global float *in21 = in21_base + xi * nInputPlanes;
 
-        if (lid < nInputPlanes) {
-            float v01 = local_01[lid] = in01[lid];
-            float v11 = local_11[lid] = in11[lid];
-            float v21 = local_21[lid] = in21[lid];
+        __local float *tmp0 = local_00;
+        __local float *tmp1 = local_10;
+        __local float *tmp2 = local_20;
 
-            if (xi == 0) {
-                local_00[lid] = v01;
-                local_10[lid] = v11;
-                local_20[lid] = v21;
-            } else {
-                local_00[lid] = in01[(int)lid-(int)nInputPlanes];
-                local_10[lid] = in11[(int)lid-(int)nInputPlanes];
-                local_20[lid] = in21[(int)lid-(int)nInputPlanes];
-            }
+        local_00 = local_01;
+        local_01 = local_02;
 
-            if (xi == wsz-1) {
-                local_02[lid] = v01;
-                local_12[lid] = v11;
-                local_22[lid] = v21;
-            } else {
+        local_10 = local_11;
+        local_11 = local_12;
+
+        local_20 = local_21;
+        local_21 = local_22;
+
+        if (xi != wsz-1) {
+            local_02 = tmp0;
+            local_12 = tmp1;
+            local_22 = tmp2;
+            if (lid < nInputPlanes) {
                 local_02[lid] = in01[(int)lid+(int)nInputPlanes];
                 local_12[lid] = in11[(int)lid+(int)nInputPlanes];
                 local_22[lid] = in21[(int)lid+(int)nInputPlanes];
