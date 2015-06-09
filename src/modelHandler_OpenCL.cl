@@ -130,6 +130,8 @@ filter(__global const float * __restrict__ packed_input,
 
         barrier(CLK_LOCAL_MEM_FENCE);
 
+        __global float *w = weight + (inputPlaneStart * nOutputPlanes) * 9 + outputIdx + opStart;
+
         for (int ipIndex = inputPlaneStart; ipIndex < inputPlaneEnd; ipIndex++) {
             float i00, i01, i02;
             float i10, i11, i12;
@@ -145,8 +147,6 @@ filter(__global const float * __restrict__ packed_input,
             i21 = local_21[ipIndex];
             i22 = local_22[ipIndex];
 
-            __global float *w = weight + (ipIndex * nOutputPlanes) * 9 + outputIdx + opStart;
-
             v += w[0*nOutputPlanes] * i00;
             v += w[1*nOutputPlanes] * i01;
             v += w[2*nOutputPlanes] * i02;
@@ -158,6 +158,8 @@ filter(__global const float * __restrict__ packed_input,
             v += w[6*nOutputPlanes] * i20;
             v += w[7*nOutputPlanes] * i21;
             v += w[8*nOutputPlanes] * i22;
+
+            w += 9 * nOutputPlanes;
         }
 
         intermediate[lid] = v;
