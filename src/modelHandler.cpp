@@ -357,7 +357,6 @@ bool Model::filterWorker(std::vector<cv::Mat> &inputPlanes,
 		std::vector<cv::Mat> &weightMatrices,
 		std::vector<cv::Mat> &outputPlanes, unsigned int beginningIndex,
 		unsigned int nWorks) {
-	cv::ocl::setUseOpenCL(false); // disable OpenCL Support(temporary)
 
 	cv::Size ipSize = inputPlanes[0].size();
 	// filter processing
@@ -369,14 +368,12 @@ bool Model::filterWorker(std::vector<cv::Mat> &inputPlanes,
 	     opIndex++) {
 		int wMatIndex = nInputPlanes * opIndex;
 		cv::Mat outputPlane = cv::Mat::zeros(ipSize, CV_32FC1);
-		cv::UMat uIntermediatePlane = outputPlane.getUMat(cv::ACCESS_WRITE); // all zero matrix
+		cv::Mat &uIntermediatePlane = outputPlane; // all zero matrix
 
 		for (int ipIndex = 0; ipIndex < nInputPlanes; ipIndex++) {
-			cv::UMat uInputPlane = inputPlanes[ipIndex].getUMat(
-					cv::ACCESS_READ);
-			cv::UMat weightMatrix = weightMatrices[wMatIndex + ipIndex].getUMat(
-					cv::ACCESS_READ);
-			cv::UMat filterOutput = cv::UMat(ipSize, CV_32FC1);
+			cv::Mat &uInputPlane = inputPlanes[ipIndex];
+			cv::Mat &weightMatrix = weightMatrices[wMatIndex + ipIndex];
+			cv::Mat filterOutput = cv::Mat(ipSize, CV_32FC1);
 
 			cv::filter2D(uInputPlane, filterOutput, -1, weightMatrix,
 					cv::Point(-1, -1), 0.0, cv::BORDER_REPLICATE);
@@ -385,13 +382,12 @@ bool Model::filterWorker(std::vector<cv::Mat> &inputPlanes,
 		}
 
 		cv::add(uIntermediatePlane, biases[opIndex], uIntermediatePlane);
-		cv::UMat moreThanZero = cv::UMat(ipSize,CV_32FC1,0.0);
-		cv::UMat lessThanZero = cv::UMat(ipSize,CV_32FC1,0.0);
+		cv::Mat moreThanZero = cv::Mat(ipSize,CV_32FC1,0.0);
+		cv::Mat lessThanZero = cv::Mat(ipSize,CV_32FC1,0.0);
 		(cv::max)(uIntermediatePlane, 0.0, moreThanZero);
 		(cv::min)(uIntermediatePlane, 0.0, lessThanZero);
 		cv::scaleAdd(lessThanZero, 0.1, moreThanZero, uIntermediatePlane);
-		outputPlane = uIntermediatePlane.getMat(cv::ACCESS_READ);
-		outputPlane.copyTo(outputPlanes[opIndex]);
+		uIntermediatePlane.copyTo(outputPlanes[opIndex]);
 
 	} // for index
 

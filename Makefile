@@ -5,7 +5,7 @@ OPENCV=$(HOME)/usr
 DEBUG= # -g
 CXXFLAGS=-I$(OPENCV)/include -I$(CURDIR)/include -std=c++11 -pthread -Wall -MMD -save-temps -O2 $(DEBUG) -fopenmp -g
 LDFLAGS=-L$(OPENCV)/lib -pthread -Wl,-rpath,$(OPENCV)/lib $(DEBUG)
-LDLIBS=-lopencv_core -lopencv_imgproc -lopencv_imgcodecs -lopencv_features2d -lOpenCL -fopenmp
+LDLIBS=-lopencv_core -lopencv_imgproc -lopencv_highgui -lopencv_features2d -fopenmp
 
 OBJS=src/main.o src/modelHandler.o src/modelHandler_avx.o src/modelHandler_fma.o src/modelHandler_OpenCL.o src/convertRoutine.o
 
@@ -44,6 +44,7 @@ clean:
 	rm -f $(OBJS) waifu2x-converter-cpp
 
 conv: conv.c
+	gcc -o $@ $<
 
 src/modelHandler_OpenCL.cl.h:src/modelHandler_OpenCL.cl conv
 	./conv $< $@

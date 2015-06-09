@@ -12,7 +12,6 @@
 #define MODEL_HANDLER_HPP_
 
 #include <opencv2/opencv.hpp>
-#include <opencv2/core/ocl.hpp>
 #include "picojson.h"
 #include <iostream>
 #include <memory>
