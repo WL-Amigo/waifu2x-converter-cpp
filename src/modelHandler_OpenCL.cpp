@@ -244,6 +244,7 @@ filter_OpenCL_impl(const float *packed_input,
 
         size_t local_size = 0;
         local_size += sizeof(float) * 256;
+        local_size += sizeof(float) * 9 * nInputPlanes;
 
         clSetKernelArg(ker, ai++, local_size, nullptr);
 

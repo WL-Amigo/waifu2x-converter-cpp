@@ -46,8 +46,9 @@ filter(__global const float * __restrict__ packed_input,
     __global float *in11_base = (__global float*)in1p;
     __global float *in21_base = (__global float*)in2p;
 
+    /* 4*256 = 1024 */
     __local float *intermediate = local_mem;
-    local_mem += sizeof(float) * nOutputPlanes;
+    local_mem += 256;
 
     unsigned int vec_width = min((int)VEC_WIDTH, (int)nOutputPlanes);
     unsigned int opHalf = nOutputPlanes / 2U;
@@ -67,6 +68,19 @@ filter(__global const float * __restrict__ packed_input,
     unsigned int inputPlaneStart = inputIdx * 32;
     unsigned int inputPlaneEnd = (inputIdx+1) * 32;
 
+    /* 9*4*128 = 4608 */
+    __local float *local_00 = local_mem; local_mem += nInputPlanes;
+    __local float *local_01 = local_mem; local_mem += nInputPlanes;
+    __local float *local_02 = local_mem; local_mem += nInputPlanes;
+
+    __local float *local_10 = local_mem; local_mem += nInputPlanes;
+    __local float *local_11 = local_mem; local_mem += nInputPlanes;
+    __local float *local_12 = local_mem; local_mem += nInputPlanes;
+
+    __local float *local_20 = local_mem; local_mem += nInputPlanes;
+    __local float *local_21 = local_mem; local_mem += nInputPlanes;
+    __local float *local_22 = local_mem; local_mem += nInputPlanes;
+
     for (int xi=0; xi<wsz; xi++) {
         float v = 0;
 
@@ -74,34 +88,48 @@ filter(__global const float * __restrict__ packed_input,
         __global float *in11 = in11_base + xi * nInputPlanes;
         __global float *in21 = in21_base + xi * nInputPlanes;
 
+        if (lid < nInputPlanes) {
+            float v01 = local_01[lid] = in01[lid];
+            float v11 = local_11[lid] = in11[lid];
+            float v21 = local_21[lid] = in21[lid];
+
+            if (xi == 0) {
+                local_00[lid] = v01;
+                local_10[lid] = v11;
+                local_20[lid] = v21;
+            } else {
+                local_00[lid] = in01[(int)lid-(int)nInputPlanes];
+                local_10[lid] = in11[(int)lid-(int)nInputPlanes];
+                local_20[lid] = in21[(int)lid-(int)nInputPlanes];
+            }
+
+            if (xi == wsz-1) {
+                local_02[lid] = v01;
+                local_12[lid] = v11;
+                local_22[lid] = v21;
+            } else {
+                local_02[lid] = in01[(int)lid+(int)nInputPlanes];
+                local_12[lid] = in11[(int)lid+(int)nInputPlanes];
+                local_22[lid] = in21[(int)lid+(int)nInputPlanes];
+            }
+        }
+
+        barrier(CLK_LOCAL_MEM_FENCE);
+
         for (int ipIndex = inputPlaneStart; ipIndex < inputPlaneEnd; ipIndex++) {
             float i00, i01, i02;
             float i10, i11, i12;
             float i20, i21, i22;
 
-            i01 = in01[ipIndex];
-            i11 = in11[ipIndex];
-            i21 = in21[ipIndex];
-
-            if (xi == 0) {
-                i00 = i01;
-                i10 = i11;
-                i20 = i21;
-            } else {
-                i00 = in01[ipIndex-(int)nInputPlanes];
-                i10 = in11[ipIndex-(int)nInputPlanes];
-                i20 = in21[ipIndex-(int)nInputPlanes];
-            }
-
-            if (xi == wsz-1) {
-                i02 = i01;
-                i12 = i11;
-                i22 = i21;
-            } else {
-                i02 = in01[ipIndex+nInputPlanes];
-                i12 = in11[ipIndex+nInputPlanes];
-                i22 = in21[ipIndex+nInputPlanes];
-            }
+            i00 = local_00[ipIndex];
+            i01 = local_01[ipIndex];
+            i02 = local_02[ipIndex];
+            i10 = local_10[ipIndex];
+            i11 = local_11[ipIndex];
+            i12 = local_12[ipIndex];
+            i20 = local_20[ipIndex];
+            i21 = local_21[ipIndex];
+            i22 = local_22[ipIndex];
 
             __global float *w = weight + (ipIndex * nOutputPlanes) * 9 + outputIdx + opStart;
 
@@ -144,7 +172,6 @@ filter(__global const float * __restrict__ packed_input,
 
             out[opIndex] = v;
         }
-        barrier(CLK_LOCAL_MEM_FENCE);
     }
 }
 
