@@ -251,12 +251,17 @@ filter_OpenCL_impl(const float *packed_input,
 
         size_t vec_width = std::min(GPU_VEC_WIDTH, nOutputPlanes);
 
-        size_t gws[3] = {h*vec_width, 1, 1};
+        unsigned int nout = 2;
+        if (nOutputPlanes == 1) {
+                nout = 1;
+        }
+
+        size_t gws[3] = {nout*vec_width, h, 1};
         size_t lws[3] = {vec_width, 1, 1};
 
         err = clEnqueueNDRangeKernel(queue,
                                      ker,
-                                     1,
+                                     2,
                                      nullptr, gws, lws,
                                      0, nullptr, &event);
 

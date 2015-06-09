@@ -11,16 +11,17 @@ get_data(__global const float *p, int hsz, int wsz, int step, int yi, int xi, in
 
 __kernel void
 filter(__global const float * __restrict__ packed_input,
-       int nInputPlanes,
+       unsigned int nInputPlanes,
        __global float * __restrict__ packed_output,
-       int nOutputPlanes,
+       unsigned int nOutputPlanes,
        __global float * __restrict__ biases,
        unsigned int hsz,
        unsigned int wsz,
        __global float * __restrict__ weight,
        __local float * __restrict__ local_mem)
 {
-    unsigned int yi = get_group_id(0);
+    unsigned int yi = get_group_id(1);
+    unsigned int og = get_group_id(0);
     unsigned int lid = get_local_id(0);
 
     __global const float * __restrict__ in = packed_input;
@@ -49,6 +50,16 @@ filter(__global const float * __restrict__ packed_input,
     local_mem += sizeof(float) * nOutputPlanes;
 
     unsigned int vec_width = min((int)VEC_WIDTH, (int)nOutputPlanes);
+    unsigned int opHalf = nOutputPlanes / 2U;
+    unsigned int opStart, opEnd;
+
+    if (nOutputPlanes == 1) {
+        opStart = 0;
+        opEnd = 1;
+    } else {
+        opStart = og * opHalf;
+        opEnd = (og+1) * opHalf;
+    }
 
     for (int xi=0; xi<wsz; xi++) {
         for (int ipIndex = 0; ipIndex < nInputPlanes; ipIndex++) {
@@ -65,9 +76,9 @@ filter(__global const float * __restrict__ packed_input,
                 i10 = i11;
                 i20 = i21;
             } else {
-                i00 = in01[-nInputPlanes];
-                i10 = in11[-nInputPlanes];
-                i20 = in21[-nInputPlanes];
+                i00 = in01[-(int)nInputPlanes];
+                i10 = in11[-(int)nInputPlanes];
+                i20 = in21[-(int)nInputPlanes];
             }
 
             if (xi == wsz-1) {
@@ -84,10 +95,10 @@ filter(__global const float * __restrict__ packed_input,
             in11 ++;
             in21 ++;
 
-            __global float *w = weight + (ipIndex * nOutputPlanes) * 9 + lid;
+            __global float *w = weight + (ipIndex * nOutputPlanes) * 9 + lid + opStart;
 
-            for (unsigned int opIndex = lid;
-                 opIndex < (unsigned int)nOutputPlanes;
+            for (unsigned int opIndex = opStart + lid;
+                 opIndex < opEnd;
                  opIndex += vec_width)
             {
                 float v = 0;
@@ -116,8 +127,8 @@ filter(__global const float * __restrict__ packed_input,
 
         __global float *out = packed_output + (yi*wsz + xi)*nOutputPlanes;
 
-        for (unsigned int opIndex = lid;
-             opIndex < nOutputPlanes;
+        for (unsigned int opIndex = opStart + lid;
+             opIndex < opEnd;
              opIndex += vec_width)
         {
             float bv = biases[opIndex];
