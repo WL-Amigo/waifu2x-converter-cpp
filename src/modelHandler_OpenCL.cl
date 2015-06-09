@@ -42,9 +42,9 @@ filter(__global const float * __restrict__ packed_input,
         in2p = inp;
     }
 
-    __global float *in01 = (__global float*)in0p;
-    __global float *in11 = (__global float*)in1p;
-    __global float *in21 = (__global float*)in2p;
+    __global float *in01_base = (__global float*)in0p;
+    __global float *in11_base = (__global float*)in1p;
+    __global float *in21_base = (__global float*)in2p;
 
     __local float *intermediate = local_mem;
     local_mem += sizeof(float) * nOutputPlanes;
@@ -53,32 +53,44 @@ filter(__global const float * __restrict__ packed_input,
     unsigned int opHalf = nOutputPlanes / 2U;
     unsigned int opStart, opEnd;
 
-    if (nOutputPlanes == 1) {
-        opStart = 0;
-        opEnd = 1;
-    } else {
-        opStart = og * opHalf;
-        opEnd = (og+1) * opHalf;
-    }
+    opStart = og * opHalf;
+
+    /* input  (32 / item) x 4
+     * .... .... .... .... 128
+     * .... .... .... .... 128
+     * output (1 / item) x 64
+     */
+
+    unsigned int outputIdx = lid / 4U;
+    unsigned int inputIdx = lid & 3;
+
+    unsigned int inputPlaneStart = inputIdx * 32;
+    unsigned int inputPlaneEnd = (inputIdx+1) * 32;
 
     for (int xi=0; xi<wsz; xi++) {
-        for (int ipIndex = 0; ipIndex < nInputPlanes; ipIndex++) {
+        float v = 0;
+
+        __global float *in01 = in01_base + xi * nInputPlanes;
+        __global float *in11 = in11_base + xi * nInputPlanes;
+        __global float *in21 = in21_base + xi * nInputPlanes;
+
+        for (int ipIndex = inputPlaneStart; ipIndex < inputPlaneEnd; ipIndex++) {
             float i00, i01, i02;
             float i10, i11, i12;
             float i20, i21, i22;
 
-            i01 = in01[0];
-            i11 = in11[0];
-            i21 = in21[0];
+            i01 = in01[ipIndex];
+            i11 = in11[ipIndex];
+            i21 = in21[ipIndex];
 
             if (xi == 0) {
                 i00 = i01;
                 i10 = i11;
                 i20 = i21;
             } else {
-                i00 = in01[-(int)nInputPlanes];
-                i10 = in11[-(int)nInputPlanes];
-                i20 = in21[-(int)nInputPlanes];
+                i00 = in01[ipIndex-(int)nInputPlanes];
+                i10 = in11[ipIndex-(int)nInputPlanes];
+                i20 = in21[ipIndex-(int)nInputPlanes];
             }
 
             if (xi == wsz-1) {
@@ -86,53 +98,43 @@ filter(__global const float * __restrict__ packed_input,
                 i12 = i11;
                 i22 = i21;
             } else {
-                i02 = in01[+nInputPlanes];
-                i12 = in11[+nInputPlanes];
-                i22 = in21[+nInputPlanes];
+                i02 = in01[ipIndex+nInputPlanes];
+                i12 = in11[ipIndex+nInputPlanes];
+                i22 = in21[ipIndex+nInputPlanes];
             }
 
-            in01 ++;
-            in11 ++;
-            in21 ++;
+            __global float *w = weight + (ipIndex * nOutputPlanes) * 9 + outputIdx + opStart;
 
-            __global float *w = weight + (ipIndex * nOutputPlanes) * 9 + lid + opStart;
+            v += w[0*nOutputPlanes] * i00;
+            v += w[1*nOutputPlanes] * i01;
+            v += w[2*nOutputPlanes] * i02;
 
-            for (unsigned int opIndex = opStart + lid;
-                 opIndex < opEnd;
-                 opIndex += vec_width)
-            {
-                float v = 0;
+            v += w[3*nOutputPlanes] * i10;
+            v += w[4*nOutputPlanes] * i11;
+            v += w[5*nOutputPlanes] * i12;
 
-                v += w[0*vec_width] * i00;
-                v += w[1*vec_width] * i01;
-                v += w[2*vec_width] * i02;
-
-                v += w[3*vec_width] * i10;
-                v += w[4*vec_width] * i11;
-                v += w[5*vec_width] * i12;
-
-                v += w[6*vec_width] * i20;
-                v += w[7*vec_width] * i21;
-                v += w[8*vec_width] * i22;
-
-                w += 9 * VEC_WIDTH;
-
-                if (ipIndex == 0) {
-                    intermediate[opIndex] = v;
-                } else {
-                    intermediate[opIndex] += v;
-                }
-            }
+            v += w[6*nOutputPlanes] * i20;
+            v += w[7*nOutputPlanes] * i21;
+            v += w[8*nOutputPlanes] * i22;
         }
 
+        intermediate[lid] = v;
+        barrier(CLK_LOCAL_MEM_FENCE);
+        unsigned int opIndex = opStart + lid;
         __global float *out = packed_output + (yi*wsz + xi)*nOutputPlanes;
 
-        for (unsigned int opIndex = opStart + lid;
-             opIndex < opEnd;
-             opIndex += vec_width)
-        {
+        /* 256 to 64 reduction */
+        if (lid < 64) {
+            float sum = 0;
+
+            sum = intermediate[lid*4 + 0]
+                + intermediate[lid*4 + 1]
+                + intermediate[lid*4 + 2]
+                + intermediate[lid*4 + 3];
+
             float bv = biases[opIndex];
-            float v = intermediate[opIndex];
+            float v = sum;
+
             v += bv;
 
             float mtz = max(v, 0.0f);
@@ -140,12 +142,9 @@ filter(__global const float * __restrict__ packed_input,
 
             v = ltz * 0.1f + mtz;
 
-            if (og == 1 && nOutputPlanes == 128) {
-                out[opIndex] = v;
-            } else {
-                out[opIndex] = v;
-            }
+            out[opIndex] = v;
         }
+        barrier(CLK_LOCAL_MEM_FENCE);
     }
 }
 

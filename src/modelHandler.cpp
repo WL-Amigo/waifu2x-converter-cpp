@@ -177,7 +177,9 @@ bool Model::filter_AVX_OpenCL(const float *packed_input,
 	bool compare_result = false;
 
 #ifdef COMPARE_RESULT
-	compare_result = true;
+	if (nOutputPlanes == 128 && nInputPlanes == 128) {
+		compare_result = true;
+	}
 #endif
 
 	if (compare_result) {
@@ -185,6 +187,8 @@ bool Model::filter_AVX_OpenCL(const float *packed_input,
 
 		double t0 = getsec();
 		filter_CV(packed_input, packed_output_cv, size);
+		//filter_FMA_impl(packed_input, packed_output_cv,
+		//		nInputPlanes, nOutputPlanes, fbiases_flat, weight_flat, size, nJob);
 		double t1 = getsec();
 
 		/* 3x3 = 9 fma */
@@ -229,7 +233,7 @@ bool Model::filter_AVX_OpenCL(const float *packed_input,
 				printf("d=%.20f %.20f %.20f @ (%d,%d,%d,%d) \n",r, v0, v1, xpos, ypos, plane, i);
 				error_count++;
 
-				if (error_count >= 8) {
+				if (error_count >= 256) {
 					exit(1);
 				}
 			}
@@ -290,6 +294,12 @@ bool Model::filter(float *packed_input,
 
 	if (size.width&1) {
 		avx_available = false;
+	}
+
+	if (nOutputPlanes == 128 && nInputPlanes == 128) {
+		/* nop */
+	} else {
+		gpu_available = false;
 	}
 
 	if (gpu_available) {

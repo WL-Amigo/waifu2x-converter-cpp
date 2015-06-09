@@ -243,7 +243,7 @@ filter_OpenCL_impl(const float *packed_input,
         clSetKernelArg(ker, ai++, sizeof(cl_mem), &cl_weight);
 
         size_t local_size = 0;
-        local_size += sizeof(float) * ALIGN_UP(nOutputPlanes, VEC_WIDTH);
+        local_size += sizeof(float) * 256;
 
         clSetKernelArg(ker, ai++, local_size, nullptr);
 
@@ -256,8 +256,8 @@ filter_OpenCL_impl(const float *packed_input,
                 nout = 1;
         }
 
-        size_t gws[3] = {nout*vec_width, h, 1};
-        size_t lws[3] = {vec_width, 1, 1};
+        size_t gws[3] = {512, h, 1};
+        size_t lws[3] = {256, 1, 1};
 
         err = clEnqueueNDRangeKernel(queue,
                                      ker,
