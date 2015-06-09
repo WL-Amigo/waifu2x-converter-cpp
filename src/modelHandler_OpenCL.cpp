@@ -1,93 +1,178 @@
-#include <CL/cl.hpp>
+#define CLLIB_EXTERN
+#include <windows.h>
 #include "modelHandler.hpp"
 #include "common.hpp"
+#include "CLlib.h"
 
-static cl::Platform platform;
-static cl::Device dev;
-static cl::Context context;
-static cl::CommandQueue queue;
-static cl::Kernel ker;
+static cl_platform_id platform;
+static cl_device_id dev;
+static cl_context context;
+static cl_command_queue queue;
+static cl_kernel ker;
+static cl_program program;
 
 static const char prog[] = 
 #include "modelHandler_OpenCL.cl.h"
-    ;
+        ;
 
 #define S_(a) #a
 #define S(a) S_(a)
 
 namespace w2xc {
 
+
+static HMODULE handle;
+
+static int
+cllib_init(void)
+{
+        /* g620s */
+        handle = LoadLibrary("OpenCL.dll");
+        if (!handle) {
+                return -1;
+        }
+
+#define LOAD(name)                              \
+        p_##name = (__decltype(p_##name)) GetProcAddress(handle, #name); \
+        if (p_##name == NULL) {                 \
+                return -1;                      \
+        }
+
+        LOAD(clGetDeviceInfo);
+        LOAD(clGetPlatformIDs);
+        LOAD(clGetDeviceIDs);
+        LOAD(clGetPlatformInfo);
+        LOAD(clCreateProgramWithSource);
+        LOAD(clBuildProgram);
+        LOAD(clGetProgramBuildInfo);
+        LOAD(clReleaseProgram);
+        LOAD(clCreateKernel);
+        LOAD(clCreateBuffer);
+        LOAD(clEnqueueWriteBuffer);
+        LOAD(clFlush);
+        LOAD(clReleaseMemObject);
+        LOAD(clEnqueueReadBuffer);
+        LOAD(clFinish);
+        LOAD(clEnqueueNDRangeKernel);
+        LOAD(clReleaseKernel);
+        LOAD(clSetKernelArg);
+        LOAD(clCreateCommandQueue);
+        LOAD(clCreateContext);
+        LOAD(clReleaseCommandQueue);
+        LOAD(clReleaseContext);
+        LOAD(clWaitForEvents);
+
+        return 0;
+}
+
 bool have_OpenCL = false;
 
 bool
 initOpenCL()
 {
-		return false;
-		std::vector<cl::Platform> pls;
-		cl::Platform::get(&pls);
+        int r = cllib_init();
+        if (r < 0) {
+                return false;
+        }
 
-		if (pls.empty()) {
-				return false;
-		}
+        cl_uint num_plt;
+        cl_platform_id plts[16];
+        clGetPlatformIDs(16, plts, &num_plt);
+        bool found = false;
+        cl_int err;
 
-		for (int i=0; i<pls.size(); i++) {
-				std::string name = pls[i].getInfo<CL_PLATFORM_NAME>();
+        for (unsigned int i=0; i<num_plt; i++) {
+                size_t sz;
+                cl_uint num_dev;
 
-				if (strncmp(name.c_str(), "Intel", 5) == 0) {
-						continue;
-				}
+                clGetPlatformInfo(plts[i], CL_PLATFORM_NAME, 0, nullptr, &sz);
+                std::vector<char> name(sz);
+                clGetPlatformInfo(plts[i], CL_PLATFORM_NAME, sz, &name[0], &sz);
 
-				cl_context_properties properties[] =
-						{ CL_CONTEXT_PLATFORM, (cl_context_properties)(pls[i])(), 0};
+                if (strncmp(&name[0], "Intel", 5) == 0) {
+                        continue;
+                }
 
-				cl::Context cand_context(CL_DEVICE_TYPE_GPU, properties);
-				std::vector<cl::Device> devices = cand_context.getInfo<CL_CONTEXT_DEVICES>();
+                clGetDeviceIDs(plts[i], CL_DEVICE_TYPE_GPU, 0, nullptr, &num_dev);
+                if (num_dev == 0) {
+                        continue;
+                }
 
-				if (!devices.empty()) {
-						platform = pls[i];
-						dev = devices[0];
-						context = cand_context;
+                std::vector<cl_device_id> devs(num_dev);
+                clGetDeviceIDs(plts[i], CL_DEVICE_TYPE_GPU, num_dev, &devs[0], &num_dev);
 
-						have_OpenCL = true;
-						break;
-				}
-		}
+                platform = plts[i];
+                dev = devs[0];
 
-		if (!have_OpenCL) {
-				return false;
-		}
 
-		cl::Program::Sources src(1, std::make_pair(prog,strlen(prog)));
-		cl::Program prog = cl::Program(context, src);
+                cl_context_properties props[] =
+                        {CL_CONTEXT_PLATFORM, (cl_context_properties)(plts[i]), 0};
+                cl_context ctxt = clCreateContext(props, 1, &devs[0], NULL, NULL, &err);
+                if (err != CL_SUCCESS) {
+                        continue;
+                }
 
-		std::vector<cl::Device> devs;
-		devs.push_back(dev);
+                context = ctxt;
 
-		cl_int err = prog.build(devs, "-DVEC_WIDTH=" S(GPU_VEC_WIDTH));
-		if (err != CL_SUCCESS) {
-				std::string log = prog.getBuildInfo<CL_PROGRAM_BUILD_LOG>(devs[0]);
-				puts(log.c_str());
-				have_OpenCL = false;
-				return false;
-		}
+                found = true;
+                break;
+        }
 
-		ker = cl::Kernel(prog, "filter", &err);
-		if (err != CL_SUCCESS) {
-				have_OpenCL = false;
-				return false;
-		}
+        if (!found) {
+                return false;
+        }
 
-		queue = cl::CommandQueue(context, dev, 0, &err);
-		if (err != CL_SUCCESS) {
-				have_OpenCL = false;
-				return false;
-		}
+        const char *source[1] = {prog};
+        size_t src_len[1] = {sizeof(prog)-1};
 
-		printf("use GPU: %s\n",
-			   dev.getInfo<CL_DEVICE_NAME>().c_str());
+        program = clCreateProgramWithSource(context, 1, source, src_len, &err);
+        if (err != CL_SUCCESS) {
+                clReleaseContext(context);
+                return false;
+        }
 
-		return true;
+        err = clBuildProgram(program, 1, &dev, "-DVEC_WIDTH=" S(GPU_VEC_WIDTH), nullptr, nullptr);
+        if (err != CL_SUCCESS) {
+                size_t log_len;
+                clGetProgramBuildInfo(program, dev, CL_PROGRAM_BUILD_LOG, 0, nullptr, &log_len);
 
+                std::vector<char> log(log_len+1);
+                clGetProgramBuildInfo(program, dev, CL_PROGRAM_BUILD_LOG, log_len, &log[0], &log_len);
+                log[log_len] = '\0';
+
+                puts(&log[0]);
+
+                clReleaseProgram(program);
+                clReleaseContext(context);
+                return false;
+        }
+
+        ker = clCreateKernel(program, "filter", &err);
+        if (err != CL_SUCCESS) {
+                clReleaseProgram(program);
+                clReleaseContext(context);
+                return false;
+        }
+
+        queue = clCreateCommandQueue(context, dev, 0, &err);
+        if (err != CL_SUCCESS) {
+                clReleaseProgram(program);
+                clReleaseContext(context);
+                clReleaseKernel(ker);
+                return false;
+        }
+
+        size_t dev_name_len;
+        clGetDeviceInfo(dev, CL_DEVICE_NAME, 0, nullptr, &dev_name_len);
+        std::vector<char> dev_name(dev_name_len+1);
+        clGetDeviceInfo(dev, CL_DEVICE_NAME, dev_name_len, &dev_name[0], &dev_name_len);
+
+        printf("use GPU: %s\n",
+               &dev_name[0]);
+
+        have_OpenCL = true;
+
+        return true;
 }
 
 
@@ -103,76 +188,86 @@ filter_OpenCL_impl(const float *packed_input,
 {
         int w = ipSize.width;
         int h = ipSize.height;
-        cl::Buffer cl_packed_input(context,
-                                   CL_MEM_READ_ONLY|CL_MEM_COPY_HOST_PTR,
-                                   sizeof(float) * w * h * nInputPlanes,
-                                   (void*)packed_input);
+        cl_int err;
+
+        cl_mem cl_packed_input = clCreateBuffer(context,
+                                                CL_MEM_READ_ONLY|CL_MEM_COPY_HOST_PTR,
+                                                sizeof(float) * w * h * nInputPlanes,
+                                                (void*)packed_input, &err);
 
         size_t out_size = sizeof(float) * w * h * nOutputPlanes;
-        cl::Buffer cl_packed_output(context,
-                                    CL_MEM_WRITE_ONLY,
-                                    out_size);
+        cl_mem cl_packed_output = clCreateBuffer(context,
+                                                 CL_MEM_WRITE_ONLY,
+                                                 out_size,
+                                                 nullptr, &err);
 
-        cl::Buffer cl_fbiases(context,
-                              CL_MEM_READ_ONLY|CL_MEM_COPY_HOST_PTR,
-                              sizeof(float) * nOutputPlanes,
-                              (void*)fbiases
+        cl_mem cl_fbiases = clCreateBuffer(context,
+                                           CL_MEM_READ_ONLY|CL_MEM_COPY_HOST_PTR,
+                                           sizeof(float) * nOutputPlanes,
+                                           (void*)fbiases, &err
                 );
 
-        cl::Buffer cl_weight(context,
-                             CL_MEM_READ_ONLY|CL_MEM_COPY_HOST_PTR,
-                             sizeof(float) * nOutputPlanes * nInputPlanes * 9,
-                             (void*)weight
+        cl_mem cl_weight = clCreateBuffer(context,
+                                          CL_MEM_READ_ONLY|CL_MEM_COPY_HOST_PTR,
+                                          sizeof(float) * nOutputPlanes * nInputPlanes * 9,
+                                          (void*)weight, &err
                 );
-
-        cl::Buffer cl_intermediate(context,
-                                   CL_MEM_READ_WRITE,
-                                   sizeof(float) * nOutputPlanes);
-
-        cl_int err;
 
         int ai = 0;
 
-        ker.setArg(ai++, cl_packed_input);
-        ker.setArg(ai++, nInputPlanes);
-        ker.setArg(ai++, cl_packed_output);
-        ker.setArg(ai++, nOutputPlanes);
-        ker.setArg(ai++, cl_fbiases);
-        ker.setArg(ai++, h);
-        ker.setArg(ai++, w);
-        ker.setArg(ai++, cl_weight);
-        ker.setArg(ai++, sizeof(float) * nOutputPlanes, NULL);
+        clSetKernelArg(ker, ai++, sizeof(cl_mem), &cl_packed_input);
+        clSetKernelArg(ker, ai++, sizeof(cl_int), &nInputPlanes);
+        clSetKernelArg(ker, ai++, sizeof(cl_mem), &cl_packed_output);
+        clSetKernelArg(ker, ai++, sizeof(cl_int), &nOutputPlanes);
+        clSetKernelArg(ker, ai++, sizeof(cl_mem), &cl_fbiases);
+        clSetKernelArg(ker, ai++, sizeof(cl_int), &h);
+        clSetKernelArg(ker, ai++, sizeof(cl_int), &w);
+        clSetKernelArg(ker, ai++, sizeof(cl_mem), &cl_weight);
 
-        cl::Event event;
+        size_t local_size = 0;
+        local_size += sizeof(float) * ALIGN_UP(nOutputPlanes, VEC_WIDTH);
 
-        err = queue.enqueueNDRangeKernel(
-                ker,
-                cl::NullRange,
-                cl::NDRange(w*GPU_VEC_WIDTH, h),
-                cl::NDRange(GPU_VEC_WIDTH, 1),
-                NULL,
-                &event);
+        clSetKernelArg(ker, ai++, local_size, nullptr);
+
+        cl_event event;
+
+        size_t vec_width = std::min(GPU_VEC_WIDTH, nOutputPlanes);
+
+        size_t gws[3] = {h*vec_width, 1, 1};
+        size_t lws[3] = {vec_width, 1, 1};
+
+        err = clEnqueueNDRangeKernel(queue,
+                                     ker,
+                                     1,
+                                     nullptr, gws, lws,
+                                     0, nullptr, &event);
 
         if (err != CL_SUCCESS) {
                 printf("enqueue ndrange error : %d\n", err);
                 exit(1);
         }
 
-        err = event.wait();
+        err = clWaitForEvents(1, &event);
 
         if (err != CL_SUCCESS) {
                 printf("wait ndrange error : %d\n", err);
                 exit(1);
         }
 
-        err = queue.enqueueReadBuffer(cl_packed_output,
-                                      CL_TRUE,
-                                      0, out_size, packed_output);
+        err = clEnqueueReadBuffer(queue, cl_packed_output,
+                                  CL_TRUE,
+                                  0, out_size, packed_output,
+                                  0, nullptr, nullptr);
 
         if (err != CL_SUCCESS) {
                 printf("read buffer error : %d\n", err);
                 exit(1);
         }
+
+        clReleaseMemObject(cl_packed_input);
+        clReleaseMemObject(cl_packed_output);
+        clReleaseMemObject(cl_fbiases);
+        clReleaseMemObject(cl_weight);
 }
 
 }
