@@ -140,7 +140,11 @@ filter(__global const float * __restrict__ packed_input,
 
             v = ltz * 0.1f + mtz;
 
-            out[opIndex] = v;
+            if (og == 1 && nOutputPlanes == 128) {
+                out[opIndex] = v;
+            } else {
+                out[opIndex] = v;
+            }
         }
     }
 }
