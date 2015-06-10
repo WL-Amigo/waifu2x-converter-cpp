@@ -127,39 +127,95 @@ filter(__global const float * __restrict__ packed_input,
 					float i10, i11, i12;
 					float i20, i21, i22;
 
-					i00 = *(__local float*)(p00 + ipIndex4);
-					i10 = *(__local float*)(p10 + ipIndex4);
-					i20 = *(__local float*)(p20 + ipIndex4);
+					float2 i00_2, i01_2, i02_2;
+					float2 i10_2, i11_2, i12_2;
+					float2 i20_2, i21_2, i22_2;
 
-					i01 = *(__local float*)(p01 + ipIndex4);
-					i11 = *(__local float*)(p11 + ipIndex4);
-					i21 = *(__local float*)(p21 + ipIndex4);
+					i00_2 = *(__local float2*)(p00 + ipIndex4);
+					i10_2 = *(__local float2*)(p10 + ipIndex4);
+					i20_2 = *(__local float2*)(p20 + ipIndex4);
 
-					i02 = *(__local float*)(p02 + ipIndex4);
-					i12 = *(__local float*)(p12 + ipIndex4);
-					i22 = *(__local float*)(p22 + ipIndex4);
+					i01_2 = *(__local float2*)(p01 + ipIndex4);
+					i11_2 = *(__local float2*)(p11 + ipIndex4);
+					i21_2 = *(__local float2*)(p21 + ipIndex4);
 
-					__global char *w = ((__global char*)w0 + (ipIndex4 * 128) * 9);
+					i02_2 = *(__local float2*)(p02 + ipIndex4);
+					i12_2 = *(__local float2*)(p12 + ipIndex4);
+					i22_2 = *(__local float2*)(p22 + ipIndex4);
 
 					{
-						int opIndex = lid;
-						float v = 0;
-						int vec_width4 = 128 * 4;
+						i00 = i00_2.x;
+						i10 = i10_2.x;
+						i20 = i20_2.x;
 
-						v += *(__global float*)(w + 0 * vec_width4) * i00;
-						v += *(__global float*)(w + 1 * vec_width4) * i01;
-						v += *(__global float*)(w + 2 * vec_width4) * i02;
+						i01 = i01_2.x;
+						i11 = i11_2.x;
+						i21 = i21_2.x;
 
-						v += *(__global float*)(w + 3 * vec_width4) * i10;
-						v += *(__global float*)(w + 4 * vec_width4) * i11;
-						v += *(__global float*)(w + 5 * vec_width4) * i12;
+						i02 = i02_2.x;
+						i12 = i12_2.x;
+						i22 = i22_2.x;
 
-						v += *(__global float*)(w + 6 * vec_width4) * i20;
-						v += *(__global float*)(w + 7 * vec_width4) * i21;
-						v += *(__global float*)(w + 8 * vec_width4) * i22;
+						__global char *w = ((__global char*)w0 + (ipIndex4 * 128) * 9);
 
-						intermediate_reg += v;
+						{
+							int opIndex = lid;
+							float v = 0;
+							int vec_width4 = 128 * 4;
+
+							v += *(__global float*)(w + 0 * vec_width4) * i00;
+							v += *(__global float*)(w + 1 * vec_width4) * i01;
+							v += *(__global float*)(w + 2 * vec_width4) * i02;
+
+							v += *(__global float*)(w + 3 * vec_width4) * i10;
+							v += *(__global float*)(w + 4 * vec_width4) * i11;
+							v += *(__global float*)(w + 5 * vec_width4) * i12;
+
+							v += *(__global float*)(w + 6 * vec_width4) * i20;
+							v += *(__global float*)(w + 7 * vec_width4) * i21;
+							v += *(__global float*)(w + 8 * vec_width4) * i22;
+
+							intermediate_reg += v;
+						}
 					}
+
+					ipIndex4 += 4;
+					{
+						i00 = i00_2.y;
+						i10 = i10_2.y;
+						i20 = i20_2.y;
+
+						i01 = i01_2.y;
+						i11 = i11_2.y;
+						i21 = i21_2.y;
+
+						i02 = i02_2.y;
+						i12 = i12_2.y;
+						i22 = i22_2.y;
+
+						__global char *w = ((__global char*)w0 + (ipIndex4 * 128) * 9);
+
+						{
+							int opIndex = lid;
+							float v = 0;
+							int vec_width4 = 128 * 4;
+
+							v += *(__global float*)(w + 0 * vec_width4) * i00;
+							v += *(__global float*)(w + 1 * vec_width4) * i01;
+							v += *(__global float*)(w + 2 * vec_width4) * i02;
+
+							v += *(__global float*)(w + 3 * vec_width4) * i10;
+							v += *(__global float*)(w + 4 * vec_width4) * i11;
+							v += *(__global float*)(w + 5 * vec_width4) * i12;
+
+							v += *(__global float*)(w + 6 * vec_width4) * i20;
+							v += *(__global float*)(w + 7 * vec_width4) * i21;
+							v += *(__global float*)(w + 8 * vec_width4) * i22;
+
+							intermediate_reg += v;
+						}
+					}
+
 				}
 
 				__global float *out = packed_output + (yi*wsz + xi)*nOutputPlanes;

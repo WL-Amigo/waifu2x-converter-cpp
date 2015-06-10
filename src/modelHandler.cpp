@@ -83,7 +83,7 @@ Model::filter_CV(const float *packed_input,
 	return true;
 }
 
-#define COMPARE_RESULT
+//#define COMPARE_RESULT
 
 bool Model::filter_AVX_OpenCL(const float *packed_input,
 			      float *packed_output,
@@ -279,7 +279,7 @@ bool Model::filter(float *packed_input,
 		gpu_available = false;
 	}
 
-	if (nOutputPlanes == 1) {
+	if (nOutputPlanes == 1 || (nInputPlanes & 1)) {
 		gpu_available = false;
 	}
 
