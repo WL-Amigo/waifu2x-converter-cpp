@@ -18,6 +18,7 @@
 #include "tclap/CmdLine.h"
 #include "sec.hpp"
 #include "common.hpp"
+#include "threadPool.hpp"
 
 #include "modelHandler.hpp"
 #include "convertRoutine.hpp"
@@ -63,6 +64,8 @@ int main(int argc, char** argv) {
 			"number of threads launching at the same time", false, 4, "integer",
 			cmd);
 
+	TCLAP::SwitchArg cmdDisableGPU("", "disable-gpu", "disable GPU", cmd, false);
+
 	// definition of command line argument : end
 
 	// parse command line arguments
@@ -74,7 +77,9 @@ int main(int argc, char** argv) {
 		std::exit(-1);
 	}
 
-	w2xc::initOpenCL();
+	if (! cmdDisableGPU.getValue()) {
+		w2xc::initOpenCL();
+	}
 
 	// load image file
 	cv::Mat image = cv::imread(cmdInputFile.getValue(), cv::IMREAD_COLOR);
@@ -82,6 +87,8 @@ int main(int argc, char** argv) {
 
 	// set number of jobs for processing models
 	w2xc::modelUtility::getInstance().setNumberOfJobs(cmdNumberOfJobs.getValue());
+
+	FLOPSCounter flops;
 
 	// ===== Noise Reduction Phase =====
 	if (cmdMode.getValue() == "noise" || cmdMode.getValue() == "noise_scale") {
@@ -100,7 +107,7 @@ int main(int argc, char** argv) {
 		cv::split(imageYUV, imageSplit);
 		imageSplit[0].copyTo(imageY);
 
-		w2xc::convertWithModels(imageY, imageSplit[0], models);
+		w2xc::convertWithModels(imageY, imageSplit[0], models, &flops);
 
 		cv::merge(imageSplit, imageYUV);
 		cv::cvtColor(imageYUV, image, cv::COLOR_YUV2RGB);
@@ -155,7 +162,7 @@ int main(int argc, char** argv) {
 			cv::cvtColor(image2xBicubic, imageYUV, cv::COLOR_RGB2YUV);
 			cv::split(imageYUV, imageSplit);
 
-			if(!w2xc::convertWithModels(imageY, imageSplit[0], models)){
+			if(!w2xc::convertWithModels(imageY, imageSplit[0], models, &flops)){
 				std::cerr << "w2xc::convertWithModels : something error has occured.\n"
 						"stop." << std::endl;
 				std::exit(1);
@@ -200,7 +207,14 @@ int main(int argc, char** argv) {
 
 	double time_end = getsec();
 
-	std::cout << "process successfully done! (" << (time_end - time_start) << "[sec])" << std::endl;
+	double gflops_proc = (flops.flop/(1000.0*1000.0*1000.0)) / flops.sec;
+	double gflops_all = (flops.flop/(1000.0*1000.0*1000.0)) / (time_end-time_start);
+
+	std::cout << "process successfully done! (all:"
+		  << (time_end - time_start)
+		  << "[sec], " << gflops_all << "[GFLOPS], filter:"
+		  << flops.sec
+		  << "[sec], " << gflops_proc << "[GFLOPS])" << std::endl;
 
 	return 0;
 }

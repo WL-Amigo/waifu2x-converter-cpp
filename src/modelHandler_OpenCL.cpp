@@ -106,7 +106,7 @@ initOpenCL()
                 std::vector<char> name(sz);
                 clGetPlatformInfo(plts[i], CL_PLATFORM_NAME, sz, &name[0], &sz);
 
-                if (strncmp(&name[0], "Intel", 5) == 0) {
+                if (strstr(&name[0], "Intel") != NULL) {
                         continue;
                 }
 

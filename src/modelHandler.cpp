@@ -18,6 +18,7 @@
 #include <intrin.h>
 #endif
 #include "sec.hpp"
+#include "threadPool.hpp"
 #include "common.hpp"
 
 namespace w2xc {
@@ -82,7 +83,7 @@ Model::filter_CV(const float *packed_input,
 	return true;
 }
 
-#define COMPARE_RESULT
+//#define COMPARE_RESULT
 #define DUMP_FLOPS
 
 bool Model::filter_AVX_OpenCL(const float *packed_input,
@@ -438,6 +439,9 @@ bool modelUtility::generateModelFromJSON(const std::string &fileName,
 bool modelUtility::setNumberOfJobs(int setNJob){
 	if(setNJob < 1)return false;
 	nJob = setNJob;
+
+	initThreadPool(nJob);
+
 	return true;
 };
 

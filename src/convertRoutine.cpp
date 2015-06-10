@@ -16,19 +16,21 @@ namespace w2xc {
 
 // converting process inside program
 static bool convertWithModelsBasic(cv::Mat &inputPlane, cv::Mat &outputPlane,
-		std::vector<std::unique_ptr<Model> > &models);
+				   std::vector<std::unique_ptr<Model> > &models, FLOPSCounter *flops);
 static bool convertWithModelsBlockSplit(cv::Mat &inputPlane,
-		cv::Mat &outputPlane, std::vector<std::unique_ptr<Model> > &models);
+					cv::Mat &outputPlane, std::vector<std::unique_ptr<Model> > &models,
+					FLOPSCounter *flops);
 
 bool convertWithModels(cv::Mat &inputPlane, cv::Mat &outputPlane,
-		std::vector<std::unique_ptr<Model> > &models, bool blockSplitting) {
+		       std::vector<std::unique_ptr<Model> > &models,
+		       FLOPSCounter *flops, bool blockSplitting) {
 
 	cv::Size blockSize = modelUtility::getInstance().getBlockSize();
 	bool requireSplitting = (inputPlane.size().width * inputPlane.size().height)
 			> blockSize.width * blockSize.height * 3 / 2;
 //	requireSplitting = true;
 	if (blockSplitting && requireSplitting) {
-		return convertWithModelsBlockSplit(inputPlane, outputPlane, models);
+		return convertWithModelsBlockSplit(inputPlane, outputPlane, models, flops);
 	} else {
 		//insert padding to inputPlane
 		cv::Mat tempMat;
@@ -37,7 +39,7 @@ bool convertWithModels(cv::Mat &inputPlane, cv::Mat &outputPlane,
 		cv::copyMakeBorder(inputPlane, tempMat, nModel, nModel, nModel, nModel,
 				cv::BORDER_REPLICATE);
 
-		bool ret = convertWithModelsBasic(tempMat, outputPlane, models);
+		bool ret = convertWithModelsBasic(tempMat, outputPlane, models, flops);
 
 		tempMat = outputPlane(cv::Range(nModel, outputSize.height + nModel),
 				cv::Range(nModel, outputSize.width + nModel));
@@ -53,7 +55,7 @@ bool convertWithModels(cv::Mat &inputPlane, cv::Mat &outputPlane,
 }
 
 static bool convertWithModelsBasic(cv::Mat &inputPlane, cv::Mat &outputPlane,
-		std::vector<std::unique_ptr<Model> > &models) {
+				   std::vector<std::unique_ptr<Model> > &models, FLOPSCounter *flops) {
 
 	// padding is require before calling this function
 
@@ -72,6 +74,9 @@ static bool convertWithModelsBasic(cv::Mat &inputPlane, cv::Mat &outputPlane,
 	float *packed_input = (float*)malloc(sizeof(float) * filterWidth * filterHeight);
 	pack_mat(packed_input, *inputPlanes, filterWidth, filterHeight, 1);
 
+	double t00 = getsec();
+	double ops_sum = 0;
+
 	for (int index = 0; index < models.size(); index++) {
 		float *packed_output = (float*)malloc(sizeof(float) * filterWidth * filterHeight *
 						      models[index]->getNOutputPlanes());
@@ -87,10 +92,18 @@ static bool convertWithModelsBasic(cv::Mat &inputPlane, cv::Mat &outputPlane,
 		double gflops = (ops/(1000.0*1000.0*1000.0)) / (t1-t0);
 
 		std::cout << "(" << (t1-t0)*1000 << "[ms], " << gflops << "[GFLOPS])" << std::endl;
+		ops_sum += ops;
+
+		flops->flop += ops;
+		flops->sec += t1-t0;
 
 		free(packed_input);
 		packed_input = packed_output;
 	}
+
+	double t01 = getsec();
+	double gflops = ops_sum/(1000.0*1000.0*1000.0) / (t01-t00);
+	std::cout << "total : " << (t01-t00) << "[sec], " << gflops << "[GFLOPS]" << std::endl;
 
 	outputPlane = cv::Mat::zeros(filterSize, CV_32FC1);
 
@@ -102,7 +115,7 @@ static bool convertWithModelsBasic(cv::Mat &inputPlane, cv::Mat &outputPlane,
 }
 
 static bool convertWithModelsBlockSplit(cv::Mat &inputPlane,
-		cv::Mat &outputPlane, std::vector<std::unique_ptr<Model> > &models) {
+					cv::Mat &outputPlane, std::vector<std::unique_ptr<Model> > &models, FLOPSCounter *flops) {
 
 	// padding is not required before calling this function
 
@@ -153,7 +166,7 @@ static bool convertWithModelsBlockSplit(cv::Mat &inputPlane,
 			std::cout << "start process block (" << c << "," << r << ") ..."
 					<< std::endl;
 			if (!convertWithModelsBasic(processBlock, processBlockOutput,
-					models)) {
+						    models, flops)) {
 				std::cerr << "w2xc::convertWithModelsBasic()\n"
 						"in w2xc::convertWithModelsBlockSplit() : \n"
 						"something error has occured. stop." << std::endl;

@@ -65,5 +65,14 @@ unpack_mat1(cv::Mat &outputMat,
     }
 }
 
+struct FLOPSCounter {
+        double flop;
+        double sec;
+
+        FLOPSCounter()
+                :flop(0), sec(0)
+        {}
+};
+
 
 #endif
