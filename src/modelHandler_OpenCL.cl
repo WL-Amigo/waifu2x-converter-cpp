@@ -60,22 +60,22 @@ filter(__global const float * __restrict__ packed_input,
     __local float *intermediate = local_mem;
     local_mem += 256;
 
-    unsigned int opHalf = nOutputPlanes / 2U;
-    unsigned int opStart, opEnd;
+    unsigned int opPerG = nOutputPlanes / 4U;
+    unsigned int opStart;
 
-    opStart = og * opHalf;
+    opStart = og * opPerG;
 
-    /* input  (32 / item) x 4
+    /* input  (16 / item) x 8
      * .... .... .... .... 128
      * .... .... .... .... 128
-     * output (1 / item) x 64
+     * output (1 / item) x 32
      */
 
-    unsigned int outputIdx = lid / 4U;
-    unsigned int inputIdx = lid & 3;
+    unsigned int outputIdx = lid / 8U + opStart;
+    unsigned int inputIdx = lid & 7;
 
-    unsigned int inputPlaneStart = inputIdx * 32;
-    unsigned int inputPlaneEnd = (inputIdx+1) * 32;
+    unsigned int inputPlaneStart = inputIdx * 16;
+    unsigned int inputPlaneEnd = (inputIdx+1) * 16;
 
     /* 9*4*128 = 4608 */
     __local float *local_00 = local_mem; local_mem += nInputPlanes;
@@ -106,7 +106,7 @@ filter(__global const float * __restrict__ packed_input,
 
     barrier(CLK_LOCAL_MEM_FENCE);
 
-    __global float *w = weight + (inputPlaneStart * nOutputPlanes) * 9 + opStart;
+    __global float *w = weight + (inputPlaneStart * nOutputPlanes) * 9;
 
     /* w<ipi>_<coef> */
 
@@ -120,12 +120,12 @@ filter(__global const float * __restrict__ packed_input,
 #define LOAD_COEF4(ipi) LOAD_COEF(ipi,4)
 #define LOAD_COEF5(ipi) LOAD_COEF(ipi,5)
 
-    ITER32(LOAD_COEF0);
-    ITER32(LOAD_COEF1);
-    ITER32(LOAD_COEF2);
-    ITER32(LOAD_COEF3);
-    ITER32(LOAD_COEF4);
-    ITER32(LOAD_COEF5);         /* 32x5 = 160reg */
+    ITER16(LOAD_COEF0);
+    ITER16(LOAD_COEF1);
+    ITER16(LOAD_COEF2);
+    ITER16(LOAD_COEF3);
+    ITER16(LOAD_COEF4);
+    ITER16(LOAD_COEF5);         /* 16x5 = 90reg */
 
     for (int xi=0; xi<wsz; xi++) {
         float v = 0;
@@ -191,9 +191,9 @@ filter(__global const float * __restrict__ packed_input,
         }
 
 #if 1
-        ITER32(IP1);
+        ITER16(IP1);
 #else
-        for (int ipi=0; ipi<32; ipi++) {
+        for (int ipi=0; ipi<16; ipi++) {
             IP1(ipi);
         }
 #endif
@@ -204,13 +204,17 @@ filter(__global const float * __restrict__ packed_input,
         __global float *out = packed_output + (yi*wsz + xi)*nOutputPlanes;
 
         /* 256 to 64 reduction */
-        if (lid < 64) {
+        if (lid < 32) {
             float sum = 0;
 
-            sum = intermediate[lid*4 + 0]
-                + intermediate[lid*4 + 1]
-                + intermediate[lid*4 + 2]
-                + intermediate[lid*4 + 3];
+            sum = intermediate[lid*8 + 0]
+                + intermediate[lid*8 + 1]
+                + intermediate[lid*8 + 2]
+                + intermediate[lid*8 + 3]
+                + intermediate[lid*8 + 4]
+                + intermediate[lid*8 + 5]
+                + intermediate[lid*8 + 6]
+                + intermediate[lid*8 + 7];
 
             float bv = biases[opIndex];
             float v = sum;

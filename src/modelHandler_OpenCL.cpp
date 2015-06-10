@@ -257,7 +257,7 @@ filter_OpenCL_impl(const float *packed_input,
                 nout = 1;
         }
 
-        size_t gws[3] = {512, h, 1};
+        size_t gws[3] = {256*4, h, 1};
         size_t lws[3] = {256, 1, 1};
 
         err = clEnqueueNDRangeKernel(queue,
