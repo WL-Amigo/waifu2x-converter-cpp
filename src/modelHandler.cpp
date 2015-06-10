@@ -91,6 +91,7 @@ bool Model::filter_AVX_OpenCL(const float *packed_input,
 			      bool OpenCL)
 {
 	int vec_width;
+	int weight_step;
 	unsigned int eax=0, ebx=0, ecx=0, edx=0;
 	bool have_fma = false;
 	int nJob = modelUtility::getInstance().getNumberOfJobs();
@@ -111,12 +112,14 @@ bool Model::filter_AVX_OpenCL(const float *packed_input,
 	}
 
 	if (OpenCL) {
+		weight_step = nOutputPlanes;
 		vec_width = std::min(GPU_VEC_WIDTH, nOutputPlanes);
 	} else {
+		weight_step = nOutputPlanes;
 		vec_width = VEC_WIDTH;
 	}
 
-	float *weight_flat = (float*)_mm_malloc(sizeof(float)*nInputPlanes*nOutputPlanes*3*3, 64);
+	float *weight_flat = (float*)_mm_malloc(sizeof(float)*nInputPlanes*weight_step*3*3, 64);
 	float *fbiases_flat = (float*)_mm_malloc(sizeof(float) * biases.size(), 64);
 
 	for (int i=0; i<(int)biases.size(); i++) {
@@ -158,7 +161,7 @@ bool Model::filter_AVX_OpenCL(const float *packed_input,
 				int oi_0 = oi % vec_width;
 				int oi_1 = (oi / vec_width) * vec_width;
 
-				float *dst = weight_flat + ((ii*nOutputPlanes + oi_1) * 9) + oi_0;
+				float *dst = weight_flat + ((ii*weight_step + oi_1) * 9) + oi_0;
 				dst[0*vec_width] = src0[0];
 				dst[1*vec_width] = src0[1];
 				dst[2*vec_width] = src0[2];
