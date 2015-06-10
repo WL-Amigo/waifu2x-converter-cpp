@@ -13,10 +13,11 @@
 #endif
 
 #ifdef _WIN32
-typedef HANDLE event_t;
 
 #include <windows.h>
 #include <process.h>
+
+typedef HANDLE event_t;
 
 static void
 notify_event(HANDLE ev)
