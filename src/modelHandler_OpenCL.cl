@@ -1,6 +1,5 @@
 /* -*- mode: c -*- */
 
-#define VEC_WIDTH 128
 #define BLOCK_SIZE 8
 
 __kernel void
@@ -50,7 +49,7 @@ filter(__global const float * __restrict__ packed_input,
 	__local float *in_block1 = in_block1_base+ nInputPlanes;
 	__local float *in_block2 = in_block2_base+ nInputPlanes;
 
-	unsigned int vec_width = min((int)VEC_WIDTH, (int)nOutputPlanes);
+	unsigned int vec_width = min((int)128, (int)nOutputPlanes);
 
 	for (int xi0=0; xi0<wsz; xi0+=BLOCK_SIZE) {
 		barrier(CLK_LOCAL_MEM_FENCE);
@@ -123,8 +122,7 @@ filter(__global const float * __restrict__ packed_input,
 
 				__global float *w0 = weight + lid;
 
-				for (int ipIndex = 0; ipIndex < nInputPlanes*4; ipIndex+=4) {
-					int ipIndex4 = ipIndex;
+				for (int ipIndex4 = 0; ipIndex4 < nInputPlanes*4; ipIndex4+=4) {
 					float i00, i01, i02;
 					float i10, i11, i12;
 					float i20, i21, i22;
@@ -141,12 +139,12 @@ filter(__global const float * __restrict__ packed_input,
 					i12 = *(__local float*)(p12 + ipIndex4);
 					i22 = *(__local float*)(p22 + ipIndex4);
 
-					__global char *w = ((__global char*)w0 + (ipIndex4 * nOutputPlanes) * 9);
+					__global char *w = ((__global char*)w0 + (ipIndex4 * 128) * 9);
 
 					{
 						int opIndex = lid;
 						float v = 0;
-						int vec_width4 = vec_width * 4;
+						int vec_width4 = 128 * 4;
 
 						v += *(__global float*)(w + 0 * vec_width4) * i00;
 						v += *(__global float*)(w + 1 * vec_width4) * i01;
@@ -159,8 +157,6 @@ filter(__global const float * __restrict__ packed_input,
 						v += *(__global float*)(w + 6 * vec_width4) * i20;
 						v += *(__global float*)(w + 7 * vec_width4) * i21;
 						v += *(__global float*)(w + 8 * vec_width4) * i22;
-
-						w += 9 * VEC_WIDTH;
 
 						intermediate_reg += v;
 					}

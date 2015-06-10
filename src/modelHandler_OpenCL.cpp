@@ -227,7 +227,7 @@ filter_OpenCL_impl(const float *packed_input,
 
         cl_mem cl_weight = clCreateBuffer(context,
                                           CL_MEM_READ_ONLY|CL_MEM_COPY_HOST_PTR,
-                                          sizeof(float) * nOutputPlanes * nInputPlanes * 9,
+                                          sizeof(float) * GPU_VEC_WIDTH * nInputPlanes * 9,
                                           (void*)weight, &err
                 );
 

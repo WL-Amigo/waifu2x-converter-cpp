@@ -112,8 +112,8 @@ bool Model::filter_AVX_OpenCL(const float *packed_input,
 	}
 
 	if (OpenCL) {
-		weight_step = nOutputPlanes;
-		vec_width = std::min(GPU_VEC_WIDTH, nOutputPlanes);
+		weight_step = GPU_VEC_WIDTH;
+		vec_width = GPU_VEC_WIDTH;
 	} else {
 		weight_step = nOutputPlanes;
 		vec_width = VEC_WIDTH;
