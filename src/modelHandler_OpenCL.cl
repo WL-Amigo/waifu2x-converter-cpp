@@ -1,7 +1,7 @@
 /* -*- mode: c -*- */
 
 #define VEC_WIDTH 128
-#define BLOCK_SIZE 4
+#define BLOCK_SIZE 8
 
 __kernel void
 filter(__global const float * __restrict__ packed_input,
@@ -39,98 +39,133 @@ filter(__global const float * __restrict__ packed_input,
 	__global float *in11 = (__global float*)in1p;
 	__global float *in21 = (__global float*)in2p;
 
-	__local float *intermediate = local_mem;
-	local_mem += sizeof(float) * nOutputPlanes;
+	__local float *in_block0_base = local_mem;
+	local_mem += nInputPlanes * (BLOCK_SIZE+2);
+	__local float *in_block1_base = local_mem;
+	local_mem += nInputPlanes * (BLOCK_SIZE+2);
+	__local float *in_block2_base = local_mem;
+	local_mem += nInputPlanes * (BLOCK_SIZE+2);
 
-	__local float *in_block0 = local_mem;
-	local_mem += sizeof(float) * nInputPlanes * BLOCK_SIZE;
-	__local float *in_block1 = local_mem;
-	local_mem += sizeof(float) * nInputPlanes * BLOCK_SIZE;
-	__local float *in_block2 = local_mem;
-	local_mem += sizeof(float) * nInputPlanes * BLOCK_SIZE;
+	__local float *in_block0 = in_block0_base+ nInputPlanes;
+	__local float *in_block1 = in_block1_base+ nInputPlanes;
+	__local float *in_block2 = in_block2_base+ nInputPlanes;
 
 	unsigned int vec_width = min((int)VEC_WIDTH, (int)nOutputPlanes);
 
-	for (int xi=0; xi<wsz; xi++) {
-		for (int ipIndex = 0; ipIndex < nInputPlanes; ipIndex++) {
-			float i00, i01, i02;
-			float i10, i11, i12;
-			float i20, i21, i22;
+	for (int xi0=0; xi0<wsz; xi0+=BLOCK_SIZE) {
+		barrier(CLK_LOCAL_MEM_FENCE);
 
-			i01 = in01[0];
-			i11 = in11[0];
-			i21 = in21[0];
+		if (lid < nInputPlanes) {
+			int bi;
 
-			if (xi == 0) {
-				i00 = i01;
-				i10 = i11;
-				i20 = i21;
-			} else {
-				i00 = in01[-nInputPlanes];
-				i10 = in11[-nInputPlanes];
-				i20 = in21[-nInputPlanes];
+			for (bi=0; bi<BLOCK_SIZE; bi++) {
+				int xi = xi0 + bi;
+
+				if (xi == wsz - 1) {
+					break;
+				}
+
+				in_block0[bi*nInputPlanes + lid] = in01[xi*nInputPlanes + lid];
+				in_block1[bi*nInputPlanes + lid] = in11[xi*nInputPlanes + lid];
+				in_block2[bi*nInputPlanes + lid] = in21[xi*nInputPlanes + lid];
 			}
 
-			if (xi == wsz-1) {
-				i02 = i01;
-				i12 = i11;
-				i22 = i21;
-			} else {
-				i02 = in01[+nInputPlanes];
-				i12 = in11[+nInputPlanes];
-				i22 = in21[+nInputPlanes];
-			}
-
-			in01 ++;
-			in11 ++;
-			in21 ++;
-
-			__global float *w = weight + (ipIndex * nOutputPlanes) * 9 + lid;
-
-			for (unsigned int opIndex = lid;
-			     opIndex < (unsigned int)nOutputPlanes;
-			     opIndex += vec_width)
 			{
-				float v = 0;
-
-				v += w[0*vec_width] * i00;
-				v += w[1*vec_width] * i01;
-				v += w[2*vec_width] * i02;
-
-				v += w[3*vec_width] * i10;
-				v += w[4*vec_width] * i11;
-				v += w[5*vec_width] * i12;
-
-				v += w[6*vec_width] * i20;
-				v += w[7*vec_width] * i21;
-				v += w[8*vec_width] * i22;
-
-				w += 9 * VEC_WIDTH;
-
-				if (ipIndex == 0) {
-					intermediate[opIndex] = v;
+				int xi = xi0 + bi;
+				if (xi == wsz - 1) {
+					in_block0[bi*(int)nInputPlanes + lid] = in01[(xi-1)*(int)nInputPlanes + lid];
+					in_block1[bi*(int)nInputPlanes + lid] = in11[(xi-1)*(int)nInputPlanes + lid];
+					in_block2[bi*(int)nInputPlanes + lid] = in21[(xi-1)*(int)nInputPlanes + lid];
 				} else {
-					intermediate[opIndex] += v;
+					in_block0[bi*(int)nInputPlanes + lid] = in01[xi*(int)nInputPlanes + lid];
+					in_block1[bi*(int)nInputPlanes + lid] = in11[xi*(int)nInputPlanes + lid];
+					in_block2[bi*(int)nInputPlanes + lid] = in21[xi*(int)nInputPlanes + lid];
+				}
+			}
+
+			{
+				int xi = xi0-1;
+				if (xi < 0) {
+					in_block0[-1*(int)nInputPlanes + (int)lid] = in01[lid];
+					in_block1[-1*(int)nInputPlanes + (int)lid] = in01[lid];
+					in_block2[-1*(int)nInputPlanes + (int)lid] = in01[lid];
+				} else {
+					in_block0[-1*(int)nInputPlanes + (int)lid] = in01[xi*(int)nInputPlanes + lid];
+					in_block1[-1*(int)nInputPlanes + (int)lid] = in11[xi*(int)nInputPlanes + lid];
+					in_block2[-1*(int)nInputPlanes + (int)lid] = in21[xi*(int)nInputPlanes + lid];
 				}
 			}
 		}
 
-		__global float *out = packed_output + (yi*wsz + xi)*nOutputPlanes;
+		barrier(CLK_LOCAL_MEM_FENCE);
 
-		for (unsigned int opIndex = lid;
-		     opIndex < nOutputPlanes;
-		     opIndex += vec_width)
-		{
-			float bv = biases[opIndex];
-			float v = intermediate[opIndex];
-			v += bv;
+		if (lid < nOutputPlanes) {
+			for (int bi=0; bi<BLOCK_SIZE; bi++) {
+				int xi = xi0 + bi;
 
-			float mtz = max(v, 0.0f);
-			float ltz = min(v, 0.0f);
+				if (xi == wsz) {
+					break;
+				}
 
-			v = ltz * 0.1f + mtz;
+				float intermediate_reg = 0;
 
-			out[opIndex] = v;
+				for (int ipIndex = 0; ipIndex < nInputPlanes; ipIndex++) {
+					float i00, i01, i02;
+					float i10, i11, i12;
+					float i20, i21, i22;
+
+					i00 = in_block0[(bi-1) * (int)nInputPlanes + ipIndex];
+					i10 = in_block1[(bi-1) * (int)nInputPlanes + ipIndex];
+					i20 = in_block2[(bi-1) * (int)nInputPlanes + ipIndex];
+
+					i01 = in_block0[bi * (int)nInputPlanes + ipIndex];
+					i11 = in_block1[bi * (int)nInputPlanes + ipIndex];
+					i21 = in_block2[bi * (int)nInputPlanes + ipIndex];
+
+					i02 = in_block0[(bi+1) * (int)nInputPlanes + ipIndex];
+					i12 = in_block1[(bi+1) * (int)nInputPlanes + ipIndex];
+					i22 = in_block2[(bi+1) * (int)nInputPlanes + ipIndex];
+
+					__global float *w = weight + (ipIndex * nOutputPlanes) * 9 + lid;
+
+					if (lid < nOutputPlanes) {
+						int opIndex = lid;
+						float v = 0;
+
+						v += w[0*vec_width] * i00;
+						v += w[1*vec_width] * i01;
+						v += w[2*vec_width] * i02;
+
+						v += w[3*vec_width] * i10;
+						v += w[4*vec_width] * i11;
+						v += w[5*vec_width] * i12;
+
+						v += w[6*vec_width] * i20;
+						v += w[7*vec_width] * i21;
+						v += w[8*vec_width] * i22;
+
+						w += 9 * VEC_WIDTH;
+
+						intermediate_reg += v;
+					}
+				}
+
+				__global float *out = packed_output + (yi*wsz + xi)*nOutputPlanes;
+
+				{
+					int opIndex = lid;
+					float bv = biases[opIndex];
+					float v = intermediate_reg;
+					v += bv;
+
+					float mtz = max(v, 0.0f);
+					float ltz = min(v, 0.0f);
+
+					v = ltz * 0.1f + mtz;
+
+					out[opIndex] = v;
+				}
+			}
 		}
 	}
 }

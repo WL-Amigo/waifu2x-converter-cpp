@@ -23,6 +23,9 @@ main(int argc, char **argv)
             if (c == '\\') {
                 buf[cur++] = '\\';
                 buf[cur++] = '\\';
+            } else if (c == '"') {
+                buf[cur++] = '\\';
+                buf[cur++] = '"';
             } else {
                 buf[cur++] = line[i];
             }

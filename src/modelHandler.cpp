@@ -207,7 +207,7 @@ bool Model::filter_AVX_OpenCL(const float *packed_input,
 
 		double t2 = getsec();
 
-		printf("%d %d %f %f\n", nInputPlanes, nOutputPlanes, t1-t0, t2-t1);
+		printf("%d %d %f %f %f[gops]\n", nInputPlanes, nOutputPlanes, t1-t0, t2-t1, ops/(1000*1000*1000));
 		printf("ver2 : %f [Gflops]\n", (ops/(1000.0*1000.0*1000.0)) / (t2-t1));
 		printf("orig : %f [Gflops]\n", (ops/(1000.0*1000.0*1000.0)) / (t1-t0));
 		int error_count = 0;
