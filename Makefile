@@ -1,4 +1,4 @@
-all: waifu2x-converter-cpp
+all: waifu2x-converter-cpp out-Spectre.isa
 
 OPENCV=$(HOME)/usr
 
@@ -15,8 +15,12 @@ src/modelHandler_OpenCL.cpp: src/modelHandler_OpenCL.cl.h
 waifu2x-converter-cpp: $(OBJS)
 	g++ $(LDFLAGS) -o $@ $^ $(LDLIBS)
 
-#INPUT=./a.png
-INPUT=./b.png
+INPUT=./a.png
+#INPUT=./b.png
+
+out-Spectre.isa: src/modelHandler_OpenCL.cl
+	/opt/AMD/CodeXL_1.7-7300/CodeXLAnalyzer -s CL $< -k filter --isa out.isa -c Spectre
+
 
 run: waifu2x-converter-cpp
 	perf stat ./waifu2x-converter-cpp -i $(INPUT) --model_dir models

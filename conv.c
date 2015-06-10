@@ -8,14 +8,28 @@ main(int argc, char **argv)
     FILE *out = fopen(argv[2], "w");
 
     char line[4096];
+    char buf[8192];
 
     while (fgets(line, 4096, in)) {
         int len = strlen(line);
+        int cur=0, i;
 
         if (len >= 1 && line[len-1] == '\n') {
             line[len-1] = '\0';
         }
 
-        fprintf(out, "\"%s\\n\"\n", line);
+        for (i=0; i<len; i++) {
+            char c = line[i];
+            if (c == '\\') {
+                buf[cur++] = '\\';
+                buf[cur++] = '\\';
+            } else {
+                buf[cur++] = line[i];
+            }
+        }
+
+        buf[cur] = '\0';
+
+        fprintf(out, "\"%s\\n\"\n", buf);
     }
 }
