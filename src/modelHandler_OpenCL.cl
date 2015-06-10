@@ -1,6 +1,6 @@
 /* -*- mode: c -*- */
 
-#define BLOCK_SIZE 8
+#define BLOCK_SIZE 4
 
 __kernel void
 filter(__global const float * __restrict__ packed_input,
@@ -121,8 +121,9 @@ filter(__global const float * __restrict__ packed_input,
 				float intermediate_reg = 0;
 
 				__global float *w0 = weight + lid;
+				int nInputPlanes4 = nInputPlanes * 4;
 
-				for (int ipIndex4 = 0; ipIndex4 < nInputPlanes*4; ipIndex4+=4) {
+				for (int ipIndex4 = 0; ipIndex4 < nInputPlanes4; ipIndex4+=4) {
 					float i00, i01, i02;
 					float i10, i11, i12;
 					float i20, i21, i22;
