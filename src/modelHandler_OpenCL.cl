@@ -10,14 +10,48 @@
     F(0)  F(1)  F(2)  F(3)  F(4)  F(5)  F(6)  F(7)            \
     F(8)  F(9)  F(10) F(11) F(12) F(13) F(14) F(15)           \
 
+#define ITER16_XX(F)                                          \
+    F(0)  F(0)  F(0)  F(0)  F(0)  F(0)  F(0)  F(0)            \
+    F(0)  F(0)  F(0)  F(0)  F(0)  F(0)  F(0)  F(0)            \
+
 float
 get_data(__global const float *p, int hsz, int wsz, int step, int yi, int xi, int num_plane, int plane)
 {
-    xi = min(wsz-1, xi);
-    xi = max(0, xi);
+	xi = min(wsz-1, xi);
+	xi = max(0, xi);
 
-    return p[xi * num_plane];
+	return p[xi * num_plane];
 }
+
+
+#define IP1(ipi) {							\
+				int ipIndex = ipi + inputPlaneStart;	\
+				float i00, i01, i02;			\
+				float i10, i11, i12;			\
+				float i20, i21, i22;			\
+									\
+				i00 = local_00[ipIndex];		\
+				i01 = local_01[ipIndex];		\
+				i02 = local_02[ipIndex];		\
+				i10 = local_10[ipIndex];		\
+				i11 = local_11[ipIndex];		\
+				i12 = local_12[ipIndex];		\
+				i20 = local_20[ipIndex];		\
+				i21 = local_21[ipIndex];		\
+				i22 = local_22[ipIndex];		\
+									\
+				v += w##ipi##_0 * i00;			\
+				v += w##ipi##_1 * i01;		\
+				v += w##ipi##_2 * i02;	\
+									\
+				v += w##ipi##_3 * i10; \
+				v += w##ipi##_4 * i11; \
+				v += w##ipi##_5 * i12; \
+								\
+				v += w##ipi##_6 * i20; \
+				v += w##ipi##_7 * i21; \
+				v += w##ipi##_8 * i22; \
+			}
 
 __kernel void
 filter(__global const float * __restrict__ packed_input,
@@ -28,90 +62,30 @@ filter(__global const float * __restrict__ packed_input,
        unsigned int hsz,
        unsigned int wsz,
        __global float * weight,
-       __local float * __restrict__ local_mem)
+       __local float * __restrict__ local_mem0)
 {
-    unsigned int yi = get_group_id(1);
-    unsigned int og = get_group_id(0);
-    unsigned int lid = get_local_id(0);
+	nOutputPlanes = 128;
+	nInputPlanes = 128;
 
-    __global const float * __restrict__ in = packed_input;
-    size_t in_step = wsz * sizeof(float) * nInputPlanes;
+	unsigned int og = get_group_id(0);
+	unsigned int lid = get_local_id(0);
+	unsigned int opPerG = nOutputPlanes / 4U;
+	unsigned int opStart = og * opPerG;
+	unsigned int outputIdx = lid / 8U + opStart;
+	unsigned int inputIdx = lid & 7;
 
-    __global char *inp = (__global char*)packed_input;
+	unsigned int inputPlaneStart = inputIdx * 16;
+	unsigned int inputPlaneEnd = (inputIdx+1) * 16;
 
-    inp += in_step*yi;
-    __global char *in0p = inp - in_step;
-    if (yi == 0) {
-        in0p = inp;
-    }
+	__global float *w = weight + (inputPlaneStart * nOutputPlanes) * 9;
 
-    __global char *in1p = inp;
-    __global char *in2p = inp + in_step;
+	/* w<ipi>_<coef> */
 
-    if (yi == hsz-1) {
-        in2p = inp;
-    }
+#define DECL_COEF(ipi,coef)                     \
+	float w##ipi##_##coef;
 
-    __global float *in01_base = (__global float*)in0p;
-    __global float *in11_base = (__global float*)in1p;
-    __global float *in21_base = (__global float*)in2p;
-
-    /* 4*256 = 1024 */
-    __local float *intermediate = local_mem;
-    local_mem += 256;
-
-    unsigned int opPerG = nOutputPlanes / 4U;
-    unsigned int opStart;
-
-    opStart = og * opPerG;
-
-    /* input  (16 / item) x 8
-     * .... .... .... .... 128
-     * .... .... .... .... 128
-     * output (1 / item) x 32
-     */
-
-    unsigned int outputIdx = lid / 8U + opStart;
-    unsigned int inputIdx = lid & 7;
-
-    unsigned int inputPlaneStart = inputIdx * 16;
-    unsigned int inputPlaneEnd = (inputIdx+1) * 16;
-
-    /* 9*4*128 = 4608 */
-    __local float *local_00 = local_mem; local_mem += nInputPlanes;
-    __local float *local_01 = local_mem; local_mem += nInputPlanes;
-    __local float *local_02 = local_mem; local_mem += nInputPlanes;
-
-    __local float *local_10 = local_mem; local_mem += nInputPlanes;
-    __local float *local_11 = local_mem; local_mem += nInputPlanes;
-    __local float *local_12 = local_mem; local_mem += nInputPlanes;
-
-    __local float *local_20 = local_mem; local_mem += nInputPlanes;
-    __local float *local_21 = local_mem; local_mem += nInputPlanes;
-    __local float *local_22 = local_mem; local_mem += nInputPlanes;
-
-    if (lid < nInputPlanes) {
-        __global float *in01 = in01_base;
-        __global float *in11 = in11_base;
-        __global float *in21 = in21_base;
-
-        float v01 = in01[lid];
-        float v11 = in11[lid];
-        float v21 = in21[lid];
-
-        local_01[lid] = local_02[lid] = v01;
-        local_11[lid] = local_12[lid] = v11;
-        local_21[lid] = local_22[lid] = v21;
-    }
-
-    barrier(CLK_LOCAL_MEM_FENCE);
-
-    __global float *w = weight + (inputPlaneStart * nOutputPlanes) * 9;
-
-    /* w<ipi>_<coef> */
-
-#define LOAD_COEF(ipi,coef)                     \
-    float w##ipi##_##coef = w[(ipi)*9*nOutputPlanes + (coef) * nOutputPlanes + outputIdx];
+#define LOAD_COEF(ipi,coef)						\
+	w##ipi##_##coef = w[(ipi)*9*nOutputPlanes + (coef) * nOutputPlanes + outputIdx];
 
 #define LOAD_COEF0(ipi) LOAD_COEF(ipi,0)
 #define LOAD_COEF1(ipi) LOAD_COEF(ipi,1)
@@ -119,115 +93,176 @@ filter(__global const float * __restrict__ packed_input,
 #define LOAD_COEF3(ipi) LOAD_COEF(ipi,3)
 #define LOAD_COEF4(ipi) LOAD_COEF(ipi,4)
 #define LOAD_COEF5(ipi) LOAD_COEF(ipi,5)
+#define LOAD_COEF6(ipi) LOAD_COEF(ipi,6)
+#define LOAD_COEF7(ipi) LOAD_COEF(ipi,7)
+#define LOAD_COEF8(ipi) LOAD_COEF(ipi,8)
 
-    ITER16(LOAD_COEF0);
-    ITER16(LOAD_COEF1);
-    ITER16(LOAD_COEF2);
-    ITER16(LOAD_COEF3);
-    ITER16(LOAD_COEF4);
-    ITER16(LOAD_COEF5);         /* 16x5 = 90reg */
+#define DECL_COEF0(ipi) DECL_COEF(ipi,0)
+#define DECL_COEF1(ipi) DECL_COEF(ipi,1)
+#define DECL_COEF2(ipi) DECL_COEF(ipi,2)
+#define DECL_COEF3(ipi) DECL_COEF(ipi,3)
+#define DECL_COEF4(ipi) DECL_COEF(ipi,4)
+#define DECL_COEF5(ipi) DECL_COEF(ipi,5)
+#define DECL_COEF6(ipi) DECL_COEF(ipi,6)
+#define DECL_COEF7(ipi) DECL_COEF(ipi,7)
+#define DECL_COEF8(ipi) DECL_COEF(ipi,8)
 
-    for (int xi=0; xi<wsz; xi++) {
-        float v = 0;
+	ITER16(DECL_COEF0);
+	ITER16(DECL_COEF1);
+	ITER16(DECL_COEF2);
+	ITER16(DECL_COEF3);
+	ITER16(DECL_COEF4);
+	ITER16(DECL_COEF5);
+	ITER16(DECL_COEF6);
+	ITER16(DECL_COEF7);
+	ITER16(DECL_COEF8);
 
-        __global float *in01 = in01_base + xi * nInputPlanes;
-        __global float *in11 = in11_base + xi * nInputPlanes;
-        __global float *in21 = in21_base + xi * nInputPlanes;
+	ITER16(LOAD_COEF0);
+	ITER16(LOAD_COEF1);
+	ITER16(LOAD_COEF2);
+	ITER16(LOAD_COEF3);
+	ITER16(LOAD_COEF4);
+	ITER16(LOAD_COEF5);
+	ITER16(LOAD_COEF6);
+	ITER16(LOAD_COEF7);
+	ITER16(LOAD_COEF8);
 
-        __local float *tmp0 = local_00;
-        __local float *tmp1 = local_10;
-        __local float *tmp2 = local_20;
 
-        local_00 = local_01;
-        local_01 = local_02;
+	for (int yi0=0; yi0<2; yi0++) {
+		unsigned int yi = yi0 + get_group_id(1) * 2;
 
-        local_10 = local_11;
-        local_11 = local_12;
+		__local float *local_mem = local_mem0;
 
-        local_20 = local_21;
-        local_21 = local_22;
+		__global const float * __restrict__ in = packed_input;
+		size_t in_step = wsz * sizeof(float) * nInputPlanes;
 
-        if (xi != wsz-1) {
-            local_02 = tmp0;
-            local_12 = tmp1;
-            local_22 = tmp2;
-            if (lid < nInputPlanes) {
-                local_02[lid] = in01[(int)lid+(int)nInputPlanes];
-                local_12[lid] = in11[(int)lid+(int)nInputPlanes];
-                local_22[lid] = in21[(int)lid+(int)nInputPlanes];
-            }
-        }
+		__global char *inp = (__global char*)packed_input;
 
-        barrier(CLK_LOCAL_MEM_FENCE);
+		inp += in_step*yi;
+		__global char *in0p = inp - in_step;
+		if (yi == 0) {
+			in0p = inp;
+		}
 
-#define IP1(ipi) {                                      \
-            int ipIndex = ipi + inputPlaneStart;        \
-            float i00, i01, i02;                        \
-            float i10, i11, i12;                        \
-            float i20, i21, i22;                        \
-                                                        \
-            i00 = local_00[ipIndex];                    \
-            i01 = local_01[ipIndex];                    \
-            i02 = local_02[ipIndex];                    \
-            i10 = local_10[ipIndex];                    \
-            i11 = local_11[ipIndex];                    \
-            i12 = local_12[ipIndex];                    \
-            i20 = local_20[ipIndex];                    \
-            i21 = local_21[ipIndex];                    \
-            i22 = local_22[ipIndex];                    \
-                                                        \
-            v += w##ipi##_0 * i00;                                  \
-            v += w##ipi##_1 * i01;                                  \
-            v += w##ipi##_2 * i02;  \
-                                                                        \
-            v += w##ipi##_3 * i10;  \
-            v += w##ipi##_4 * i11;  \
-            v += w##ipi##_5 * i12;  \
-                                                                        \
-            v += w[ipi*9*nOutputPlanes + 6*nOutputPlanes + outputIdx] * i20;  \
-            v += w[ipi*9*nOutputPlanes + 7*nOutputPlanes + outputIdx] * i21; \
-            v += w[ipi*9*nOutputPlanes + 8*nOutputPlanes + outputIdx] * i22;  \
-                                                        \
-        }
+		__global char *in1p = inp;
+		__global char *in2p = inp + in_step;
 
-#if 1
-        ITER16(IP1);
-#else
-        for (int ipi=0; ipi<16; ipi++) {
-            IP1(ipi);
-        }
-#endif
+		if (yi == hsz-1) {
+			in2p = inp;
+		}
 
-        intermediate[lid] = v;
-        barrier(CLK_LOCAL_MEM_FENCE);
-        unsigned int opIndex = opStart + lid;
-        __global float *out = packed_output + (yi*wsz + xi)*nOutputPlanes;
+		__global float *in01_base = (__global float*)in0p;
+		__global float *in11_base = (__global float*)in1p;
+		__global float *in21_base = (__global float*)in2p;
 
-        /* 256 to 64 reduction */
-        if (lid < 32) {
-            float sum = 0;
+		/* 4*256 = 1024 */
+		__local float *intermediate = local_mem;
+		local_mem += 256;
 
-            sum = intermediate[lid*8 + 0]
-                + intermediate[lid*8 + 1]
-                + intermediate[lid*8 + 2]
-                + intermediate[lid*8 + 3]
-                + intermediate[lid*8 + 4]
-                + intermediate[lid*8 + 5]
-                + intermediate[lid*8 + 6]
-                + intermediate[lid*8 + 7];
+		/* input  (16 / item) x 8
+		 * .... .... .... .... 128
+		 * .... .... .... .... 128
+		 * output (1 / item) x 32
+		 */
 
-            float bv = biases[opIndex];
-            float v = sum;
+		/* 9*4*128 = 4608 */
+		__local float *local_00 = local_mem; local_mem += nInputPlanes;
+		__local float *local_01 = local_mem; local_mem += nInputPlanes;
+		__local float *local_02 = local_mem; local_mem += nInputPlanes;
 
-            v += bv;
+		__local float *local_10 = local_mem; local_mem += nInputPlanes;
+		__local float *local_11 = local_mem; local_mem += nInputPlanes;
+		__local float *local_12 = local_mem; local_mem += nInputPlanes;
 
-            float mtz = max(v, 0.0f);
-            float ltz = min(v, 0.0f);
+		__local float *local_20 = local_mem; local_mem += nInputPlanes;
+		__local float *local_21 = local_mem; local_mem += nInputPlanes;
+		__local float *local_22 = local_mem; local_mem += nInputPlanes;
 
-            v = ltz * 0.1f + mtz;
+		if (lid < nInputPlanes) {
+			__global float *in01 = in01_base;
+			__global float *in11 = in11_base;
+			__global float *in21 = in21_base;
 
-            out[opIndex] = v;
-        }
-    }
+			float v01 = in01[lid];
+			float v11 = in11[lid];
+			float v21 = in21[lid];
+
+			local_01[lid] = local_02[lid] = v01;
+			local_11[lid] = local_12[lid] = v11;
+			local_21[lid] = local_22[lid] = v21;
+		}
+
+		barrier(CLK_LOCAL_MEM_FENCE);
+
+		/* rem : 16 * 2 = 32x128x4x4 = 16kb */
+
+		for (int xi=0; xi<wsz; xi++) {
+			float v = 0;
+			float v1 = 0;
+
+			__global float *in01 = in01_base + xi * nInputPlanes;
+			__global float *in11 = in11_base + xi * nInputPlanes;
+			__global float *in21 = in21_base + xi * nInputPlanes;
+
+			__local float *tmp0 = local_00;
+			__local float *tmp1 = local_10;
+			__local float *tmp2 = local_20;
+
+			local_00 = local_01;
+			local_01 = local_02;
+
+			local_10 = local_11;
+			local_11 = local_12;
+
+			local_20 = local_21;
+			local_21 = local_22;
+
+			if (xi != wsz-1) {
+				local_02 = tmp0;
+				local_12 = tmp1;
+				local_22 = tmp2;
+				if (lid < nInputPlanes) {
+					local_02[lid] = in01[(int)lid+(int)nInputPlanes];
+					local_12[lid] = in11[(int)lid+(int)nInputPlanes];
+					local_22[lid] = in21[(int)lid+(int)nInputPlanes];
+				}
+			}
+
+			barrier(CLK_LOCAL_MEM_FENCE);
+
+			ITER16(IP1);
+
+			intermediate[lid] = v + v1;
+			barrier(CLK_LOCAL_MEM_FENCE);
+			unsigned int opIndex = opStart + lid;
+			__global float *out = packed_output + (yi*wsz + xi)*nOutputPlanes;
+
+			/* 256 to 64 reduction */
+			if (lid < 32) {
+				float sum = 0;
+
+				sum = intermediate[lid*8 + 0]
+					+ intermediate[lid*8 + 1]
+					+ intermediate[lid*8 + 2]
+					+ intermediate[lid*8 + 3]
+					+ intermediate[lid*8 + 4]
+					+ intermediate[lid*8 + 5]
+					+ intermediate[lid*8 + 6]
+					+ intermediate[lid*8 + 7];
+
+				float bv = biases[opIndex];
+				float v = sum;
+
+				v += bv;
+
+				float mtz = max(v, 0.0f);
+				float ltz = min(v, 0.0f);
+
+				v = ltz * 0.1f + mtz;
+
+				out[opIndex] = v;
+			}
+		}
+	}
 }
 
