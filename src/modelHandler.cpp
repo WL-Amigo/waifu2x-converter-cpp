@@ -177,9 +177,7 @@ bool Model::filter_AVX_OpenCL(const float *packed_input,
 	bool compare_result = false;
 
 #ifdef COMPARE_RESULT
-	if (nOutputPlanes == 128 && nInputPlanes == 128) {
-		compare_result = true;
-	}
+	compare_result = true;
 #endif
 
 	if (compare_result) {
@@ -294,12 +292,6 @@ bool Model::filter(float *packed_input,
 
 	if (size.width&1) {
 		avx_available = false;
-	}
-
-	if (nOutputPlanes == 128 && nInputPlanes == 128) {
-		/* nop */
-	} else {
-		gpu_available = false;
 	}
 
 	if (gpu_available) {
