@@ -329,7 +329,6 @@ bool Model::filter(ComputeEnv *env,
 bool Model::loadModelFromJSONObject(picojson::object &jsonObj) {
 
 	// nInputPlanes,nOutputPlanes,kernelSize have already set.
-
 	int matProgress = 0;
 	picojson::array &wOutputPlane = jsonObj["weight"].get<picojson::array>();
 
@@ -419,30 +418,132 @@ modelUtility& modelUtility::getInstance(){
 	return *instance;
 }
 
+Model::Model(FILE *binfp)
+{
+	uint32_t nInputPlanes, nOutputPlanes;
+
+	fread(&nInputPlanes, 4, 1, binfp);
+	fread(&nOutputPlanes, 4, 1, binfp);
+
+	this->nInputPlanes = nInputPlanes;
+	this->nOutputPlanes = nOutputPlanes;
+	this->kernelSize = 3;
+	this->weights.clear();
+	this->biases.clear();
+
+	// setting weight matrices
+	for (uint32_t oi=0; oi<nOutputPlanes; oi++) {
+		for (uint32_t ii=0; ii<nInputPlanes; ii++) {
+			cv::Mat writeMatrix(kernelSize, kernelSize, CV_32FC1);
+			for (int yi=0; yi<3; yi++) {
+				for (int xi=0; xi<3; xi++) {
+					double v;
+					fread(&v, 8, 1, binfp);
+					writeMatrix.at<float>(yi, xi) = v;
+				}
+			}
+			this->weights.push_back(std::move(writeMatrix));
+		}
+	}
+
+	for (uint32_t oi=0; oi<nOutputPlanes; oi++) {
+		double v;
+		fread(&v, 8, 1, binfp);
+		biases.push_back(v);
+	}
+}
+
+
 bool modelUtility::generateModelFromJSON(const std::string &fileName,
 		std::vector<std::unique_ptr<Model> > &models) {
 
-	std::ifstream jsonFile;
+	std::string binpath = fileName + ".bin";
+	FILE *binfp = fopen(binpath.c_str(), "rb");
 
-	jsonFile.open(fileName);
-	if (!jsonFile.is_open()) {
-		std::cerr << "Error : couldn't open " << fileName << std::endl;
-		return false;
-	}
+	if (binfp) {
+		uint32_t nModel;
 
-	picojson::value jsonValue;
-	jsonFile >> jsonValue;
-	std::string errMsg = picojson::get_last_error();
-	if (!errMsg.empty()) {
-		std::cerr << "Error : PicoJSON Error : " << errMsg << std::endl;
-		return false;
-	}
+		fread(&nModel, 4, 1, binfp);
 
-	picojson::array& objectArray = jsonValue.get<picojson::array>();
-	for (auto&& obj : objectArray) {
-		std::unique_ptr<Model> m = std::unique_ptr<Model>(
+		for (uint32_t i=0; i<nModel; i++) {
+			std::unique_ptr<Model> m = std::unique_ptr<Model>(
+				new Model(binfp));
+			models.push_back(std::move(m));
+		}
+
+		fclose(binfp);
+	} else {
+		std::ifstream jsonFile;
+
+		jsonFile.open(fileName);
+		if (!jsonFile.is_open()) {
+			std::cerr << "Error : couldn't open " << fileName << std::endl;
+			return false;
+		}
+
+		picojson::value jsonValue;
+		jsonFile >> jsonValue;
+
+		std::string errMsg = picojson::get_last_error();
+		if (!errMsg.empty()) {
+			std::cerr << "Error : PicoJSON Error : " << errMsg << std::endl;
+			return false;
+		}
+
+		picojson::array& objectArray = jsonValue.get<picojson::array>();
+		for (auto&& obj : objectArray) {
+			std::unique_ptr<Model> m = std::unique_ptr<Model>(
 				new Model(obj.get<picojson::object>()));
-		models.push_back(std::move(m));
+			models.push_back(std::move(m));
+		}
+
+		binfp = fopen(binpath.c_str(), "wb");
+		if (binfp) {
+			uint32_t nModel = objectArray.size();
+
+			fwrite(&nModel, 4, 1, binfp);
+			for (auto&& m : models) {
+				uint32_t nInputPlanes = m->getNInputPlanes();
+				uint32_t nOutputPlanes = m->getNOutputPlanes();
+
+				fwrite(&nInputPlanes, 4, 1, binfp);
+				fwrite(&nOutputPlanes, 4, 1, binfp);
+
+				int kernelSize = 3;
+				std::vector<cv::Mat> &weights = m->getWeigts();
+
+				int nw = weights.size();
+				for (int wi=0; wi<nw; wi++) {
+					cv::Mat &wm = weights[wi];
+					double v;
+					v = wm.at<float>(0,0);
+					fwrite(&v, 1, 8, binfp);
+					v = wm.at<float>(0,1);
+					fwrite(&v, 1, 8, binfp);
+					v = wm.at<float>(0,2);
+					fwrite(&v, 1, 8, binfp);
+
+					v = wm.at<float>(1,0);
+					fwrite(&v, 1, 8, binfp);
+					v = wm.at<float>(1,1);
+					fwrite(&v, 1, 8, binfp);
+					v = wm.at<float>(1,2);
+					fwrite(&v, 1, 8, binfp);
+
+					v = wm.at<float>(2,0);
+					fwrite(&v, 1, 8, binfp);
+					v = wm.at<float>(2,1);
+					fwrite(&v, 1, 8, binfp);
+					v = wm.at<float>(2,2);
+					fwrite(&v, 1, 8, binfp);
+				}
+
+				std::vector<double> &b = m->getBiases();
+				fwrite(&b[0], 8, b.size(), binfp);
+			}
+
+			fclose(binfp);
+		}
 	}
 
 	return true;

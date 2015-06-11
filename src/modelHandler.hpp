@@ -110,6 +110,8 @@ public:
 			std::exit(-1);
 		}
 	}
+	Model(FILE *binfp);
+
 	;
 	~Model() {
 	}
@@ -122,6 +124,12 @@ public:
 	int getNInputPlanes();
 	int getNOutputPlanes();
 
+	std::vector<cv::Mat> &getWeigts() {
+		return weights;
+	}
+	std::vector<double> &getBiases() {
+		return biases;
+	}
 	// setter function
 
 	// public operation function

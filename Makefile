@@ -35,7 +35,7 @@ run8r: waifu2x-converter-cpp
 	perf record ./waifu2x-converter-cpp -m scale -j 8 -i $(INPUT) --model_dir models
 
 run4: waifu2x-converter-cpp
-	perf stat ./waifu2x-converter-cpp -j 4 -i $(INPUT) --model_dir models
+	perf stat ./waifu2x-converter-cpp -m scale -j 4 -i $(INPUT) --model_dir models
 
 run4d: waifu2x-converter-cpp
 	perf stat ./waifu2x-converter-cpp -j 4 -i $(INPUT) --model_dir models --disable-gpu

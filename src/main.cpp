@@ -134,7 +134,6 @@ int main(int argc, char** argv) {
 
 		if (!w2xc::modelUtility::generateModelFromJSON(modelFileName, models))
 			std::exit(-1);
-
 		std::cout << "start scaling" << std::endl;
 
 		// 2x scaling
@@ -155,7 +154,6 @@ int main(int argc, char** argv) {
 			cv::Mat imageY;
 			cv::split(imageYUV, imageSplit);
 			imageSplit[0].copyTo(imageY);
-
 			// generate bicubic scaled image and
 			// convert RGB -> YUV and split
 			imageSplit.clear();

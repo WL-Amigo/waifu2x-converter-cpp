@@ -61,7 +61,6 @@ bool convertWithModels(ComputeEnv *env,
 static bool convertWithModelsBasic(ComputeEnv *env,
 				   cv::Mat &inputPlane, cv::Mat &outputPlane,
 				   std::vector<std::unique_ptr<Model> > &models, FLOPSCounter *flops) {
-
 	// padding is require before calling this function
 
 	std::unique_ptr<std::vector<cv::Mat> > inputPlanes = std::unique_ptr<
@@ -108,10 +107,8 @@ static bool convertWithModelsBasic(ComputeEnv *env,
 		delete packed_input_buf;
 		packed_input_buf = packed_output_buf;
 	}
-
 	double t01 = getsec();
-	double gflops = ops_sum/(1000.0*1000.0*1000.0) / (t01-t00);
-	std::cout << "total : " << (t01-t00) << "[sec], " << gflops << "[GFLOPS]" << std::endl;
+
 
 	outputPlane = cv::Mat::zeros(filterSize, CV_32FC1);
 
@@ -119,6 +116,9 @@ static bool convertWithModelsBasic(ComputeEnv *env,
 	unpack_mat1(outputPlane, packed_input, filterWidth, filterHeight);
 
 	delete packed_input_buf;
+
+	double gflops = ops_sum/(1000.0*1000.0*1000.0) / (t01-t00);
+	std::cout << "total : " << (t01-t00) << "[sec], " << gflops << "[GFLOPS]" << std::endl;
 
 	return true;
 
@@ -128,7 +128,6 @@ static bool convertWithModelsBlockSplit(ComputeEnv *env,
 					cv::Mat &inputPlane,
 					cv::Mat &outputPlane,
 					std::vector<std::unique_ptr<Model> > &models, FLOPSCounter *flops) {
-
 	// padding is not required before calling this function
 
 	// initialize local variables
