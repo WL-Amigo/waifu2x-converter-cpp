@@ -10,6 +10,7 @@
 
 #include "convertRoutine.hpp"
 #include "common.hpp"
+#include "Buffer.hpp"
 #include "sec.hpp"
 
 namespace w2xc {
@@ -75,18 +76,21 @@ static bool convertWithModelsBasic(ComputeEnv *env,
 	int filterWidth = filterSize.width;
 	int filterHeight = filterSize.height;
 
-	float *packed_input = (float*)malloc(sizeof(float) * filterWidth * filterHeight);
+	Buffer *packed_input_buf = new Buffer(env, sizeof(float) * filterWidth * filterHeight);
+
+	float *packed_input = (float*)packed_input_buf->get_write_ptr_host(env);
 	pack_mat(packed_input, *inputPlanes, filterWidth, filterHeight, 1);
 
 	double t00 = getsec();
 	double ops_sum = 0;
 
 	for (int index = 0; index < models.size(); index++) {
-		float *packed_output = (float*)malloc(sizeof(float) * filterWidth * filterHeight *
-						      models[index]->getNOutputPlanes());
+		Buffer *packed_output_buf = new Buffer(env,
+						       sizeof(float) * filterWidth * filterHeight *
+						       models[index]->getNOutputPlanes());
 		std::cout << "Iteration #" << (index + 1) << "..." ;
 		double t0 = getsec();
-		if (!models[index]->filter(env, packed_input, packed_output, filterSize)) {
+		if (!models[index]->filter(env, packed_input_buf, packed_output_buf, filterSize)) {
 			std::exit(-1);
 		}
 		double t1 = getsec();
@@ -101,8 +105,8 @@ static bool convertWithModelsBasic(ComputeEnv *env,
 		flops->flop += ops;
 		flops->sec += t1-t0;
 
-		free(packed_input);
-		packed_input = packed_output;
+		delete packed_input_buf;
+		packed_input_buf = packed_output_buf;
 	}
 
 	double t01 = getsec();
@@ -111,8 +115,10 @@ static bool convertWithModelsBasic(ComputeEnv *env,
 
 	outputPlane = cv::Mat::zeros(filterSize, CV_32FC1);
 
+	packed_input = (float*)packed_input_buf->get_read_ptr_host(env);
 	unpack_mat1(outputPlane, packed_input, filterWidth, filterHeight);
-	free(packed_input);
+
+	delete packed_input_buf;
 
 	return true;
 

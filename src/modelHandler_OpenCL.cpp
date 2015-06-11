@@ -201,8 +201,8 @@ initOpenCL(ComputeEnv *env)
 
 void
 filter_OpenCL_impl(ComputeEnv *env,
-                   const float *packed_input,
-                   float *packed_output,
+                   Buffer *packed_input_buf,
+                   Buffer *packed_output_buf,
                    int nInputPlanes,
                    int nOutputPlanes,
                    const float *fbiases,
@@ -217,16 +217,8 @@ filter_OpenCL_impl(ComputeEnv *env,
         OpenCLDev *dev = &env->cl_dev_list[0];
         cl_context context = dev->context;
 
-        cl_mem cl_packed_input = clCreateBuffer(context,
-                                                CL_MEM_READ_ONLY|CL_MEM_COPY_HOST_PTR,
-                                                sizeof(float) * w * h * nInputPlanes,
-                                                (void*)packed_input, &err);
-
-        size_t out_size = sizeof(float) * w * h * nOutputPlanes;
-        cl_mem cl_packed_output = clCreateBuffer(context,
-                                                 CL_MEM_WRITE_ONLY,
-                                                 out_size,
-                                                 nullptr, &err);
+        cl_mem cl_packed_input = packed_input_buf->get_read_ptr_cl(env, 0);
+        cl_mem cl_packed_output = packed_output_buf->get_write_ptr_cl(env, 0);
 
         cl_mem cl_fbiases = clCreateBuffer(context,
                                            CL_MEM_READ_ONLY|CL_MEM_COPY_HOST_PTR,
@@ -289,18 +281,11 @@ filter_OpenCL_impl(ComputeEnv *env,
         double t1 = getsec();
         printf("%f\n", t1-t0);
 
-        err = clEnqueueReadBuffer(dev->queue, cl_packed_output,
-                                  CL_TRUE,
-                                  0, out_size, packed_output,
-                                  0, nullptr, nullptr);
-
         if (err != CL_SUCCESS) {
                 printf("read buffer error : %d\n", err);
                 exit(1);
         }
 
-        clReleaseMemObject(cl_packed_input);
-        clReleaseMemObject(cl_packed_output);
         clReleaseMemObject(cl_fbiases);
         clReleaseMemObject(cl_weight);
 }

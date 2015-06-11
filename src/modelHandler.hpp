@@ -42,8 +42,8 @@ extern void filter_FMA_impl(const float *packed_input,
 			    int nJob);
 
 extern void filter_OpenCL_impl(ComputeEnv *env,
-			       const float *packed_input,
-                               float *packed_output,
+			       Buffer *packed_input,
+                               Buffer *packed_output,
                                int nInputPlanes,
                                int nOutputPlanes,
                                const float *biases,
@@ -73,13 +73,14 @@ private:
 			std::vector<cv::Mat> &outputPlanes, unsigned int beginningIndex,
 			unsigned int nWorks);
 
-	bool filter_CV(const float *packed_input,
-		       float *packed_output,
+	bool filter_CV(ComputeEnv *env,
+		       Buffer *packed_input,
+		       Buffer *packed_output,
 		       cv::Size size);
 
 	bool filter_AVX_OpenCL(ComputeEnv *env,
-			       const float *packed_input,
-                               float *packed_output,
+			       Buffer *packed_input,
+                               Buffer *packed_output,
                                cv::Size size,
                                bool OpenCL);
 
@@ -125,8 +126,8 @@ public:
 
 	// public operation function
 	bool filter(ComputeEnv *env,
-		    float *packed_input,
-		    float *packed_output,
+		    Buffer *packed_input,
+		    Buffer *packed_output,
 		    cv::Size size);
 
 

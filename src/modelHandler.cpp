@@ -32,10 +32,14 @@ int Model::getNOutputPlanes() {
 }
 
 bool
-Model::filter_CV(const float *packed_input,
-		 float *packed_output,
+Model::filter_CV(ComputeEnv *env,
+		 Buffer *packed_input_buf,
+		 Buffer *packed_output_buf,
 		 cv::Size size)
 {
+	const float *packed_input = (float*)packed_input_buf->get_read_ptr_host(env);
+	float *packed_output = (float*)packed_output_buf->get_write_ptr_host(env);
+
 	std::vector<cv::Mat> outputPlanes;
 	std::vector<cv::Mat> inputPlanes;
 
@@ -86,8 +90,8 @@ Model::filter_CV(const float *packed_input,
 //#define COMPARE_RESULT
 
 bool Model::filter_AVX_OpenCL(ComputeEnv *env,
-			      const float *packed_input,
-			      float *packed_output,
+			      Buffer *packed_input_buf,
+			      Buffer *packed_output_buf,
 			      cv::Size size,
 			      bool OpenCL)
 {
@@ -185,10 +189,10 @@ bool Model::filter_AVX_OpenCL(ComputeEnv *env,
 #endif
 
 	if (compare_result) {
-		float *packed_output_cv = (float*)malloc(sizeof(float) * size.width * size.height * nOutputPlanes);
+		Buffer *packed_output_cv_buf = new Buffer(env, sizeof(float) * size.width * size.height * nOutputPlanes);
 
 		double t0 = getsec();
-		filter_CV(packed_input, packed_output_cv, size);
+		filter_CV(env, packed_input_buf, packed_output_cv_buf, size);
 		//filter_FMA_impl(packed_input, packed_output_cv,
 		//		nInputPlanes, nOutputPlanes, fbiases_flat, weight_flat, size, nJob);
 		double t1 = getsec();
@@ -197,9 +201,12 @@ bool Model::filter_AVX_OpenCL(ComputeEnv *env,
 		double ops = size.width * size.height * 9.0 * 2.0 * nOutputPlanes * nInputPlanes;
 		std::vector<cv::Mat> output2;
 		if (OpenCL) {
-			filter_OpenCL_impl(env, packed_input, packed_output,
+			filter_OpenCL_impl(env, packed_input_buf, packed_output_buf,
 					   nInputPlanes, nOutputPlanes, fbiases_flat, weight_flat, size, nJob);
 		} else {
+			const float *packed_input = (float*)packed_input_buf->get_read_ptr_host(env);
+			float *packed_output = (float*)packed_input_buf->get_write_ptr_host(env);
+
 			if (have_fma) {
 				filter_FMA_impl(packed_input, packed_output,
 						nInputPlanes, nOutputPlanes, fbiases_flat, weight_flat, size, nJob);
@@ -215,6 +222,9 @@ bool Model::filter_AVX_OpenCL(ComputeEnv *env,
 		printf("ver2 : %f [Gflops]\n", (ops/(1000.0*1000.0*1000.0)) / (t2-t1));
 		printf("orig : %f [Gflops]\n", (ops/(1000.0*1000.0*1000.0)) / (t1-t0));
 		int error_count = 0;
+
+		float *packed_output_cv = (float*)packed_output_cv_buf->get_read_ptr_host(env);
+		float *packed_output = (float*)packed_output_buf->get_read_ptr_host(env);
 
 		for (int i=0; i<size.width * size.height * nOutputPlanes; i++) {
 			float v0 = packed_output_cv[i];
@@ -245,12 +255,17 @@ bool Model::filter_AVX_OpenCL(ComputeEnv *env,
 		if (error_count != 0) {
 			exit(1);
 		}
+
+		delete packed_output_cv_buf;
 	} else {
 		if (OpenCL) {
 			filter_OpenCL_impl(env,
-					   packed_input, packed_output,
+					   packed_input_buf, packed_output_buf,
 					   nInputPlanes, nOutputPlanes, fbiases_flat, weight_flat, size, nJob);
 		} else {
+			const float *packed_input = (float*)packed_input_buf->get_read_ptr_host(env);
+			float *packed_output = (float*)packed_output_buf->get_write_ptr_host(env);
+
 			if (have_fma) {
 				filter_FMA_impl(packed_input, packed_output,
 						nInputPlanes, nOutputPlanes, fbiases_flat, weight_flat, size, nJob);
@@ -269,8 +284,8 @@ bool Model::filter_AVX_OpenCL(ComputeEnv *env,
 }
 
 bool Model::filter(ComputeEnv *env,
-		   float *packed_input,
-		   float *packed_output,
+		   Buffer *packed_input_buf,
+		   Buffer *packed_output_buf,
 		   cv::Size size)
 {
 	bool ret;
@@ -301,11 +316,11 @@ bool Model::filter(ComputeEnv *env,
 	}
 
 	if (gpu_available) {
-		ret = filter_AVX_OpenCL(env, packed_input, packed_output, size, true);
+		ret = filter_AVX_OpenCL(env, packed_input_buf, packed_output_buf, size, true);
 	} else if (avx_available) {
-		ret = filter_AVX_OpenCL(env, packed_input, packed_output, size, false);
+		ret = filter_AVX_OpenCL(env, packed_input_buf, packed_output_buf, size, false);
 	} else {
-		ret = filter_CV(packed_input, packed_output, size);
+		ret = filter_CV(env, packed_input_buf, packed_output_buf, size);
 	}
 
 	return ret;
