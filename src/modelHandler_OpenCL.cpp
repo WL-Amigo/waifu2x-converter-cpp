@@ -262,7 +262,6 @@ filter_OpenCL_impl(ComputeEnv *env,
         size_t gws[3] = {h*vec_width, 1, 1};
         size_t lws[3] = {vec_width, 1, 1};
 
-        double t0 = getsec();
         err = clEnqueueNDRangeKernel(dev->queue,
                                      dev->ker,
                                      1,
@@ -278,8 +277,6 @@ filter_OpenCL_impl(ComputeEnv *env,
                 printf("wait ndrange error : %d\n", err);
                 exit(1);
         }
-        double t1 = getsec();
-        printf("%f\n", t1-t0);
 
         if (err != CL_SUCCESS) {
                 printf("read buffer error : %d\n", err);
