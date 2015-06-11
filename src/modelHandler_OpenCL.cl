@@ -136,7 +136,6 @@ filter(__global const float * __restrict__ packed_input,
 	F(2,8);					\
 	F(2,9);					\
 
-
 	for (int xi0=0; xi0<wsz; xi0+=BLOCK_SIZE) {
 		barrier(CLK_LOCAL_MEM_FENCE);
 

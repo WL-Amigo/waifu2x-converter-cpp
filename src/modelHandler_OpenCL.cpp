@@ -14,7 +14,7 @@
 
 static const char prog[] = 
 #include "modelHandler_OpenCL.cl.h"
-        ;
+	;
 
 #define S_(a) #a
 #define S(a) S_(a)
@@ -108,7 +108,11 @@ initOpenCL(ComputeEnv *env)
                 std::vector<char> name(sz);
                 clGetPlatformInfo(plts[i], CL_PLATFORM_NAME, sz, &name[0], &sz);
 
-                if (strstr(&name[0], "AMD") == NULL) {
+                bool is_amd = strstr(&name[0], "AMD") != NULL;
+                //bool is_intel = strstr(&name[0], "Intel") != NULL;
+                //bool is_nvidia = strstr(&name[0], "NVIDIA") != NULL;
+
+                if (!is_amd) {
                         continue;
                 }
 
@@ -151,6 +155,8 @@ initOpenCL(ComputeEnv *env)
 
         bool bin_avaiable = false;
 
+#if defined __linux || _WIN32
+
 #ifdef __linux
         ssize_t path_len = 4;
         char *self_path = (char*)malloc(path_len+1);
@@ -168,11 +174,36 @@ initOpenCL(ComputeEnv *env)
         struct stat self_st;
         stat(self_path, &self_st);
         self_path = dirname(self_path);
+#else
+        ssize_t path_len = 4;
+        char *self_path = (char*)malloc(path_len+1);
+	DWORD len;
+        while (1) {
+		len = GetModuleFileName(NULL, self_path, path_len);
+		if (len > 0 && len != path_len) {
+			break;
+		}
+
+                path_len *= 2;
+                self_path = (char*)realloc(self_path, path_len+1);
+        }
+	WIN32_FIND_DATA self_st;
+	HANDLE finder = FindFirstFile(self_path, &self_st);
+	FindClose(finder);
+
+	for (int si=len-1; si>=0; si--) {
+		if (self_path[si] == '\\') {
+			self_path[si] = '\0';
+			break;
+		}
+	}
+#endif
 
         std::string bin_path = std::string(self_path) + "/" + &dev_name[0] + ".bin";
 
         FILE *binfp = fopen(bin_path.c_str(), "rb");
         if (binfp) {
+#ifdef __linux
                 struct stat bin_st;
                 stat(bin_path.c_str(), &bin_st);
 
@@ -186,9 +217,26 @@ initOpenCL(ComputeEnv *env)
                                 old = true;
                         }
                 }
+		size_t bin_sz = bin_st.st_size;
+#else
+                WIN32_FIND_DATA bin_st;
+		HANDLE finder = FindFirstFile(bin_path.c_str(), &bin_st);
+		FindClose(finder);
+
+		bool old = false;
+		uint64_t self_time = (((uint64_t)self_st.ftLastWriteTime.dwHighDateTime)<<32) |
+			((uint64_t)self_st.ftLastWriteTime.dwLowDateTime);
+		uint64_t bin_time = (((uint64_t)bin_st.ftLastWriteTime.dwHighDateTime)<<32) |
+			((uint64_t)bin_st.ftLastWriteTime.dwLowDateTime);
+
+		if (bin_time < self_time) {
+			old = true;
+		}
+
+		size_t bin_sz = bin_st.nFileSizeLow;
+#endif
 
                 if (!old) {
-                        size_t bin_sz = bin_st.st_size;
                         unsigned char *bin = (unsigned char*)malloc(bin_sz);
 
                         size_t rem = bin_sz;
@@ -232,7 +280,7 @@ initOpenCL(ComputeEnv *env)
 
         }
 
-#ifdef __linux
+#if defined __linux || defined _WIN32
         free(self_path);
 #endif
 
@@ -254,7 +302,7 @@ initOpenCL(ComputeEnv *env)
 
 
 
-#ifdef __linux
+#if defined __linux || _WIN32
         if (!bin_avaiable) {
                 size_t binsz;
                 size_t ret_len;
