@@ -15,8 +15,8 @@ src/modelHandler_OpenCL.cpp: src/modelHandler_OpenCL.cl.h
 waifu2x-converter-cpp: $(OBJS)
 	g++ $(LDFLAGS) -o $@ $^ $(LDLIBS)
 
-INPUT=./a.png
-#INPUT=./b.png
+#INPUT=./a.png
+INPUT=./b.png
 
 out-Spectre.isa: src/modelHandler_OpenCL.cl
 	/opt/AMD/CodeXL_1.7-7300/CodeXLAnalyzer -s CL $< -k filter --isa out.isa -c Spectre

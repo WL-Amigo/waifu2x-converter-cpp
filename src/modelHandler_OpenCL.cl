@@ -1,6 +1,6 @@
 /* -*- mode: c -*- */
 
-#define BLOCK_SIZE 4
+#define BLOCK_SIZE 8
 
 __kernel void
 filter(__global const float * __restrict__ packed_input,
@@ -51,6 +51,92 @@ filter(__global const float * __restrict__ packed_input,
 
 	unsigned int vec_width = min((int)128, (int)nOutputPlanes);
 
+#define UNROLL9(F)				\
+	F(0);					\
+	F(1);					\
+	F(2);					\
+	F(3);					\
+	F(4);					\
+	F(5);					\
+	F(6);					\
+	F(7);					\
+	F(8);					\
+
+#define UNROLL8(F)				\
+	F(0);					\
+	F(1);					\
+	F(2);					\
+	F(3);					\
+	F(4);					\
+	F(5);					\
+	F(6);					\
+	F(7);					\
+
+
+#define UNROLL8x3(F)				\
+	F(0,0);					\
+	F(0,1);					\
+	F(0,2);					\
+	F(0,3);					\
+	F(0,4);					\
+	F(0,5);					\
+	F(0,6);					\
+	F(0,7);					\
+						\
+	F(1,0);					\
+	F(1,1);					\
+	F(1,2);					\
+	F(1,3);					\
+	F(1,4);					\
+	F(1,5);					\
+	F(1,6);					\
+	F(1,7);					\
+						\
+	F(2,0);					\
+	F(2,1);					\
+	F(2,2);					\
+	F(2,3);					\
+	F(2,4);					\
+	F(2,5);					\
+	F(2,6);					\
+	F(2,7);					\
+
+
+#define UNROLL10x3(F)				\
+	F(0,0);					\
+	F(0,1);					\
+	F(0,2);					\
+	F(0,3);					\
+	F(0,4);					\
+	F(0,5);					\
+	F(0,6);					\
+	F(0,7);					\
+	F(0,8);					\
+	F(0,9);					\
+						\
+	F(1,0);					\
+	F(1,1);					\
+	F(1,2);					\
+	F(1,3);					\
+	F(1,4);					\
+	F(1,5);					\
+	F(1,6);					\
+	F(1,7);					\
+	F(1,8);					\
+	F(1,9);					\
+						\
+	F(2,0);					\
+	F(2,1);					\
+	F(2,2);					\
+	F(2,3);					\
+	F(2,4);					\
+	F(2,5);					\
+	F(2,6);					\
+	F(2,7);					\
+	F(2,8);					\
+	F(2,9);					\
+
+
 	for (int xi0=0; xi0<wsz; xi0+=BLOCK_SIZE) {
 		barrier(CLK_LOCAL_MEM_FENCE);
 
@@ -98,144 +184,251 @@ filter(__global const float * __restrict__ packed_input,
 
 		barrier(CLK_LOCAL_MEM_FENCE);
 
-		for (int bi=0; bi<BLOCK_SIZE; bi++) {
-			__local char *p00 = (__local char*)&in_block0[-nInputPlanes + bi * (int)nInputPlanes];
-			__local char *p01 = (__local char*)&in_block0[              + bi * (int)nInputPlanes];
-			__local char *p02 = (__local char*)&in_block0[+nInputPlanes + bi * (int)nInputPlanes];
+		int rem = wsz - xi0;
+		int vec_width4 = 128 * 4;
 
-			__local char *p10 = (__local char*)&in_block1[-nInputPlanes + bi * (int)nInputPlanes];
-			__local char *p11 = (__local char*)&in_block1[              + bi * (int)nInputPlanes];
-			__local char *p12 = (__local char*)&in_block1[+nInputPlanes + bi * (int)nInputPlanes];
+		if (rem >= BLOCK_SIZE) {
+			{
+				int bi = 0;
+#define DECL_PTR(y,x)							\
+				__local char *p##y##x = (__local char*)&in_block##y[nInputPlanes * (x-1)];
 
-			__local char *p20 = (__local char*)&in_block2[-nInputPlanes + bi * (int)nInputPlanes];
-			__local char *p21 = (__local char*)&in_block2[              + bi * (int)nInputPlanes];
-			__local char *p22 = (__local char*)&in_block2[+nInputPlanes + bi * (int)nInputPlanes];
+				UNROLL10x3(DECL_PTR);
 
-			if (lid < nOutputPlanes) {
-				int xi = xi0 + bi;
+				float intermediate_reg0 = 0;
+				float intermediate_reg1 = 0;
+				float intermediate_reg2 = 0;
+				float intermediate_reg3 = 0;
 
-				if (xi == wsz) {
-					break;
-				}
+				float intermediate_reg4 = 0;
+				float intermediate_reg5 = 0;
+				float intermediate_reg6 = 0;
+				float intermediate_reg7 = 0;
 
-				float intermediate_reg = 0;
+				if (lid < nOutputPlanes) {
+					__global float *w0 = weight + lid;
+					int nInputPlanes4 = nInputPlanes * 4;
 
-				__global float *w0 = weight + lid;
-				int nInputPlanes4 = nInputPlanes * 4;
+					for (int ipIndex4 = 0; ipIndex4 < nInputPlanes4; ipIndex4+=4) {
 
-				for (int ipIndex4 = 0; ipIndex4 < nInputPlanes4; ipIndex4+=4) {
-					float i00, i01, i02;
-					float i10, i11, i12;
-					float i20, i21, i22;
+#define LOAD_INPUT2(y,x)					\
+						float2 i##y##x##_2 = *(__local float2*)(p##y##x + ipIndex4);
 
-					float2 i00_2, i01_2, i02_2;
-					float2 i10_2, i11_2, i12_2;
-					float2 i20_2, i21_2, i22_2;
+						UNROLL10x3(LOAD_INPUT2);
 
-					i00_2 = *(__local float2*)(p00 + ipIndex4);
-					i10_2 = *(__local float2*)(p10 + ipIndex4);
-					i20_2 = *(__local float2*)(p20 + ipIndex4);
+#define LOAD_COEF(X)							\
+						float w_##X = *(__global float*)(w + X * vec_width4);
 
-					i01_2 = *(__local float2*)(p01 + ipIndex4);
-					i11_2 = *(__local float2*)(p11 + ipIndex4);
-					i21_2 = *(__local float2*)(p21 + ipIndex4);
-
-					i02_2 = *(__local float2*)(p02 + ipIndex4);
-					i12_2 = *(__local float2*)(p12 + ipIndex4);
-					i22_2 = *(__local float2*)(p22 + ipIndex4);
-
-					{
-						i00 = i00_2.x;
-						i10 = i10_2.x;
-						i20 = i20_2.x;
-
-						i01 = i01_2.x;
-						i11 = i11_2.x;
-						i21 = i21_2.x;
-
-						i02 = i02_2.x;
-						i12 = i12_2.x;
-						i22 = i22_2.x;
-
-						__global char *w = ((__global char*)w0 + (ipIndex4 * 128) * 9);
 
 						{
-							int opIndex = lid;
-							float v = 0;
-							int vec_width4 = 128 * 4;
+#define LOAD_INPUT1X(Y,X)						\
+							float i##Y##X = i##Y##X##_2.x;
 
-							v += *(__global float*)(w + 0 * vec_width4) * i00;
-							v += *(__global float*)(w + 1 * vec_width4) * i01;
-							v += *(__global float*)(w + 2 * vec_width4) * i02;
+							UNROLL10x3(LOAD_INPUT1X);
 
-							v += *(__global float*)(w + 3 * vec_width4) * i10;
-							v += *(__global float*)(w + 4 * vec_width4) * i11;
-							v += *(__global float*)(w + 5 * vec_width4) * i12;
+							__global char *w = ((__global char*)w0 + (ipIndex4 * 128) * 9);
+							UNROLL9(LOAD_COEF);
+#define CALC(IDX,Y,I0,I1,I2,I3,I4,I5,I6,I7)				\
+								intermediate_reg0 += w_##IDX * i##Y##I0; \
+								intermediate_reg1 += w_##IDX * i##Y##I1; \
+								intermediate_reg2 += w_##IDX * i##Y##I2; \
+								intermediate_reg3 += w_##IDX * i##Y##I3; \
+								intermediate_reg4 += w_##IDX * i##Y##I4; \
+								intermediate_reg5 += w_##IDX * i##Y##I5; \
+								intermediate_reg6 += w_##IDX * i##Y##I6; \
+								intermediate_reg7 += w_##IDX * i##Y##I7;
 
-							v += *(__global float*)(w + 6 * vec_width4) * i20;
-							v += *(__global float*)(w + 7 * vec_width4) * i21;
-							v += *(__global float*)(w + 8 * vec_width4) * i22;
+							{
+								CALC(0,0,0,1,2,3,4,5,6,7);
+								CALC(1,0,1,2,3,4,5,6,7,8);
+								CALC(2,0,2,3,4,5,6,7,8,9);
 
-							intermediate_reg += v;
+								CALC(3,1,0,1,2,3,4,5,6,7);
+								CALC(4,1,1,2,3,4,5,6,7,8);
+								CALC(5,1,2,3,4,5,6,7,8,9);
+
+								CALC(6,2,0,1,2,3,4,5,6,7);
+								CALC(7,2,1,2,3,4,5,6,7,8);
+								CALC(8,2,2,3,4,5,6,7,8,9);
+							}
 						}
+
+						ipIndex4 += 4;
+						{
+#define LOAD_INPUT1Y(Y,X)						\
+							float i##Y##X = i##Y##X##_2.y;
+
+							UNROLL10x3(LOAD_INPUT1Y);
+
+							__global char *w = ((__global char*)w0 + (ipIndex4 * 128) * 9);
+							UNROLL9(LOAD_COEF);
+
+							{
+								CALC(0,0,0,1,2,3,4,5,6,7);
+								CALC(1,0,1,2,3,4,5,6,7,8);
+								CALC(2,0,2,3,4,5,6,7,8,9);
+
+								CALC(3,1,0,1,2,3,4,5,6,7);
+								CALC(4,1,1,2,3,4,5,6,7,8);
+								CALC(5,1,2,3,4,5,6,7,8,9);
+
+								CALC(6,2,0,1,2,3,4,5,6,7);
+								CALC(7,2,1,2,3,4,5,6,7,8);
+								CALC(8,2,2,3,4,5,6,7,8,9);
+							}
+						}
+
 					}
 
-					ipIndex4 += 4;
-					{
-						i00 = i00_2.y;
-						i10 = i10_2.y;
-						i20 = i20_2.y;
+#define STORE_RESULT(BI)						\
+					{				\
+						__global float *out = packed_output + (yi*wsz + (xi0+BI))*nOutputPlanes; \
+									\
+						{			\
+							int opIndex = lid; \
+							float bv = biases[opIndex]; \
+							float v = intermediate_reg##BI; \
+							v += bv;	\
+									\
+							float mtz = max(v, 0.0f); \
+							float ltz = min(v, 0.0f); \
+									\
+							v = ltz * 0.1f + mtz; \
+									\
+							out[opIndex] = v; \
+						}			\
+					}
 
-						i01 = i01_2.y;
-						i11 = i11_2.y;
-						i21 = i21_2.y;
+					UNROLL8(STORE_RESULT);
+				}
+			}
+		} else {
+			for (int bi=0; bi<BLOCK_SIZE; bi++) {
+				__local char *p00 = (__local char*)&in_block0[-nInputPlanes   + bi * (int)nInputPlanes];
+				__local char *p01 = (__local char*)&in_block0[                + bi * (int)nInputPlanes];
+				__local char *p02 = (__local char*)&in_block0[+nInputPlanes*1 + bi * (int)nInputPlanes];
 
-						i02 = i02_2.y;
-						i12 = i12_2.y;
-						i22 = i22_2.y;
+				__local char *p10 = (__local char*)&in_block1[-nInputPlanes   + bi * (int)nInputPlanes];
+				__local char *p11 = (__local char*)&in_block1[                + bi * (int)nInputPlanes];
+				__local char *p12 = (__local char*)&in_block1[+nInputPlanes*1 + bi * (int)nInputPlanes];
 
-						__global char *w = ((__global char*)w0 + (ipIndex4 * 128) * 9);
+				__local char *p20 = (__local char*)&in_block2[-nInputPlanes   + bi * (int)nInputPlanes];
+				__local char *p21 = (__local char*)&in_block2[                + bi * (int)nInputPlanes];
+				__local char *p22 = (__local char*)&in_block2[+nInputPlanes*1 + bi * (int)nInputPlanes];
+
+				float intermediate_reg0 = 0;
+
+				if (lid < nOutputPlanes) {
+					int xi = xi0 + bi;
+
+					if (xi == wsz) {
+						break;
+					}
+
+					__global float *w0 = weight + lid;
+					int nInputPlanes4 = nInputPlanes * 4;
+
+					for (int ipIndex4 = 0; ipIndex4 < nInputPlanes4; ipIndex4+=4) {
+						float i00, i01, i02;
+						float i10, i11, i12;
+						float i20, i21, i22;
+
+						float2 i00_2, i01_2, i02_2;
+						float2 i10_2, i11_2, i12_2;
+						float2 i20_2, i21_2, i22_2;
+
+						i00_2 = *(__local float2*)(p00 + ipIndex4);
+						i10_2 = *(__local float2*)(p10 + ipIndex4);
+						i20_2 = *(__local float2*)(p20 + ipIndex4);
+
+						i01_2 = *(__local float2*)(p01 + ipIndex4);
+						i11_2 = *(__local float2*)(p11 + ipIndex4);
+						i21_2 = *(__local float2*)(p21 + ipIndex4);
+
+						i02_2 = *(__local float2*)(p02 + ipIndex4);
+						i12_2 = *(__local float2*)(p12 + ipIndex4);
+						i22_2 = *(__local float2*)(p22 + ipIndex4);
 
 						{
-							int opIndex = lid;
-							float v = 0;
-							int vec_width4 = 128 * 4;
+							i00 = i00_2.x;
+							i10 = i10_2.x;
+							i20 = i20_2.x;
 
-							v += *(__global float*)(w + 0 * vec_width4) * i00;
-							v += *(__global float*)(w + 1 * vec_width4) * i01;
-							v += *(__global float*)(w + 2 * vec_width4) * i02;
+							i01 = i01_2.x;
+							i11 = i11_2.x;
+							i21 = i21_2.x;
 
-							v += *(__global float*)(w + 3 * vec_width4) * i10;
-							v += *(__global float*)(w + 4 * vec_width4) * i11;
-							v += *(__global float*)(w + 5 * vec_width4) * i12;
+							i02 = i02_2.x;
+							i12 = i12_2.x;
+							i22 = i22_2.x;
 
-							v += *(__global float*)(w + 6 * vec_width4) * i20;
-							v += *(__global float*)(w + 7 * vec_width4) * i21;
-							v += *(__global float*)(w + 8 * vec_width4) * i22;
+							__global char *w = ((__global char*)w0 + (ipIndex4 * 128) * 9);
 
-							intermediate_reg += v;
+							{
+								intermediate_reg0 += *(__global float*)(w + 0 * vec_width4) * i00;
+								intermediate_reg0 += *(__global float*)(w + 1 * vec_width4) * i01;
+								intermediate_reg0 += *(__global float*)(w + 2 * vec_width4) * i02;
+
+								intermediate_reg0 += *(__global float*)(w + 3 * vec_width4) * i10;
+								intermediate_reg0 += *(__global float*)(w + 4 * vec_width4) * i11;
+								intermediate_reg0 += *(__global float*)(w + 5 * vec_width4) * i12;
+
+								intermediate_reg0 += *(__global float*)(w + 6 * vec_width4) * i20;
+								intermediate_reg0 += *(__global float*)(w + 7 * vec_width4) * i21;
+								intermediate_reg0 += *(__global float*)(w + 8 * vec_width4) * i22;
+							}
 						}
+
+						ipIndex4 += 4;
+						{
+							i00 = i00_2.y;
+							i10 = i10_2.y;
+							i20 = i20_2.y;
+
+							i01 = i01_2.y;
+							i11 = i11_2.y;
+							i21 = i21_2.y;
+
+							i02 = i02_2.y;
+							i12 = i12_2.y;
+							i22 = i22_2.y;
+
+							__global char *w = ((__global char*)w0 + (ipIndex4 * 128) * 9);
+
+							{
+								intermediate_reg0 += *(__global float*)(w + 0 * vec_width4) * i00;
+								intermediate_reg0 += *(__global float*)(w + 1 * vec_width4) * i01;
+								intermediate_reg0 += *(__global float*)(w + 2 * vec_width4) * i02;
+
+								intermediate_reg0 += *(__global float*)(w + 3 * vec_width4) * i10;
+								intermediate_reg0 += *(__global float*)(w + 4 * vec_width4) * i11;
+								intermediate_reg0 += *(__global float*)(w + 5 * vec_width4) * i12;
+
+								intermediate_reg0 += *(__global float*)(w + 6 * vec_width4) * i20;
+								intermediate_reg0 += *(__global float*)(w + 7 * vec_width4) * i21;
+								intermediate_reg0 += *(__global float*)(w + 8 * vec_width4) * i22;
+							}
+						}
+
 					}
 
-				}
+					__global float *out = packed_output + (yi*wsz + xi)*nOutputPlanes;
 
-				__global float *out = packed_output + (yi*wsz + xi)*nOutputPlanes;
+					{
+						int opIndex = lid;
+						float bv = biases[opIndex];
+						float v = intermediate_reg0;
+						v += bv;
 
-				{
-					int opIndex = lid;
-					float bv = biases[opIndex];
-					float v = intermediate_reg;
-					v += bv;
+						float mtz = max(v, 0.0f);
+						float ltz = min(v, 0.0f);
 
-					float mtz = max(v, 0.0f);
-					float ltz = min(v, 0.0f);
+						v = ltz * 0.1f + mtz;
 
-					v = ltz * 0.1f + mtz;
-
-					out[opIndex] = v;
+						out[opIndex] = v;
+					}
 				}
 			}
 		}
 	}
 }
-

@@ -261,12 +261,12 @@ filter_OpenCL_impl(const float *packed_input,
         size_t gws[3] = {h*vec_width, 1, 1};
         size_t lws[3] = {vec_width, 1, 1};
 
+        double t0 = getsec();
         err = clEnqueueNDRangeKernel(queue,
                                      ker,
                                      1,
                                      nullptr, gws, lws,
                                      0, nullptr, &event);
-
         if (err != CL_SUCCESS) {
                 printf("enqueue ndrange error : %d\n", err);
                 exit(1);
@@ -277,6 +277,8 @@ filter_OpenCL_impl(const float *packed_input,
                 printf("wait ndrange error : %d\n", err);
                 exit(1);
         }
+        double t1 = getsec();
+        printf("%f\n", t1-t0);
 
         err = clEnqueueReadBuffer(queue, cl_packed_output,
                                   CL_TRUE,
