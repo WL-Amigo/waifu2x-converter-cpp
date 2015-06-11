@@ -205,7 +205,7 @@ bool Model::filter_AVX_OpenCL(ComputeEnv *env,
 					   nInputPlanes, nOutputPlanes, fbiases_flat, weight_flat, size, nJob);
 		} else {
 			const float *packed_input = (float*)packed_input_buf->get_read_ptr_host(env);
-			float *packed_output = (float*)packed_input_buf->get_write_ptr_host(env);
+			float *packed_output = (float*)packed_output_buf->get_write_ptr_host(env);
 
 			if (have_fma) {
 				filter_FMA_impl(packed_input, packed_output,

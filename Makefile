@@ -16,11 +16,13 @@ waifu2x-converter-cpp: $(OBJS)
 	g++ $(LDFLAGS) -o $@ $^ $(LDLIBS)
 
 #INPUT=./a.png
-#INPUT=./b.png
-INPUT=./c.png
+INPUT=./b.png
+#INPUT=./c.png
+#INPUT=./d.png
+#INPUT=./e.png
 
-#out-Spectre.isa: src/modelHandler_OpenCL.cl
-#	/opt/AMD/CodeXL_1.7-7300/CodeXLAnalyzer -s CL $< -k filter --isa out.isa -c Spectre
+out-Spectre.isa: src/modelHandler_OpenCL.cl
+	/opt/AMD/CodeXL_1.7-7300/CodeXLAnalyzer -s CL $< -k filter --isa out.isa -c Spectre
 
 
 run: waifu2x-converter-cpp

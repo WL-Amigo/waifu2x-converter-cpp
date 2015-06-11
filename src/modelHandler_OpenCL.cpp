@@ -104,7 +104,7 @@ initOpenCL(ComputeEnv *env)
                 std::vector<char> name(sz);
                 clGetPlatformInfo(plts[i], CL_PLATFORM_NAME, sz, &name[0], &sz);
 
-                if (strstr(&name[0], "Intel") != NULL) {
+                if (strstr(&name[0], "AMD") == NULL) {
                         continue;
                 }
 
