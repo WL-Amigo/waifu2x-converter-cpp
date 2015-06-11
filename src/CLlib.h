@@ -54,6 +54,17 @@ CLLIB_EXTERN CL_API_ENTRY cl_program CL_API_CALL
 
 #define clCreateProgramWithSource p_clCreateProgramWithSource
 
+CLLIB_EXTERN CL_API_ENTRY cl_program CL_API_CALL
+(*p_clCreateProgramWithBinary)(cl_context                     /* context */,
+                               cl_uint                        /* num_devices */,
+                               const cl_device_id *           /* device_list */,
+                               const size_t *                 /* lengths */,
+                               const unsigned char **         /* binaries */,
+                               cl_int *                       /* binary_status */,
+                               cl_int *                       /* errcode_ret */) CL_API_SUFFIX__VERSION_1_0;
+
+#define clCreateProgramWithBinary p_clCreateProgramWithBinary 
+
 CLLIB_EXTERN CL_API_ENTRY cl_int CL_API_CALL
 (*p_clBuildProgram)(cl_program           /* program */,
                     cl_uint              /* num_devices */,
@@ -74,6 +85,15 @@ CLLIB_EXTERN CL_API_ENTRY cl_int CL_API_CALL
                            size_t *              /* param_value_size_ret */) CL_API_SUFFIX__VERSION_1_0;
 
 #define clGetProgramBuildInfo p_clGetProgramBuildInfo
+
+CLLIB_EXTERN CL_API_ENTRY cl_int CL_API_CALL
+(*p_clGetProgramInfo)(cl_program         /* program */,
+                      cl_program_info    /* param_name */,
+                      size_t             /* param_value_size */,
+                      void *             /* param_value */,
+                      size_t *           /* param_value_size_ret */) CL_API_SUFFIX__VERSION_1_0;
+
+#define clGetProgramInfo p_clGetProgramInfo
 
 CLLIB_EXTERN CL_API_ENTRY cl_int CL_API_CALL
 (*p_clReleaseProgram)(cl_program /* program */) CL_API_SUFFIX__VERSION_1_0;

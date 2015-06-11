@@ -4,6 +4,8 @@
 #include <windows.h>
 #else
 #include <dlfcn.h>
+#include <libgen.h>
+#include <sys/stat.h>
 #endif
 #include "modelHandler.hpp"
 #include "common.hpp"
@@ -53,8 +55,10 @@ cllib_init(void)
         LOAD(clGetDeviceIDs);
         LOAD(clGetPlatformInfo);
         LOAD(clCreateProgramWithSource);
+        LOAD(clCreateProgramWithBinary);
         LOAD(clBuildProgram);
         LOAD(clGetProgramBuildInfo);
+        LOAD(clGetProgramInfo);
         LOAD(clReleaseProgram);
         LOAD(clCreateKernel);
         LOAD(clCreateBuffer);
@@ -137,17 +141,102 @@ initOpenCL(ComputeEnv *env)
                 return false;
         }
 
-        const char *source[1] = {prog};
-        size_t src_len[1] = {sizeof(prog)-1};
+        size_t dev_name_len;
+        clGetDeviceInfo(dev, CL_DEVICE_NAME, 0, nullptr, &dev_name_len);
+        std::vector<char> dev_name(dev_name_len+1);
+        clGetDeviceInfo(dev, CL_DEVICE_NAME, dev_name_len, &dev_name[0], &dev_name_len);
 
-        program = clCreateProgramWithSource(context, 1, source, src_len, &err);
-        if (err != CL_SUCCESS) {
-                clReleaseContext(context);
-                return false;
+        printf("use GPU: %s\n",
+               &dev_name[0]);
+
+        bool bin_avaiable = false;
+
+#ifdef __linux
+        ssize_t path_len = 4;
+        char *self_path = (char*)malloc(path_len+1);
+        while (1) {
+                ssize_t r = readlink("/proc/self/exe", self_path, path_len);
+                if (r < path_len) {
+                        self_path[r] = '\0';
+                        break;
+                }
+
+                path_len *= 2;
+                self_path = (char*)realloc(self_path, path_len+1);
         }
 
-        err = clBuildProgram(program, 1, &dev, "-DVEC_WIDTH=" S(GPU_VEC_WIDTH), nullptr, nullptr);
+        struct stat self_st;
+        stat(self_path, &self_st);
+        self_path = dirname(self_path);
 
+        std::string bin_path = std::string(self_path) + "/" + &dev_name[0] + ".bin";
+
+        FILE *binfp = fopen(bin_path.c_str(), "rb");
+        if (binfp) {
+                struct stat bin_st;
+                stat(bin_path.c_str(), &bin_st);
+
+                bool old = false;
+                if (bin_st.st_mtim.tv_sec < self_st.st_mtim.tv_sec) {
+                        old = true;
+                }
+
+                if (bin_st.st_mtim.tv_sec == self_st.st_mtim.tv_sec) {
+                        if (bin_st.st_mtim.tv_nsec < self_st.st_mtim.tv_nsec) {
+                                old = true;
+                        }
+                }
+
+                if (!old) {
+                        size_t bin_sz = bin_st.st_size;
+                        unsigned char *bin = (unsigned char*)malloc(bin_sz);
+
+                        size_t rem = bin_sz;
+                        unsigned char *p = bin;
+                        while (rem) {
+                                size_t rsz = fread(p, 1, rem, binfp);
+                                if (rsz <= 0) {
+                                        break;
+                                }
+
+                                rem -= rsz;
+                                p += rsz;
+                        }
+
+                        if (rem == 0) {
+                                cl_int err;
+                                program = clCreateProgramWithBinary(context, 1, &dev, &bin_sz,
+                                                                    (const unsigned char**)&bin, NULL, &err);
+
+                                if (err == CL_SUCCESS) {
+                                        bin_avaiable = true;
+                                }
+                        }
+
+                        free(bin);
+                }
+
+                fclose(binfp);
+        }
+#endif
+
+        if (! bin_avaiable) {
+                const char *source[1] = {prog};
+                size_t src_len[1] = {sizeof(prog)-1};
+
+                program = clCreateProgramWithSource(context, 1, source, src_len, &err);
+                if (err != CL_SUCCESS) {
+                        clReleaseContext(context);
+                        return false;
+                }
+
+        }
+
+#ifdef __linux
+        free(self_path);
+#endif
+
+        err = clBuildProgram(program, 1, &dev, "" , nullptr, nullptr);
         if (err != CL_SUCCESS) {
                 size_t log_len;
                 clGetProgramBuildInfo(program, dev, CL_PROGRAM_BUILD_LOG, 0, nullptr, &log_len);
@@ -163,6 +252,47 @@ initOpenCL(ComputeEnv *env)
                 return false;
         }
 
+
+
+#ifdef __linux
+        if (!bin_avaiable) {
+                size_t binsz;
+                size_t ret_len;
+                clGetProgramInfo(program, CL_PROGRAM_BINARY_SIZES, sizeof(binsz), &binsz, &ret_len);
+
+                char *buffer = new char [binsz];
+                char *ptrs[1];
+                ptrs[0] = buffer;
+
+                clGetProgramInfo(program, CL_PROGRAM_BINARIES, sizeof(ptrs), ptrs, &ret_len);
+
+                FILE *fp = fopen(bin_path.c_str(), "wb");
+
+                size_t rem = binsz;
+                char *p = buffer;
+
+                while (rem) {
+                        size_t wsz = fwrite(p, 1, rem, fp);
+                        if (wsz <= 0) {
+                                fclose(fp);
+                                unlink(bin_path.c_str());
+                                fp=NULL;
+                                break;
+                        }
+                        rem -= wsz;
+                        p += wsz;
+                }
+
+                if (fp) {
+                        fclose(fp);
+                }
+
+                delete [] buffer;
+        }
+#endif
+
+
+
         ker = clCreateKernel(program, "filter", &err);
         if (err != CL_SUCCESS) {
                 clReleaseProgram(program);
@@ -177,14 +307,6 @@ initOpenCL(ComputeEnv *env)
                 clReleaseKernel(ker);
                 return false;
         }
-
-        size_t dev_name_len;
-        clGetDeviceInfo(dev, CL_DEVICE_NAME, 0, nullptr, &dev_name_len);
-        std::vector<char> dev_name(dev_name_len+1);
-        clGetDeviceInfo(dev, CL_DEVICE_NAME, dev_name_len, &dev_name[0], &dev_name_len);
-
-        printf("use GPU: %s\n",
-               &dev_name[0]);
 
         env->num_cl_dev = 1;
         env->cl_dev_list = new OpenCLDev[1];

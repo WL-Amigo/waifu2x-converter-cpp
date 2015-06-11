@@ -3,7 +3,7 @@ all: waifu2x-converter-cpp out-Spectre.isa
 OPENCV=$(HOME)/usr
 
 DEBUG= -g
-CXXFLAGS=-I$(OPENCV)/include -I$(CURDIR)/include -std=c++11 -pthread -Wall -Wmissing-declarations -MMD -save-temps -O2 $(DEBUG) -fopenmp
+CXXFLAGS=-I$(OPENCV)/include -I$(CURDIR)/include -std=c++11 -pthread -Wall -Wmissing-declarations -MMD -save-temps -O0 $(DEBUG) -fopenmp
 LDFLAGS=-L$(OPENCV)/lib -pthread -Wl,-rpath,$(OPENCV)/lib $(DEBUG)
 LDLIBS=-lopencv_core -lopencv_imgproc -lopencv_highgui -lopencv_features2d -fopenmp -ldl
 
@@ -16,14 +16,13 @@ waifu2x-converter-cpp: $(OBJS)
 	g++ $(LDFLAGS) -o $@ $^ $(LDLIBS)
 
 #INPUT=./a.png
-INPUT=./b.png
+#INPUT=./b.png
 #INPUT=./c.png
 #INPUT=./d.png
-#INPUT=./e.png
+INPUT=./e.png
 
-out-Spectre.isa: src/modelHandler_OpenCL.cl
-	/opt/AMD/CodeXL_1.7-7300/CodeXLAnalyzer -s CL $< -k filter --isa out.isa -c Spectre
-
+#out-Spectre.isa: src/modelHandler_OpenCL.cl
+#	/opt/AMD/CodeXL_1.7-7300/CodeXLAnalyzer -s CL $< -k filter --isa out.isa -c Spectre
 
 run: waifu2x-converter-cpp
 	perf stat ./waifu2x-converter-cpp -i $(INPUT) --model_dir models
@@ -32,13 +31,16 @@ run8: waifu2x-converter-cpp
 	perf stat ./waifu2x-converter-cpp -j 8 -i $(INPUT) --model_dir models
 
 run8r: waifu2x-converter-cpp
-	perf record ./waifu2x-converter-cpp -m scale -j 8 -i $(INPUT) --model_dir models
+	perf record ./waifu2x-converter-cpp -j 8 -i $(INPUT) --model_dir models
 
 run4: waifu2x-converter-cpp
-	perf stat ./waifu2x-converter-cpp -m scale -j 4 -i $(INPUT) --model_dir models
+	perf stat ./waifu2x-converter-cpp -j 4 -i $(INPUT) --model_dir models
 
 run4d: waifu2x-converter-cpp
 	perf stat ./waifu2x-converter-cpp -j 4 -i $(INPUT) --model_dir models --disable-gpu
+
+run2d: waifu2x-converter-cpp
+	perf stat ./waifu2x-converter-cpp -j 2 -i $(INPUT) --model_dir models --disable-gpu
 
 run1: waifu2x-converter-cpp
 	perf stat ./waifu2x-converter-cpp -m scale -j 1 -i $(INPUT) --model_dir models
