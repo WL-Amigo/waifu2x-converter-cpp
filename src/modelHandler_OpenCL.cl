@@ -146,7 +146,7 @@ filter(__global const float * __restrict__ packed_input,
 			for (bi=0; bi<BLOCK_SIZE; bi++) {
 				int xi = xi0 + bi;
 
-				if (xi == wsz - 1) {
+				if (xi == wsz) {
 					break;
 				}
 
@@ -157,7 +157,7 @@ filter(__global const float * __restrict__ packed_input,
 
 			{
 				int xi = xi0 + bi;
-				if (xi == wsz - 1) {
+				if (xi == wsz) {
 					in_block0[bi*(int)nInputPlanes + lid] = in01[(xi-1)*(int)nInputPlanes + lid];
 					in_block1[bi*(int)nInputPlanes + lid] = in11[(xi-1)*(int)nInputPlanes + lid];
 					in_block2[bi*(int)nInputPlanes + lid] = in21[(xi-1)*(int)nInputPlanes + lid];
@@ -170,10 +170,10 @@ filter(__global const float * __restrict__ packed_input,
 
 			{
 				int xi = xi0-1;
-				if (xi < 0) {
+				if (xi == -1) {
 					in_block0[-1*(int)nInputPlanes + (int)lid] = in01[lid];
-					in_block1[-1*(int)nInputPlanes + (int)lid] = in01[lid];
-					in_block2[-1*(int)nInputPlanes + (int)lid] = in01[lid];
+					in_block1[-1*(int)nInputPlanes + (int)lid] = in11[lid];
+					in_block2[-1*(int)nInputPlanes + (int)lid] = in21[lid];
 				} else {
 					in_block0[-1*(int)nInputPlanes + (int)lid] = in01[xi*(int)nInputPlanes + lid];
 					in_block1[-1*(int)nInputPlanes + (int)lid] = in11[xi*(int)nInputPlanes + lid];
