@@ -13,6 +13,7 @@
 
 #include <opencv2/opencv.hpp>
 #include "picojson.h"
+#include "Buffer.hpp"
 #include <iostream>
 #include <memory>
 #include <cstdint>
@@ -20,8 +21,7 @@
 
 namespace w2xc {
 
-bool initOpenCL();
-extern bool have_OpenCL;
+bool initOpenCL(ComputeEnv *env);
 
 extern void filter_AVX_impl(const float *packed_input,
 			    float *packed_output,
@@ -41,7 +41,8 @@ extern void filter_FMA_impl(const float *packed_input,
 			    cv::Size ipSize,
 			    int nJob);
 
-extern void filter_OpenCL_impl(const float *packed_input,
+extern void filter_OpenCL_impl(ComputeEnv *env,
+			       const float *packed_input,
                                float *packed_output,
                                int nInputPlanes,
                                int nOutputPlanes,
@@ -76,7 +77,8 @@ private:
 		       float *packed_output,
 		       cv::Size size);
 
-	bool filter_AVX_OpenCL(const float *packed_input,
+	bool filter_AVX_OpenCL(ComputeEnv *env,
+			       const float *packed_input,
                                float *packed_output,
                                cv::Size size,
                                bool OpenCL);
@@ -122,7 +124,8 @@ public:
 	// setter function
 
 	// public operation function
-	bool filter(float *packed_input,
+	bool filter(ComputeEnv *env,
+		    float *packed_input,
 		    float *packed_output,
 		    cv::Size size);
 

@@ -27,6 +27,8 @@ int main(int argc, char** argv) {
 
 	double time_start = getsec();
 
+	ComputeEnv env;
+
 	// definition of command line arguments
 	TCLAP::CmdLine cmd("waifu2x reimplementation using OpenCV", ' ', "1.0.0");
 
@@ -78,7 +80,7 @@ int main(int argc, char** argv) {
 	}
 
 	if (! cmdDisableGPU.getValue()) {
-		w2xc::initOpenCL();
+		w2xc::initOpenCL(&env);
 	}
 
 	// load image file
@@ -107,7 +109,7 @@ int main(int argc, char** argv) {
 		cv::split(imageYUV, imageSplit);
 		imageSplit[0].copyTo(imageY);
 
-		w2xc::convertWithModels(imageY, imageSplit[0], models, &flops);
+		w2xc::convertWithModels(&env, imageY, imageSplit[0], models, &flops);
 
 		cv::merge(imageSplit, imageYUV);
 		cv::cvtColor(imageYUV, image, cv::COLOR_YUV2RGB);
@@ -162,7 +164,7 @@ int main(int argc, char** argv) {
 			cv::cvtColor(image2xBicubic, imageYUV, cv::COLOR_RGB2YUV);
 			cv::split(imageYUV, imageSplit);
 
-			if(!w2xc::convertWithModels(imageY, imageSplit[0], models, &flops)){
+			if(!w2xc::convertWithModels(&env, imageY, imageSplit[0], models, &flops)){
 				std::cerr << "w2xc::convertWithModels : something error has occured.\n"
 						"stop." << std::endl;
 				std::exit(1);

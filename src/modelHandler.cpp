@@ -85,7 +85,8 @@ Model::filter_CV(const float *packed_input,
 
 //#define COMPARE_RESULT
 
-bool Model::filter_AVX_OpenCL(const float *packed_input,
+bool Model::filter_AVX_OpenCL(ComputeEnv *env,
+			      const float *packed_input,
 			      float *packed_output,
 			      cv::Size size,
 			      bool OpenCL)
@@ -196,7 +197,7 @@ bool Model::filter_AVX_OpenCL(const float *packed_input,
 		double ops = size.width * size.height * 9.0 * 2.0 * nOutputPlanes * nInputPlanes;
 		std::vector<cv::Mat> output2;
 		if (OpenCL) {
-			filter_OpenCL_impl(packed_input, packed_output,
+			filter_OpenCL_impl(env, packed_input, packed_output,
 					   nInputPlanes, nOutputPlanes, fbiases_flat, weight_flat, size, nJob);
 		} else {
 			if (have_fma) {
@@ -246,7 +247,8 @@ bool Model::filter_AVX_OpenCL(const float *packed_input,
 		}
 	} else {
 		if (OpenCL) {
-			filter_OpenCL_impl(packed_input, packed_output,
+			filter_OpenCL_impl(env,
+					   packed_input, packed_output,
 					   nInputPlanes, nOutputPlanes, fbiases_flat, weight_flat, size, nJob);
 		} else {
 			if (have_fma) {
@@ -266,14 +268,15 @@ bool Model::filter_AVX_OpenCL(const float *packed_input,
 
 }
 
-bool Model::filter(float *packed_input,
+bool Model::filter(ComputeEnv *env,
+		   float *packed_input,
 		   float *packed_output,
 		   cv::Size size)
 {
 	bool ret;
 
 	bool avx_available = true;
-	bool gpu_available = have_OpenCL;
+	bool gpu_available = env->num_cl_dev > 0;
 
 	if (nOutputPlanes > GPU_VEC_WIDTH && nOutputPlanes % GPU_VEC_WIDTH) {
 		gpu_available = false;
@@ -298,9 +301,9 @@ bool Model::filter(float *packed_input,
 	}
 
 	if (gpu_available) {
-		ret = filter_AVX_OpenCL(packed_input, packed_output, size, true);
+		ret = filter_AVX_OpenCL(env, packed_input, packed_output, size, true);
 	} else if (avx_available) {
-		ret = filter_AVX_OpenCL(packed_input, packed_output, size, false);
+		ret = filter_AVX_OpenCL(env, packed_input, packed_output, size, false);
 	} else {
 		ret = filter_CV(packed_input, packed_output, size);
 	}

@@ -23,7 +23,8 @@ namespace w2xc {
 /**
  * convert inputPlane to outputPlane by convoluting with models.
  */
-bool convertWithModels(cv::Mat &inputPlanes,
+bool convertWithModels(ComputeEnv *env,
+                       cv::Mat &inputPlanes,
                        cv::Mat &outputPlanes,
                        std::vector<std::unique_ptr<Model> > &models,
                        FLOPSCounter *flops,

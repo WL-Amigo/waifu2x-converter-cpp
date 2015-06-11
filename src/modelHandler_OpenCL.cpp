@@ -10,13 +10,6 @@
 #include "sec.hpp"
 #include "CLlib.h"
 
-static cl_platform_id platform;
-static cl_device_id dev;
-static cl_context context;
-static cl_command_queue queue;
-static cl_kernel ker;
-static cl_program program;
-
 static const char prog[] = 
 #include "modelHandler_OpenCL.cl.h"
         ;
@@ -82,10 +75,8 @@ cllib_init(void)
         return 0;
 }
 
-bool have_OpenCL = false;
-
 bool
-initOpenCL()
+initOpenCL(ComputeEnv *env)
 {
         int r = cllib_init();
         if (r < 0) {
@@ -97,6 +88,13 @@ initOpenCL()
         clGetPlatformIDs(16, plts, &num_plt);
         bool found = false;
         cl_int err;
+
+        cl_platform_id platform;
+        cl_context context;
+        cl_device_id dev;
+        cl_command_queue queue;
+        cl_kernel ker;
+        cl_program program;
 
         for (unsigned int i=0; i<num_plt; i++) {
                 size_t sz;
@@ -188,14 +186,22 @@ initOpenCL()
         printf("use GPU: %s\n",
                &dev_name[0]);
 
-        have_OpenCL = true;
+        env->num_cl_dev = 1;
+        env->cl_dev_list = new OpenCLDev[1];
+
+        env->cl_dev_list[0].platform = platform;
+        env->cl_dev_list[0].context = context;
+        env->cl_dev_list[0].devid = dev;
+        env->cl_dev_list[0].queue = queue;
+        env->cl_dev_list[0].ker = ker;
 
         return true;
 }
 
 
 void
-filter_OpenCL_impl(const float *packed_input,
+filter_OpenCL_impl(ComputeEnv *env,
+                   const float *packed_input,
                    float *packed_output,
                    int nInputPlanes,
                    int nOutputPlanes,
@@ -207,6 +213,9 @@ filter_OpenCL_impl(const float *packed_input,
         int w = ipSize.width;
         int h = ipSize.height;
         cl_int err;
+
+        OpenCLDev *dev = &env->cl_dev_list[0];
+        cl_context context = dev->context;
 
         cl_mem cl_packed_input = clCreateBuffer(context,
                                                 CL_MEM_READ_ONLY|CL_MEM_COPY_HOST_PTR,
@@ -233,21 +242,21 @@ filter_OpenCL_impl(const float *packed_input,
 
         int ai = 0;
 
-        clSetKernelArg(ker, ai++, sizeof(cl_mem), &cl_packed_input);
-        clSetKernelArg(ker, ai++, sizeof(cl_int), &nInputPlanes);
-        clSetKernelArg(ker, ai++, sizeof(cl_mem), &cl_packed_output);
-        clSetKernelArg(ker, ai++, sizeof(cl_int), &nOutputPlanes);
-        clSetKernelArg(ker, ai++, sizeof(cl_mem), &cl_fbiases);
-        clSetKernelArg(ker, ai++, sizeof(cl_int), &h);
-        clSetKernelArg(ker, ai++, sizeof(cl_int), &w);
-        clSetKernelArg(ker, ai++, sizeof(cl_mem), &cl_weight);
+        clSetKernelArg(dev->ker, ai++, sizeof(cl_mem), &cl_packed_input);
+        clSetKernelArg(dev->ker, ai++, sizeof(cl_int), &nInputPlanes);
+        clSetKernelArg(dev->ker, ai++, sizeof(cl_mem), &cl_packed_output);
+        clSetKernelArg(dev->ker, ai++, sizeof(cl_int), &nOutputPlanes);
+        clSetKernelArg(dev->ker, ai++, sizeof(cl_mem), &cl_fbiases);
+        clSetKernelArg(dev->ker, ai++, sizeof(cl_int), &h);
+        clSetKernelArg(dev->ker, ai++, sizeof(cl_int), &w);
+        clSetKernelArg(dev->ker, ai++, sizeof(cl_mem), &cl_weight);
 
         size_t local_size = 0;
         //local_size += sizeof(float) * 256;
         //local_size += sizeof(float) * GPU_VEC_WIDTH;
         local_size += sizeof(float) * nInputPlanes * (GPU_BLOCK_SIZE+2) * 3;
 
-        clSetKernelArg(ker, ai++, local_size, nullptr);
+        clSetKernelArg(dev->ker, ai++, local_size, nullptr);
 
         cl_event event;
 
@@ -262,8 +271,8 @@ filter_OpenCL_impl(const float *packed_input,
         size_t lws[3] = {vec_width, 1, 1};
 
         double t0 = getsec();
-        err = clEnqueueNDRangeKernel(queue,
-                                     ker,
+        err = clEnqueueNDRangeKernel(dev->queue,
+                                     dev->ker,
                                      1,
                                      nullptr, gws, lws,
                                      0, nullptr, &event);
@@ -280,7 +289,7 @@ filter_OpenCL_impl(const float *packed_input,
         double t1 = getsec();
         printf("%f\n", t1-t0);
 
-        err = clEnqueueReadBuffer(queue, cl_packed_output,
+        err = clEnqueueReadBuffer(dev->queue, cl_packed_output,
                                   CL_TRUE,
                                   0, out_size, packed_output,
                                   0, nullptr, nullptr);

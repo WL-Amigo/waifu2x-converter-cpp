@@ -15,13 +15,16 @@
 namespace w2xc {
 
 // converting process inside program
-static bool convertWithModelsBasic(cv::Mat &inputPlane, cv::Mat &outputPlane,
+static bool convertWithModelsBasic(ComputeEnv *env,
+				   cv::Mat &inputPlane, cv::Mat &outputPlane,
 				   std::vector<std::unique_ptr<Model> > &models, FLOPSCounter *flops);
-static bool convertWithModelsBlockSplit(cv::Mat &inputPlane,
+static bool convertWithModelsBlockSplit(ComputeEnv *env,
+					cv::Mat &inputPlane,
 					cv::Mat &outputPlane, std::vector<std::unique_ptr<Model> > &models,
 					FLOPSCounter *flops);
 
-bool convertWithModels(cv::Mat &inputPlane, cv::Mat &outputPlane,
+bool convertWithModels(ComputeEnv *env,
+		       cv::Mat &inputPlane, cv::Mat &outputPlane,
 		       std::vector<std::unique_ptr<Model> > &models,
 		       FLOPSCounter *flops, bool blockSplitting) {
 
@@ -30,7 +33,7 @@ bool convertWithModels(cv::Mat &inputPlane, cv::Mat &outputPlane,
 			> blockSize.width * blockSize.height * 3 / 2;
 //	requireSplitting = true;
 	if (blockSplitting && requireSplitting) {
-		return convertWithModelsBlockSplit(inputPlane, outputPlane, models, flops);
+		return convertWithModelsBlockSplit(env, inputPlane, outputPlane, models, flops);
 	} else {
 		//insert padding to inputPlane
 		cv::Mat tempMat;
@@ -39,7 +42,7 @@ bool convertWithModels(cv::Mat &inputPlane, cv::Mat &outputPlane,
 		cv::copyMakeBorder(inputPlane, tempMat, nModel, nModel, nModel, nModel,
 				cv::BORDER_REPLICATE);
 
-		bool ret = convertWithModelsBasic(tempMat, outputPlane, models, flops);
+		bool ret = convertWithModelsBasic(env, tempMat, outputPlane, models, flops);
 
 		tempMat = outputPlane(cv::Range(nModel, outputSize.height + nModel),
 				cv::Range(nModel, outputSize.width + nModel));
@@ -54,7 +57,8 @@ bool convertWithModels(cv::Mat &inputPlane, cv::Mat &outputPlane,
 
 }
 
-static bool convertWithModelsBasic(cv::Mat &inputPlane, cv::Mat &outputPlane,
+static bool convertWithModelsBasic(ComputeEnv *env,
+				   cv::Mat &inputPlane, cv::Mat &outputPlane,
 				   std::vector<std::unique_ptr<Model> > &models, FLOPSCounter *flops) {
 
 	// padding is require before calling this function
@@ -63,7 +67,7 @@ static bool convertWithModelsBasic(cv::Mat &inputPlane, cv::Mat &outputPlane,
 			std::vector<cv::Mat> >(new std::vector<cv::Mat>());
 	std::unique_ptr<std::vector<cv::Mat> > outputPlanes = std::unique_ptr<
 			std::vector<cv::Mat> >(new std::vector<cv::Mat>());
-
+	
 	inputPlanes->clear();
 	inputPlanes->push_back(inputPlane);
 
@@ -82,7 +86,7 @@ static bool convertWithModelsBasic(cv::Mat &inputPlane, cv::Mat &outputPlane,
 						      models[index]->getNOutputPlanes());
 		std::cout << "Iteration #" << (index + 1) << "..." ;
 		double t0 = getsec();
-		if (!models[index]->filter(packed_input, packed_output, filterSize)) {
+		if (!models[index]->filter(env, packed_input, packed_output, filterSize)) {
 			std::exit(-1);
 		}
 		double t1 = getsec();
@@ -114,8 +118,10 @@ static bool convertWithModelsBasic(cv::Mat &inputPlane, cv::Mat &outputPlane,
 
 }
 
-static bool convertWithModelsBlockSplit(cv::Mat &inputPlane,
-					cv::Mat &outputPlane, std::vector<std::unique_ptr<Model> > &models, FLOPSCounter *flops) {
+static bool convertWithModelsBlockSplit(ComputeEnv *env,
+					cv::Mat &inputPlane,
+					cv::Mat &outputPlane,
+					std::vector<std::unique_ptr<Model> > &models, FLOPSCounter *flops) {
 
 	// padding is not required before calling this function
 
@@ -165,7 +171,8 @@ static bool convertWithModelsBlockSplit(cv::Mat &inputPlane,
 
 			std::cout << "start process block (" << c << "," << r << ") ..."
 					<< std::endl;
-			if (!convertWithModelsBasic(processBlock, processBlockOutput,
+			if (!convertWithModelsBasic(env,
+						    processBlock, processBlockOutput,
 						    models, flops)) {
 				std::cerr << "w2xc::convertWithModelsBasic()\n"
 						"in w2xc::convertWithModelsBlockSplit() : \n"
