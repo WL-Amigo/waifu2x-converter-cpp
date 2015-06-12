@@ -97,7 +97,7 @@ initOpenCL(ComputeEnv *env)
         cl_context context;
         cl_device_id dev;
         cl_command_queue queue;
-        cl_kernel ker;
+        cl_kernel ker_filter, ker_filter_in1_out32;
         cl_program program;
 
         for (unsigned int i=0; i<num_plt; i++) {
@@ -341,10 +341,18 @@ initOpenCL(ComputeEnv *env)
 
 
 
-        ker = clCreateKernel(program, "filter", &err);
+        ker_filter = clCreateKernel(program, "filter", &err);
         if (err != CL_SUCCESS) {
                 clReleaseProgram(program);
                 clReleaseContext(context);
+                return false;
+        }
+
+        ker_filter_in1_out32 = clCreateKernel(program, "filter_in1_out32", &err);
+        if (err != CL_SUCCESS) {
+                clReleaseProgram(program);
+                clReleaseContext(context);
+                clReleaseKernel(ker_filter);
                 return false;
         }
 
@@ -352,7 +360,8 @@ initOpenCL(ComputeEnv *env)
         if (err != CL_SUCCESS) {
                 clReleaseProgram(program);
                 clReleaseContext(context);
-                clReleaseKernel(ker);
+                clReleaseKernel(ker_filter);
+                clReleaseKernel(ker_filter_in1_out32);
                 return false;
         }
 
@@ -363,7 +372,8 @@ initOpenCL(ComputeEnv *env)
         env->cl_dev_list[0].context = context;
         env->cl_dev_list[0].devid = dev;
         env->cl_dev_list[0].queue = queue;
-        env->cl_dev_list[0].ker = ker;
+        env->cl_dev_list[0].ker_filter = ker_filter;
+        env->cl_dev_list[0].ker_filter_in1_out32 = ker_filter_in1_out32;
 
         return true;
 }
@@ -404,36 +414,54 @@ filter_OpenCL_impl(ComputeEnv *env,
 
         int ai = 0;
 
-        clSetKernelArg(dev->ker, ai++, sizeof(cl_mem), &cl_packed_input);
-        clSetKernelArg(dev->ker, ai++, sizeof(cl_int), &nInputPlanes);
-        clSetKernelArg(dev->ker, ai++, sizeof(cl_mem), &cl_packed_output);
-        clSetKernelArg(dev->ker, ai++, sizeof(cl_int), &nOutputPlanes);
-        clSetKernelArg(dev->ker, ai++, sizeof(cl_mem), &cl_fbiases);
-        clSetKernelArg(dev->ker, ai++, sizeof(cl_int), &h);
-        clSetKernelArg(dev->ker, ai++, sizeof(cl_int), &w);
-        clSetKernelArg(dev->ker, ai++, sizeof(cl_mem), &cl_weight);
+        enum filter_type {
+                FILTER_GENERIC,
+                FILTER_IN1,
+                FILTER_OUT1
+        } type = FILTER_GENERIC;
+
+        cl_kernel ker = dev->ker_filter;
+
+        if (nInputPlanes == 1) {
+                type = FILTER_IN1;
+                ker = dev->ker_filter_in1_out32;
+        }
+
+        clSetKernelArg(ker, ai++, sizeof(cl_mem), &cl_packed_input);
+        clSetKernelArg(ker, ai++, sizeof(cl_int), &nInputPlanes);
+        clSetKernelArg(ker, ai++, sizeof(cl_mem), &cl_packed_output);
+        clSetKernelArg(ker, ai++, sizeof(cl_int), &nOutputPlanes);
+        clSetKernelArg(ker, ai++, sizeof(cl_mem), &cl_fbiases);
+        clSetKernelArg(ker, ai++, sizeof(cl_int), &h);
+        clSetKernelArg(ker, ai++, sizeof(cl_int), &w);
+        clSetKernelArg(ker, ai++, sizeof(cl_mem), &cl_weight);
 
         size_t local_size = 0;
         //local_size += sizeof(float) * 256;
         //local_size += sizeof(float) * GPU_VEC_WIDTH;
-        local_size += sizeof(float) * nInputPlanes * (GPU_BLOCK_SIZE+2) * 3;
 
-        clSetKernelArg(dev->ker, ai++, local_size, nullptr);
+        if (type == FILTER_GENERIC) {
+                local_size += sizeof(float) * nInputPlanes * (GPU_BLOCK_SIZE+2) * 3;
+        }
+
+        clSetKernelArg(ker, ai++, local_size, nullptr);
 
         cl_event event;
 
         size_t vec_width = std::min(GPU_VEC_WIDTH, nOutputPlanes);
 
-        unsigned int nout = 2;
-        if (nOutputPlanes == 1) {
-                nout = 1;
+        size_t gws[3] = {1, 1, 1};
+        size_t lws[3] = {1, 1, 1};
+        if (type == FILTER_GENERIC) {
+                gws[0] = h * nOutputPlanes;
+                lws[0] = h * nOutputPlanes;
+        } else if (type == FILTER_IN1) {
+                gws[0] = h * 256;
+                lws[0] = 256;
         }
 
-        size_t gws[3] = {h*vec_width, 1, 1};
-        size_t lws[3] = {vec_width, 1, 1};
-
         err = clEnqueueNDRangeKernel(dev->queue,
-                                     dev->ker,
+                                     ker,
                                      1,
                                      nullptr, gws, lws,
                                      0, nullptr, &event);

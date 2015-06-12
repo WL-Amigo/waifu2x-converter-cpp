@@ -1,9 +1,9 @@
-all: waifu2x-converter-cpp out-Spectre.isa
+all: waifu2x-converter-cpp filter-Spectre.isa filter_in1_out32-Spectre.isa
 
 OPENCV=$(HOME)/usr
 
 DEBUG= -g
-CXXFLAGS=-I$(OPENCV)/include -I$(CURDIR)/include -std=c++11 -pthread -Wall -Wmissing-declarations -MMD -save-temps -O0 $(DEBUG) -fopenmp
+CXXFLAGS=-I$(OPENCV)/include -I$(CURDIR)/include -std=c++11 -pthread -Wall -Wmissing-declarations -MMD -save-temps -O2 $(DEBUG) -fopenmp
 LDFLAGS=-L$(OPENCV)/lib -pthread -Wl,-rpath,$(OPENCV)/lib $(DEBUG)
 LDLIBS=-lopencv_core -lopencv_imgproc -lopencv_highgui -lopencv_features2d -fopenmp -ldl
 
@@ -21,8 +21,8 @@ INPUT=./b.png
 #INPUT=./d.png
 #INPUT=./e.png
 
-#out-Spectre.isa: src/modelHandler_OpenCL.cl
-#	/opt/AMD/CodeXL_1.7-7300/CodeXLAnalyzer -s CL $< -k filter --isa out.isa -c Spectre
+%-Spectre.isa: src/modelHandler_OpenCL.cl
+	/opt/AMD/CodeXL_1.7-7300/CodeXLAnalyzer -s CL $< -k $* --isa $*.isa -c Spectre
 
 run: waifu2x-converter-cpp
 	perf stat ./waifu2x-converter-cpp -i $(INPUT) --model_dir models

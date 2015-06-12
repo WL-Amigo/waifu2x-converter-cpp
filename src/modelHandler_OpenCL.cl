@@ -1,55 +1,5 @@
 /* -*- mode: c -*- */
 
-#define BLOCK_SIZE 8
-
-__kernel void
-filter(__global const float * __restrict__ packed_input,
-       int nInputPlanes,
-       __global float * __restrict__ packed_output,
-       int nOutputPlanes,
-       __global float * __restrict__ biases,
-       unsigned int hsz,
-       unsigned int wsz,
-       __global float * __restrict__ weight,
-       __local float * __restrict__ local_mem)
-{
-	unsigned int yi = get_group_id(0);
-	unsigned int lid = get_local_id(0);
-
-	__global const float * __restrict__ in = packed_input;
-	size_t in_step = wsz * sizeof(float) * nInputPlanes;
-
-	__global char *inp = (__global char*)packed_input;
-
-	inp += in_step*yi;
-	__global char *in0p = inp - in_step;
-	if (yi == 0) {
-		in0p = inp;
-	}
-
-	__global char *in1p = inp;
-	__global char *in2p = inp + in_step;
-
-	if (yi == hsz-1) {
-		in2p = inp;
-	}
-
-	__global float *in01 = (__global float*)in0p;
-	__global float *in11 = (__global float*)in1p;
-	__global float *in21 = (__global float*)in2p;
-
-	__local float *in_block0_base = local_mem;
-	local_mem += nInputPlanes * (BLOCK_SIZE+2);
-	__local float *in_block1_base = local_mem;
-	local_mem += nInputPlanes * (BLOCK_SIZE+2);
-	__local float *in_block2_base = local_mem;
-	local_mem += nInputPlanes * (BLOCK_SIZE+2);
-
-	__local float *in_block0 = in_block0_base+ nInputPlanes;
-	__local float *in_block1 = in_block1_base+ nInputPlanes;
-	__local float *in_block2 = in_block2_base+ nInputPlanes;
-
-	unsigned int vec_width = min((int)128, (int)nOutputPlanes);
 
 #define UNROLL9(F)				\
 	F(0);					\
@@ -61,6 +11,88 @@ filter(__global const float * __restrict__ packed_input,
 	F(6);					\
 	F(7);					\
 	F(8);					\
+
+
+#define UNROLL8x3x3(F)				\
+	F(0,0,0);				\
+	F(0,0,1);				\
+	F(0,0,2);				\
+	F(0,1,0);				\
+	F(0,1,1);				\
+	F(0,1,2);				\
+	F(0,2,0);				\
+	F(0,2,1);				\
+	F(0,2,2);				\
+						\
+	F(1,0,0);				\
+	F(1,0,1);				\
+	F(1,0,2);				\
+	F(1,1,0);				\
+	F(1,1,1);				\
+	F(1,1,2);				\
+	F(1,2,0);				\
+	F(1,2,1);				\
+	F(1,2,2);				\
+						\
+	F(2,0,0);				\
+	F(2,0,1);				\
+	F(2,0,2);				\
+	F(2,1,0);				\
+	F(2,1,1);				\
+	F(2,1,2);				\
+	F(2,2,0);				\
+	F(2,2,1);				\
+	F(2,2,2);				\
+						\
+	F(3,0,0);				\
+	F(3,0,1);				\
+	F(3,0,2);				\
+	F(3,1,0);				\
+	F(3,1,1);				\
+	F(3,1,2);				\
+	F(3,2,0);				\
+	F(3,2,1);				\
+	F(3,2,2);				\
+						\
+	F(4,0,0);				\
+	F(4,0,1);				\
+	F(4,0,2);				\
+	F(4,1,0);				\
+	F(4,1,1);				\
+	F(4,1,2);				\
+	F(4,2,0);				\
+	F(4,2,1);				\
+	F(4,2,2);				\
+						\
+	F(5,0,0);				\
+	F(5,0,1);				\
+	F(5,0,2);				\
+	F(5,1,0);				\
+	F(5,1,1);				\
+	F(5,1,2);				\
+	F(5,2,0);				\
+	F(5,2,1);				\
+	F(5,2,2);				\
+						\
+	F(6,0,0);				\
+	F(6,0,1);				\
+	F(6,0,2);				\
+	F(6,1,0);				\
+	F(6,1,1);				\
+	F(6,1,2);				\
+	F(6,2,0);				\
+	F(6,2,1);				\
+	F(6,2,2);				\
+						\
+	F(7,0,0);				\
+	F(7,0,1);				\
+	F(7,0,2);				\
+	F(7,1,0);				\
+	F(7,1,1);				\
+	F(7,1,2);				\
+	F(7,2,0);				\
+	F(7,2,1);				\
+	F(7,2,2);				\
 
 #define UNROLL8(F)				\
 	F(0);					\
@@ -136,6 +168,187 @@ filter(__global const float * __restrict__ packed_input,
 	F(2,8);					\
 	F(2,9);					\
 
+
+#define BLOCK_SIZE 8
+
+__kernel void
+filter_in1_out32(__global const float * __restrict__ packed_input,
+		 int nInputPlanes,
+		 __global float * __restrict__ packed_output,
+		 int nOutputPlanes,
+		 __global float * __restrict__ biases,
+		 unsigned int hsz,
+		 unsigned int wsz,
+		 __global float * __restrict__ weight,
+		 __local float * __restrict__ local_mem)
+{
+	unsigned int yi = get_group_id(0);
+	unsigned int lid = get_local_id(0);
+
+	__global const float * __restrict__ in = packed_input;
+	size_t in_step = wsz * sizeof(float) * nInputPlanes;
+
+	__global char *inp = (__global char*)packed_input;
+
+	inp += in_step*yi;
+	__global char *in0p = inp - in_step;
+	if (yi == 0) {
+		in0p = inp;
+	}
+
+	__global char *in1p = inp;
+	__global char *in2p = inp + in_step;
+
+	if (yi == hsz-1) {
+		in2p = inp;
+	}
+
+	__global float *in01 = (__global float*)in0p;
+	__global float *in11 = (__global float*)in1p;
+	__global float *in21 = (__global float*)in2p;
+
+	__local float in_block0_base[256+2];
+	__local float in_block1_base[256+2];
+	__local float in_block2_base[256+2];
+
+	__local float *in_block0 = in_block0_base + 1;
+	__local float *in_block1 = in_block1_base + 1;
+	__local float *in_block2 = in_block2_base + 1;
+
+	unsigned int vec_width = min((int)128, (int)nOutputPlanes);
+
+	/* 256 item */
+	/* x : 8x32 (32width) */
+	/* o : 1x8  (4weight)*/
+	unsigned int xoff = lid / 4U;
+	unsigned int ooff = (lid % 4U) * 8;
+
+#define IN1_LOAD_COEF(O,Y,X)				\
+	float w##O##Y##X = weight[9 * (O + ooff) + (Y*3) + X];
+
+	UNROLL8x3x3(IN1_LOAD_COEF);
+
+	for (int xi0=0; xi0<wsz; xi0+=256) {
+		/* load */
+		barrier(CLK_LOCAL_MEM_FENCE);
+		{
+			int xi = xi0 + lid;
+
+			if (xi < wsz) {
+				in_block0[lid] = in01[xi0 + lid];
+				in_block1[lid] = in11[xi0 + lid];
+				in_block2[lid] = in21[xi0 + lid];
+
+			}
+
+			if (lid == 0) {
+				if (xi == 0) {
+					in_block0[-1] = in01[0];
+					in_block1[-1] = in11[0];
+					in_block2[-1] = in21[0];
+				}  else {
+					in_block0[-1] = in01[xi-1];
+					in_block1[-1] = in11[xi-1];
+					in_block2[-1] = in21[xi-1];
+				}
+			}
+
+			if (xi == wsz-1) {
+				in_block0[lid+1] = in01[xi];
+				in_block1[lid+1] = in11[xi];
+				in_block2[lid+1] = in21[xi];
+			}
+
+			if ((lid == 255) && (xi < wsz-1)) {
+				in_block0[256] = in01[xi+1];
+				in_block1[256] = in11[xi+1];
+				in_block2[256] = in21[xi+1];
+			}
+		}
+		barrier(CLK_LOCAL_MEM_FENCE);
+
+		for (int xi1_base=0; xi1_base<8; xi1_base++) {
+			{
+				int xi1 = xi1_base*32 + xoff;
+
+				int xi = xi0 + xi1;
+				if (xi < wsz) {
+
+#define IN1_DECLSUM(O)			float sum##O = 0;
+#define IN1_CALC(O,Y,X)			sum##O += in_block##Y[xi1+X-1] * w##O##Y##X;
+#define IN1_RELU(O)			{				\
+						float v = sum##O;	\
+						int opIndex = ooff + O;	\
+						float bv = biases[opIndex]; \
+						v += bv;		\
+						float mtz = max(v, 0.0f); \
+						float ltz = min(v, 0.0f); \
+						v = ltz * 0.1f + mtz;	\
+						out[O] = v;		\
+					}
+
+					UNROLL8(IN1_DECLSUM);
+					UNROLL8x3x3(IN1_CALC);
+					__global float *out = packed_output + (yi*wsz + xi) * 32 + ooff;
+					UNROLL8(IN1_RELU);
+				}
+			}
+
+		}
+
+	}
+}
+
+
+__kernel void
+filter(__global const float * __restrict__ packed_input,
+       int nInputPlanes,
+       __global float * __restrict__ packed_output,
+       int nOutputPlanes,
+       __global float * __restrict__ biases,
+       unsigned int hsz,
+       unsigned int wsz,
+       __global float * __restrict__ weight,
+       __local float * __restrict__ local_mem)
+{
+	unsigned int yi = get_group_id(0);
+	unsigned int lid = get_local_id(0);
+
+	__global const float * __restrict__ in = packed_input;
+	size_t in_step = wsz * sizeof(float) * nInputPlanes;
+
+	__global char *inp = (__global char*)packed_input;
+
+	inp += in_step*yi;
+	__global char *in0p = inp - in_step;
+	if (yi == 0) {
+		in0p = inp;
+	}
+
+	__global char *in1p = inp;
+	__global char *in2p = inp + in_step;
+
+	if (yi == hsz-1) {
+		in2p = inp;
+	}
+
+	__global float *in01 = (__global float*)in0p;
+	__global float *in11 = (__global float*)in1p;
+	__global float *in21 = (__global float*)in2p;
+
+	__local float *in_block0_base = local_mem;
+	local_mem += nInputPlanes * (BLOCK_SIZE+2);
+	__local float *in_block1_base = local_mem;
+	local_mem += nInputPlanes * (BLOCK_SIZE+2);
+	__local float *in_block2_base = local_mem;
+	local_mem += nInputPlanes * (BLOCK_SIZE+2);
+
+	__local float *in_block0 = in_block0_base+ nInputPlanes;
+	__local float *in_block1 = in_block1_base+ nInputPlanes;
+	__local float *in_block2 = in_block2_base+ nInputPlanes;
+
+	unsigned int vec_width = min((int)128, (int)nOutputPlanes);
+
 	for (int xi0=0; xi0<wsz; xi0+=BLOCK_SIZE) {
 		barrier(CLK_LOCAL_MEM_FENCE);
 
@@ -204,7 +417,8 @@ filter(__global const float * __restrict__ packed_input,
 				float intermediate_reg6 = 0;
 				float intermediate_reg7 = 0;
 
-				if (lid < nOutputPlanes) {
+				/*if (lid < nOutputPlanes)*/
+				{
 					__global float *w0 = weight + lid;
 					int nInputPlanes4 = nInputPlanes * 4;
 
@@ -317,7 +531,8 @@ filter(__global const float * __restrict__ packed_input,
 
 				float intermediate_reg0 = 0;
 
-				if (lid < nOutputPlanes) {
+				/*if (lid < nOutputPlanes)*/
+				{
 					int xi = xi0 + bi;
 
 					if (xi == wsz) {

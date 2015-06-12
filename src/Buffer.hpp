@@ -10,7 +10,8 @@ struct OpenCLDev {
     cl_context context;
     cl_device_id devid;
     cl_command_queue queue;
-    cl_kernel ker;
+    cl_kernel ker_filter;
+    cl_kernel ker_filter_in1_out32;
     cl_program program;
 };
 
