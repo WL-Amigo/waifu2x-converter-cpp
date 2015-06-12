@@ -87,7 +87,7 @@ Model::filter_CV(ComputeEnv *env,
 	return true;
 }
 
-//#define COMPARE_RESULT
+#define COMPARE_RESULT
 
 bool Model::filter_AVX_OpenCL(ComputeEnv *env,
 			      Buffer *packed_input_buf,
@@ -322,6 +322,9 @@ bool Model::filter(ComputeEnv *env,
 	if (nOutputPlanes == 1 || (nInputPlanes & 1)) {
 		if (nOutputPlanes == 32 && nInputPlanes == 1) {
 			/* in1 filter */
+		} else if (nOutputPlanes == 1 && nInputPlanes == 128) {
+			/* out1 filter */
+			gpu_available = false;
 		} else {
 			gpu_available = false;
 		}
@@ -339,6 +342,10 @@ bool Model::filter(ComputeEnv *env,
 
 	if (size.width&1) {
 		avx_available = false;
+	}
+
+	if ((size.height&1) && (nOutputPlanes == 1)) {
+		gpu_available = false;
 	}
 
 	if (gpu_available) {
