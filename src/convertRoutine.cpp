@@ -97,8 +97,10 @@ static bool convertWithModelsBasic(ComputeEnv *env,
 		int nInputPlanes = models[index]->getNInputPlanes();
 		double ops = filterSize.width * filterSize.height * 9.0 * 2.0 * nOutputPlanes * nInputPlanes;
 		double gflops = (ops/(1000.0*1000.0*1000.0)) / (t1-t0);
+		double bytes = filterSize.width * filterSize.height * sizeof(float) * (nOutputPlanes + nInputPlanes);
+		double GBs = (bytes/(1000.0*1000.0*1000.0)) / (t1-t0);
 
-		std::cout << "(" << (t1-t0)*1000 << "[ms], " << gflops << "[GFLOPS])" << std::endl;
+		std::cout << "(" << (t1-t0)*1000 << "[ms], " << gflops << "[GFLOPS], " << GBs << "[GB/s])" << std::endl;
 		ops_sum += ops;
 
 		flops->flop += ops;

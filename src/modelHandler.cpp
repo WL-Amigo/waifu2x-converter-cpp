@@ -365,10 +365,6 @@ bool Model::filter(ComputeEnv *env,
 		avx_available = false;
 	}
 
-	if ((size.height&1) && (nOutputPlanes == 1)) {
-		gpu_available = false;
-	}
-
 	if (gpu_available) {
 		ret = filter_AVX_OpenCL(env, packed_input_buf, packed_output_buf, size, true);
 	} else if (avx_available) {

@@ -307,144 +307,172 @@ filter_in128_out1(__global const float * __restrict__ packed_input,
 		  unsigned int wsz,
 		  __global float * __restrict__ weight)
 {
-	unsigned int yi = get_group_id(0);
-	unsigned int lid = get_local_id(0);
+	unsigned int yi_base = get_group_id(0)*1;
+	for (int yi0=0; yi0<1; yi0++) {
+		int yi = yi_base + yi0;
+		unsigned int lid = get_local_id(0);
 
-	size_t in_step = wsz * sizeof(float) * nInputPlanes;
+		size_t in_step = wsz * sizeof(float) * nInputPlanes;
 
-	__global char *inp = (__global char*)packed_input;
+		__global char *inp = (__global char*)packed_input;
 
-	inp += in_step*yi;
-	__global char *in0p = inp - in_step;
-	if (yi == 0) {
-		in0p = inp;
-	}
+		inp += in_step*yi;
+		__global char *in0p = inp - in_step;
+		if (yi == 0) {
+			in0p = inp;
+		}
 
-	__global char *in1p = inp;
-	__global char *in2p = inp + in_step;
+		__global char *in1p = inp;
+		__global char *in2p = inp + in_step;
 
-	if (yi == hsz-1) {
-		in2p = in1p;
-	}
+		if (yi == hsz-1) {
+			in2p = in1p;
+		}
 
-	__global float *in01 = (__global float*)in0p;
-	__global float *in11 = (__global float*)in1p;
-	__global float *in21 = (__global float*)in2p;
+		__global float *in01 = (__global float*)in0p;
+		__global float *in11 = (__global float*)in1p;
+		__global float *in21 = (__global float*)in2p;
 
-	float bv = biases[0];
+		float bv = biases[0];
 
-	/* 128 item */
-	/* x      : (1width/group) */
-	/* y      : (2height/group) */
-	/* iplane : 1plane / 1item * 128plane */
+		/* 128 item */
+		/* x      : (1width/group) */
+		/* y      : (2height/group) */
+		/* iplane : 1plane / 1item * 128plane */
 
-	__local float sum_buffer[128];
+		__local float in00_buf[128];
+		__local float in01_buf[128];
+		__local float in02_buf[128];
+
+		__local float in10_buf[128];
+		__local float in11_buf[128];
+		__local float in12_buf[128];
+
+		__local float in20_buf[128];
+		__local float in21_buf[128];
+		__local float in22_buf[128];
+
+		__local float *lin00 = in00_buf;
+		__local float *lin01 = in01_buf;
+		__local float *lin02 = in02_buf;
+
+		__local float *lin10 = in10_buf;
+		__local float *lin11 = in11_buf;
+		__local float *lin12 = in12_buf;
+
+		__local float *lin20 = in20_buf;
+		__local float *lin21 = in21_buf;
+		__local float *lin22 = in22_buf;
+
+		__local float sum_buffer[128];
 
 #define OUT1_LOAD_WEIGHT(I,Y,X) float w##I##Y##X = weight[(I*16 + lid)*9 + Y*3 + X];
-	float w00 = weight[lid*9 + 0];
-	float w01 = weight[lid*9 + 1];
-	float w02 = weight[lid*9 + 2];
-	float w10 = weight[lid*9 + 3];
-	float w11 = weight[lid*9 + 4];
-	float w12 = weight[lid*9 + 5];
-	float w20 = weight[lid*9 + 6];
-	float w21 = weight[lid*9 + 7];
-	float w22 = weight[lid*9 + 8];
+		float w00 = weight[lid*9 + 0];
+		float w01 = weight[lid*9 + 1];
+		float w02 = weight[lid*9 + 2];
+		float w10 = weight[lid*9 + 3];
+		float w11 = weight[lid*9 + 4];
+		float w12 = weight[lid*9 + 5];
+		float w20 = weight[lid*9 + 6];
+		float w21 = weight[lid*9 + 7];
+		float w22 = weight[lid*9 + 8];
 
-	__global float *pin00 = in01 - 128 + lid;
-	__global float *pin01 = in01 + lid;
-	__global float *pin02 = in01 + 128 + lid;
+		__global float *pin00 = in01 - 128 + lid;
+		__global float *pin01 = in01 + lid;
+		__global float *pin02 = in01 + 128 + lid;
 
-	__global float *pin10 = in11 - 128 + lid;
-	__global float *pin11 = in11 + lid;
-	__global float *pin12 = in11 + 128 + lid;
+		__global float *pin10 = in11 - 128 + lid;
+		__global float *pin11 = in11 + lid;
+		__global float *pin12 = in11 + 128 + lid;
 
-	__global float *pin20 = in21 - 128 + lid;
-	__global float *pin21 = in21 + lid;
-	__global float *pin22 = in21 + 128 + lid;
+		__global float *pin20 = in21 - 128 + lid;
+		__global float *pin21 = in21 + lid;
+		__global float *pin22 = in21 + 128 + lid;
+
+		lin01[lid] = pin01[0];
+		lin02[lid] = pin01[0];
+
+		lin11[lid] = pin11[0];
+		lin12[lid] = pin11[0];
+
+		lin21[lid] = pin21[0];
+		lin22[lid] = pin21[0];
 
 #define OUT1_BODY(LEDGE,REDGE)						\
-	{								\
-		float sum = 0;						\
 		{							\
-			int i = lid;					\
-									\
-									\
-			__global float *p0 = &pin00[xi*128];		\
-			__global float *p1 = &pin10[xi*128];		\
-			__global float *p2 = &pin20[xi*128];		\
-									\
-			float v01 = p0[128];				\
-			float v11 = p1[128];				\
-			float v21 = p2[128];				\
-									\
-			sum += w01 * v01;				\
-			sum += w11 * v11;				\
-			sum += w21 * v21;				\
-									\
-			if (LEDGE) {					\
-				sum += w00 * v01;			\
-				sum += w10 * v11;			\
-				sum += w20 * v21;			\
-			} else{						\
-				sum += w00 * p0[0];			\
-				sum += w10 * p1[0];			\
-				sum += w20 * p2[0];			\
-			}						\
-									\
-									\
-			if (REDGE) {					\
-				sum += w02 * v01;			\
-				sum += w12 * v01;			\
-				sum += w22 * v01;			\
-			} else {					\
-				sum += w02 * p0[256];			\
-				sum += w12 * p1[256];			\
-				sum += w22 * p2[256];			\
-			}						\
-		}							\
-		barrier(CLK_LOCAL_MEM_FENCE);				\
-		sum_buffer[lid] = sum;					\
-		barrier(CLK_LOCAL_MEM_FENCE);				\
-		if (lid < 64) {						\
-			float2 v2 = *(__local float2*)&sum_buffer[lid*2]; \
-			sum_buffer[lid] = v2.x + v2.y;			\
-		}							\
-		barrier(CLK_LOCAL_MEM_FENCE);				\
-		if (lid < 32) {						\
-			float2 v2 = *(__local float2*)&sum_buffer[lid*2]; \
-			sum_buffer[lid] = v2.x + v2.y;			\
-		}							\
-		barrier(CLK_LOCAL_MEM_FENCE);				\
-									\
-									\
-		if (lid == 0) {						\
 			float sum = 0;					\
-			for (int i=0; i<32; i++) {			\
-				sum += sum_buffer[i];			\
-			}						\
+			{						\
+				int i = lid;				\
+				__local float *tmp0 = lin00;			\
+				__local float *tmp1 = lin10;			\
+				__local float *tmp2 = lin20;			\
 									\
-			float v = sum;					\
-			__global float *out = packed_output + (yi*wsz + xi); \
-			v += bv;					\
-			float mtz = max(v, 0.0f);			\
-			float ltz = min(v, 0.0f);			\
-			v = ltz * 0.1f + mtz;				\
-			out[0] = v;					\
-		}							\
-	}
+				lin00 = lin01; lin01 = lin02; lin02 = tmp0; \
+				lin10 = lin11; lin11 = lin12; lin12 = tmp1; \
+				lin20 = lin21; lin21 = lin22; lin22 = tmp2; \
+									\
+				if (REDGE) {				\
+					lin02 = lin01;			\
+					lin12 = lin11;			\
+					lin22 = lin21;			\
+				} else {				\
+					lin02[lid] = pin02[xi*128];	\
+					lin12[lid] = pin12[xi*128];	\
+					lin22[lid] = pin22[xi*128];	\
+				}					\
+									\
+				sum += w00 * lin00[lid];		\
+				sum += w10 * lin10[lid];		\
+				sum += w20 * lin20[lid];		\
+									\
+				sum += w01 * lin01[lid];		\
+				sum += w11 * lin11[lid];		\
+				sum += w21 * lin21[lid];		\
+									\
+				sum += w02 * lin02[lid];		\
+				sum += w12 * lin12[lid];		\
+				sum += w22 * lin22[lid];		\
+									\
+			}						\
+			barrier(CLK_LOCAL_MEM_FENCE);			\
+			sum_buffer[lid] = sum;				\
+			barrier(CLK_LOCAL_MEM_FENCE);			\
+			if (lid < 64) {					\
+				float2 v2 = *(__local float2*)&sum_buffer[lid*2]; \
+				sum_buffer[lid] = v2.x + v2.y;		\
+			}						\
+			barrier(CLK_LOCAL_MEM_FENCE);			\
+			if (lid < 32) {					\
+				float2 v2 = *(__local float2*)&sum_buffer[lid*2]; \
+				sum_buffer[lid] = v2.x + v2.y;		\
+			}						\
+			barrier(CLK_LOCAL_MEM_FENCE);			\
+									\
+									\
+			if (lid == 0) {					\
+				float sum = 0;				\
+				for (int i=0; i<32; i++) {		\
+					sum += sum_buffer[i];		\
+				}					\
+									\
+				float v = sum;				\
+				__global float *out = packed_output + (yi*wsz + xi); \
+				v += bv;				\
+				float mtz = max(v, 0.0f);		\
+				float ltz = min(v, 0.0f);		\
+				v = ltz * 0.1f + mtz;			\
+				out[0] = v;				\
+			}						\
+		}
 
 
-	{
-		int xi = 0;
-		OUT1_BODY(1,0);
-	}
-	for (int xi=1; xi<wsz-1; xi++) {
-		OUT1_BODY(0,0);
-	}
-	{
-		int xi = wsz-1;
-		OUT1_BODY(0,1);
+		for (int xi=0; xi<wsz-1; xi++) {
+			OUT1_BODY(0,0);
+		}
+		{
+			int xi = wsz-1;
+			OUT1_BODY(0,1);
+		}
 	}
 }
 
