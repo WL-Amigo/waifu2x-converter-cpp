@@ -369,9 +369,14 @@ filter_in128_out1(__global const float * __restrict__ packed_input,
 		{							\
 			int i = lid;					\
 									\
-			float v01 = in01[xi*128];			\
-			float v11 = in11[xi*128];			\
-			float v21 = in21[xi*128];			\
+									\
+			__global float *p0 = &pin00[xi*128];		\
+			__global float *p1 = &pin10[xi*128];		\
+			__global float *p2 = &pin20[xi*128];		\
+									\
+			float v01 = p0[128];				\
+			float v11 = p1[128];				\
+			float v21 = p2[128];				\
 									\
 			sum += w01 * v01;				\
 			sum += w11 * v11;				\
@@ -382,9 +387,9 @@ filter_in128_out1(__global const float * __restrict__ packed_input,
 				sum += w10 * v11;			\
 				sum += w20 * v21;			\
 			} else{						\
-				sum += w00 * pin00[(xi)*128];		\
-				sum += w10 * pin10[(xi)*128];		\
-				sum += w20 * pin20[(xi)*128];		\
+				sum += w00 * p0[0];			\
+				sum += w10 * p1[0];			\
+				sum += w20 * p2[0];			\
 			}						\
 									\
 									\
@@ -393,9 +398,9 @@ filter_in128_out1(__global const float * __restrict__ packed_input,
 				sum += w12 * v01;			\
 				sum += w22 * v01;			\
 			} else {					\
-				sum += w02 * pin02[(xi)*128];		\
-				sum += w12 * pin12[(xi)*128];		\
-				sum += w22 * pin22[(xi)*128];		\
+				sum += w02 * p0[256];			\
+				sum += w12 * p1[256];			\
+				sum += w22 * p2[256];			\
 			}						\
 		}							\
 		barrier(CLK_LOCAL_MEM_FENCE);				\
