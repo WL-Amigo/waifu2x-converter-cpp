@@ -127,7 +127,6 @@ initOpenCL(ComputeEnv *env)
                 platform = plts[i];
                 dev = devs[0];
 
-
                 cl_context_properties props[] =
                         {CL_CONTEXT_PLATFORM, (cl_context_properties)(plts[i]), 0};
                 cl_context ctxt = clCreateContext(props, 1, &devs[0], NULL, NULL, &err);
@@ -415,15 +414,6 @@ filter_OpenCL_impl(ComputeEnv *env,
                                            sizeof(float) * nOutputPlanes,
                                            (void*)fbiases, &err
                 );
-
-        cl_mem cl_weight = clCreateBuffer(context,
-                                          CL_MEM_READ_ONLY|CL_MEM_COPY_HOST_PTR,
-                                          sizeof(float) * GPU_VEC_WIDTH * nInputPlanes * 9,
-                                          (void*)weight, &err
-                );
-
-        int ai = 0;
-
         enum filter_type {
                 FILTER_GENERIC,
                 FILTER_IN1,
@@ -439,6 +429,23 @@ filter_OpenCL_impl(ComputeEnv *env,
                 type = FILTER_OUT1;
                 ker = dev->ker_filter_in128_out1;
         }
+
+
+        size_t weight_size;
+
+        if (type == FILTER_GENERIC) {
+                weight_size = sizeof(float) * GPU_VEC_WIDTH * nInputPlanes * 9;
+        } else {
+                weight_size = sizeof(float) * nOutputPlanes * nInputPlanes * 9;
+        }
+
+        cl_mem cl_weight = clCreateBuffer(context,
+                                          CL_MEM_READ_ONLY|CL_MEM_COPY_HOST_PTR,
+                                          weight_size,
+                                          (void*)weight, &err
+                );
+
+        int ai = 0;
 
         clSetKernelArg(ker, ai++, sizeof(cl_mem), &cl_packed_input);
         clSetKernelArg(ker, ai++, sizeof(cl_int), &nInputPlanes);
@@ -468,11 +475,14 @@ filter_OpenCL_impl(ComputeEnv *env,
         } else if (type == FILTER_IN1) {
                 gws[0] = h * 256;
                 lws[0] = 256;
+        } else if (type == FILTER_OUT1) {
+                gws[0] = h*128;
+                lws[0] = 128;
         }
 
         err = clEnqueueNDRangeKernel(dev->queue,
                                      ker,
-                                     1,
+                                     3,
                                      nullptr, gws, lws,
                                      0, nullptr, &event);
         if (err != CL_SUCCESS) {

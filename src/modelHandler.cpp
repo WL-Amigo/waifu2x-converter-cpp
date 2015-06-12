@@ -87,7 +87,7 @@ Model::filter_CV(ComputeEnv *env,
 	return true;
 }
 
-#define COMPARE_RESULT
+//#define COMPARE_RESULT
 
 bool Model::filter_AVX_OpenCL(ComputeEnv *env,
 			      Buffer *packed_input_buf,
@@ -132,27 +132,49 @@ bool Model::filter_AVX_OpenCL(ComputeEnv *env,
 	}
 
 	if (nOutputPlanes == 1) {
-		for (int ii=0; ii<nInputPlanes; ii++) {
-			cv::Mat &wm = weights[ii];
-			const float *src0 = (float*)wm.ptr(0);
-			const float *src1 = (float*)wm.ptr(1);
-			const float *src2 = (float*)wm.ptr(2);
+		if (OpenCL) {
+			for (int ii=0; ii<nInputPlanes; ii++) {
+				cv::Mat &wm = weights[ii];
+				const float *src0 = (float*)wm.ptr(0);
+				const float *src1 = (float*)wm.ptr(1);
+				const float *src2 = (float*)wm.ptr(2);
 
-			int ii_0 = ii % vec_width;
-			int ii_1 = (ii / vec_width) * vec_width;
+				float *dst = weight_flat + ii * 9;
+				dst[0] = src0[0];
+				dst[1] = src0[1];
+				dst[2] = src0[2];
 
-			float *dst = weight_flat + ii_1 * 9  + ii_0;
-			dst[0 * vec_width] = src0[0];
-			dst[1 * vec_width] = src0[1];
-			dst[2 * vec_width] = src0[2];
+				dst[3] = src1[0];
+				dst[4] = src1[1];
+				dst[5] = src1[2];
 
-			dst[3 * vec_width] = src1[0];
-			dst[4 * vec_width] = src1[1];
-			dst[5 * vec_width] = src1[2];
+				dst[6] = src2[0];
+				dst[7] = src2[1];
+				dst[8] = src2[2];
+			}
+		} else {
+			for (int ii=0; ii<nInputPlanes; ii++) {
+				cv::Mat &wm = weights[ii];
+				const float *src0 = (float*)wm.ptr(0);
+				const float *src1 = (float*)wm.ptr(1);
+				const float *src2 = (float*)wm.ptr(2);
 
-			dst[6 * vec_width] = src2[0];
-			dst[7 * vec_width] = src2[1];
-			dst[8 * vec_width] = src2[2];
+				int ii_0 = ii % vec_width;
+				int ii_1 = (ii / vec_width) * vec_width;
+
+				float *dst = weight_flat + ii_1 * 9  + ii_0;
+				dst[0 * vec_width] = src0[0];
+				dst[1 * vec_width] = src0[1];
+				dst[2 * vec_width] = src0[2];
+
+				dst[3 * vec_width] = src1[0];
+				dst[4 * vec_width] = src1[1];
+				dst[5 * vec_width] = src1[2];
+
+				dst[6 * vec_width] = src2[0];
+				dst[7 * vec_width] = src2[1];
+				dst[8 * vec_width] = src2[2];
+			}
 		}
 	} else if (OpenCL && nInputPlanes == 1) {
 		for (int oi=0; oi<nOutputPlanes; oi++) {
@@ -238,7 +260,7 @@ bool Model::filter_AVX_OpenCL(ComputeEnv *env,
 
 		double t2 = getsec();
 
-		printf("%d %d %f %f %f[gops]\n", nInputPlanes, nOutputPlanes, t1-t0, t2-t1, ops/(1000*1000*1000));
+		printf("%d %d %d %d %f %f %f[gops]\n", size.width, size.height, nInputPlanes, nOutputPlanes, t1-t0, t2-t1, ops/(1000*1000*1000));
 		printf("ver2 : %f [Gflops]\n", (ops/(1000.0*1000.0*1000.0)) / (t2-t1));
 		printf("orig : %f [Gflops]\n", (ops/(1000.0*1000.0*1000.0)) / (t1-t0));
 		int error_count = 0;
@@ -324,7 +346,6 @@ bool Model::filter(ComputeEnv *env,
 			/* in1 filter */
 		} else if (nOutputPlanes == 1 && nInputPlanes == 128) {
 			/* out1 filter */
-			gpu_available = false;
 		} else {
 			gpu_available = false;
 		}
