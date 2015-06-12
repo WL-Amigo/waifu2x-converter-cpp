@@ -154,6 +154,26 @@ bool Model::filter_AVX_OpenCL(ComputeEnv *env,
 			dst[7 * vec_width] = src2[1];
 			dst[8 * vec_width] = src2[2];
 		}
+	} else if (OpenCL && nInputPlanes == 1) {
+		for (int oi=0; oi<nOutputPlanes; oi++) {
+			cv::Mat &wm = weights[oi];
+			const float *src0 = (float*)wm.ptr(0);
+			const float *src1 = (float*)wm.ptr(1);
+			const float *src2 = (float*)wm.ptr(2);
+
+			float *dst = weight_flat + oi * 9;
+			dst[0] = src0[0];
+			dst[1] = src0[1];
+			dst[2] = src0[2];
+
+			dst[3] = src1[0];
+			dst[4] = src1[1];
+			dst[5] = src1[2];
+
+			dst[6] = src2[0];
+			dst[7] = src2[1];
+			dst[8] = src2[2];
+		}
 	} else {
 		for (int oi=0; oi<nOutputPlanes; oi++) {
 			for (int ii=0; ii<nInputPlanes; ii++) {
@@ -298,7 +318,11 @@ bool Model::filter(ComputeEnv *env,
 	}
 
 	if (nOutputPlanes == 1 || (nInputPlanes & 1)) {
-		gpu_available = false;
+		if (nOutputPlanes == 32 && nInputPlanes == 1) {
+			/* in1 filter */
+		} else {
+			gpu_available = false;
+		}
 	}
 
 	if (nOutputPlanes % (VEC_WIDTH*UNROLL)) {

@@ -32,7 +32,7 @@ static int
 cllib_init(void)
 {
 #ifdef _WIN32
-        handle = LoadLibrary("OpenCL.dll");
+	handle = LoadLibrary("OpenCL.dll");
 #else
         handle = dlopen("libOpenCL.so.1", RTLD_LAZY);
 
@@ -422,7 +422,7 @@ filter_OpenCL_impl(ComputeEnv *env,
 
         cl_kernel ker = dev->ker_filter;
 
-        if (nInputPlanes == 1) {
+        if (nInputPlanes == 1 && nOutputPlanes == 32) {
                 type = FILTER_IN1;
                 ker = dev->ker_filter_in1_out32;
         }
@@ -442,9 +442,8 @@ filter_OpenCL_impl(ComputeEnv *env,
 
         if (type == FILTER_GENERIC) {
                 local_size += sizeof(float) * nInputPlanes * (GPU_BLOCK_SIZE+2) * 3;
+                clSetKernelArg(ker, ai++, local_size, nullptr);
         }
-
-        clSetKernelArg(ker, ai++, local_size, nullptr);
 
         cl_event event;
 
@@ -454,7 +453,7 @@ filter_OpenCL_impl(ComputeEnv *env,
         size_t lws[3] = {1, 1, 1};
         if (type == FILTER_GENERIC) {
                 gws[0] = h * nOutputPlanes;
-                lws[0] = h * nOutputPlanes;
+                lws[0] = nOutputPlanes;
         } else if (type == FILTER_IN1) {
                 gws[0] = h * 256;
                 lws[0] = 256;

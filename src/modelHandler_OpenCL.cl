@@ -179,8 +179,7 @@ filter_in1_out32(__global const float * __restrict__ packed_input,
 		 __global float * __restrict__ biases,
 		 unsigned int hsz,
 		 unsigned int wsz,
-		 __global float * __restrict__ weight,
-		 __local float * __restrict__ local_mem)
+		 __global float * __restrict__ weight)
 {
 	unsigned int yi = get_group_id(0);
 	unsigned int lid = get_local_id(0);
@@ -228,6 +227,7 @@ filter_in1_out32(__global const float * __restrict__ packed_input,
 
 	UNROLL8x3x3(IN1_LOAD_COEF);
 
+#if 1
 	for (int xi0=0; xi0<wsz; xi0+=256) {
 		/* load */
 		barrier(CLK_LOCAL_MEM_FENCE);
@@ -284,12 +284,12 @@ filter_in1_out32(__global const float * __restrict__ packed_input,
 						float mtz = max(v, 0.0f); \
 						float ltz = min(v, 0.0f); \
 						v = ltz * 0.1f + mtz;	\
-						out[O] = v;		\
+						out[opIndex] = v;	\
 					}
 
 					UNROLL8(IN1_DECLSUM);
 					UNROLL8x3x3(IN1_CALC);
-					__global float *out = packed_output + (yi*wsz + xi) * 32 + ooff;
+					__global float *out = packed_output + (yi*wsz + xi) * 32;
 					UNROLL8(IN1_RELU);
 				}
 			}
@@ -297,6 +297,65 @@ filter_in1_out32(__global const float * __restrict__ packed_input,
 		}
 
 	}
+#else
+	for (int xi=0; xi<wsz; xi++) {
+		float v00, v01, v02;
+		float v10, v11, v12;
+		float v20, v21, v22;
+
+		v01 = in01[xi];
+		v11 = in11[xi];
+		v21 = in21[xi];
+
+		if (xi == 0) {
+			v00 = v01;
+			v10 = v11;
+			v20 = v21;
+		} else {
+			v00 = in01[xi-1];
+			v10 = in11[xi-1];
+			v20 = in21[xi-1];
+		}
+
+		if (xi == wsz-1) {
+			v02 = v01;
+			v12 = v11;
+			v22 = v21;
+		} else {
+			v02 = in01[xi+1];
+			v12 = in11[xi+1];
+			v22 = in21[xi+1];
+		}
+
+
+		for (int oi=0; oi<32; oi++) {
+			float sum = 0;
+
+			sum += v00 * weight[9*oi + 0];
+			sum += v01 * weight[9*oi + 1];
+			sum += v02 * weight[9*oi + 2];
+
+			sum += v10 * weight[9*oi + 3];
+			sum += v11 * weight[9*oi + 4];
+			sum += v12 * weight[9*oi + 5];
+
+			sum += v20 * weight[9*oi + 6];
+			sum += v21 * weight[9*oi + 7];
+			sum += v22 * weight[9*oi + 8];
+
+			float v = sum;
+			float bv = biases[oi];
+			v += bv;
+			float mtz = max(v, 0.0f);
+			float ltz = min(v, 0.0f);
+			v = ltz * 0.1f + mtz;
+
+			__global float *out = packed_output + (yi*wsz + xi) * 32;
+			out[oi] = v;
+		}
+	}
+
+#endif
 }
 
 
