@@ -313,6 +313,8 @@ bool Model::filter(ComputeEnv *env,
 	bool avx_available = true;
 	bool gpu_available = env->num_cl_dev > 0;
 
+	//printf("%d->%d\n", nInputPlanes, nOutputPlanes);
+
 	if (nOutputPlanes > GPU_VEC_WIDTH && nOutputPlanes % GPU_VEC_WIDTH) {
 		gpu_available = false;
 	}

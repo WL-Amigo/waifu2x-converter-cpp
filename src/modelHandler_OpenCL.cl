@@ -184,7 +184,6 @@ filter_in1_out32(__global const float * __restrict__ packed_input,
 	unsigned int yi = get_group_id(0);
 	unsigned int lid = get_local_id(0);
 
-	__global const float * __restrict__ in = packed_input;
 	size_t in_step = wsz * sizeof(float) * nInputPlanes;
 
 	__global char *inp = (__global char*)packed_input;
@@ -216,9 +215,9 @@ filter_in1_out32(__global const float * __restrict__ packed_input,
 
 	unsigned int vec_width = min((int)128, (int)nOutputPlanes);
 
-	/* 256 item */
-	/* x : 8x32 (32width) */
-	/* o : 1x8  (4weight)*/
+	/* 256 item / group */
+	/* x         : (64width/group) */
+	/* 32 oplane : (8weight/item * 4item)*/
 	unsigned int xoff = lid / 4U;
 	unsigned int ooff = (lid % 4U) * 8;
 
@@ -266,9 +265,9 @@ filter_in1_out32(__global const float * __restrict__ packed_input,
 		}
 		barrier(CLK_LOCAL_MEM_FENCE);
 
-		for (int xi1_base=0; xi1_base<8; xi1_base++) {
+		for (int xi1_base=0; xi1_base<4; xi1_base++) {
 			{
-				int xi1 = xi1_base*32 + xoff;
+				int xi1 = xi1_base*64 + xoff;
 
 				int xi = xi0 + xi1;
 				if (xi < wsz) {
@@ -293,6 +292,246 @@ filter_in1_out32(__global const float * __restrict__ packed_input,
 				}
 			}
 
+		}
+
+	}
+}
+
+__kernel void
+filter_in128_out1(__global const float * __restrict__ packed_input,
+		  int nInputPlanes,
+		  __global float * __restrict__ packed_output,
+		  int nOutputPlanes,
+		  __global float * __restrict__ biases,
+		  unsigned int hsz,
+		  unsigned int wsz,
+		  __global float * __restrict__ weight)
+{
+	unsigned int yi = get_group_id(0)*2;
+	unsigned int lid = get_local_id(0);
+
+	size_t in_step = wsz * sizeof(float) * nInputPlanes;
+
+	__global char *inp = (__global char*)packed_input;
+
+	inp += in_step*yi;
+	__global char *in0p = inp - in_step;
+	if (yi == 0) {
+		in0p = inp;
+	}
+
+	__global char *in1p = inp;
+	__global char *in2p = inp + in_step;
+	__global char *in3p = inp + in_step*2;
+
+	if (yi+1 == hsz-1) {
+		in3p = in2p;
+	}
+
+	__global float *in01 = (__global float*)in0p;
+	__global float *in11 = (__global float*)in1p;
+	__global float *in21 = (__global float*)in2p;
+	__global float *in31 = (__global float*)in3p;
+
+	__local float in00_buf[128];
+	__local float in01_buf[128];
+	__local float in02_buf[128];
+
+	__local float in10_buf[128];
+	__local float in11_buf[128];
+	__local float in12_buf[128];
+
+	__local float in20_buf[128];
+	__local float in21_buf[128];
+	__local float in22_buf[128];
+
+	__local float in30_buf[128];
+	__local float in31_buf[128];
+	__local float in32_buf[128];
+
+	__local float *lin00 = in00_buf;
+	__local float *lin01 = in01_buf;
+	__local float *lin02 = in02_buf;
+
+	__local float *lin10 = in10_buf;
+	__local float *lin11 = in11_buf;
+	__local float *lin12 = in12_buf;
+
+	__local float *lin20 = in20_buf;
+	__local float *lin21 = in21_buf;
+	__local float *lin22 = in22_buf;
+
+	__local float *lin30 = in20_buf;
+	__local float *lin31 = in21_buf;
+	__local float *lin32 = in22_buf;
+
+	__local float sum_buffer[256];
+
+	unsigned int ioff = (lid % 4U) * 8;
+	float bv = biases[0];
+
+#define OUT1_LOAD_COEF(I,Y,X) float w##I##Y##X = weight[(ioff + I)*9 + Y*3 + X];
+
+	UNROLL8x3x3(OUT1_LOAD_COEF);
+
+	/* 256 item */
+	/* x      : (1width/group) */
+	/* y      : (2height/group) */
+	/* iplane : 1plane / 1item * 128plane */
+	unsigned int xoff = lid / 4U;
+	unsigned int ooff = (lid % 4U) * 8;
+
+	if (lid < 128) {
+		lin01[lid] = in01[lid];
+		lin02[lid] = in01[lid];
+
+		lin11[lid] = in11[lid];
+		lin12[lid] = in11[lid];
+
+		lin21[lid] = in21[lid];
+		lin22[lid] = in21[lid];
+
+		lin31[lid] = in31[lid];
+		lin32[lid] = in31[lid];
+	}
+	barrier(CLK_LOCAL_MEM_FENCE);
+
+	for (int xi=0; xi<wsz; xi++) {
+		__local float *tmp0 = lin02;
+		__local float *tmp1 = lin12;
+		__local float *tmp2 = lin22;
+		__local float *tmp3 = lin32;
+
+		lin00 = lin01; lin01 = lin02; lin02 = tmp0;
+		lin10 = lin11; lin11 = lin12; lin12 = tmp1;
+		lin20 = lin21; lin21 = lin22; lin22 = tmp2;
+		lin30 = lin31; lin31 = lin32; lin32 = tmp3;
+
+		if (xi == wsz-1) {
+			lin02 = lin01;
+			lin12 = lin11;
+			lin22 = lin21;
+			lin32 = lin31;
+		} else {
+			if (lid < 128) {
+				lin02[lid] = in01[(xi+1)*128 + lid];
+				lin12[lid] = in11[(xi+1)*128 + lid];
+				lin22[lid] = in21[(xi+1)*128 + lid];
+				lin32[lid] = in31[(xi+1)*128 + lid];
+			}
+			barrier(CLK_LOCAL_MEM_FENCE);
+		}
+
+		__local float *pin00;
+		__local float *pin01;
+		__local float *pin02;
+
+		__local float *pin10;
+		__local float *pin11;
+		__local float *pin12;
+
+		__local float *pin20;
+		__local float *pin21;
+		__local float *pin22;
+
+		if (lid < 128) {
+			pin00 = lin00;
+			pin01 = lin01;
+			pin02 = lin02;
+
+			pin10 = lin10;
+			pin11 = lin11;
+			pin12 = lin12;
+
+			pin20 = lin10;
+			pin21 = lin11;
+			pin22 = lin12;
+		} else {
+			pin00 = lin10;
+			pin01 = lin11;
+			pin02 = lin12;
+
+			pin10 = lin20;
+			pin11 = lin21;
+			pin12 = lin22;
+
+			pin20 = lin30;
+			pin21 = lin31;
+			pin22 = lin32;
+		}
+
+		float sum = 0;
+
+#define OUT1_CALC(I,Y,X) sum += pin##Y##X[ioff + I] * w##I##Y##X;
+
+		UNROLL8x3x3(OUT1_CALC);
+
+		sum_buffer[lid] = sum;
+
+
+		/* 256 to 2 reduction */
+		int off = 0;
+		int llid = lid;
+
+		__local float *sum_buffer0 = sum_buffer;
+		__local float *sum_buffer1 = sum_buffer + 128;
+
+		barrier(CLK_LOCAL_MEM_FENCE);
+		if (lid < 64) {
+			sum_buffer0[lid] += sum_buffer0[lid+64];
+			sum_buffer1[lid] += sum_buffer1[lid+64];
+		}
+		barrier(CLK_LOCAL_MEM_FENCE);
+		if (lid < 32) {
+			sum_buffer0[lid] += sum_buffer0[lid+32];
+			sum_buffer1[lid] += sum_buffer1[lid+32];
+		}
+		barrier(CLK_LOCAL_MEM_FENCE);
+		if (lid < 16) {
+			sum_buffer0[lid] += sum_buffer0[lid+16];
+			sum_buffer1[lid] += sum_buffer1[lid+16];
+		}
+		barrier(CLK_LOCAL_MEM_FENCE);
+		if (lid < 8) {
+			sum_buffer0[lid] += sum_buffer0[lid+8];
+			sum_buffer1[lid] += sum_buffer1[lid+8];
+		}
+		barrier(CLK_LOCAL_MEM_FENCE);
+		if (lid < 4) {
+			sum_buffer0[lid] += sum_buffer0[lid+4];
+			sum_buffer1[lid] += sum_buffer1[lid+4];
+		}
+		barrier(CLK_LOCAL_MEM_FENCE);
+		if (lid < 2) {
+			sum_buffer0[lid] += sum_buffer0[lid+2];
+			sum_buffer1[lid] += sum_buffer1[lid+2];
+		}
+		barrier(CLK_LOCAL_MEM_FENCE);
+
+		if (lid == 0) {
+			float sum_y0 = sum_buffer0[0] + sum_buffer0[1];
+			float sum_y1 = sum_buffer1[0] + sum_buffer1[1];
+
+			__global float *out = packed_output + (yi*wsz + xi);
+			
+
+			{
+				float v = sum_y0;
+				v += bv;
+				float mtz = max(v, 0.0f);
+				float ltz = min(v, 0.0f);
+				v = ltz * 0.1f + mtz;
+				out[0] = v;
+			}
+
+			{
+				float v = sum_y1;
+				v += bv;
+				float mtz = max(v, 0.0f);
+				float ltz = min(v, 0.0f);
+				v = ltz * 0.1f + mtz;
+				out[yi*wsz] = v;
+			}
 		}
 
 	}

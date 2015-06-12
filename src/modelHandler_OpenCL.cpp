@@ -447,8 +447,6 @@ filter_OpenCL_impl(ComputeEnv *env,
 
         cl_event event;
 
-        size_t vec_width = std::min(GPU_VEC_WIDTH, nOutputPlanes);
-
         size_t gws[3] = {1, 1, 1};
         size_t lws[3] = {1, 1, 1};
         if (type == FILTER_GENERIC) {

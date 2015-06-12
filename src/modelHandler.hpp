@@ -148,7 +148,7 @@ private:
 	int nJob;
 	cv::Size blockSplittingSize;
 	modelUtility() :
-		nJob(4), blockSplittingSize(1024,1024) {
+		nJob(4), blockSplittingSize(4096,4096) {
 	}
 	;
 
