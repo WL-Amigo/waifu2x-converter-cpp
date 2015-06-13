@@ -89,7 +89,7 @@ Model::filter_CV(ComputeEnv *env,
 	return true;
 }
 
-//#define COMPARE_RESULT
+#define COMPARE_RESULT
 
 bool Model::filter_AVX_OpenCL(ComputeEnv *env,
 			      Buffer *packed_input_buf,
@@ -396,10 +396,8 @@ bool Model::filter(ComputeEnv *env,
 	}
 
 	if (cuda_available) {
-		puts("cuda");
 		ret = filter_AVX_OpenCL(env, packed_input_buf, packed_output_buf, size, RUN_CUDA);
 	} else if (cl_available) {
-		puts("cl");
 		ret = filter_AVX_OpenCL(env, packed_input_buf, packed_output_buf, size, RUN_OPENCL);
 	} else if (avx_available) {
 		ret = filter_AVX_OpenCL(env, packed_input_buf, packed_output_buf, size, RUN_CPU);

@@ -10,6 +10,7 @@
 #include <vector>
 #include <stdio.h>
 #include <string>
+#include <string.h>
 #include "filters.hpp"
 #include "sec.hpp"
 #include "CLlib.h"

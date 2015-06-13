@@ -1,6 +1,7 @@
 #include "CUDAlib.h"
 #include "Buffer.hpp"
 #include <stdio.h>
+#include <string.h>
 
 #ifdef _WIN32
 #include <windows.h>
@@ -18,7 +19,7 @@ static const char prog[] =
 #define CUDA_DECL(name)				\
 	t##name name;
 
-FOR_EACH_CUDA_FUNC(CUDA_DECL)
+FOR_EACH_CUDA_FUNC(CUDA_DECL, CUDA_DECL)
 
 namespace w2xc {
 
@@ -43,7 +44,13 @@ cudalib_init(void)
 		return -1;				\
 	}
 
-	FOR_EACH_CUDA_FUNC(LOAD);
+#define LOAD_V2(name)					\
+	name = (t##name) GetProcAddress(handle, #name "_v2"); \
+	if (name == NULL) {				\
+		return -1;				\
+	}
+
+	FOR_EACH_CUDA_FUNC(LOAD, LOAD_V2);
 
 	return 0;
 }
@@ -52,7 +59,6 @@ cudalib_init(void)
 bool
 initCUDA(ComputeEnv *env)
 {
-	return false;
 	if (cudalib_init() < 0) {
 		return false;
 	}
@@ -135,11 +141,11 @@ filter_CUDA_impl(ComputeEnv *env,
 	CUresult r;
 	CUDADev *dev = &env->cuda_dev_list[0];
 	CUdeviceptr packed_input = packed_input_buf->get_read_ptr_cuda(env, 0);
-	CUdeviceptr packed_output = packed_input_buf->get_write_ptr_cuda(env, 0);
+	CUdeviceptr packed_output = packed_output_buf->get_write_ptr_cuda(env, 0);
 
 	cuCtxPushCurrent(dev->context);
 
-	CUdeviceptr d_fbiases;
+	CUdeviceptr d_fbiases = 0;
 	size_t bias_size = sizeof(float) * nOutputPlanes;
 	r = cuMemAlloc(&d_fbiases, bias_size);
 	if (r != CUDA_SUCCESS) {
@@ -151,8 +157,7 @@ filter_CUDA_impl(ComputeEnv *env,
 		puts("fail: copy to bias");
 		exit(1);
 	}
-
-	CUdeviceptr d_weight;
+	CUdeviceptr d_weight = 0;
 	size_t weight_size = sizeof(float) * 128 * nInputPlanes * 9;
 	r = cuMemAlloc(&d_weight, weight_size);;
 	if (r != CUDA_SUCCESS) {
@@ -171,6 +176,10 @@ filter_CUDA_impl(ComputeEnv *env,
 	size_t h = ip_height;
 	size_t w = ip_width;
 
+	unsigned char *zero = (unsigned char*)malloc(nOutputPlanes * w * h * sizeof(float));
+	memset(zero, 0, nOutputPlanes * w * h * sizeof(float));
+	cuMemcpyHtoD(packed_output, zero, nOutputPlanes * w * h * sizeof(float));
+
 	void *args[8] = {&packed_input,
 			 &nInputPlanes2,
 			 &packed_output,
@@ -180,7 +189,6 @@ filter_CUDA_impl(ComputeEnv *env,
 			 &w,
 			 &d_weight};
 
-	/*
 	r = cuLaunchKernel(dev->filter,
 			   h, 1, 1,
 			   1, 1, 1,
@@ -190,7 +198,6 @@ filter_CUDA_impl(ComputeEnv *env,
 		puts("fail: launch");
 		exit(1);
 	}
-	*/
 
 	r = cuStreamSynchronize(dev->stream);
 	if (r != CUDA_SUCCESS) {

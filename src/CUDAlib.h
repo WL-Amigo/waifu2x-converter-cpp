@@ -2,6 +2,7 @@
 #define CUDALIB_H
 
 #include <stddef.h>
+#include <stdint.h>
 
 #ifdef _WIN32
 #define CUDAAPI __stdcall
@@ -48,32 +49,32 @@ typedef CUresult (* CUDAAPI tcuLaunchKernel)(CUfunction f,
                                              unsigned int sharedMemBytes,
                                              CUstream str, void **kernelParams, void **extra);
 
-#define FOR_EACH_CUDA_FUNC(F)                   \
+#define FOR_EACH_CUDA_FUNC(F,F_V2)              \
     F(cuInit)                                   \
     F(cuDriverGetVersion)                       \
     F(cuDeviceGetCount)                         \
     F(cuDeviceGetName)                          \
-    F(cuCtxCreate)                              \
-    F(cuCtxDestroy)                              \
+    F_V2(cuCtxCreate)                            \
+    F_V2(cuCtxDestroy)                           \
     F(cuModuleLoadData)                          \
     F(cuModuleUnload)                            \
     F(cuModuleGetFunction)                       \
-    F(cuStreamCreate)                            \
-    F(cuStreamDestroy)                            \
-    F(cuMemAlloc)                                 \
-    F(cuMemFree)                                  \
-    F(cuMemcpyHtoD)                               \
-    F(cuMemcpyDtoH)                               \
-    F(cuCtxSetCurrent)                            \
-    F(cuStreamSynchronize)                        \
-    F(cuCtxPushCurrent)                           \
-    F(cuCtxPopCurrent)                           \
+    F(cuStreamCreate)                             \
+    F_V2(cuStreamDestroy)                         \
+    F_V2(cuMemAlloc)                              \
+    F_V2(cuMemFree)                               \
+    F_V2(cuMemcpyHtoD)                               \
+    F_V2(cuMemcpyDtoH)                               \
+    F(cuCtxSetCurrent)                               \
+    F(cuStreamSynchronize)                           \
+    F_V2(cuCtxPushCurrent)                           \
+    F_V2(cuCtxPopCurrent)                            \
     F(cuLaunchKernel)
 
 
 #define CUDA_PROTOTYPE(name)                    \
     extern t##name name;
 
-FOR_EACH_CUDA_FUNC(CUDA_PROTOTYPE)
+FOR_EACH_CUDA_FUNC(CUDA_PROTOTYPE,CUDA_PROTOTYPE)
 
 #endif
