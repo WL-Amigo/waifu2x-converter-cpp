@@ -170,9 +170,9 @@
 
 #define BLOCK_SIZE 8
 
-extern "C" __global__ void
+template <int nInputPlanes>
+__device__ void
 filter(const float * __restrict__ packed_input,
-       int nInputPlanes,
        float * __restrict__ packed_output,
        int nOutputPlanes,
        const float * __restrict__ biases,
@@ -430,3 +430,38 @@ filter(const float * __restrict__ packed_input,
 	}
 }
 
+extern "C" __global__ void
+filter_i32(const float * __restrict__ packed_input,
+	   float * __restrict__ packed_output,
+	   int nOutputPlanes,
+	   const float * __restrict__ biases,
+	   unsigned int hsz,
+	   unsigned int wsz,
+	   const float * __restrict__ weight)
+{
+	filter<32>(packed_input, packed_output, nOutputPlanes, biases, hsz, wsz, weight);
+}
+
+extern "C" __global__ void
+filter_i64(const float * __restrict__ packed_input,
+	   float * __restrict__ packed_output,
+	   int nOutputPlanes,
+	   const float * __restrict__ biases,
+	   unsigned int hsz,
+	   unsigned int wsz,
+	   const float * __restrict__ weight)
+{
+	filter<64>(packed_input, packed_output, nOutputPlanes, biases, hsz, wsz, weight);
+}
+
+extern "C" __global__ void
+filter_i128(const float * __restrict__ packed_input,
+	    float * __restrict__ packed_output,
+	    int nOutputPlanes,
+	    const float * __restrict__ biases,
+	    unsigned int hsz,
+	    unsigned int wsz,
+	    const float * __restrict__ weight)
+{
+	filter<128>(packed_input, packed_output, nOutputPlanes, biases, hsz, wsz, weight);
+}

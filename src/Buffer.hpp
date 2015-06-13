@@ -22,7 +22,9 @@ struct CUDADev {
     int dev;
     CUcontext context;
     CUmodule mod;
-    CUfunction filter;
+    CUfunction filter_i32;
+    CUfunction filter_i64;
+    CUfunction filter_i128;
     CUstream stream;
 };
 

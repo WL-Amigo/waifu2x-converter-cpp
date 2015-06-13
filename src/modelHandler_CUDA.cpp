@@ -101,9 +101,23 @@ initCUDA(ComputeEnv *env)
 		return false;
 	}
 
-	CUfunction filter;
+	CUfunction filter_i32=0, filter_i64=0, filter_i128=0;
 
-	r = cuModuleGetFunction(&filter, mod, "filter");
+	r = cuModuleGetFunction(&filter_i32, mod, "filter_i32");
+	if (r != CUDA_SUCCESS) {
+		cuModuleUnload(mod);
+		cuCtxDestroy(ctxt);
+		cuStreamDestroy(stream);
+		return false;
+	}
+	r = cuModuleGetFunction(&filter_i64, mod, "filter_i64");
+	if (r != CUDA_SUCCESS) {
+		cuModuleUnload(mod);
+		cuCtxDestroy(ctxt);
+		cuStreamDestroy(stream);
+		return false;
+	}
+	r = cuModuleGetFunction(&filter_i128, mod, "filter_i128");
 	if (r != CUDA_SUCCESS) {
 		cuModuleUnload(mod);
 		cuCtxDestroy(ctxt);
@@ -116,14 +130,18 @@ initCUDA(ComputeEnv *env)
 	printf("CUDA : %s\n", name);
 
 	cuCtxSetCacheConfig(CU_FUNC_CACHE_PREFER_SHARED);
-	cuFuncSetSharedMemConfig(filter, CU_SHARED_MEM_CONFIG_EIGHT_BYTE_BANK_SIZE);
+	cuFuncSetSharedMemConfig(filter_i32, CU_SHARED_MEM_CONFIG_EIGHT_BYTE_BANK_SIZE);
+	cuFuncSetSharedMemConfig(filter_i64, CU_SHARED_MEM_CONFIG_EIGHT_BYTE_BANK_SIZE);
+	cuFuncSetSharedMemConfig(filter_i128, CU_SHARED_MEM_CONFIG_EIGHT_BYTE_BANK_SIZE);
 
 	env->num_cuda_dev = 1;
 	env->cuda_dev_list = new CUDADev[1];
 	env->cuda_dev_list[0].dev = dev;
 	env->cuda_dev_list[0].context = ctxt;
 	env->cuda_dev_list[0].mod = mod;
-	env->cuda_dev_list[0].filter = filter;
+	env->cuda_dev_list[0].filter_i32 = filter_i32;
+	env->cuda_dev_list[0].filter_i64 = filter_i64;
+	env->cuda_dev_list[0].filter_i128 = filter_i128;
 	env->cuda_dev_list[0].stream = stream;
 
 	return true;
@@ -181,7 +199,6 @@ filter_CUDA_impl(ComputeEnv *env,
 	size_t w = ip_width;
 
 	void *args[8] = {&packed_input,
-			 &nInputPlanes2,
 			 &packed_output,
 			 &nOutputPlanes2,
 			 &d_fbiases,
@@ -189,11 +206,27 @@ filter_CUDA_impl(ComputeEnv *env,
 			 &w,
 			 &d_weight};
 
-	r = cuLaunchKernel(dev->filter,
-			   h, 1, 1,
-			   nOutputPlanes, 1, 1,
-			   sizeof(float) * nInputPlanes * (GPU_BLOCK_SIZE+2) * 3,
-			   dev->stream, args, NULL);
+	if (nInputPlanes == 32) {
+		r = cuLaunchKernel(dev->filter_i32,
+				   h, 1, 1,
+				   nOutputPlanes, 1, 1,
+				   sizeof(float) * nInputPlanes * (GPU_BLOCK_SIZE+2) * 3,
+				   dev->stream, args, NULL);
+	} else if (nInputPlanes == 64) {
+		r = cuLaunchKernel(dev->filter_i64,
+				   h, 1, 1,
+				   nOutputPlanes, 1, 1,
+				   sizeof(float) * nInputPlanes * (GPU_BLOCK_SIZE+2) * 3,
+				   dev->stream, args, NULL);
+	} else if (nInputPlanes == 128) {
+		r = cuLaunchKernel(dev->filter_i128,
+				   h, 1, 1,
+				   nOutputPlanes, 1, 1,
+				   sizeof(float) * nInputPlanes * (GPU_BLOCK_SIZE+2) * 3,
+				   dev->stream, args, NULL);
+	} else {
+		abort();
+	}
 	if (r != CUDA_SUCCESS) {
 		puts("fail: launch");
 		exit(1);

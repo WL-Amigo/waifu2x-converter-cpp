@@ -80,5 +80,5 @@ src/modelHandler_CUDA.ptx: src/modelHandler_CUDA.cu
 %.sass: %.cubin
 	nvdisasm $< > $@
 %.cubin: %.ptx
-	ptxas --gpu-name sm_30 -o $@ $<
+	ptxas -O3 --gpu-name sm_30 -o $@ $<
 
