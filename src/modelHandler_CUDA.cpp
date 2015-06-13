@@ -52,6 +52,7 @@ cudalib_init(void)
 bool
 initCUDA(ComputeEnv *env)
 {
+	return false;
 	if (cudalib_init() < 0) {
 		return false;
 	}
@@ -136,11 +137,13 @@ filter_CUDA_impl(ComputeEnv *env,
 	CUdeviceptr packed_input = packed_input_buf->get_read_ptr_cuda(env, 0);
 	CUdeviceptr packed_output = packed_input_buf->get_write_ptr_cuda(env, 0);
 
+	cuCtxPushCurrent(dev->context);
+
 	CUdeviceptr d_fbiases;
 	size_t bias_size = sizeof(float) * nOutputPlanes;
 	r = cuMemAlloc(&d_fbiases, bias_size);
 	if (r != CUDA_SUCCESS) {
-		puts("fail: alloc bias");
+		printf("fail: alloc bias %d.", (int)r);
 		exit(1);
 	}
 	r = cuMemcpyHtoD(d_fbiases, biases, bias_size);
@@ -177,6 +180,7 @@ filter_CUDA_impl(ComputeEnv *env,
 			 &w,
 			 &d_weight};
 
+	/*
 	r = cuLaunchKernel(dev->filter,
 			   h, 1, 1,
 			   1, 1, 1,
@@ -186,6 +190,7 @@ filter_CUDA_impl(ComputeEnv *env,
 		puts("fail: launch");
 		exit(1);
 	}
+	*/
 
 	r = cuStreamSynchronize(dev->stream);
 	if (r != CUDA_SUCCESS) {
@@ -195,6 +200,9 @@ filter_CUDA_impl(ComputeEnv *env,
 
 	cuMemFree(d_weight);
 	cuMemFree(d_fbiases);
+
+	CUcontext old;
+	cuCtxPopCurrent(&old);
 }
 
 

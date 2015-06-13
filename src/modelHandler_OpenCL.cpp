@@ -78,6 +78,7 @@ cllib_init(void)
         LOAD(clReleaseCommandQueue);
         LOAD(clReleaseContext);
         LOAD(clWaitForEvents);
+        LOAD(clReleaseEvent);
 
         return 0;
 }
@@ -505,6 +506,7 @@ filter_OpenCL_impl(ComputeEnv *env,
 
         clReleaseMemObject(cl_fbiases);
         clReleaseMemObject(cl_weight);
+        clReleaseEvent(event);
 }
 
 }

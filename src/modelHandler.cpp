@@ -95,7 +95,7 @@ bool Model::filter_AVX_OpenCL(ComputeEnv *env,
 			      Buffer *packed_input_buf,
 			      Buffer *packed_output_buf,
 			      cv::Size size,
-			      bool OpenCL)
+			      enum runtype rt)
 {
 	int vec_width;
 	int weight_step;
@@ -121,7 +121,9 @@ bool Model::filter_AVX_OpenCL(ComputeEnv *env,
 		have_fma = true;
 	}
 
-	if (OpenCL) {
+	bool gpu = (rt == RUN_OPENCL) || (rt == RUN_CUDA);
+
+	if (gpu) {
 		weight_step = GPU_VEC_WIDTH;
 		vec_width = GPU_VEC_WIDTH;
 	} else {
@@ -137,7 +139,7 @@ bool Model::filter_AVX_OpenCL(ComputeEnv *env,
 	}
 
 	if (nOutputPlanes == 1) {
-		if (OpenCL) {
+		if (gpu) {
 			for (int ii=0; ii<nInputPlanes; ii++) {
 				cv::Mat &wm = weights[ii];
 				const float *src0 = (float*)wm.ptr(0);
@@ -181,7 +183,7 @@ bool Model::filter_AVX_OpenCL(ComputeEnv *env,
 				dst[8 * vec_width] = src2[2];
 			}
 		}
-	} else if (OpenCL && nInputPlanes == 1) {
+	} else if (gpu && nInputPlanes == 1) {
 		for (int oi=0; oi<nOutputPlanes; oi++) {
 			cv::Mat &wm = weights[oi];
 			const float *src0 = (float*)wm.ptr(0);
@@ -247,10 +249,14 @@ bool Model::filter_AVX_OpenCL(ComputeEnv *env,
 		/* 3x3 = 9 fma */
 		double ops = size.width * size.height * 9.0 * 2.0 * nOutputPlanes * nInputPlanes;
 		std::vector<cv::Mat> output2;
-		if (OpenCL) {
+		if (rt == RUN_OPENCL) {
 			filter_OpenCL_impl(env, packed_input_buf, packed_output_buf,
 					   nInputPlanes, nOutputPlanes, fbiases_flat, weight_flat,
 					   size.width, size.height, nJob);
+		} else if (rt == RUN_CUDA) {
+			filter_CUDA_impl(env, packed_input_buf, packed_output_buf,
+					 nInputPlanes, nOutputPlanes, fbiases_flat, weight_flat,
+					 size.width, size.height, nJob);
 		} else {
 			const float *packed_input = (float*)packed_input_buf->get_read_ptr_host(env);
 			float *packed_output = (float*)packed_output_buf->get_write_ptr_host(env);
@@ -308,11 +314,16 @@ bool Model::filter_AVX_OpenCL(ComputeEnv *env,
 
 		delete packed_output_cv_buf;
 	} else {
-		if (OpenCL) {
+		if (rt == RUN_OPENCL) {
 			filter_OpenCL_impl(env,
 					   packed_input_buf, packed_output_buf,
 					   nInputPlanes, nOutputPlanes, fbiases_flat, weight_flat,
 					   size.width, size.height, nJob);
+		} else if (rt == RUN_CUDA) {
+			filter_CUDA_impl(env,
+					 packed_input_buf, packed_output_buf,
+					 nInputPlanes, nOutputPlanes, fbiases_flat, weight_flat,
+					 size.width, size.height, nJob);
 		} else {
 			if (!have_avx) {
 				filter_CV(env, packed_input_buf, packed_output_buf, size);
@@ -348,12 +359,14 @@ bool Model::filter(ComputeEnv *env,
 	bool ret;
 
 	bool avx_available = true;
-	bool gpu_available = env->num_cl_dev > 0;
+	bool cl_available = env->num_cl_dev > 0;
+	bool cuda_available = env->num_cuda_dev > 0;
 
 	//printf("%d->%d\n", nInputPlanes, nOutputPlanes);
 
 	if (nOutputPlanes > GPU_VEC_WIDTH && nOutputPlanes % GPU_VEC_WIDTH) {
-		gpu_available = false;
+		cl_available = false;
+		cuda_available = false;
 	}
 
 	if (nOutputPlanes == 1 || (nInputPlanes & 1)) {
@@ -362,8 +375,10 @@ bool Model::filter(ComputeEnv *env,
 		} else if (nOutputPlanes == 1 && nInputPlanes == 128) {
 			/* out1 filter */
 		} else {
-			gpu_available = false;
+			cl_available = false;
 		}
+
+		cuda_available = false;
 	}
 
 	if (nOutputPlanes % (VEC_WIDTH*UNROLL)) {
@@ -380,10 +395,14 @@ bool Model::filter(ComputeEnv *env,
 		avx_available = false;
 	}
 
-	if (gpu_available) {
-		ret = filter_AVX_OpenCL(env, packed_input_buf, packed_output_buf, size, true);
+	if (cuda_available) {
+		puts("cuda");
+		ret = filter_AVX_OpenCL(env, packed_input_buf, packed_output_buf, size, RUN_CUDA);
+	} else if (cl_available) {
+		puts("cl");
+		ret = filter_AVX_OpenCL(env, packed_input_buf, packed_output_buf, size, RUN_OPENCL);
 	} else if (avx_available) {
-		ret = filter_AVX_OpenCL(env, packed_input_buf, packed_output_buf, size, false);
+		ret = filter_AVX_OpenCL(env, packed_input_buf, packed_output_buf, size, RUN_CPU);
 	} else {
 		ret = filter_CV(env, packed_input_buf, packed_output_buf, size);
 	}

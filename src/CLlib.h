@@ -222,6 +222,9 @@ CLLIB_EXTERN CL_API_ENTRY cl_int CL_API_CALL
 #define clWaitForEvents p_clWaitForEvents
 
 
+CLLIB_EXTERN CL_API_ENTRY cl_int CL_API_CALL
+(*p_clReleaseEvent)(cl_event /* event */) CL_API_SUFFIX__VERSION_1_0;
+#define clReleaseEvent p_clReleaseEvent
 
 #ifdef __cplusplus
 }

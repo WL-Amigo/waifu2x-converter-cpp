@@ -48,12 +48,17 @@ private:
 		       Buffer *packed_input,
 		       Buffer *packed_output,
 		       cv::Size size);
+	enum runtype {
+		RUN_CUDA,
+		RUN_OPENCL,
+		RUN_CPU
+	};
 
 	bool filter_AVX_OpenCL(ComputeEnv *env,
 			       Buffer *packed_input,
                                Buffer *packed_output,
                                cv::Size size,
-                               bool OpenCL);
+			       enum runtype rt);
 
 public:
 	// ctor and dtor

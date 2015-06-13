@@ -15,8 +15,8 @@ src/modelHandler_OpenCL.cpp: src/modelHandler_OpenCL.cl.h
 waifu2x-converter-cpp: $(OBJS)
 	g++ $(LDFLAGS) -o $@ $^ $(LDLIBS)
 
-#INPUT=./a.png
-INPUT=./b.png
+INPUT=./a.png
+#INPUT=./b.png
 #INPUT=./c.png
 #INPUT=./d.png
 #INPUT=./e.png
