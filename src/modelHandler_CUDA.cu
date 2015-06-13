@@ -465,3 +465,164 @@ filter_i128(const float * __restrict__ packed_input,
 {
 	filter<128>(packed_input, packed_output, nOutputPlanes, biases, hsz, wsz, weight);
 }
+
+static __device__ float
+warp_sum(float v) {
+    v += __shfl_down(v, 1);
+    v += __shfl_down(v, 2);
+    v += __shfl_down(v, 4);
+    v += __shfl_down(v, 8);
+    v += __shfl_down(v, 16);
+
+    return v;
+}
+
+extern "C" __global__ void
+filter_i128_o128(const float * __restrict__ packed_input,
+		 float * __restrict__ packed_output,
+		 const float * __restrict__ biases,
+		 unsigned int hsz,
+		 unsigned int wsz,
+		 const float * __restrict__ weight)
+{
+	int nInputPlanes = 128;
+	int nOutputPlanes = 128;
+
+	/* 1024 thread
+	 *  128 input plane x 32 output plane / block  (147KB regs)
+	 *   4  input plane                   / thread (36 regs), 1output plane = 32thread
+	 *
+	 * block  [yi       , op32(0-3) ]
+	 * thread [op1(0-31), ip(0-31)  ] (1024thread)
+	 *
+	 * op       = op32*32 + op1
+	 * ip       = (ip*4+0, ip*4+1, ip*4+2, ip*4+3)
+	 */
+	int yi = blockIdx.y;
+	int op32 = blockIdx.x;
+	int op1 = threadIdx.y;
+	int ip0 = threadIdx.x*32;
+
+	int op = op32 * 32 + op1;
+
+	float w000 = weight[(ip0*128 + op)*9 + 0];
+	float w001 = weight[(ip0*128 + op)*9 + 1];
+	float w002 = weight[(ip0*128 + op)*9 + 2];
+	float w010 = weight[(ip0*128 + op)*9 + 3];
+	float w011 = weight[(ip0*128 + op)*9 + 4];
+	float w012 = weight[(ip0*128 + op)*9 + 5];
+	float w020 = weight[(ip0*128 + op)*9 + 6];
+	float w021 = weight[(ip0*128 + op)*9 + 7];
+	float w022 = weight[(ip0*128 + op)*9 + 8];
+
+	float w100 = weight[((ip0+1)*128 + op)*9 + 0];
+	float w101 = weight[((ip0+1)*128 + op)*9 + 1];
+	float w102 = weight[((ip0+1)*128 + op)*9 + 2];
+	float w110 = weight[((ip0+1)*128 + op)*9 + 3];
+	float w111 = weight[((ip0+1)*128 + op)*9 + 4];
+	float w112 = weight[((ip0+1)*128 + op)*9 + 5];
+	float w120 = weight[((ip0+1)*128 + op)*9 + 6];
+	float w121 = weight[((ip0+1)*128 + op)*9 + 7];
+	float w122 = weight[((ip0+1)*128 + op)*9 + 8];
+
+	float w200 = weight[((ip0+2)*128 + op)*9 + 0];
+	float w201 = weight[((ip0+2)*128 + op)*9 + 1];
+	float w202 = weight[((ip0+2)*128 + op)*9 + 2];
+	float w210 = weight[((ip0+2)*128 + op)*9 + 3];
+	float w211 = weight[((ip0+2)*128 + op)*9 + 4];
+	float w212 = weight[((ip0+2)*128 + op)*9 + 5];
+	float w220 = weight[((ip0+2)*128 + op)*9 + 6];
+	float w221 = weight[((ip0+2)*128 + op)*9 + 7];
+	float w222 = weight[((ip0+2)*128 + op)*9 + 8];
+
+	float w300 = weight[((ip0+3)*128 + op)*9 + 0];
+	float w301 = weight[((ip0+3)*128 + op)*9 + 1];
+	float w302 = weight[((ip0+3)*128 + op)*9 + 2];
+	float w310 = weight[((ip0+3)*128 + op)*9 + 3];
+	float w311 = weight[((ip0+3)*128 + op)*9 + 4];
+	float w312 = weight[((ip0+3)*128 + op)*9 + 5];
+	float w320 = weight[((ip0+3)*128 + op)*9 + 6];
+	float w321 = weight[((ip0+3)*128 + op)*9 + 7];
+	float w322 = weight[((ip0+3)*128 + op)*9 + 8];
+
+	__shared__ float intermediate0[1024];
+	__shared__ float intermediate1[1024];
+	__shared__ float intermediate2[1024];
+	__shared__ float intermediate3[1024];
+
+	size_t in_step = wsz * nInputPlanes;
+	const float *inp = packed_input;
+	inp += yi * in_step;
+
+	const float *in0p = inp - in_step;
+	if (yi == 0) {
+		in0p = inp;
+	}
+	const float *in1p = inp;
+
+	const float *in2p = inp + in_step;
+	if (yi == hsz-1) {
+		in2p = in1p;
+	}
+
+	const float *in01 = in0p;
+	const float *in11 = in1p;
+	const float *in21 = in2p;
+
+	for (int xi=0; xi<wsz; xi++) {
+		float sum = 0;
+#define CONVOLVE(I) {							\
+			float v00, v01, v02;				\
+			float v10, v11, v12;				\
+			float v20, v21, v22;				\
+									\
+			v01 = in0p[xi*nInputPlanes + ip0 + I];		\
+			v11 = in0p[xi*nInputPlanes + ip0 + I];		\
+			v21 = in0p[xi*nInputPlanes + ip0 + I];		\
+									\
+			if (xi == 0) {					\
+				v00 = v01;				\
+				v10 = v11;				\
+				v20 = v21;				\
+			} else {					\
+				v01 = in0p[(xi-1)*nInputPlanes + ip0 + I]; \
+				v11 = in0p[(xi-1)*nInputPlanes + ip0 + I]; \
+				v21 = in0p[(xi-1)*nInputPlanes + ip0 + I]; \
+			}						\
+									\
+			if (xi == wsz-1) {				\
+				v02 = v01;				\
+				v12 = v11;				\
+				v22 = v21;				\
+			} else {					\
+				v02 = in0p[(xi+1)*nInputPlanes + ip0 + I]; \
+				v12 = in0p[(xi+1)*nInputPlanes + ip0 + I]; \
+				v22 = in0p[(xi+1)*nInputPlanes + ip0 + I]; \
+			}						\
+									\
+			sum += w##I##00 * v00;				\
+			sum += w##I##01 * v01;				\
+			sum += w##I##02 * v02;				\
+									\
+			sum += w##I##10 * v10;				\
+			sum += w##I##11 * v11;				\
+			sum += w##I##12 * v12;				\
+									\
+			sum += w##I##20 * v20;				\
+			sum += w##I##21 * v21;				\
+			sum += w##I##22 * v22;				\
+		}
+
+		CONVOLVE(0);
+		CONVOLVE(1);
+		CONVOLVE(2);
+		CONVOLVE(3);
+
+		sum = warp_sum(sum);
+
+		if (ip0 == 0) {
+			float *out = packed_output + (yi*wsz + xi)*nOutputPlanes;
+			out[op] = sum;
+		}
+	}
+}
