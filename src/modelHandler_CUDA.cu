@@ -10,6 +10,8 @@ filter(const float * __restrict__ packed_input,
        unsigned int wsz,
        const float * __restrict__ weight)
 {
+	extern __shared__ float shared_buf[];
+
 	unsigned int yi = blockIdx.x;
 
 	size_t in_step = wsz * nInputPlanes;
@@ -32,7 +34,9 @@ filter(const float * __restrict__ packed_input,
 	const float *in21 = in2p;
 
 	for (int xi=0; xi<wsz; xi++) {
-		for (unsigned int op=0; op<nOutputPlanes; op++) {
+		/*for (unsigned int op=0; op<nOutputPlanes; op++) thread */
+		{
+			int op = threadIdx.x;
 			float sum=0;
 			for (unsigned int ip=0; ip<nInputPlanes; ip++) {
 				float i00, i01, i02;

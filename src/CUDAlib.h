@@ -15,6 +15,14 @@ typedef uintptr_t CUdeviceptr;
 typedef enum cudaError_enum {
     CUDA_SUCCESS = 0
 } CUresult;
+
+typedef enum CUfunc_cache_enum {
+    CU_FUNC_CACHE_PREFER_NONE = 0,
+    CU_FUNC_CACHE_PREFER_SHARED = 1,
+    CU_FUNC_CACHE_PREFER_L1 = 2,
+    CU_FUNC_CACHE_PREFER_EQUAL = 3
+} CUfunc_cache;
+
 typedef int CUdevice;
 
 typedef struct CUctx_st *CUcontext;
@@ -48,6 +56,7 @@ typedef CUresult (* CUDAAPI tcuLaunchKernel)(CUfunction f,
                                              unsigned int blockDimX, unsigned int blockDimY, unsigned int blockDimZ,
                                              unsigned int sharedMemBytes,
                                              CUstream str, void **kernelParams, void **extra);
+typedef CUresult (* CUDAAPI tcuCtxSetCacheConfig)(CUfunc_cache c);
 
 #define FOR_EACH_CUDA_FUNC(F,F_V2)              \
     F(cuInit)                                   \
@@ -69,7 +78,8 @@ typedef CUresult (* CUDAAPI tcuLaunchKernel)(CUfunction f,
     F(cuStreamSynchronize)                           \
     F_V2(cuCtxPushCurrent)                           \
     F_V2(cuCtxPopCurrent)                            \
-    F(cuLaunchKernel)
+    F(cuLaunchKernel)                                \
+    F(cuCtxSetCacheConfig)
 
 
 #define CUDA_PROTOTYPE(name)                    \

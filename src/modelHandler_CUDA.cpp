@@ -114,6 +114,8 @@ initCUDA(ComputeEnv *env)
 	cuDeviceGetName(name, sizeof(name), dev);
 	printf("CUDA : %s\n", name);
 
+	cuCtxSetCacheConfig(CU_FUNC_CACHE_PREFER_SHARED);
+
 	env->num_cuda_dev = 1;
 	env->cuda_dev_list = new CUDADev[1];
 	env->cuda_dev_list[0].dev = dev;
@@ -159,7 +161,7 @@ filter_CUDA_impl(ComputeEnv *env,
 	}
 	CUdeviceptr d_weight = 0;
 	size_t weight_size = sizeof(float) * 128 * nInputPlanes * 9;
-	r = cuMemAlloc(&d_weight, weight_size);;
+	r = cuMemAlloc(&d_weight, weight_size);
 	if (r != CUDA_SUCCESS) {
 		puts("fail: alloc weight");
 		exit(1);
@@ -176,10 +178,6 @@ filter_CUDA_impl(ComputeEnv *env,
 	size_t h = ip_height;
 	size_t w = ip_width;
 
-	unsigned char *zero = (unsigned char*)malloc(nOutputPlanes * w * h * sizeof(float));
-	memset(zero, 0, nOutputPlanes * w * h * sizeof(float));
-	cuMemcpyHtoD(packed_output, zero, nOutputPlanes * w * h * sizeof(float));
-
 	void *args[8] = {&packed_input,
 			 &nInputPlanes2,
 			 &packed_output,
@@ -191,7 +189,7 @@ filter_CUDA_impl(ComputeEnv *env,
 
 	r = cuLaunchKernel(dev->filter,
 			   h, 1, 1,
-			   1, 1, 1,
+			   nOutputPlanes, 1, 1,
 			   0,
 			   dev->stream, args, NULL);
 	if (r != CUDA_SUCCESS) {
