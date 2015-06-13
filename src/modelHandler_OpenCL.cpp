@@ -7,10 +7,13 @@
 #include <libgen.h>
 #include <sys/stat.h>
 #endif
-#include "modelHandler.hpp"
-#include "common.hpp"
+#include <vector>
+#include <stdio.h>
+#include <string>
+#include "filters.hpp"
 #include "sec.hpp"
 #include "CLlib.h"
+#include "params.h"
 
 static const char prog[] = 
 #include "modelHandler_OpenCL.cl.h"
@@ -396,11 +399,10 @@ filter_OpenCL_impl(ComputeEnv *env,
                    int nOutputPlanes,
                    const float *fbiases,
                    const float *weight,
-                   cv::Size ipSize,
+                   int w,
+                   int h,
                    int nJob)
 {
-        int w = ipSize.width;
-        int h = ipSize.height;
         cl_int err;
 
         OpenCLDev *dev = &env->cl_dev_list[0];

@@ -1,16 +1,9 @@
 #ifndef COMMON_HPP
 #define COMMON_HPP
 
-#ifdef __GNUC__
-#define UNUSED __attribute__((unused))
-#else
-#define UNUSED
-#endif
-
-#define VEC_WIDTH 8U
-#define UNROLL 2U
-#define GPU_VEC_WIDTH 128
-#define GPU_BLOCK_SIZE 8
+#include <opencv2/opencv.hpp>
+#include <vector>
+#include "compiler.h"
 
 #define ALIGN_UP(v,a) (((v+(a-1))/(a))*(a))
 

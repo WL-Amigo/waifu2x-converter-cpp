@@ -1,7 +1,6 @@
-#include "common.hpp"
-
 #ifdef _WIN32
 #include <windows.h>
+#include "compiler.h"
 
 static double UNUSED
 getsec(void)

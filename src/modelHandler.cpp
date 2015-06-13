@@ -20,6 +20,8 @@
 #include "sec.hpp"
 #include "threadPool.hpp"
 #include "common.hpp"
+#include "filters.hpp"
+#include "params.h"
 
 namespace w2xc {
 
@@ -98,7 +100,7 @@ bool Model::filter_AVX_OpenCL(ComputeEnv *env,
 	int vec_width;
 	int weight_step;
 	unsigned int eax=0, ebx=0, ecx=0, edx=0;
-	bool have_fma = false;
+	bool have_fma = false, have_avx = false;
 	int nJob = modelUtility::getInstance().getNumberOfJobs();
 
 #ifdef __GNUC__
@@ -111,6 +113,9 @@ bool Model::filter_AVX_OpenCL(ComputeEnv *env,
 	ecx = cpuInfo[2];
 	edx = cpuInfo[3];
 #endif
+	if ((ecx & 0x18000000) == 0x18000000) {
+		have_avx = true;
+	}
 
 	if (ecx & (1<<12)) {
 		have_fma = true;
@@ -244,17 +249,20 @@ bool Model::filter_AVX_OpenCL(ComputeEnv *env,
 		std::vector<cv::Mat> output2;
 		if (OpenCL) {
 			filter_OpenCL_impl(env, packed_input_buf, packed_output_buf,
-					   nInputPlanes, nOutputPlanes, fbiases_flat, weight_flat, size, nJob);
+					   nInputPlanes, nOutputPlanes, fbiases_flat, weight_flat,
+					   size.width, size.height, nJob);
 		} else {
 			const float *packed_input = (float*)packed_input_buf->get_read_ptr_host(env);
 			float *packed_output = (float*)packed_output_buf->get_write_ptr_host(env);
 
 			if (have_fma) {
 				filter_FMA_impl(packed_input, packed_output,
-						nInputPlanes, nOutputPlanes, fbiases_flat, weight_flat, size, nJob);
+						nInputPlanes, nOutputPlanes, fbiases_flat, weight_flat,
+						size.width, size.height, nJob);
 			} else {
 				filter_AVX_impl(packed_input, packed_output,
-						nInputPlanes, nOutputPlanes, fbiases_flat, weight_flat, size, nJob);
+						nInputPlanes, nOutputPlanes, fbiases_flat, weight_flat,
+						size.width, size.height, nJob);
 			}
 		}
 
@@ -303,17 +311,24 @@ bool Model::filter_AVX_OpenCL(ComputeEnv *env,
 		if (OpenCL) {
 			filter_OpenCL_impl(env,
 					   packed_input_buf, packed_output_buf,
-					   nInputPlanes, nOutputPlanes, fbiases_flat, weight_flat, size, nJob);
+					   nInputPlanes, nOutputPlanes, fbiases_flat, weight_flat,
+					   size.width, size.height, nJob);
 		} else {
-			const float *packed_input = (float*)packed_input_buf->get_read_ptr_host(env);
-			float *packed_output = (float*)packed_output_buf->get_write_ptr_host(env);
-
-			if (have_fma) {
-				filter_FMA_impl(packed_input, packed_output,
-						nInputPlanes, nOutputPlanes, fbiases_flat, weight_flat, size, nJob);
+			if (!have_avx) {
+				filter_CV(env, packed_input_buf, packed_output_buf, size);
 			} else {
-				filter_AVX_impl(packed_input, packed_output,
-						nInputPlanes, nOutputPlanes, fbiases_flat, weight_flat, size, nJob);
+				const float *packed_input = (float*)packed_input_buf->get_read_ptr_host(env);
+				float *packed_output = (float*)packed_output_buf->get_write_ptr_host(env);
+
+				if (have_fma) {
+					filter_FMA_impl(packed_input, packed_output,
+							nInputPlanes, nOutputPlanes, fbiases_flat, weight_flat,
+							size.width, size.height, nJob);
+				} else if (have_avx) {
+					filter_AVX_impl(packed_input, packed_output,
+							nInputPlanes, nOutputPlanes, fbiases_flat, weight_flat,
+							size.width, size.height, nJob);
+				}
 			}
 		}
 	}

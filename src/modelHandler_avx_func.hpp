@@ -1,4 +1,5 @@
 #include "threadPool.hpp"
+#include "params.h"
 
 #define BLOCK_SIZE_HOR 256
 #define BLOCK_SIZE_VER 16
@@ -379,17 +380,16 @@ filter_AVX_impl0(const float *packed_input,
 		 int nOutputPlanes,
 		 const float *fbiases,
 		 const float *weight,
-		 cv::Size ipSize,
+		 int ip_width,
+		 int ip_height,
 		 int nJob)
 {
-	unsigned int wsz = ipSize.width;
-	unsigned int hsz = ipSize.height;
+	unsigned int wsz = ip_width;
+	unsigned int hsz = ip_height;
 
 	// filter processing
 	// input : inputPlanes
 	// kernel : weightMatrices
-
-	std::vector<std::thread> workerThreads;
 
 	unsigned int num_block_hor = CEIL_DIV(wsz, BLOCK_SIZE_HOR);
 	unsigned int num_block_ver = CEIL_DIV(hsz, BLOCK_SIZE_VER);

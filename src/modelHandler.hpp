@@ -23,34 +23,6 @@ namespace w2xc {
 
 bool initOpenCL(ComputeEnv *env);
 
-extern void filter_AVX_impl(const float *packed_input,
-			    float *packed_output,
-			    int nInputPlanes,
-			    int nOutputPlanes,
-                            const float *biases,
-                            const float *weight,
-			    cv::Size ipSize,
-			    int nJob);
-
-extern void filter_FMA_impl(const float *packed_input,
-			    float *packed_output,
-			    int nInputPlanes,
-			    int nOutputPlanes,
-                            const float *biases,
-                            const float *weight,
-			    cv::Size ipSize,
-			    int nJob);
-
-extern void filter_OpenCL_impl(ComputeEnv *env,
-			       Buffer *packed_input,
-                               Buffer *packed_output,
-                               int nInputPlanes,
-                               int nOutputPlanes,
-                               const float *biases,
-                               const float *weight,
-                               cv::Size ipSize,
-                               int nJob);
-
 class Model {
 
 private:
@@ -148,7 +120,7 @@ private:
 	int nJob;
 	cv::Size blockSplittingSize;
 	modelUtility() :
-		nJob(4), blockSplittingSize(2048,2048) {
+		nJob(4), blockSplittingSize(1024,1024) {
 	}
 	;
 

@@ -1,8 +1,7 @@
 #include <thread>
 #include <immintrin.h>
 #include <atomic>
-#include "modelHandler.hpp"
-#include "common.hpp"
+#include "filters.hpp"
 #include "sec.hpp"
 
 #define HAVE_FMA
@@ -17,7 +16,8 @@ filter_FMA_impl(const float *packed_input,
 		int nOutputPlanes,
 		const float *fbiases,
 		const float *weight,
-		cv::Size ipSize,
+		int ip_width,
+		int ip_height,
 		int nJob)
 {
 	filter_AVX_impl0<true>(packed_input,
@@ -26,7 +26,8 @@ filter_FMA_impl(const float *packed_input,
 			       nOutputPlanes,
 			       fbiases,
 			       weight,
-			       ipSize,
+			       ip_width,
+			       ip_height,
 			       nJob);
 }
 
