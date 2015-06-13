@@ -23,6 +23,12 @@ typedef enum CUfunc_cache_enum {
     CU_FUNC_CACHE_PREFER_EQUAL = 3
 } CUfunc_cache;
 
+typedef enum CUsharedconfig_enum {
+    CU_SHARED_MEM_CONFIG_DEFAULT_BANK_SIZE = 0,
+    CU_SHARED_MEM_CONFIG_FOUR_BYTE_BANK_SIZE = 1,
+    CU_SHARED_MEM_CONFIG_EIGHT_BYTE_BANK_SIZE = 2
+} CUsharedconfig;
+
 typedef int CUdevice;
 
 typedef struct CUctx_st *CUcontext;
@@ -57,6 +63,7 @@ typedef CUresult (* CUDAAPI tcuLaunchKernel)(CUfunction f,
                                              unsigned int sharedMemBytes,
                                              CUstream str, void **kernelParams, void **extra);
 typedef CUresult (* CUDAAPI tcuCtxSetCacheConfig)(CUfunc_cache c);
+typedef CUresult (* CUDAAPI tcuFuncSetSharedMemConfig)(CUfunction func, CUsharedconfig config);
 
 #define FOR_EACH_CUDA_FUNC(F,F_V2)              \
     F(cuInit)                                   \
@@ -79,7 +86,8 @@ typedef CUresult (* CUDAAPI tcuCtxSetCacheConfig)(CUfunc_cache c);
     F_V2(cuCtxPushCurrent)                           \
     F_V2(cuCtxPopCurrent)                            \
     F(cuLaunchKernel)                                \
-    F(cuCtxSetCacheConfig)
+    F(cuCtxSetCacheConfig)                           \
+    F(cuFuncSetSharedMemConfig)
 
 
 #define CUDA_PROTOTYPE(name)                    \

@@ -1,5 +1,6 @@
 all: waifu2x-converter-cpp 
 isa: filter-Spectre.isa filter_in1_out32-Spectre.isa filter_in128_out1-Spectre.isa
+sass: src/modelHandler_CUDA.sass
 
 OPENCV=/usr
 
@@ -32,6 +33,9 @@ run: waifu2x-converter-cpp
 
 run8: waifu2x-converter-cpp
 	perf stat ./waifu2x-converter-cpp -j 8 -i $(INPUT) --model_dir models
+
+run8d: waifu2x-converter-cpp
+	perf stat ./waifu2x-converter-cpp -j 8 -i $(INPUT) --model_dir models --disable-gpu
 
 run8r: waifu2x-converter-cpp
 	perf record ./waifu2x-converter-cpp -j 8 -i $(INPUT) --model_dir models
@@ -71,4 +75,10 @@ src/modelHandler_CUDA.ptx.h: src/modelHandler_CUDA.ptx
 	./conv $< $@ str
 
 src/modelHandler_CUDA.ptx: src/modelHandler_CUDA.cu
-	nvcc -ccbin /usr/bin/gcc-4.7 -m64 -ptx -o $@ $< -O2
+	nvcc -use_fast_math -arch=sm_30 -ccbin /usr/bin/gcc-4.7 -m64 -ptx -o $@ $< -O2
+
+%.sass: %.cubin
+	nvdisasm $< > $@
+%.cubin: %.ptx
+	ptxas --gpu-name sm_30 -o $@ $<
+
