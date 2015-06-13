@@ -1,5 +1,173 @@
 /* -*- mode: c++ -*- */
 
+#define UNROLL9(F)				\
+	F(0);					\
+	F(1);					\
+	F(2);					\
+	F(3);					\
+	F(4);					\
+	F(5);					\
+	F(6);					\
+	F(7);					\
+	F(8);					\
+
+
+#define UNROLL8x3x3(F)				\
+	F(0,0,0);				\
+	F(0,0,1);				\
+	F(0,0,2);				\
+	F(0,1,0);				\
+	F(0,1,1);				\
+	F(0,1,2);				\
+	F(0,2,0);				\
+	F(0,2,1);				\
+	F(0,2,2);				\
+						\
+	F(1,0,0);				\
+	F(1,0,1);				\
+	F(1,0,2);				\
+	F(1,1,0);				\
+	F(1,1,1);				\
+	F(1,1,2);				\
+	F(1,2,0);				\
+	F(1,2,1);				\
+	F(1,2,2);				\
+						\
+	F(2,0,0);				\
+	F(2,0,1);				\
+	F(2,0,2);				\
+	F(2,1,0);				\
+	F(2,1,1);				\
+	F(2,1,2);				\
+	F(2,2,0);				\
+	F(2,2,1);				\
+	F(2,2,2);				\
+						\
+	F(3,0,0);				\
+	F(3,0,1);				\
+	F(3,0,2);				\
+	F(3,1,0);				\
+	F(3,1,1);				\
+	F(3,1,2);				\
+	F(3,2,0);				\
+	F(3,2,1);				\
+	F(3,2,2);				\
+						\
+	F(4,0,0);				\
+	F(4,0,1);				\
+	F(4,0,2);				\
+	F(4,1,0);				\
+	F(4,1,1);				\
+	F(4,1,2);				\
+	F(4,2,0);				\
+	F(4,2,1);				\
+	F(4,2,2);				\
+						\
+	F(5,0,0);				\
+	F(5,0,1);				\
+	F(5,0,2);				\
+	F(5,1,0);				\
+	F(5,1,1);				\
+	F(5,1,2);				\
+	F(5,2,0);				\
+	F(5,2,1);				\
+	F(5,2,2);				\
+						\
+	F(6,0,0);				\
+	F(6,0,1);				\
+	F(6,0,2);				\
+	F(6,1,0);				\
+	F(6,1,1);				\
+	F(6,1,2);				\
+	F(6,2,0);				\
+	F(6,2,1);				\
+	F(6,2,2);				\
+						\
+	F(7,0,0);				\
+	F(7,0,1);				\
+	F(7,0,2);				\
+	F(7,1,0);				\
+	F(7,1,1);				\
+	F(7,1,2);				\
+	F(7,2,0);				\
+	F(7,2,1);				\
+	F(7,2,2);				\
+
+#define UNROLL8(F)				\
+	F(0);					\
+	F(1);					\
+	F(2);					\
+	F(3);					\
+	F(4);					\
+	F(5);					\
+	F(6);					\
+	F(7);					\
+
+
+#define UNROLL8x3(F)				\
+	F(0,0);					\
+	F(0,1);					\
+	F(0,2);					\
+	F(0,3);					\
+	F(0,4);					\
+	F(0,5);					\
+	F(0,6);					\
+	F(0,7);					\
+						\
+	F(1,0);					\
+	F(1,1);					\
+	F(1,2);					\
+	F(1,3);					\
+	F(1,4);					\
+	F(1,5);					\
+	F(1,6);					\
+	F(1,7);					\
+						\
+	F(2,0);					\
+	F(2,1);					\
+	F(2,2);					\
+	F(2,3);					\
+	F(2,4);					\
+	F(2,5);					\
+	F(2,6);					\
+	F(2,7);					\
+
+
+#define UNROLL10x3(F)				\
+	F(0,0);					\
+	F(0,1);					\
+	F(0,2);					\
+	F(0,3);					\
+	F(0,4);					\
+	F(0,5);					\
+	F(0,6);					\
+	F(0,7);					\
+	F(0,8);					\
+	F(0,9);					\
+						\
+	F(1,0);					\
+	F(1,1);					\
+	F(1,2);					\
+	F(1,3);					\
+	F(1,4);					\
+	F(1,5);					\
+	F(1,6);					\
+	F(1,7);					\
+	F(1,8);					\
+	F(1,9);					\
+						\
+	F(2,0);					\
+	F(2,1);					\
+	F(2,2);					\
+	F(2,3);					\
+	F(2,4);					\
+	F(2,5);					\
+	F(2,6);					\
+	F(2,7);					\
+	F(2,8);					\
+	F(2,9);					\
+
+
 #define BLOCK_SIZE 8
 
 extern "C" __global__ void
@@ -98,7 +266,111 @@ filter(const float * __restrict__ packed_input,
 			}
 			__syncthreads();
 
-			if (0 && rem >= BLOCK_SIZE) {
+			if (rem >= BLOCK_SIZE) {
+#define DECL_PTR(y,x)		float *p##y##x = &in_block##y[nInputPlanes * (x-1)];
+
+				UNROLL10x3(DECL_PTR);
+
+				float sum0 = 0;
+				float sum1 = 0;
+				float sum2 = 0;
+				float sum3 = 0;
+
+				float sum4 = 0;
+				float sum5 = 0;
+				float sum6 = 0;
+				float sum7 = 0;
+
+				{
+					const float *w0 = weight + lid;
+
+					for (int ip = 0; ip < nInputPlanes; ip++) {
+#define LOAD_INPUT2(y,x)			float2 i##y##x##_2 = *(float2*)&p##y##x[ip];
+
+						UNROLL10x3(LOAD_INPUT2);
+
+#define LOAD_COEF(X)				float w_##X = w[X * 128];
+
+#define CALC(IDX,Y,I0,I1,I2,I3,I4,I5,I6,I7)				\
+						sum0 += w_##IDX * i##Y##I0; \
+						sum1 += w_##IDX * i##Y##I1; \
+						sum2 += w_##IDX * i##Y##I2; \
+						sum3 += w_##IDX * i##Y##I3; \
+						sum4 += w_##IDX * i##Y##I4; \
+						sum5 += w_##IDX * i##Y##I5; \
+						sum6 += w_##IDX * i##Y##I6; \
+						sum7 += w_##IDX * i##Y##I7;
+
+
+						{
+#define LOAD_INPUT1X(Y,X)				float i##Y##X = i##Y##X##_2.x;
+
+							UNROLL10x3(LOAD_INPUT1X);
+
+							const float *w = (w0 + (ip * 128) * 9);
+							UNROLL9(LOAD_COEF);
+
+							{
+								CALC(0,0,0,1,2,3,4,5,6,7);
+								CALC(1,0,1,2,3,4,5,6,7,8);
+								CALC(2,0,2,3,4,5,6,7,8,9);
+
+								CALC(3,1,0,1,2,3,4,5,6,7);
+								CALC(4,1,1,2,3,4,5,6,7,8);
+								CALC(5,1,2,3,4,5,6,7,8,9);
+
+								CALC(6,2,0,1,2,3,4,5,6,7);
+								CALC(7,2,1,2,3,4,5,6,7,8);
+								CALC(8,2,2,3,4,5,6,7,8,9);
+							}
+						}
+
+						ip++;
+						{
+#define LOAD_INPUT1Y(Y,X)				float i##Y##X = i##Y##X##_2.y;
+
+							UNROLL10x3(LOAD_INPUT1Y);
+
+							const float *w = (w0 + (ip * 128) * 9);
+							UNROLL9(LOAD_COEF);
+
+							{
+								CALC(0,0,0,1,2,3,4,5,6,7);
+								CALC(1,0,1,2,3,4,5,6,7,8);
+								CALC(2,0,2,3,4,5,6,7,8,9);
+
+								CALC(3,1,0,1,2,3,4,5,6,7);
+								CALC(4,1,1,2,3,4,5,6,7,8);
+								CALC(5,1,2,3,4,5,6,7,8,9);
+
+								CALC(6,2,0,1,2,3,4,5,6,7);
+								CALC(7,2,1,2,3,4,5,6,7,8);
+								CALC(8,2,2,3,4,5,6,7,8,9);
+							}
+						}
+
+					}
+
+#define RELU(BI)							\
+					{				\
+						float *out = packed_output + (yi*wsz + (xi0+BI))*nOutputPlanes; \
+									\
+						{			\
+							int opIndex = lid; \
+							float v = sum##BI; \
+							v += bv;	\
+									\
+							float mtz = max(v, 0.0f); \
+							float ltz = min(v, 0.0f); \
+									\
+							v = ltz * 0.1f + mtz; \
+									\
+							out[opIndex] = v; \
+						}			\
+					}
+
+					UNROLL8(RELU);
+				}
 			} else {
 				for (int bi=0; bi<BLOCK_SIZE; bi++) {
 					int xi = xi0+bi;
@@ -106,7 +378,6 @@ filter(const float * __restrict__ packed_input,
 						break;
 					}
 
-#if 1
 					const float *w0 = weight + lid;
 					float sum = 0;
 
@@ -128,19 +399,6 @@ filter(const float * __restrict__ packed_input,
 						i22 = in_block2[(bi+1)*nInputPlanes+ip];
 
 						const float *w = w0;
-/*
-						sum += i00 * weight[(9*ip+0) * 128 + op];
-						sum += i01 * weight[(9*ip+1) * 128 + op];
-						sum += i02 * weight[(9*ip+2) * 128 + op];
-
-						sum += i10 * weight[(9*ip+3) * 128 + op];
-						sum += i11 * weight[(9*ip+4) * 128 + op];
-						sum += i12 * weight[(9*ip+5) * 128 + op];
-
-						sum += i20 * weight[(9*ip+6) * 128 + op];
-						sum += i21 * weight[(9*ip+7) * 128 + op];
-						sum += i22 * weight[(9*ip+8) * 128 + op];
-*/
 						sum += w[(9*ip+0) * 128]*i00;
 						sum += w[(9*ip+1) * 128]*i01;
 						sum += w[(9*ip+2) * 128]*i02;
@@ -153,50 +411,6 @@ filter(const float * __restrict__ packed_input,
 						sum += w[(9*ip+7) * 128]*i21;
 						sum += w[(9*ip+8) * 128]*i22;
 					}
-#else
-					float sum = 0;
-					for (unsigned int ip=0; ip<nInputPlanes; ip++) {
-						float i00, i01, i02;
-						float i10, i11, i12;
-						float i20, i21, i22;
-
-						i01 = in01[xi*nInputPlanes+ip];
-						i11 = in11[xi*nInputPlanes+ip];
-						i21 = in21[xi*nInputPlanes+ip];
-
-						if (xi == 0) {
-							i00 = i01;
-							i10 = i11;
-							i20 = i21;
-						} else {
-							i00 = in01[(xi-1)*nInputPlanes+ip];
-							i10 = in11[(xi-1)*nInputPlanes+ip];
-							i20 = in21[(xi-1)*nInputPlanes+ip];
-						}
-
-						if (xi == wsz-1) {
-							i02 = i01;
-							i12 = i11;
-							i22 = i21;
-						} else {
-							i02 = in01[(xi+1)*nInputPlanes+ip];
-							i12 = in11[(xi+1)*nInputPlanes+ip];
-							i22 = in21[(xi+1)*nInputPlanes+ip];
-						}
-
-						sum += i00 * weight[(9*ip+0) * 128 + op];
-						sum += i01 * weight[(9*ip+1) * 128 + op];
-						sum += i02 * weight[(9*ip+2) * 128 + op];
-
-						sum += i10 * weight[(9*ip+3) * 128 + op];
-						sum += i11 * weight[(9*ip+4) * 128 + op];
-						sum += i12 * weight[(9*ip+5) * 128 + op];
-
-						sum += i20 * weight[(9*ip+6) * 128 + op];
-						sum += i21 * weight[(9*ip+7) * 128 + op];
-						sum += i22 * weight[(9*ip+8) * 128 + op];
-					}
-#endif
 
 					float *out = packed_output + (yi*wsz + xi)*nOutputPlanes;
 					{
@@ -215,18 +429,3 @@ filter(const float * __restrict__ packed_input,
 	}
 }
 
-
-/*
-			float v = sum;
-			float bv = biases[op];
-			v += bv;
-			float mtz = max(v,0.0f);
-			float ltz = min(v,0.0f);
-
-			v = ltz * 0.1f + mtz;
-
-			float *out = packed_output + (yi*wsz + xi)*nOutputPlanes;
-
-			out[op] = v;
-
-*/
