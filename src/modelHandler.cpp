@@ -89,7 +89,7 @@ Model::filter_CV(ComputeEnv *env,
 	return true;
 }
 
-//#define COMPARE_RESULT
+#define COMPARE_RESULT
 
 bool Model::filter_AVX_OpenCL(ComputeEnv *env,
 			      Buffer *packed_input_buf,

@@ -195,8 +195,8 @@ filter(const float * __restrict__ packed_input,
 	const float *in1p = inp;
 
 	const float *in2p = inp + in_step;
-	if (yi == wsz-1) {
-		in2p = inp;
+	if (yi == hsz-1) {
+		in2p = in1p;
 	}
 
 	const float *in01 = in0p;
