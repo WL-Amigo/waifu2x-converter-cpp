@@ -23,6 +23,7 @@ struct CUDADev {
     CUcontext context;
     CUmodule mod;
     CUfunction filter;
+    CUstream stream;
 };
 
 struct ComputeEnv {
@@ -59,7 +60,7 @@ struct Buffer {
 
     void *host_ptr;
     cl_mem *cl_ptr_list;
-    void **cuda_ptr_list;
+    CUdeviceptr *cuda_ptr_list;
 
     bool host_valid;
     bool *cl_valid_list;
@@ -78,7 +79,7 @@ struct Buffer {
         cl_ptr_list = new cl_mem[num_cl_dev];
         cl_valid_list = new bool[num_cl_dev];
 
-        cuda_ptr_list = new void *[num_cuda_dev];
+        cuda_ptr_list = new CUdeviceptr[num_cuda_dev];
         cuda_valid_list = new bool[num_cuda_dev];
 
         clear(env);
@@ -108,7 +109,7 @@ struct Buffer {
         }
         for (i=0; i<num_cuda_dev; i++) {
             cuda_valid_list[i] = false;
-            cuda_ptr_list[i] = nullptr;
+            cuda_ptr_list[i] = 0;
         }
 
         host_valid = false;
@@ -130,10 +131,10 @@ struct Buffer {
         }
         for (i=0; i<num_cuda_dev; i++) {
             if (cuda_ptr_list[i]) {
-                //cudadaFree(cuda_ptr_list[i]);
+                cuMemFree(cuda_ptr_list[i]);
             }
 
-            cuda_ptr_list[i] = nullptr;
+            cuda_ptr_list[i] = 0;
             cuda_valid_list[i] = false;
         }
 
@@ -159,20 +160,7 @@ struct Buffer {
         host_valid = false;
     }
 
-    void *get_write_ptr_host(ComputeEnv *env) {
-        invalidate(env);
 
-        last_write.type = Processor::HOST;
-        last_write.devid = 0;
-
-        if (host_ptr == nullptr) {
-            host_ptr = _mm_malloc(byte_size, 64);
-        }
-
-        host_valid = true;
-
-        return host_ptr;
-    }
 
     cl_mem get_read_ptr_cl(ComputeEnv *env,int devid) {
         if (cl_valid_list[devid]) {
@@ -219,6 +207,64 @@ struct Buffer {
         return cl_ptr_list[devid];
     }
 
+
+    CUdeviceptr get_read_ptr_cuda(ComputeEnv *env,int devid) {
+        if (cuda_valid_list[devid]) {
+            return cuda_ptr_list[devid];
+        }
+
+        if (host_valid == false) {
+            /* xx */
+            abort();
+            return 0;
+        }
+
+        CUDADev *dev = &env->cuda_dev_list[devid];
+        cuCtxPushCurrent(dev->context);
+
+        if (cuda_ptr_list[devid] == 0) {
+            CUresult err;
+            err = cuMemAlloc(&cuda_ptr_list[devid], byte_size);
+            if (err != CUDA_SUCCESS) {
+                abort();
+            }
+        }
+
+        cuMemcpyHtoD(cuda_ptr_list[devid], host_ptr, byte_size);
+        cuda_valid_list[devid] = true;
+
+        CUcontext old;
+        cuCtxPopCurrent(&old);
+
+        return cuda_ptr_list[devid];
+    }
+
+    CUdeviceptr get_write_ptr_cuda(ComputeEnv *env,int devid) {
+        invalidate(env);
+
+        CUDADev *dev = &env->cuda_dev_list[devid];
+        cuCtxPushCurrent(dev->context);
+
+        if (cuda_ptr_list[devid] == 0) {
+            CUresult err;
+            err = cuMemAlloc(&cuda_ptr_list[devid], byte_size);
+            if (err != CUDA_SUCCESS) {
+                abort();
+            }
+        }
+
+        last_write.type = Processor::CUDA;
+        last_write.devid = devid;
+
+        cuda_valid_list[devid] = true;
+        CUcontext old;
+        cuCtxPopCurrent(&old);
+
+        return cuda_ptr_list[devid];
+    }
+
+
+
     void *get_read_ptr_host(ComputeEnv *env) {
         if (host_valid) {
             return host_ptr;
@@ -232,6 +278,10 @@ struct Buffer {
             OpenCLDev *dev = &env->cl_dev_list[last_write.devid];
             clEnqueueReadBuffer(dev->queue, cl_ptr_list[last_write.devid],
                                 CL_TRUE, 0, byte_size, host_ptr, 0, nullptr, nullptr);
+        } else if (last_write.type == Processor::CUDA) {
+            CUDADev *dev = &env->cuda_dev_list[last_write.devid];
+            cuCtxPushCurrent(dev->context);
+            cuMemcpyDtoH(host_ptr, cuda_ptr_list[last_write.devid], byte_size);
         } else {
             abort();
         }
@@ -240,20 +290,20 @@ struct Buffer {
         return host_ptr;
     }
 
-    void *get_mem_write_host(ComputeEnv *env,int devid) {
+    void *get_write_ptr_host(ComputeEnv *env) {
         invalidate(env);
+
+        last_write.type = Processor::HOST;
+        last_write.devid = 0;
 
         if (host_ptr == nullptr) {
             host_ptr = _mm_malloc(byte_size, 64);
         }
 
-        last_write.type = Processor::HOST;
-        last_write.devid = 0;
-
         host_valid = true;
+
         return host_ptr;
     }
-
 };
 
 #endif

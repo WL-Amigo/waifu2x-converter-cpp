@@ -71,15 +71,25 @@ initCUDA(ComputeEnv *env)
 	CUcontext ctxt;
 	CUdevice dev = 0;
 	CUmodule mod;
+	CUstream stream;
 
-	r = cuCtxCreate(&ctxt, 0, dev);
+	r = cuStreamCreate(&stream, 0);
+
+	r = cuCtxCreate(&ctxt, CU_CTX_SCHED_BLOCKING_SYNC, dev);
 	if (r != CUDA_SUCCESS) {
+		return false;
+	}
+
+	r = cuStreamCreate(&stream, 0);
+	if (r != CUDA_SUCCESS) {
+		cuCtxDestroy(ctxt);
 		return false;
 	}
 
 	r = cuModuleLoadData(&mod, prog);
 	if (r != CUDA_SUCCESS) {
 		cuCtxDestroy(ctxt);
+		cuStreamDestroy(stream);
 		return false;
 	}
 
@@ -89,6 +99,8 @@ initCUDA(ComputeEnv *env)
 	if (r != CUDA_SUCCESS) {
 		cuModuleUnload(mod);
 		cuCtxDestroy(ctxt);
+		cuStreamDestroy(stream);
+		return false;
 	}
 
 	char name [1024];
@@ -101,6 +113,89 @@ initCUDA(ComputeEnv *env)
 	env->cuda_dev_list[0].context = ctxt;
 	env->cuda_dev_list[0].mod = mod;
 	env->cuda_dev_list[0].filter = filter;
+	env->cuda_dev_list[0].stream = stream;
+
+	return true;
 }
+
+
+void
+filter_CUDA_impl(ComputeEnv *env,
+		 Buffer *packed_input_buf,
+		 Buffer *packed_output_buf,
+		 int nInputPlanes,
+		 int nOutputPlanes,
+		 const float *biases,
+		 const float *weight,
+		 int ip_width,
+		 int ip_height,
+		 int nJob)
+{
+	CUresult r;
+	CUDADev *dev = &env->cuda_dev_list[0];
+	CUdeviceptr packed_input = packed_input_buf->get_read_ptr_cuda(env, 0);
+	CUdeviceptr packed_output = packed_input_buf->get_write_ptr_cuda(env, 0);
+
+	CUdeviceptr d_fbiases;
+	size_t bias_size = sizeof(float) * nOutputPlanes;
+	r = cuMemAlloc(&d_fbiases, bias_size);
+	if (r != CUDA_SUCCESS) {
+		puts("fail: alloc bias");
+		exit(1);
+	}
+	r = cuMemcpyHtoD(d_fbiases, biases, bias_size);
+	if (r != CUDA_SUCCESS) {
+		puts("fail: copy to bias");
+		exit(1);
+	}
+
+	CUdeviceptr d_weight;
+	size_t weight_size = sizeof(float) * 128 * nInputPlanes * 9;
+	r = cuMemAlloc(&d_weight, weight_size);;
+	if (r != CUDA_SUCCESS) {
+		puts("fail: alloc weight");
+		exit(1);
+	}
+
+	r = cuMemcpyHtoD(d_weight, weight, weight_size);
+	if (r != CUDA_SUCCESS) {
+		puts("fail: copy to weight");
+		exit(1);
+	}
+
+	size_t nInputPlanes2 = nInputPlanes;
+	size_t nOutputPlanes2 = nOutputPlanes;
+	size_t h = ip_height;
+	size_t w = ip_width;
+
+	void *args[8] = {&packed_input,
+			 &nInputPlanes2,
+			 &packed_output,
+			 &nOutputPlanes2,
+			 &d_fbiases,
+			 &h,
+			 &w,
+			 &d_weight};
+
+	r = cuLaunchKernel(dev->filter,
+			   h, 1, 1,
+			   1, 1, 1,
+			   0,
+			   dev->stream, args, NULL);
+	if (r != CUDA_SUCCESS) {
+		puts("fail: launch");
+		exit(1);
+	}
+
+	r = cuStreamSynchronize(dev->stream);
+	if (r != CUDA_SUCCESS) {
+		puts("fail: stream sync");
+		exit(1);
+	}
+
+	cuMemFree(d_weight);
+	cuMemFree(d_fbiases);
+}
+
 
 }
