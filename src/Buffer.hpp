@@ -1,9 +1,11 @@
 #ifndef BUFFER_HPP
 #define BUFFER_HPP
 
+#include <malloc.h>
+#include <stdlib.h>
 #include <CL/cl.h>
 #include "CLlib.h"
-
+#include "CUDAlib.h"
 
 struct OpenCLDev {
     cl_platform_id platform;
@@ -16,15 +18,24 @@ struct OpenCLDev {
     cl_program program;
 };
 
+struct CUDADev {
+    int dev;
+    CUcontext context;
+    CUmodule mod;
+    CUfunction filter;
+};
+
 struct ComputeEnv {
     int num_cl_dev;
     int num_cuda_dev;
     OpenCLDev *cl_dev_list;
+    CUDADev *cuda_dev_list;
 
     ComputeEnv()
         :num_cl_dev(0),
          num_cuda_dev(0),
-         cl_dev_list(nullptr)
+         cl_dev_list(nullptr),
+         cuda_dev_list(nullptr)
     {}
 };
 

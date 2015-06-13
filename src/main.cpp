@@ -81,6 +81,7 @@ int main(int argc, char** argv) {
 
 	if (! cmdDisableGPU.getValue()) {
 		w2xc::initOpenCL(&env);
+		w2xc::initCUDA(&env);
 	}
 
 	// load image file

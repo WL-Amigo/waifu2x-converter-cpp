@@ -14,14 +14,13 @@
 #include <opencv2/opencv.hpp>
 #include "picojson.h"
 #include "Buffer.hpp"
+#include "filters.hpp"
 #include <iostream>
 #include <memory>
 #include <cstdint>
 #include <cstdlib>
 
 namespace w2xc {
-
-bool initOpenCL(ComputeEnv *env);
 
 class Model {
 

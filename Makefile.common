@@ -1,0 +1,5 @@
+# -*- mode: makefile -*-
+
+SRCS=src/main.cpp src/modelHandler.cpp src/modelHandler_avx.cpp src/modelHandler_fma.cpp \
+	src/modelHandler_OpenCL.cpp src/convertRoutine.cpp src/threadPool.cpp \
+	src/modelHandler_CUDA.cpp

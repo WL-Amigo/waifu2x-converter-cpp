@@ -15,4 +15,9 @@ perf.data*
 *.png
 *.exe
 src/modelHandler_OpenCL.cl.h
+src/modelHandler_CUDA.ptx.h
+*.ptx
+*.asm
+*.o
 conv
+*.bin
