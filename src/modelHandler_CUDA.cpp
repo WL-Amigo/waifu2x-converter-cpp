@@ -1,5 +1,6 @@
 #include "CUDAlib.h"
 #include "Buffer.hpp"
+#include "params.h"
 #include <stdio.h>
 #include <string.h>
 
@@ -190,7 +191,7 @@ filter_CUDA_impl(ComputeEnv *env,
 	r = cuLaunchKernel(dev->filter,
 			   h, 1, 1,
 			   nOutputPlanes, 1, 1,
-			   0,
+			   sizeof(float) * nInputPlanes * (GPU_BLOCK_SIZE+2) * 3,
 			   dev->stream, args, NULL);
 	if (r != CUDA_SUCCESS) {
 		puts("fail: launch");
