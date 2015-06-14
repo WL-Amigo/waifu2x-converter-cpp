@@ -531,9 +531,9 @@ filter_i128_o128(const float * __restrict__ packed_input,
 	float *in_block2 = in_block2_base + INPUT_BLOCK_SIZE;
 	int lid = threadIdx.x;
 
-	for (int xi0=0; xi0<wsz; xi0+=BLOCK_SIZE) {
-		for (unsigned int ib0=0; ib0<nInputPlanes; ib0+=INPUT_BLOCK_SIZE) {
-			for (unsigned int ob0=0; ob0<nOutputPlanes; ob0+=OUTPUT_BLOCK_SIZE) {
+	for (unsigned int ib0=0; ib0<nInputPlanes; ib0+=INPUT_BLOCK_SIZE) {
+		for (unsigned int ob0=0; ob0<nOutputPlanes; ob0+=OUTPUT_BLOCK_SIZE) {
+			for (int xi0=0; xi0<wsz; xi0+=BLOCK_SIZE) {
 				__syncthreads();
 				if (lid < INPUT_BLOCK_SIZE) {
 					int bi;
