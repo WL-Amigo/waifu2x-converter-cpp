@@ -140,7 +140,7 @@ initCUDA(ComputeEnv *env)
 	cuCtxSetCacheConfig(CU_FUNC_CACHE_PREFER_SHARED);
 	cuFuncSetSharedMemConfig(filter_i32, CU_SHARED_MEM_CONFIG_EIGHT_BYTE_BANK_SIZE);
 	cuFuncSetSharedMemConfig(filter_i64, CU_SHARED_MEM_CONFIG_EIGHT_BYTE_BANK_SIZE);
-	cuFuncSetSharedMemConfig(filter_i128, CU_SHARED_MEM_CONFIG_EIGHT_BYTE_BANK_SIZE);
+	//cuFuncSetSharedMemConfig(filter_i128, CU_SHARED_MEM_CONFIG_EIGHT_BYTE_BANK_SIZE);
 
 	env->num_cuda_dev = 1;
 	env->cuda_dev_list = new CUDADev[1];
