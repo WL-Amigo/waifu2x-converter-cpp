@@ -25,6 +25,7 @@ struct CUDADev {
     CUfunction filter_i32;
     CUfunction filter_i64;
     CUfunction filter_i128;
+    CUfunction filter_i128_o128;
     CUstream stream;
 };
 
