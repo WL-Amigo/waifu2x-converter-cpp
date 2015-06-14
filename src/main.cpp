@@ -68,6 +68,14 @@ int main(int argc, char** argv) {
 
 	TCLAP::SwitchArg cmdDisableGPU("", "disable-gpu", "disable GPU", cmd, false);
 
+	std::vector<int> cmdBlockSizeConstraintV;
+	cmdBlockSizeConstraintV.push_back(0);
+	cmdBlockSizeConstraintV.push_back(512);
+	cmdBlockSizeConstraintV.push_back(1024);
+	TCLAP::ValuesConstraint<int> cmdBlockSizeConstraint(cmdBlockSizeConstraintV);
+	TCLAP::ValueArg<int> cmdBlockSize("", "block_size", "block size",
+					  false, 1024, &cmdBlockSizeConstraint, cmd);
+
 	// definition of command line argument : end
 
 	// parse command line arguments
@@ -90,6 +98,12 @@ int main(int argc, char** argv) {
 
 	// set number of jobs for processing models
 	w2xc::modelUtility::getInstance().setNumberOfJobs(cmdNumberOfJobs.getValue());
+	int bs = cmdBlockSize.getValue();
+
+	if (bs == 0) {
+		bs = 65536;
+	}
+	w2xc::modelUtility::getInstance().setBlockSize(cv::Size(bs,bs));
 
 	FLOPSCounter flops;
 

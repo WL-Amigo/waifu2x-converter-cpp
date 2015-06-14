@@ -28,6 +28,10 @@ typedef enum CUjit_option_enum {
     CU_JIT_CACHE_MODE=14,
 } CUjit_option;
 
+typedef enum CUdevice_attribute_enum {
+    CU_DEVICE_ATTRIBUTE_COMPUTE_CAPABILITY_MAJOR = 75,
+} CUdevice_attribute;
+
 typedef enum CUjit_cacheMode_enum {
     CU_JIT_CACHE_OPTION_NONE = 0,
     CU_JIT_CACHE_OPTION_CG,
@@ -84,6 +88,7 @@ typedef CUresult (* CUDAAPI tcuLaunchKernel)(CUfunction f,
 typedef CUresult (* CUDAAPI tcuCtxSetCacheConfig)(CUfunc_cache c);
 typedef CUresult (* CUDAAPI tcuFuncSetSharedMemConfig)(CUfunction func, CUsharedconfig config);
 typedef CUresult (* CUDAAPI tcuCtxSetSharedMemConfig)(CUsharedconfig config);
+typedef CUresult (* CUDAAPI tcuDeviceGetAttribute)(int *pi, CUdevice_attribute attr, CUdevice dev);
 
 #define FOR_EACH_CUDA_FUNC(F,F_V2)              \
     F(cuInit)                                   \
@@ -109,7 +114,8 @@ typedef CUresult (* CUDAAPI tcuCtxSetSharedMemConfig)(CUsharedconfig config);
     F(cuLaunchKernel)                                \
     F(cuCtxSetCacheConfig)                           \
     F(cuFuncSetSharedMemConfig)                      \
-    F(cuCtxSetSharedMemConfig)
+    F(cuCtxSetSharedMemConfig)                       \
+    F(cuDeviceGetAttribute)
 
 
 #define CUDA_PROTOTYPE(name)                    \

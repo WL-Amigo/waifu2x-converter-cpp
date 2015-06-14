@@ -92,6 +92,18 @@ initCUDA(ComputeEnv *env)
 		return false;
 	}
 
+	int cap_major;
+	r = cuDeviceGetAttribute(&cap_major, CU_DEVICE_ATTRIBUTE_COMPUTE_CAPABILITY_MAJOR, dev);
+	if (r != CUDA_SUCCESS) {
+		cuCtxDestroy(ctxt);
+		return false;
+	}
+
+	const char *prog = prog20;
+	if (cap_major >= 3) {
+		prog = prog30;
+	}
+
 	r = cuStreamCreate(&stream, 0);
 	if (r != CUDA_SUCCESS) {
 		cuCtxDestroy(ctxt);

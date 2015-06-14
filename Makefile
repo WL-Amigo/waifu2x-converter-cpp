@@ -18,13 +18,13 @@ src/modelHandler_CUDA.o: src/modelHandler_CUDA.ptx20.h src/modelHandler_CUDA.ptx
 waifu2x-converter-cpp: $(OBJS)
 	g++ $(LDFLAGS) -o $@ $^ $(LDLIBS)
 
-INPUT=./a.png
+#INPUT=./a.png
 #INPUT=./b.png
 #INPUT=./c.png
 #INPUT=./d.png
 #INPUT=./e.png
 #INPUT=./f.png
-#INPUT=./g.png
+INPUT=./g.png
 
 %-Spectre.isa: src/modelHandler_OpenCL.cl
 	/opt/AMD/CodeXL_1.7-7300/CodeXLAnalyzer -s CL $< -k $* --isa $*.isa -c Spectre
