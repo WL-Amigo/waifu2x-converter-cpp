@@ -13,18 +13,18 @@ include Makefile.common
 OBJS=$(SRCS:.cpp=.o)
 
 src/modelHandler_OpenCL.cpp: src/modelHandler_OpenCL.cl.h
-src/modelHandler_CUDA.o: src/modelHandler_CUDA.ptx.h
+src/modelHandler_CUDA.o: src/modelHandler_CUDA.ptx20.h src/modelHandler_CUDA.ptx30.h
 
 waifu2x-converter-cpp: $(OBJS)
 	g++ $(LDFLAGS) -o $@ $^ $(LDLIBS)
 
-#INPUT=./a.png
+INPUT=./a.png
 #INPUT=./b.png
 #INPUT=./c.png
 #INPUT=./d.png
 #INPUT=./e.png
 #INPUT=./f.png
-INPUT=./g.png
+#INPUT=./g.png
 
 %-Spectre.isa: src/modelHandler_OpenCL.cl
 	/opt/AMD/CodeXL_1.7-7300/CodeXLAnalyzer -s CL $< -k $* --isa $*.isa -c Spectre
@@ -72,10 +72,14 @@ src/modelHandler_OpenCL.cl.h:src/modelHandler_OpenCL.cl conv
 	./conv $< $@ str
 
 
-src/modelHandler_CUDA.ptx.h: src/modelHandler_CUDA.ptx
+src/modelHandler_CUDA.ptx20.h: src/modelHandler_CUDA.ptx20
+	./conv $< $@ str
+src/modelHandler_CUDA.ptx30.h: src/modelHandler_CUDA.ptx30
 	./conv $< $@ str
 
-src/modelHandler_CUDA.ptx: src/modelHandler_CUDA.cu
+src/modelHandler_CUDA.ptx20: src/modelHandler_CUDA.cu
+	nvcc -use_fast_math -arch=sm_20 -ccbin /usr/bin/gcc-4.7 -m64 -ptx -o $@ $< -O2
+src/modelHandler_CUDA.ptx30: src/modelHandler_CUDA.cu
 	nvcc -use_fast_math -arch=sm_30 -ccbin /usr/bin/gcc-4.7 -m64 -ptx -o $@ $< -O2
 
 %.sass: %.cubin

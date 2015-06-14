@@ -13,8 +13,11 @@ static HMODULE handle;
 static void *handle;
 #endif
 
-static const char prog[] = 
-#include "modelHandler_CUDA.ptx.h"
+static const char prog20[] = 
+#include "modelHandler_CUDA.ptx20.h"
+	;
+static const char prog30[] = 
+#include "modelHandler_CUDA.ptx30.h"
 	;
 
 
@@ -104,7 +107,7 @@ initCUDA(ComputeEnv *env)
 	//jit_options[1] = CU_JIT_OPTIMIZATION_LEVEL;
 	//jit_optvals[1] = (void*)(uintptr_t)0;
 
-	r = cuModuleLoadDataEx(&mod, prog, 1, jit_options, jit_optvals);
+	r = cuModuleLoadDataEx(&mod, prog20, 1, jit_options, jit_optvals);
 	if (r != CUDA_SUCCESS) {
 		cuCtxDestroy(ctxt);
 		cuStreamDestroy(stream);

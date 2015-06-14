@@ -474,16 +474,17 @@ filter_i128(const float * __restrict__ packed_input,
 	filter<128>(packed_input, packed_output, nOutputPlanes, biases, hsz, wsz, weight);
 }
 
-static __device__ float
+#if __CUDA_ARCH__ >= 300
+static inline __device__ float
 warp_sum(float v) {
-    v += __shfl_down(v, 1);
-    v += __shfl_down(v, 2);
-    v += __shfl_down(v, 4);
-    v += __shfl_down(v, 8);
-    v += __shfl_down(v, 16);
-
-    return v;
+	v += __shfl_down(v, 1);
+	v += __shfl_down(v, 2);
+	v += __shfl_down(v, 4);
+	v += __shfl_down(v, 8);
+	v += __shfl_down(v, 16);
+	return v;
 }
+#endif
 
 template <int nInputPlanes,
 	  int nOutputPlanes>
@@ -958,7 +959,7 @@ filter_i128_o1(const float * __restrict__ packed_input,
 		lin21 = pin21[0];
 		lin22 = pin21[0];
 
-#define OUT1_BODY(LEDGE,REDGE)						\
+#define OUT1_BODY(LEDGE,REDGE,SUM_RELU)						\
 		{							\
 			float sum = 0;					\
 			{						\
@@ -1002,30 +1003,72 @@ filter_i128_o1(const float * __restrict__ packed_input,
 				sum_buffer[lid] += v2;			\
 			}						\
 			__syncthreads();				\
-			if (lid < 32) {					\
-				float v2 = sum_buffer[lid+32];		\
-				sum_buffer[lid] += v2;			\
-				float sum = warp_sum(sum_buffer[lid]);	\
-									\
-				if (lid == 0) {				\
-					float v = sum;			\
-					float *out = packed_output + (yi*wsz + xi); \
-					v += bv;			\
-					float mtz = max(v, 0.0f);	\
-					float ltz = min(v, 0.0f);	\
-					v = ltz * 0.1f + mtz;		\
-					out[0] = v;			\
-				}					\
-			}						\
+			SUM_RELU();					\
 		}
+
+#if __CUDA_ARCH__ >= 300
+#define SUM_RELU()							\
+		if (lid < 32) {						\
+			float v0 = sum_buffer[lid] + sum_buffer[lid+32];			\
+			float sum = warp_sum(v0);			\
+									\
+			if (lid == 0) {					\
+				float v = sum;				\
+				float *out = packed_output + (yi*wsz + xi); \
+				v += bv;				\
+				float mtz = max(v, 0.0f);		\
+				float ltz = min(v, 0.0f);		\
+				v = ltz * 0.1f + mtz;			\
+				out[0] = v;				\
+			}						\
+		}							\
+
+#else
+
+#define SUM_RELU()							\
+		if (lid < 32) {						\
+			sum_buffer[lid] += sum_buffer[lid+32];		\
+		}							\
+		__syncthreads();					\
+		if (lid < 16) {						\
+			sum_buffer[lid] += sum_buffer[lid+16];		\
+		}							\
+		__syncthreads();					\
+		if (lid < 8) {						\
+			sum_buffer[lid] += sum_buffer[lid+8];		\
+		}							\
+		__syncthreads();					\
+		if (lid < 4) {						\
+			sum_buffer[lid] += sum_buffer[lid+4];		\
+		}							\
+		__syncthreads();					\
+		if (lid < 2) {						\
+			sum_buffer[lid] += sum_buffer[lid+2];		\
+		}							\
+		__syncthreads();					\
+		if (lid == 0) {						\
+			float sum = sum_buffer[0] + sum_buffer[1];	\
+			float v = sum;					\
+			float *out = packed_output + (yi*wsz + xi);	\
+			v += bv;					\
+			float mtz = max(v, 0.0f);			\
+			float ltz = min(v, 0.0f);			\
+			v = ltz * 0.1f + mtz;				\
+			out[0] = v;					\
+		}
+
+#endif
+
+
+
 
 
 		for (int xi=0; xi<wsz-1; xi++) {
-			OUT1_BODY(0,0);
+			OUT1_BODY(0,0,SUM_RELU);
 		}
 		{
 			int xi = wsz-1;
-			OUT1_BODY(0,1);
+			OUT1_BODY(0,1,SUM_RELU);
 		}
 	}
 }
