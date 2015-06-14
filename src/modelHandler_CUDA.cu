@@ -538,49 +538,89 @@ filter_weight_blocking(const float * __restrict__ packed_input,
 
 			for (int xi0=0; xi0<wsz; xi0+=BLOCK_SIZE) {
 				__syncthreads();
-				if (lid < INPUT_BLOCK_SIZE) {
-					int bi;
-					for (bi=0; bi<X_BLOCK_SIZE; bi++) {
-						int xi = xi0 + bi;
-						if (xi == wsz) {
-							break;
+				int rem = wsz - xi0;
+				if (rem >= 3 && xi0 != 0) {
+					if (lid < INPUT_BLOCK_SIZE) {
+						in_block0[-1*INPUT_BLOCK_SIZE + lid] = in_block0[7*INPUT_BLOCK_SIZE + lid];
+						in_block1[-1*INPUT_BLOCK_SIZE + lid] = in_block1[7*INPUT_BLOCK_SIZE + lid];
+						in_block2[-1*INPUT_BLOCK_SIZE + lid] = in_block2[7*INPUT_BLOCK_SIZE + lid];
+
+						in_block0[0*INPUT_BLOCK_SIZE + lid] = in_block0[8*INPUT_BLOCK_SIZE + lid];
+						in_block1[0*INPUT_BLOCK_SIZE + lid] = in_block1[8*INPUT_BLOCK_SIZE + lid];
+						in_block2[0*INPUT_BLOCK_SIZE + lid] = in_block2[8*INPUT_BLOCK_SIZE + lid];
+					}
+					__syncthreads();
+
+					if (lid < INPUT_BLOCK_SIZE) {
+						int bi;
+						for (bi=1; bi<X_BLOCK_SIZE; bi++) {
+							int xi = xi0 + bi;
+							if (xi == wsz) {
+								break;
+							}
+
+							/* load to shared */
+							in_block0[bi*INPUT_BLOCK_SIZE + lid] = in01[xi*nInputPlanes + ib0+lid];
+							in_block1[bi*INPUT_BLOCK_SIZE + lid] = in11[xi*nInputPlanes + ib0+lid];
+							in_block2[bi*INPUT_BLOCK_SIZE + lid] = in21[xi*nInputPlanes + ib0+lid];
 						}
 
-						/* load to shared */
-						in_block0[bi*INPUT_BLOCK_SIZE + lid] = in01[xi*nInputPlanes + ib0+lid];
-						in_block1[bi*INPUT_BLOCK_SIZE + lid] = in11[xi*nInputPlanes + ib0+lid];
-						in_block2[bi*INPUT_BLOCK_SIZE + lid] = in21[xi*nInputPlanes + ib0+lid];
-					}
-
-					{
-						int xi = xi0 + bi;
-						if (xi == wsz) {
-							in_block0[bi*(int)INPUT_BLOCK_SIZE + lid] = in01[(xi-1)*(int)nInputPlanes + ib0+lid];
-							in_block1[bi*(int)INPUT_BLOCK_SIZE + lid] = in11[(xi-1)*(int)nInputPlanes + ib0+lid];
-							in_block2[bi*(int)INPUT_BLOCK_SIZE + lid] = in21[(xi-1)*(int)nInputPlanes + ib0+lid];
-						} else {
-							in_block0[bi*(int)INPUT_BLOCK_SIZE + lid] = in01[xi*(int)nInputPlanes + ib0+lid];
-							in_block1[bi*(int)INPUT_BLOCK_SIZE + lid] = in11[xi*(int)nInputPlanes + ib0+lid];
-							in_block2[bi*(int)INPUT_BLOCK_SIZE + lid] = in21[xi*(int)nInputPlanes + ib0+lid];
+						{
+							int xi = xi0 + bi;
+							if (xi == wsz) {
+								in_block0[bi*(int)INPUT_BLOCK_SIZE + lid] = in01[(xi-1)*(int)nInputPlanes + ib0+lid];
+								in_block1[bi*(int)INPUT_BLOCK_SIZE + lid] = in11[(xi-1)*(int)nInputPlanes + ib0+lid];
+								in_block2[bi*(int)INPUT_BLOCK_SIZE + lid] = in21[(xi-1)*(int)nInputPlanes + ib0+lid];
+							} else {
+								in_block0[bi*(int)INPUT_BLOCK_SIZE + lid] = in01[xi*(int)nInputPlanes + ib0+lid];
+								in_block1[bi*(int)INPUT_BLOCK_SIZE + lid] = in11[xi*(int)nInputPlanes + ib0+lid];
+								in_block2[bi*(int)INPUT_BLOCK_SIZE + lid] = in21[xi*(int)nInputPlanes + ib0+lid];
+							}
 						}
 					}
+				} else {
+					if (lid < INPUT_BLOCK_SIZE) {
+						int bi;
+						for (bi=0; bi<X_BLOCK_SIZE; bi++) {
+							int xi = xi0 + bi;
+							if (xi == wsz) {
+								break;
+							}
 
-					{
-						int xi = xi0-1;
-						if (xi == -1) {
-							in_block0[-1*(int)INPUT_BLOCK_SIZE + (int)lid] = in01[ib0+lid];
-							in_block1[-1*(int)INPUT_BLOCK_SIZE + (int)lid] = in11[ib0+lid];
-							in_block2[-1*(int)INPUT_BLOCK_SIZE + (int)lid] = in21[ib0+lid];
-						} else {
-							in_block0[-1*(int)INPUT_BLOCK_SIZE + (int)lid] = in01[xi*(int)nInputPlanes + ib0+lid];
-							in_block1[-1*(int)INPUT_BLOCK_SIZE + (int)lid] = in11[xi*(int)nInputPlanes + ib0+lid];
-							in_block2[-1*(int)INPUT_BLOCK_SIZE + (int)lid] = in21[xi*(int)nInputPlanes + ib0+lid];
+							/* load to shared */
+							in_block0[bi*INPUT_BLOCK_SIZE + lid] = in01[xi*nInputPlanes + ib0+lid];
+							in_block1[bi*INPUT_BLOCK_SIZE + lid] = in11[xi*nInputPlanes + ib0+lid];
+							in_block2[bi*INPUT_BLOCK_SIZE + lid] = in21[xi*nInputPlanes + ib0+lid];
+						}
+
+						{
+							int xi = xi0 + bi;
+							if (xi == wsz) {
+								in_block0[bi*(int)INPUT_BLOCK_SIZE + lid] = in01[(xi-1)*(int)nInputPlanes + ib0+lid];
+								in_block1[bi*(int)INPUT_BLOCK_SIZE + lid] = in11[(xi-1)*(int)nInputPlanes + ib0+lid];
+								in_block2[bi*(int)INPUT_BLOCK_SIZE + lid] = in21[(xi-1)*(int)nInputPlanes + ib0+lid];
+							} else {
+								in_block0[bi*(int)INPUT_BLOCK_SIZE + lid] = in01[xi*(int)nInputPlanes + ib0+lid];
+								in_block1[bi*(int)INPUT_BLOCK_SIZE + lid] = in11[xi*(int)nInputPlanes + ib0+lid];
+								in_block2[bi*(int)INPUT_BLOCK_SIZE + lid] = in21[xi*(int)nInputPlanes + ib0+lid];
+							}
+						}
+
+						{
+							int xi = xi0-1;
+							if (xi == -1) {
+								in_block0[-1*(int)INPUT_BLOCK_SIZE + (int)lid] = in01[ib0+lid];
+								in_block1[-1*(int)INPUT_BLOCK_SIZE + (int)lid] = in11[ib0+lid];
+								in_block2[-1*(int)INPUT_BLOCK_SIZE + (int)lid] = in21[ib0+lid];
+							} else {
+								in_block0[-1*(int)INPUT_BLOCK_SIZE + (int)lid] = in01[xi*(int)nInputPlanes + ib0+lid];
+								in_block1[-1*(int)INPUT_BLOCK_SIZE + (int)lid] = in11[xi*(int)nInputPlanes + ib0+lid];
+								in_block2[-1*(int)INPUT_BLOCK_SIZE + (int)lid] = in21[xi*(int)nInputPlanes + ib0+lid];
+							}
 						}
 					}
 				}
 				__syncthreads();
-
-				int rem = wsz - xi0;
 
 				const float *w0 = weight + op;
 
@@ -829,4 +869,171 @@ filter_i64_o64(const float * __restrict__ packed_input,
 				      weight,
 				      ib0,
 				      ob0);
+}
+
+
+
+extern "C" __global__ void
+filter_i128_o1(const float * __restrict__ packed_input,
+	       int nInputPlanes,
+	       float * __restrict__ packed_output,
+	       int nOutputPlanes,
+	       float * __restrict__ biases,
+	       unsigned int hsz,
+	       unsigned int wsz,
+	       float * __restrict__ weight)
+{
+	unsigned int yi_base = blockIdx.x;
+	for (int yi0=0; yi0<1; yi0++) {
+		int yi = yi_base + yi0;
+		unsigned int lid = threadIdx.x;
+
+		size_t in_step = wsz * sizeof(float) * nInputPlanes;
+
+		char *inp = (char*)packed_input;
+
+		inp += in_step*yi;
+		char *in0p = inp - in_step;
+		if (yi == 0) {
+			in0p = inp;
+		}
+
+		char *in1p = inp;
+		char *in2p = inp + in_step;
+
+		if (yi == hsz-1) {
+			in2p = in1p;
+		}
+
+		float *in01 = (float*)in0p;
+		float *in11 = (float*)in1p;
+		float *in21 = (float*)in2p;
+
+		float bv = biases[0];
+
+		/* 128 item */
+		/* x      : (1width/group) */
+		/* y      : (2height/group) */
+		/* iplane : 1plane / 1item * 128plane */
+
+		__shared__ float shared_buf[128 * 10];
+
+		float *lin00 = shared_buf + 128*0;
+		float *lin01 = shared_buf + 128*1;
+		float *lin02 = shared_buf + 128*2;
+
+		float *lin10 = shared_buf + 128*3;
+		float *lin11 = shared_buf + 128*4;
+		float *lin12 = shared_buf + 128*5;
+
+		float *lin20 = shared_buf + 128*6;
+		float *lin21 = shared_buf + 128*7;
+		float *lin22 = shared_buf + 128*8;
+
+		float *sum_buffer = shared_buf + 128*9;
+
+#define OUT1_LOAD_WEIGHT(I,Y,X) float w##I##Y##X = weight[(I*16 + lid)*9 + Y*3 + X];
+		float w00 = weight[lid*9 + 0];
+		float w01 = weight[lid*9 + 1];
+		float w02 = weight[lid*9 + 2];
+		float w10 = weight[lid*9 + 3];
+		float w11 = weight[lid*9 + 4];
+		float w12 = weight[lid*9 + 5];
+		float w20 = weight[lid*9 + 6];
+		float w21 = weight[lid*9 + 7];
+		float w22 = weight[lid*9 + 8];
+
+		float *pin01 = in01 + lid;
+		float *pin02 = in01 + 128 + lid;
+
+		float *pin11 = in11 + lid;
+		float *pin12 = in11 + 128 + lid;
+
+		float *pin21 = in21 + lid;
+		float *pin22 = in21 + 128 + lid;
+
+		lin01[lid] = pin01[0];
+		lin02[lid] = pin01[0];
+
+		lin11[lid] = pin11[0];
+		lin12[lid] = pin11[0];
+
+		lin21[lid] = pin21[0];
+		lin22[lid] = pin21[0];
+
+#define OUT1_BODY(LEDGE,REDGE)						\
+		{							\
+			float sum = 0;					\
+			{						\
+				int i = lid;				\
+				float *tmp0 = lin00;			\
+				float *tmp1 = lin10;			\
+				float *tmp2 = lin20;			\
+									\
+				lin00 = lin01; lin01 = lin02; lin02 = tmp0; \
+				lin10 = lin11; lin11 = lin12; lin12 = tmp1; \
+				lin20 = lin21; lin21 = lin22; lin22 = tmp2; \
+									\
+				if (REDGE) {				\
+					lin02 = lin01;			\
+					lin12 = lin11;			\
+					lin22 = lin21;			\
+				} else {				\
+					lin02[lid] = pin02[xi*128];	\
+					lin12[lid] = pin12[xi*128];	\
+					lin22[lid] = pin22[xi*128];	\
+				}					\
+									\
+				sum += w00 * lin00[lid];		\
+				sum += w10 * lin10[lid];		\
+				sum += w20 * lin20[lid];		\
+									\
+				sum += w01 * lin01[lid];		\
+				sum += w11 * lin11[lid];		\
+				sum += w21 * lin21[lid];		\
+									\
+				sum += w02 * lin02[lid];		\
+				sum += w12 * lin12[lid];		\
+				sum += w22 * lin22[lid];		\
+									\
+			}						\
+			__syncthreads();				\
+			sum_buffer[lid] = sum;				\
+			__syncthreads();				\
+			if (lid < 64) {					\
+				float2 v2 = *(float2*)&sum_buffer[lid*2]; \
+				sum_buffer[lid] = v2.x + v2.y;		\
+			}						\
+			__syncthreads();				\
+			if (lid < 32) {					\
+				float2 v2 = *(float2*)&sum_buffer[lid*2]; \
+				sum_buffer[lid] = v2.x + v2.y;		\
+			}						\
+			__syncthreads();				\
+									\
+			if (lid == 0) {					\
+				float sum = 0;				\
+				for (int i=0; i<32; i++) {		\
+					sum += sum_buffer[i];		\
+				}					\
+									\
+				float v = sum;				\
+				float *out = packed_output + (yi*wsz + xi); \
+				v += bv;				\
+				float mtz = max(v, 0.0f);		\
+				float ltz = min(v, 0.0f);		\
+				v = ltz * 0.1f + mtz;			\
+				out[0] = v;				\
+			}						\
+		}
+
+
+		for (int xi=0; xi<wsz-1; xi++) {
+			OUT1_BODY(0,0);
+		}
+		{
+			int xi = wsz-1;
+			OUT1_BODY(0,1);
+		}
+	}
 }

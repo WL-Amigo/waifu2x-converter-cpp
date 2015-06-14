@@ -87,14 +87,15 @@ static bool convertWithModelsBasic(ComputeEnv *env,
 		Buffer *packed_output_buf = new Buffer(env,
 						       sizeof(float) * filterWidth * filterHeight *
 						       models[index]->getNOutputPlanes());
-		std::cout << "Iteration #" << (index + 1) << "..." ;
+		int nOutputPlanes = models[index]->getNOutputPlanes();
+		int nInputPlanes = models[index]->getNInputPlanes();
+
+		std::cout << "Iteration #" << (index + 1) << "(" << nInputPlanes << "->" << nOutputPlanes << ")..." ;
 		double t0 = getsec();
 		if (!models[index]->filter(env, packed_input_buf, packed_output_buf, filterSize)) {
 			std::exit(-1);
 		}
 		double t1 = getsec();
-		int nOutputPlanes = models[index]->getNOutputPlanes();
-		int nInputPlanes = models[index]->getNInputPlanes();
 		double ops = filterSize.width * filterSize.height * 9.0 * 2.0 * nOutputPlanes * nInputPlanes;
 		double gflops = (ops/(1000.0*1000.0*1000.0)) / (t1-t0);
 		double bytes = filterSize.width * filterSize.height * sizeof(float) * (nOutputPlanes + nInputPlanes);
