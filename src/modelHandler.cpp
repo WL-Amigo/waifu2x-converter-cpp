@@ -364,7 +364,7 @@ bool Model::filter(ComputeEnv *env,
 	bool cl_available = env->num_cl_dev > 0;
 	bool cuda_available = env->num_cuda_dev > 0;
 
-	printf("%d->%d\n", nInputPlanes, nOutputPlanes);
+	//printf("%d->%d\n", nInputPlanes, nOutputPlanes);
 
 	if (nOutputPlanes > GPU_VEC_WIDTH && nOutputPlanes % GPU_VEC_WIDTH) {
 		cl_available = false;
@@ -372,11 +372,6 @@ bool Model::filter(ComputeEnv *env,
 	}
 
 	if (nInputPlanes == 32 || nInputPlanes == 64 || nInputPlanes == 128) {
-	} else {
-		cuda_available = false;
-	}
-
-	if (nInputPlanes == 128 && nInputPlanes == 128) {
 	} else {
 		cuda_available = false;
 	}

@@ -16,6 +16,24 @@ typedef enum cudaError_enum {
     CUDA_SUCCESS = 0
 } CUresult;
 
+typedef enum CUjit_option_enum {
+    CU_JIT_MAX_REGISTERS = 0,
+    CU_JIT_THREADS_PER_BLOCK = 1,
+    CU_JIT_WALL_TIME = 2,
+    CU_JIT_INFO_LOG_BUFFER = 3,
+    CU_JIT_INFO_LOG_BUFFER_SIZE_BYTES = 4,
+    CU_JIT_ERROR_LOG_BUFFER = 5,
+    CU_JIT_ERROR_LOG_BUFFER_SIZE_BYTES = 6,
+    CU_JIT_OPTIMIZATION_LEVEL = 7,
+    CU_JIT_CACHE_MODE=14,
+} CUjit_option;
+
+typedef enum CUjit_cacheMode_enum {
+    CU_JIT_CACHE_OPTION_NONE = 0,
+    CU_JIT_CACHE_OPTION_CG,
+    CU_JIT_CACHE_OPTION_CA
+} CUjit_cacheMode;
+
 typedef enum CUfunc_cache_enum {
     CU_FUNC_CACHE_PREFER_NONE = 0,
     CU_FUNC_CACHE_PREFER_SHARED = 1,
@@ -45,6 +63,7 @@ typedef CUresult (* CUDAAPI tcuDeviceGetName)(char *name, int len, CUdevice dev)
 typedef CUresult (* CUDAAPI tcuCtxCreate)(CUcontext *ret, unsigned int flags, CUdevice dev);
 typedef CUresult (* CUDAAPI tcuCtxDestroy)(CUcontext ret);
 typedef CUresult (* CUDAAPI tcuModuleLoadData)(CUmodule *module, const void *image);
+typedef CUresult (* CUDAAPI tcuModuleLoadDataEx)(CUmodule *module, const void *image, unsigned int n, CUjit_option *o, void **ov);
 typedef CUresult (* CUDAAPI tcuModuleUnload)(CUmodule mod);
 typedef CUresult (* CUDAAPI tcuModuleGetFunction)(CUfunction *hfunc, CUmodule mod, const char *name);
 typedef CUresult (* CUDAAPI tcuStreamCreate)(CUstream *str, unsigned int Flags);
@@ -64,6 +83,7 @@ typedef CUresult (* CUDAAPI tcuLaunchKernel)(CUfunction f,
                                              CUstream str, void **kernelParams, void **extra);
 typedef CUresult (* CUDAAPI tcuCtxSetCacheConfig)(CUfunc_cache c);
 typedef CUresult (* CUDAAPI tcuFuncSetSharedMemConfig)(CUfunction func, CUsharedconfig config);
+typedef CUresult (* CUDAAPI tcuCtxSetSharedMemConfig)(CUsharedconfig config);
 
 #define FOR_EACH_CUDA_FUNC(F,F_V2)              \
     F(cuInit)                                   \
@@ -73,6 +93,7 @@ typedef CUresult (* CUDAAPI tcuFuncSetSharedMemConfig)(CUfunction func, CUshared
     F_V2(cuCtxCreate)                            \
     F_V2(cuCtxDestroy)                           \
     F(cuModuleLoadData)                          \
+    F(cuModuleLoadDataEx)                          \
     F(cuModuleUnload)                            \
     F(cuModuleGetFunction)                       \
     F(cuStreamCreate)                             \
@@ -87,7 +108,8 @@ typedef CUresult (* CUDAAPI tcuFuncSetSharedMemConfig)(CUfunction func, CUshared
     F_V2(cuCtxPopCurrent)                            \
     F(cuLaunchKernel)                                \
     F(cuCtxSetCacheConfig)                           \
-    F(cuFuncSetSharedMemConfig)
+    F(cuFuncSetSharedMemConfig)                      \
+    F(cuCtxSetSharedMemConfig)
 
 
 #define CUDA_PROTOTYPE(name)                    \

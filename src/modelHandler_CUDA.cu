@@ -580,6 +580,8 @@ filter_i128_o128(const float * __restrict__ packed_input,
 	__shared__ float in21_block_buf[128];
 	__shared__ float in22_block_buf[128];
 
+	__shared__ float intermediate[32];
+
 	float *in00_block = in00_block_buf;
 	float *in01_block = in01_block_buf;
 	float *in02_block = in02_block_buf;
@@ -592,7 +594,12 @@ filter_i128_o128(const float * __restrict__ packed_input,
 	float *in21_block = in21_block_buf;
 	float *in22_block = in22_block_buf;
 
-	float bv = biases[op];
+	int op_relu = op32*32 + lid;
+	float bv = 0;
+
+	if (lid < 32) {
+		bv = biases[op_relu];
+	}
 
 	if (lid < 128) {
 		float v0 = in0p[lid];
@@ -664,17 +671,21 @@ filter_i128_o128(const float * __restrict__ packed_input,
 		CONVOLVE(3);
 
 		sum = warp_sum(sum);
-
 		if (ip0 == 0) {
+			intermediate[op1] = sum;
+		}
+		__syncthreads();
+
+		if (lid < 32) {
 			float *out = packed_output + (yi*wsz + xi)*nOutputPlanes;
-			float v = sum;
+			float v = intermediate[lid];
 			v += bv;
 
 			float mtz = max(v, 0.0f);
 			float ltz = min(v, 0.0f);
 
 			v = ltz * 0.1f + mtz;
-			out[op] = v;
+			out[op_relu] = v;
 		}
 
 #else

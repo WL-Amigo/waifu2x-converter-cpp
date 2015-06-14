@@ -18,8 +18,8 @@ src/modelHandler_CUDA.o: src/modelHandler_CUDA.ptx.h
 waifu2x-converter-cpp: $(OBJS)
 	g++ $(LDFLAGS) -o $@ $^ $(LDLIBS)
 
-INPUT=./a.png
-#INPUT=./b.png
+#INPUT=./a.png
+INPUT=./b.png
 #INPUT=./c.png
 #INPUT=./d.png
 #INPUT=./e.png
@@ -80,5 +80,5 @@ src/modelHandler_CUDA.ptx: src/modelHandler_CUDA.cu
 %.sass: %.cubin
 	nvdisasm $< > $@
 %.cubin: %.ptx
-	ptxas -O3 --gpu-name sm_30 -o $@ $<
+	ptxas -dlcm=ca -O3 --gpu-name sm_30 -o $@ $<
 

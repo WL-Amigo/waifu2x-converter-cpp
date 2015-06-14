@@ -95,7 +95,16 @@ initCUDA(ComputeEnv *env)
 		return false;
 	}
 
-	r = cuModuleLoadData(&mod, prog);
+	CUjit_option jit_options[2];
+	void *jit_optvals[2];
+
+	jit_options[0] = CU_JIT_CACHE_MODE;
+	jit_optvals[0] = (void*)(uintptr_t)CU_JIT_CACHE_OPTION_CA;
+
+	//jit_options[1] = CU_JIT_OPTIMIZATION_LEVEL;
+	//jit_optvals[1] = (void*)(uintptr_t)0;
+
+	r = cuModuleLoadDataEx(&mod, prog, 1, jit_options, jit_optvals);
 	if (r != CUDA_SUCCESS) {
 		cuCtxDestroy(ctxt);
 		cuStreamDestroy(stream);
@@ -138,8 +147,9 @@ initCUDA(ComputeEnv *env)
 	printf("CUDA : %s\n", name);
 
 	cuCtxSetCacheConfig(CU_FUNC_CACHE_PREFER_SHARED);
-	cuFuncSetSharedMemConfig(filter_i32, CU_SHARED_MEM_CONFIG_EIGHT_BYTE_BANK_SIZE);
-	cuFuncSetSharedMemConfig(filter_i64, CU_SHARED_MEM_CONFIG_EIGHT_BYTE_BANK_SIZE);
+	cuCtxSetSharedMemConfig(CU_SHARED_MEM_CONFIG_EIGHT_BYTE_BANK_SIZE);
+	//cuFuncSetSharedMemConfig(filter_i32, CU_SHARED_MEM_CONFIG_EIGHT_BYTE_BANK_SIZE);
+	//cuFuncSetSharedMemConfig(filter_i64, CU_SHARED_MEM_CONFIG_EIGHT_BYTE_BANK_SIZE);
 	//cuFuncSetSharedMemConfig(filter_i128, CU_SHARED_MEM_CONFIG_EIGHT_BYTE_BANK_SIZE);
 
 	env->num_cuda_dev = 1;
@@ -207,7 +217,7 @@ filter_CUDA_impl(ComputeEnv *env,
 	size_t h = ip_height;
 	size_t w = ip_width;
 
-	if (nInputPlanes == 128 && nOutputPlanes == 128) {
+	if (0 && nInputPlanes == 128 && nOutputPlanes == 128) {
 		void *args[7] = {&packed_input,
 				 &packed_output,
 				 &d_fbiases,
