@@ -580,11 +580,10 @@ filter_i128_o128(const float * __restrict__ packed_input,
 				int rem = wsz - xi0;
 				int op = lid + ob0;
 
-				const float *w = weight + op;
+				const float *w0 = weight + op;
 
-				if (0 && rem >= BLOCK_SIZE) {
-
-#define DECL_PTR(y,x)			float *p##y##x = &in_block##y[nInputPlanes * (x-1)];
+				if (rem >= BLOCK_SIZE) {
+#define DECL_PTR(y,x)			float *p##y##x = &in_block##y[INPUT_BLOCK_SIZE * (x-1)];
 					UNROLL10x3(DECL_PTR);
 
 					float sum0 = 0;
@@ -597,70 +596,62 @@ filter_i128_o128(const float * __restrict__ packed_input,
 					float sum6 = 0;
 					float sum7 = 0;
 
-					int xi = xi0;
+					for (int ip1 = 0; ip1 < INPUT_BLOCK_SIZE; ip1+=2) {
+						int ip = ip1 + ib0;
 
-					for (int ip = 0; ip < nInputPlanes; ip++) {
-#define LOAD_INPUT2(y,x)			float2 i##y##x##_2 = *(float2*)&p##y##x[ip];
+#define LOAD_INPUT2(y,x)			float2 i##y##x##_2 = *(float2*)&p##y##x[ip1];
 
 						UNROLL10x3(LOAD_INPUT2);
 
 #define LOAD_COEF(X)				float w_##X = w[X * 128];
 
-#define CALC(IDX,Y,I0,I1,I2,I3,I4,I5,I6,I7)				\
-						sum0 += w_##IDX * i##Y##I0; \
-						sum1 += w_##IDX * i##Y##I1; \
-						sum2 += w_##IDX * i##Y##I2; \
-						sum3 += w_##IDX * i##Y##I3; \
-						sum4 += w_##IDX * i##Y##I4; \
-						sum5 += w_##IDX * i##Y##I5; \
-						sum6 += w_##IDX * i##Y##I6; \
-						sum7 += w_##IDX * i##Y##I7;
+#define CALC(SYM,IDX,Y,I0,I1,I2,I3,I4,I5,I6,I7)				\
+						sum0 += w_##IDX * i##Y##I0##_2.SYM; \
+						sum1 += w_##IDX * i##Y##I1##_2.SYM; \
+						sum2 += w_##IDX * i##Y##I2##_2.SYM; \
+						sum3 += w_##IDX * i##Y##I3##_2.SYM; \
+						sum4 += w_##IDX * i##Y##I4##_2.SYM; \
+						sum5 += w_##IDX * i##Y##I5##_2.SYM; \
+						sum6 += w_##IDX * i##Y##I6##_2.SYM; \
+						sum7 += w_##IDX * i##Y##I7##_2.SYM;
 
 
 						{
-#define LOAD_INPUT1X(Y,X)				float i##Y##X = i##Y##X##_2.x;
-
-							UNROLL10x3(LOAD_INPUT1X);
-
-							const float *w = (w + (ip * 128) * 9);
+							const float *w = (w0 + (ip * 128) * 9);
 							UNROLL9(LOAD_COEF);
 
 							{
-								CALC(0,0,0,1,2,3,4,5,6,7);
-								CALC(1,0,1,2,3,4,5,6,7,8);
-								CALC(2,0,2,3,4,5,6,7,8,9);
+								CALC(x, 0,0,0,1,2,3,4,5,6,7);
+								CALC(x, 1,0,1,2,3,4,5,6,7,8);
+								CALC(x, 2,0,2,3,4,5,6,7,8,9);
 
-								CALC(3,1,0,1,2,3,4,5,6,7);
-								CALC(4,1,1,2,3,4,5,6,7,8);
-								CALC(5,1,2,3,4,5,6,7,8,9);
+								CALC(x, 3,1,0,1,2,3,4,5,6,7);
+								CALC(x, 4,1,1,2,3,4,5,6,7,8);
+								CALC(x, 5,1,2,3,4,5,6,7,8,9);
 
-								CALC(6,2,0,1,2,3,4,5,6,7);
-								CALC(7,2,1,2,3,4,5,6,7,8);
-								CALC(8,2,2,3,4,5,6,7,8,9);
+								CALC(x, 6,2,0,1,2,3,4,5,6,7);
+								CALC(x, 7,2,1,2,3,4,5,6,7,8);
+								CALC(x, 8,2,2,3,4,5,6,7,8,9);
 							}
 						}
 
 						ip++;
 						{
-#define LOAD_INPUT1Y(Y,X)				float i##Y##X = i##Y##X##_2.y;
-
-							UNROLL10x3(LOAD_INPUT1Y);
-
-							const float *w = (w + (ip * 128) * 9);
+							const float *w = (w0 + (ip * 128) * 9);
 							UNROLL9(LOAD_COEF);
 
 							{
-								CALC(0,0,0,1,2,3,4,5,6,7);
-								CALC(1,0,1,2,3,4,5,6,7,8);
-								CALC(2,0,2,3,4,5,6,7,8,9);
+								CALC(y, 0,0,0,1,2,3,4,5,6,7);
+								CALC(y, 1,0,1,2,3,4,5,6,7,8);
+								CALC(y, 2,0,2,3,4,5,6,7,8,9);
 
-								CALC(3,1,0,1,2,3,4,5,6,7);
-								CALC(4,1,1,2,3,4,5,6,7,8);
-								CALC(5,1,2,3,4,5,6,7,8,9);
+								CALC(y, 3,1,0,1,2,3,4,5,6,7);
+								CALC(y, 4,1,1,2,3,4,5,6,7,8);
+								CALC(y, 5,1,2,3,4,5,6,7,8,9);
 
-								CALC(6,2,0,1,2,3,4,5,6,7);
-								CALC(7,2,1,2,3,4,5,6,7,8);
-								CALC(8,2,2,3,4,5,6,7,8,9);
+								CALC(y, 6,2,0,1,2,3,4,5,6,7);
+								CALC(y, 7,2,1,2,3,4,5,6,7,8);
+								CALC(y, 8,2,2,3,4,5,6,7,8,9);
 							}
 						}
 					}
@@ -670,7 +661,7 @@ filter_i128_o128(const float * __restrict__ packed_input,
 						float *out = packed_output + (yi*wsz + (xi0+BI))*nOutputPlanes; \
 									\
 						{			\
-							float v = sum##BI; \
+							float v = sum##BI + out[op]; \
 							v += biases[op]; \
 									\
 							float mtz = max(v, 0.0f); \
@@ -735,17 +726,17 @@ filter_i128_o128(const float * __restrict__ packed_input,
 							i12 = in_block1[(bi+1)*INPUT_BLOCK_SIZE+ip1];
 							i22 = in_block2[(bi+1)*INPUT_BLOCK_SIZE+ip1];
 
-							sum += w[(9*ip+0) * 128]*i00;
-							sum += w[(9*ip+1) * 128]*i01;
-							sum += w[(9*ip+2) * 128]*i02;
+							sum += w0[(9*ip+0) * 128]*i00;
+							sum += w0[(9*ip+1) * 128]*i01;
+							sum += w0[(9*ip+2) * 128]*i02;
 
-							sum += w[(9*ip+3) * 128]*i10;
-							sum += w[(9*ip+4) * 128]*i11;
-							sum += w[(9*ip+5) * 128]*i12;
+							sum += w0[(9*ip+3) * 128]*i10;
+							sum += w0[(9*ip+4) * 128]*i11;
+							sum += w0[(9*ip+5) * 128]*i12;
 
-							sum += w[(9*ip+6) * 128]*i20;
-							sum += w[(9*ip+7) * 128]*i21;
-							sum += w[(9*ip+8) * 128]*i22;
+							sum += w0[(9*ip+6) * 128]*i20;
+							sum += w0[(9*ip+7) * 128]*i21;
+							sum += w0[(9*ip+8) * 128]*i22;
 						}
 
 						float *out = packed_output + (yi*wsz + xi)*nOutputPlanes;

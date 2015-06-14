@@ -89,7 +89,7 @@ Model::filter_CV(ComputeEnv *env,
 	return true;
 }
 
-#define COMPARE_RESULT
+//#define COMPARE_RESULT
 
 bool Model::filter_AVX_OpenCL(ComputeEnv *env,
 			      Buffer *packed_input_buf,
@@ -372,11 +372,6 @@ bool Model::filter(ComputeEnv *env,
 	}
 
 	if (nInputPlanes == 32 || nInputPlanes == 64 || nInputPlanes == 128) {
-	} else {
-		cuda_available = false;
-	}
-
-	if (nInputPlanes == 128 && nOutputPlanes == 128) {
 	} else {
 		cuda_available = false;
 	}
