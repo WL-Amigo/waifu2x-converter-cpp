@@ -5,7 +5,7 @@
 extern "C" {
 #endif
 
-#include <CL/cl.h>
+#include <cl.h>
 
 #ifndef CLLIB_EXTERN
 #define CLLIB_EXTERN extern

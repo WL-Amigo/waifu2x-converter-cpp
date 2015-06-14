@@ -18,7 +18,7 @@
 #include <intrin.h>
 #endif
 #include "sec.hpp"
-#include "threadPool.hpp"
+//#include "threadPool.hpp"
 #include "common.hpp"
 #include "filters.hpp"
 #include "params.h"
@@ -618,7 +618,7 @@ bool modelUtility::setNumberOfJobs(int setNJob){
 	if(setNJob < 1)return false;
 	nJob = setNJob;
 
-	initThreadPool(nJob);
+	//initThreadPool(nJob);
 
 	return true;
 };

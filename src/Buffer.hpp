@@ -1,7 +1,7 @@
 #ifndef BUFFER_HPP
 #define BUFFER_HPP
 
-#include <CL/cl.h>
+#include <cl.h>
 #include "CLlib.h"
 
 

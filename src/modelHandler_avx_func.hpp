@@ -1,5 +1,7 @@
 #include "threadPool.hpp"
 #include "params.h"
+#include <algorithm>
+#include <vector>
 
 #define BLOCK_SIZE_HOR 256
 #define BLOCK_SIZE_VER 16
@@ -398,7 +400,10 @@ filter_AVX_impl0(const float *packed_input,
 
 	std::atomic<unsigned int> block_counter(0U);
 
-	startFunc([&]() {
+std::vector<std::thread> workerThreads;
+//    for (int ji=0; ji<nJob; ji++) {
+//		               auto t = std::thread([&]() {
+//	startFunc([&]() {
 			float *intermediate = (float*)_mm_malloc(sizeof(float)*nOutputPlanes*2, 64);
 
 			while (1) {
@@ -448,6 +453,15 @@ filter_AVX_impl0(const float *packed_input,
 					}
 				}
 			}
-		}
+//		}
+/*  
 		);
+               workerThreads.push_back(std::move(t));
+
+	       for (auto& th : workerThreads) {
+		               th.join();
+		       }
+	}
+*/
+
 }
