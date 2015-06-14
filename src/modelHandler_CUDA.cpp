@@ -111,7 +111,8 @@ initCUDA(ComputeEnv *env)
 		return false;
 	}
 
-	CUfunction filter_i32=0, filter_i64=0, filter_i128=0, filter_i128_o128=0;
+	CUfunction filter_i32=0, filter_i64=0, filter_i128=0;
+	CUfunction filter_i64_o64=0, filter_i128_o128=0, filter_i64_o128=0;
 
 	r = cuModuleGetFunction(&filter_i32, mod, "filter_i32");
 	if (r != CUDA_SUCCESS) {
@@ -134,6 +135,20 @@ initCUDA(ComputeEnv *env)
 		cuStreamDestroy(stream);
 		return false;
 	}
+	r = cuModuleGetFunction(&filter_i64_o64, mod, "filter_i64_o64");
+	if (r != CUDA_SUCCESS) {
+		cuModuleUnload(mod);
+		cuCtxDestroy(ctxt);
+		cuStreamDestroy(stream);
+		return false;
+	}
+	r = cuModuleGetFunction(&filter_i64_o128, mod, "filter_i64_o128");
+	if (r != CUDA_SUCCESS) {
+		cuModuleUnload(mod);
+		cuCtxDestroy(ctxt);
+		cuStreamDestroy(stream);
+		return false;
+	}
 	r = cuModuleGetFunction(&filter_i128_o128, mod, "filter_i128_o128");
 	if (r != CUDA_SUCCESS) {
 		cuModuleUnload(mod);
@@ -147,7 +162,7 @@ initCUDA(ComputeEnv *env)
 	printf("CUDA : %s\n", name);
 
 	cuCtxSetCacheConfig(CU_FUNC_CACHE_PREFER_SHARED);
-	cuCtxSetSharedMemConfig(CU_SHARED_MEM_CONFIG_EIGHT_BYTE_BANK_SIZE);
+	cuCtxSetSharedMemConfig(CU_SHARED_MEM_CONFIG_FOUR_BYTE_BANK_SIZE);
 	//cuFuncSetSharedMemConfig(filter_i32, CU_SHARED_MEM_CONFIG_EIGHT_BYTE_BANK_SIZE);
 	//cuFuncSetSharedMemConfig(filter_i64, CU_SHARED_MEM_CONFIG_EIGHT_BYTE_BANK_SIZE);
 	//cuFuncSetSharedMemConfig(filter_i128, CU_SHARED_MEM_CONFIG_EIGHT_BYTE_BANK_SIZE);
@@ -160,6 +175,8 @@ initCUDA(ComputeEnv *env)
 	env->cuda_dev_list[0].filter_i32 = filter_i32;
 	env->cuda_dev_list[0].filter_i64 = filter_i64;
 	env->cuda_dev_list[0].filter_i128 = filter_i128;
+	env->cuda_dev_list[0].filter_i64_o64 = filter_i64_o64;
+	env->cuda_dev_list[0].filter_i64_o128 = filter_i64_o128;
 	env->cuda_dev_list[0].filter_i128_o128 = filter_i128_o128;
 	env->cuda_dev_list[0].stream = stream;
 
@@ -217,7 +234,19 @@ filter_CUDA_impl(ComputeEnv *env,
 	size_t h = ip_height;
 	size_t w = ip_width;
 
-	if (nInputPlanes == 128 && nOutputPlanes == 128) {
+	if ((nInputPlanes == 128 && nOutputPlanes == 128) ||
+	    (nInputPlanes == 64 && nOutputPlanes == 128) ||
+	    (nInputPlanes == 64 && nOutputPlanes == 64))
+	{
+		CUfunction f = 0;
+		if (nInputPlanes == 128 && nOutputPlanes == 128) {
+			f = dev->filter_i128_o128;
+		} else if (nInputPlanes == 64 && nOutputPlanes == 128) {
+			f = dev->filter_i64_o128;
+		} else if (nInputPlanes == 64 && nOutputPlanes == 64) {
+			f = dev->filter_i64_o64;
+		}
+
 		for (size_t ib0=0; ib0<nInputPlanes; ib0+=32) {
 			for (size_t ob0=0; ob0<nOutputPlanes; ob0+=64) {
 				void *args[] = {&packed_input,
@@ -229,7 +258,7 @@ filter_CUDA_impl(ComputeEnv *env,
 						&ib0,
 						&ob0};
 
-				r = cuLaunchKernel(dev->filter_i128_o128,
+				r = cuLaunchKernel(f,
 						   h, 1, 1,
 						   64, 1, 1,
 						   0,

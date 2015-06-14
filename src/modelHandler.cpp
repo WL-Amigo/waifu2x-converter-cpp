@@ -234,9 +234,7 @@ bool Model::filter_AVX_OpenCL(ComputeEnv *env,
 	bool compare_result = false;
 
 #ifdef COMPARE_RESULT
-	if (nInputPlanes == 128) {
-		compare_result = true;
-	}
+	compare_result = true;
 #endif
 
 	if (compare_result) {
@@ -364,7 +362,7 @@ bool Model::filter(ComputeEnv *env,
 	bool cl_available = env->num_cl_dev > 0;
 	bool cuda_available = env->num_cuda_dev > 0;
 
-	//printf("%d->%d\n", nInputPlanes, nOutputPlanes);
+	printf("%d->%d\n", nInputPlanes, nOutputPlanes);
 
 	if (nOutputPlanes > GPU_VEC_WIDTH && nOutputPlanes % GPU_VEC_WIDTH) {
 		cl_available = false;

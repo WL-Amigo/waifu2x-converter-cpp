@@ -485,23 +485,21 @@ warp_sum(float v) {
     return v;
 }
 
-extern "C" __global__ void
-filter_i128_o128(const float * __restrict__ packed_input,
-		 float * __restrict__ packed_output,
-		 const float * __restrict__ biases,
-		 unsigned int hsz,
-		 unsigned int wsz,
-		 const float * __restrict__ weight,
-		 int ib0,
-		 int ob0)
+template <int nInputPlanes,
+	  int nOutputPlanes>
+void __device__
+filter_weight_blocking(const float * __restrict__ packed_input,
+		       float * __restrict__ packed_output,
+		       const float * __restrict__ biases,
+		       unsigned int hsz,
+		       unsigned int wsz,
+		       const float * __restrict__ weight,
+		       int ib0,
+		       int ob0)
 {
 #define INPUT_BLOCK_SIZE 32
 #define OUTPUT_BLOCK_SIZE 64 // == blockDim.x
 #define X_BLOCK_SIZE 8
-
-	int nInputPlanes = 128;
-	int nOutputPlanes = 128;
-
 	unsigned int yi = blockIdx.x;
 
 	size_t in_step = wsz * nInputPlanes;
@@ -535,6 +533,9 @@ filter_i128_o128(const float * __restrict__ packed_input,
 
 	{ // ib0
 		{ // ob0
+			int op = lid + ob0;
+			float bv = biases[op];
+
 			for (int xi0=0; xi0<wsz; xi0+=BLOCK_SIZE) {
 				__syncthreads();
 				if (lid < INPUT_BLOCK_SIZE) {
@@ -580,7 +581,6 @@ filter_i128_o128(const float * __restrict__ packed_input,
 				__syncthreads();
 
 				int rem = wsz - xi0;
-				int op = lid + ob0;
 
 				const float *w0 = weight + op;
 
@@ -664,7 +664,7 @@ filter_i128_o128(const float * __restrict__ packed_input,
 									\
 						{			\
 							float v = sum##BI + out[op]; \
-							v += biases[op]; \
+							v += bv; \
 									\
 							float mtz = max(v, 0.0f); \
 							float ltz = min(v, 0.0f); \
@@ -745,7 +745,7 @@ filter_i128_o128(const float * __restrict__ packed_input,
 						if ((ib0+INPUT_BLOCK_SIZE) == nInputPlanes) {
 							/* last */
 							float v = sum + out[op];
-							v += biases[op];
+							v += bv;
 
 							float mtz = max(v, 0.0f);
 							float ltz = min(v, 0.0f);
@@ -763,21 +763,70 @@ filter_i128_o128(const float * __restrict__ packed_input,
 			}
 
 		}
-
-#if 0
-		/*for (unsigned int op=0; op<nOutputPlanes; op++) thread */
-		{
-
-
-					{
-
-
-					}
-				}
-			} else {
-			}
-		}
-#endif
 	}
 
+}
+
+extern "C" __global__
+void
+filter_i128_o128(const float * __restrict__ packed_input,
+		 float * __restrict__ packed_output,
+		 const float * __restrict__ biases,
+		 unsigned int hsz,
+		 unsigned int wsz,
+		 const float * __restrict__ weight,
+		 int ib0,
+		 int ob0)
+{
+	filter_weight_blocking<128,128>(packed_input,
+					packed_output,
+					biases,
+					hsz,
+					wsz,
+					weight,
+					ib0,
+					ob0);
+}
+
+extern "C" __global__
+void
+filter_i64_o128(const float * __restrict__ packed_input,
+		float * __restrict__ packed_output,
+		const float * __restrict__ biases,
+		unsigned int hsz,
+		unsigned int wsz,
+		const float * __restrict__ weight,
+		int ib0,
+		int ob0)
+{
+	filter_weight_blocking<64,128>(packed_input,
+				       packed_output,
+				       biases,
+				       hsz,
+				       wsz,
+				       weight,
+				       ib0,
+				       ob0);
+}
+
+
+extern "C" __global__
+void
+filter_i64_o64(const float * __restrict__ packed_input,
+	       float * __restrict__ packed_output,
+	       const float * __restrict__ biases,
+	       unsigned int hsz,
+	       unsigned int wsz,
+	       const float * __restrict__ weight,
+	       int ib0,
+	       int ob0)
+{
+	filter_weight_blocking<64,64>(packed_input,
+				      packed_output,
+				      biases,
+				      hsz,
+				      wsz,
+				      weight,
+				      ib0,
+				      ob0);
 }
