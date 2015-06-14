@@ -218,19 +218,28 @@ filter_CUDA_impl(ComputeEnv *env,
 	size_t w = ip_width;
 
 	if (nInputPlanes == 128 && nOutputPlanes == 128) {
-		void *args[7] = {&packed_input,
-				 &packed_output,
-				 &d_fbiases,
-				 &h,
-				 &w,
-				 &d_weight};
+		for (size_t ib0=0; ib0<nInputPlanes; ib0+=32) {
+			for (size_t ob0=0; ob0<nOutputPlanes; ob0+=64) {
+				void *args[] = {&packed_input,
+						&packed_output,
+						&d_fbiases,
+						&h,
+						&w,
+						&d_weight,
+						&ib0,
+						&ob0};
 
-		r = cuLaunchKernel(dev->filter_i128_o128,
-				   h, 1, 1,
-				   64, 1, 1,
-				   0,
-				   dev->stream, args, NULL);
-
+				r = cuLaunchKernel(dev->filter_i128_o128,
+						   h, 1, 1,
+						   64, 1, 1,
+						   0,
+						   dev->stream, args, NULL);
+				if (r != CUDA_SUCCESS) {
+					puts("fail: launch");
+					exit(1);
+				}
+			}
+		}
 	} else {
 		void *args[8] = {&packed_input,
 				 &packed_output,

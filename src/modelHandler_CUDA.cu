@@ -491,7 +491,9 @@ filter_i128_o128(const float * __restrict__ packed_input,
 		 const float * __restrict__ biases,
 		 unsigned int hsz,
 		 unsigned int wsz,
-		 const float * __restrict__ weight)
+		 const float * __restrict__ weight,
+		 int ib0,
+		 int ob0)
 {
 #define INPUT_BLOCK_SIZE 32
 #define OUTPUT_BLOCK_SIZE 64 // == blockDim.x
@@ -531,8 +533,8 @@ filter_i128_o128(const float * __restrict__ packed_input,
 	float *in_block2 = in_block2_base + INPUT_BLOCK_SIZE;
 	int lid = threadIdx.x;
 
-	for (unsigned int ib0=0; ib0<nInputPlanes; ib0+=INPUT_BLOCK_SIZE) {
-		for (unsigned int ob0=0; ob0<nOutputPlanes; ob0+=OUTPUT_BLOCK_SIZE) {
+	{ // ib0
+		{ // ob0
 			for (int xi0=0; xi0<wsz; xi0+=BLOCK_SIZE) {
 				__syncthreads();
 				if (lid < INPUT_BLOCK_SIZE) {
