@@ -875,14 +875,14 @@ filter_i64_o64(const float * __restrict__ packed_input,
 
 extern "C" __global__ void
 filter_i128_o1(const float * __restrict__ packed_input,
-	       int nInputPlanes,
 	       float * __restrict__ packed_output,
-	       int nOutputPlanes,
 	       float * __restrict__ biases,
 	       unsigned int hsz,
 	       unsigned int wsz,
 	       float * __restrict__ weight)
 {
+	int nInputPlanes = 128;
+	int nOutputPlanes = 1;
 	unsigned int yi_base = blockIdx.x;
 	for (int yi0=0; yi0<1; yi0++) {
 		int yi = yi_base + yi0;

@@ -113,6 +113,7 @@ initCUDA(ComputeEnv *env)
 
 	CUfunction filter_i32=0, filter_i64=0, filter_i128=0;
 	CUfunction filter_i64_o64=0, filter_i128_o128=0, filter_i64_o128=0;
+	CUfunction filter_i128_o1=0;
 
 	r = cuModuleGetFunction(&filter_i32, mod, "filter_i32");
 	if (r != CUDA_SUCCESS) {
@@ -156,6 +157,13 @@ initCUDA(ComputeEnv *env)
 		cuStreamDestroy(stream);
 		return false;
 	}
+	r = cuModuleGetFunction(&filter_i128_o1, mod, "filter_i128_o1");
+	if (r != CUDA_SUCCESS) {
+		cuModuleUnload(mod);
+		cuCtxDestroy(ctxt);
+		cuStreamDestroy(stream);
+		return false;
+	}
 
 	char name [1024];
 	cuDeviceGetName(name, sizeof(name), dev);
@@ -178,6 +186,7 @@ initCUDA(ComputeEnv *env)
 	env->cuda_dev_list[0].filter_i64_o64 = filter_i64_o64;
 	env->cuda_dev_list[0].filter_i64_o128 = filter_i64_o128;
 	env->cuda_dev_list[0].filter_i128_o128 = filter_i128_o128;
+	env->cuda_dev_list[0].filter_i128_o1 = filter_i128_o1;
 	env->cuda_dev_list[0].stream = stream;
 
 	return true;
@@ -247,8 +256,8 @@ filter_CUDA_impl(ComputeEnv *env,
 			f = dev->filter_i64_o64;
 		}
 
-		for (size_t ib0=0; ib0<nInputPlanes; ib0+=32) {
-			for (size_t ob0=0; ob0<nOutputPlanes; ob0+=64) {
+		for (size_t ib0=0; ib0<(size_t)nInputPlanes; ib0+=32) {
+			for (size_t ob0=0; ob0<(size_t)nOutputPlanes; ob0+=64) {
 				void *args[] = {&packed_input,
 						&packed_output,
 						&d_fbiases,
@@ -269,6 +278,18 @@ filter_CUDA_impl(ComputeEnv *env,
 				}
 			}
 		}
+	} else if (nInputPlanes == 128 && nOutputPlanes == 1) {
+		void *args[8] = {&packed_input,
+				 &packed_output,
+				 &d_fbiases,
+				 &h,
+				 &w,
+				 &d_weight};
+		r = cuLaunchKernel(dev->filter_i128_o1,
+				   h, 1, 1,
+				   128, 1, 1,
+				   0,
+				   dev->stream, args, NULL);
 	} else {
 		void *args[8] = {&packed_input,
 				 &packed_output,
