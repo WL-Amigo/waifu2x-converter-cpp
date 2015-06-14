@@ -568,17 +568,19 @@ filter_i128_o128(const float * __restrict__ packed_input,
 	const float *in11 = in1p;
 	const float *in21 = in2p;
 
-	__shared__ float in00_block_buf[128];
-	__shared__ float in01_block_buf[128];
-	__shared__ float in02_block_buf[128];
+	__shared__ float in00_block_buf_base[128 * 3 * 3];
 
-	__shared__ float in10_block_buf[128];
-	__shared__ float in11_block_buf[128];
-	__shared__ float in12_block_buf[128];
+	float *in00_block_buf = in00_block_buf_base + 128 * 0;
+	float *in01_block_buf = in00_block_buf_base + 128 * 1;
+	float *in02_block_buf = in00_block_buf_base + 128 * 2;
 
-	__shared__ float in20_block_buf[128];
-	__shared__ float in21_block_buf[128];
-	__shared__ float in22_block_buf[128];
+	float *in10_block_buf = in00_block_buf_base + 128 * 3;
+	float *in11_block_buf = in00_block_buf_base + 128 * 4;
+	float *in12_block_buf = in00_block_buf_base + 128 * 5;
+
+	float *in20_block_buf = in00_block_buf_base + 128 * 6;
+	float *in21_block_buf = in00_block_buf_base + 128 * 7;
+	float *in22_block_buf = in00_block_buf_base + 128 * 8;
 
 	__shared__ float intermediate[32];
 
@@ -613,15 +615,23 @@ filter_i128_o128(const float * __restrict__ packed_input,
 		bv = biases[op_relu];
 	}
 
+	in0p += lid;
+	in1p += lid;
+	in2p += lid;
+
 	if (lid < 128) {
-		float v0 = in0p[lid];
-		float v1 = in1p[lid];
-		float v2 = in2p[lid];
+		float v0 = in0p[0];
+		float v1 = in1p[0];
+		float v2 = in2p[0];
 
 		in01_block_buf[lid] = in02_block_buf[lid] = v0;
 		in11_block_buf[lid] = in12_block_buf[lid] = v1;
 		in21_block_buf[lid] = in22_block_buf[lid] = v2;
 	}
+
+	in0p += nInputPlanes;
+	in1p += nInputPlanes;
+	in2p += nInputPlanes;
 
 	for (int xi=0; xi<wsz; xi++) {
 		__syncthreads();
@@ -635,15 +645,25 @@ filter_i128_o128(const float * __restrict__ packed_input,
 			in20_block_load[0] = in21_block_load[0];
 			in21_block_load[0] = in22_block_load[0];
 
+			float v0, v1, v2;
+
 			if (xi == wsz-1) {
-				in02_block_load[0] = in01_block_load[0];
-				in12_block_load[0] = in11_block_load[0];
-				in22_block_load[0] = in21_block_load[0];
+				v0 = in01_block_load[0];
+				v1 = in11_block_load[0];
+				v2 = in21_block_load[0];
 			} else {
-				in02_block_load[0] = in0p[(xi+1)*nInputPlanes + lid];
-				in12_block_load[0] = in1p[(xi+1)*nInputPlanes + lid];
-				in22_block_load[0] = in2p[(xi+1)*nInputPlanes + lid];
+				v0 = in0p[0];
+				v1 = in1p[0];
+				v2 = in2p[0];
 			}
+
+			in02_block_load[0] = v0;
+			in12_block_load[0] = v1;
+			in22_block_load[0] = v2;
+
+			in0p += nInputPlanes;
+			in1p += nInputPlanes;
+			in2p += nInputPlanes;
 		}
 		__syncthreads();
 
