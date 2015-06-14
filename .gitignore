@@ -21,3 +21,5 @@ src/modelHandler_CUDA.ptx.h
 *.o
 conv
 *.bin
+*.cubin
+*.sass
