@@ -493,9 +493,12 @@ filter_i128_o128(const float * __restrict__ packed_input,
 		 unsigned int wsz,
 		 const float * __restrict__ weight)
 {
+#define INPUT_BLOCK_SIZE 32
+#define OUTPUT_BLOCK_SIZE 64 // == blockDim.x
+#define X_BLOCK_SIZE 8
+
 	int nInputPlanes = 128;
 	int nOutputPlanes = 128;
-	int WARP_SIZE = 64;
 
 	unsigned int yi = blockIdx.x;
 
@@ -518,68 +521,132 @@ filter_i128_o128(const float * __restrict__ packed_input,
 	const float *in11 = in1p;
 	const float *in21 = in2p;
 
-	float *shared_ptr = shared_buf;
-	float *in_block0_base = shared_ptr;
-	shared_ptr += nInputPlanes*(BLOCK_SIZE+2);
-	float *in_block1_base = shared_ptr;
-	shared_ptr += nInputPlanes*(BLOCK_SIZE+2);
-	float *in_block2_base = shared_ptr;
-	shared_ptr += nInputPlanes*(BLOCK_SIZE+2);
+	__shared__ float shared_buf_base[INPUT_BLOCK_SIZE * (X_BLOCK_SIZE+2) * 3];
+	float *in_block0_base = shared_buf_base + INPUT_BLOCK_SIZE * (BLOCK_SIZE+2) * 0;
+	float *in_block1_base = shared_buf_base + INPUT_BLOCK_SIZE * (BLOCK_SIZE+2) * 1;
+	float *in_block2_base = shared_buf_base + INPUT_BLOCK_SIZE * (BLOCK_SIZE+2) * 2;
 
-	float *in_block0 = in_block0_base + nInputPlanes;
-	float *in_block1 = in_block1_base + nInputPlanes;
-	float *in_block2 = in_block2_base + nInputPlanes;
+	float *in_block0 = in_block0_base + INPUT_BLOCK_SIZE;
+	float *in_block1 = in_block1_base + INPUT_BLOCK_SIZE;
+	float *in_block2 = in_block2_base + INPUT_BLOCK_SIZE;
 	int lid = threadIdx.x;
-	float bv = biases[lid];
 
 	for (int xi0=0; xi0<wsz; xi0+=BLOCK_SIZE) {
+		for (unsigned int ib0=0; ib0<nInputPlanes; ib0+=INPUT_BLOCK_SIZE) {
+			for (unsigned int ob0=0; ob0<nOutputPlanes; ob0+=OUTPUT_BLOCK_SIZE) {
+				__syncthreads();
+				if (lid < INPUT_BLOCK_SIZE) {
+					int bi;
+					for (bi=0; bi<X_BLOCK_SIZE; bi++) {
+						int xi = xi0 + bi;
+						if (xi == wsz) {
+							break;
+						}
 
+						/* load to shared */
+						in_block0[bi*INPUT_BLOCK_SIZE + lid] = in01[xi*nInputPlanes + ib0+lid];
+						in_block1[bi*INPUT_BLOCK_SIZE + lid] = in11[xi*nInputPlanes + ib0+lid];
+						in_block2[bi*INPUT_BLOCK_SIZE + lid] = in21[xi*nInputPlanes + ib0+lid];
+					}
+
+					{
+						int xi = xi0 + bi;
+						if (xi == wsz) {
+							in_block0[bi*(int)INPUT_BLOCK_SIZE + lid] = in01[(xi-1)*(int)nInputPlanes + ib0+lid];
+							in_block1[bi*(int)INPUT_BLOCK_SIZE + lid] = in11[(xi-1)*(int)nInputPlanes + ib0+lid];
+							in_block2[bi*(int)INPUT_BLOCK_SIZE + lid] = in21[(xi-1)*(int)nInputPlanes + ib0+lid];
+						} else {
+							in_block0[bi*(int)INPUT_BLOCK_SIZE + lid] = in01[xi*(int)nInputPlanes + ib0+lid];
+							in_block1[bi*(int)INPUT_BLOCK_SIZE + lid] = in11[xi*(int)nInputPlanes + ib0+lid];
+							in_block2[bi*(int)INPUT_BLOCK_SIZE + lid] = in21[xi*(int)nInputPlanes + ib0+lid];
+						}
+					}
+
+					{
+						int xi = xi0-1;
+						if (xi == -1) {
+							in_block0[-1*(int)INPUT_BLOCK_SIZE + (int)lid] = in01[ib0+lid];
+							in_block1[-1*(int)INPUT_BLOCK_SIZE + (int)lid] = in11[ib0+lid];
+							in_block2[-1*(int)INPUT_BLOCK_SIZE + (int)lid] = in21[ib0+lid];
+						} else {
+							in_block0[-1*(int)INPUT_BLOCK_SIZE + (int)lid] = in01[xi*(int)nInputPlanes + ib0+lid];
+							in_block1[-1*(int)INPUT_BLOCK_SIZE + (int)lid] = in11[xi*(int)nInputPlanes + ib0+lid];
+							in_block2[-1*(int)INPUT_BLOCK_SIZE + (int)lid] = in21[xi*(int)nInputPlanes + ib0+lid];
+						}
+					}
+				}
+				__syncthreads();
+
+				{
+					int op = lid + ob0;
+					for (int bi=0; bi<X_BLOCK_SIZE; bi++) {
+						int xi = xi0+bi;
+						if (xi == wsz) {
+							break;
+						}
+
+						const float *w = weight + op;
+						float sum = 0;
+
+						for (int ip1=0; ip1<INPUT_BLOCK_SIZE; ip1++) {
+							int ip = ib0 + ip1;
+
+							float i00, i01, i02;
+							float i10, i11, i12;
+							float i20, i21, i22;
+
+							i00 = in_block0[(bi-1)*INPUT_BLOCK_SIZE+ip1];
+							i10 = in_block1[(bi-1)*INPUT_BLOCK_SIZE+ip1];
+							i20 = in_block2[(bi-1)*INPUT_BLOCK_SIZE+ip1];
+
+							i01 = in_block0[bi*INPUT_BLOCK_SIZE+ip1];
+							i11 = in_block1[bi*INPUT_BLOCK_SIZE+ip1];
+							i21 = in_block2[bi*INPUT_BLOCK_SIZE+ip1];
+
+							i02 = in_block0[(bi+1)*INPUT_BLOCK_SIZE+ip1];
+							i12 = in_block1[(bi+1)*INPUT_BLOCK_SIZE+ip1];
+							i22 = in_block2[(bi+1)*INPUT_BLOCK_SIZE+ip1];
+
+							sum += w[(9*ip+0) * 128]*i00;
+							sum += w[(9*ip+1) * 128]*i01;
+							sum += w[(9*ip+2) * 128]*i02;
+
+							sum += w[(9*ip+3) * 128]*i10;
+							sum += w[(9*ip+4) * 128]*i11;
+							sum += w[(9*ip+5) * 128]*i12;
+
+							sum += w[(9*ip+6) * 128]*i20;
+							sum += w[(9*ip+7) * 128]*i21;
+							sum += w[(9*ip+8) * 128]*i22;
+						}
+
+						float *out = packed_output + (yi*wsz + xi)*nOutputPlanes;
+						if ((ib0+INPUT_BLOCK_SIZE) == nInputPlanes) {
+							/* last */
+							float v = sum + out[op];
+							v += biases[op];
+
+							float mtz = max(v, 0.0f);
+							float ltz = min(v, 0.0f);
+
+							v = ltz * 0.1f + mtz;
+							out[op] = v;
+						} else if (ib0 == 0) {
+							out[op] = sum;
+						} else {
+							out[op] += sum;
+						}
+					}
+				}
+
+			}
+
+		}
+
+#if 0
 		/*for (unsigned int op=0; op<nOutputPlanes; op++) thread */
 		{
 			int rem = wsz - xi0;
-			__syncthreads();
-			if (lid < nInputPlanes) {
-				int bi;
-				int lid2 = lid*2;
-				for (bi=0; bi<BLOCK_SIZE; bi++) {
-					int xi = xi0 + bi;
-					if (xi == wsz) {
-						break;
-					}
-
-					/* load to shared */
-					*(float2*)&in_block0[bi*nInputPlanes + lid2] = *(float2*)&in01[xi*nInputPlanes + lid2];
-					*(float2*)&in_block1[bi*nInputPlanes + lid2] = *(float2*)&in11[xi*nInputPlanes + lid2];
-					*(float2*)&in_block2[bi*nInputPlanes + lid2] = *(float2*)&in21[xi*nInputPlanes + lid2];
-				}
-
-				{
-					int xi = xi0 + bi;
-					if (xi == wsz) {
-						*(float2*)&in_block0[bi*(int)nInputPlanes + lid2] = *(float2*)&in01[(xi-1)*(int)nInputPlanes + lid2];
-						*(float2*)&in_block1[bi*(int)nInputPlanes + lid2] = *(float2*)&in11[(xi-1)*(int)nInputPlanes + lid2];
-						*(float2*)&in_block2[bi*(int)nInputPlanes + lid2] = *(float2*)&in21[(xi-1)*(int)nInputPlanes + lid2];
-					} else {
-						*(float2*)&in_block0[bi*(int)nInputPlanes + lid2] = *(float2*)&in01[xi*(int)nInputPlanes + lid2];
-						*(float2*)&in_block1[bi*(int)nInputPlanes + lid2] = *(float2*)&in11[xi*(int)nInputPlanes + lid2];
-						*(float2*)&in_block2[bi*(int)nInputPlanes + lid2] = *(float2*)&in21[xi*(int)nInputPlanes + lid2];
-					}
-				}
-
-				{
-					int xi = xi0-1;
-					if (xi == -1) {
-						*(float2*)&in_block0[-1*(int)nInputPlanes + (int)lid2] = *(float2*)&in01[lid2];
-						*(float2*)&in_block1[-1*(int)nInputPlanes + (int)lid2] = *(float2*)&in11[lid2];
-						*(float2*)&in_block2[-1*(int)nInputPlanes + (int)lid2] = *(float2*)&in21[lid2];
-					} else {
-						*(float2*)&in_block0[-1*(int)nInputPlanes + (int)lid2] = *(float2*)&in01[xi*(int)nInputPlanes + lid2];
-						*(float2*)&in_block1[-1*(int)nInputPlanes + (int)lid2] = *(float2*)&in11[xi*(int)nInputPlanes + lid2];
-						*(float2*)&in_block2[-1*(int)nInputPlanes + (int)lid2] = *(float2*)&in21[xi*(int)nInputPlanes + lid2];
-					}
-				}
-			}
-			__syncthreads();
 
 			if (rem >= BLOCK_SIZE) {
 #define DECL_PTR(y,x)		float *p##y##x = &in_block##y[nInputPlanes * (x-1)];
@@ -687,62 +754,9 @@ filter_i128_o128(const float * __restrict__ packed_input,
 					}
 				}
 			} else {
-				for (int op=lid; op<nOutputPlanes; op+=WARP_SIZE) {
-					for (int bi=0; bi<BLOCK_SIZE; bi++) {
-						int xi = xi0+bi;
-						if (xi == wsz) {
-							break;
-						}
-
-						const float *w0 = weight + op;
-						float sum = 0;
-
-						for (int ip=0; ip<nInputPlanes; ip++) {
-							float i00, i01, i02;
-							float i10, i11, i12;
-							float i20, i21, i22;
-
-							i00 = in_block0[(bi-1)*nInputPlanes+ip];
-							i10 = in_block1[(bi-1)*nInputPlanes+ip];
-							i20 = in_block2[(bi-1)*nInputPlanes+ip];
-
-							i01 = in_block0[bi*nInputPlanes+ip];
-							i11 = in_block1[bi*nInputPlanes+ip];
-							i21 = in_block2[bi*nInputPlanes+ip];
-
-							i02 = in_block0[(bi+1)*nInputPlanes+ip];
-							i12 = in_block1[(bi+1)*nInputPlanes+ip];
-							i22 = in_block2[(bi+1)*nInputPlanes+ip];
-
-							const float *w = w0;
-							sum += w[(9*ip+0) * 128]*i00;
-							sum += w[(9*ip+1) * 128]*i01;
-							sum += w[(9*ip+2) * 128]*i02;
-
-							sum += w[(9*ip+3) * 128]*i10;
-							sum += w[(9*ip+4) * 128]*i11;
-							sum += w[(9*ip+5) * 128]*i12;
-
-							sum += w[(9*ip+6) * 128]*i20;
-							sum += w[(9*ip+7) * 128]*i21;
-							sum += w[(9*ip+8) * 128]*i22;
-						}
-
-						float *out = packed_output + (yi*wsz + xi)*nOutputPlanes;
-						{
-							float v = sum;
-							v += biases[op];
-
-							float mtz = max(v, 0.0f);
-							float ltz = min(v, 0.0f);
-
-							v = ltz * 0.1f + mtz;
-							out[op] = v;
-						}
-					}
-				}
 			}
 		}
+#endif
 	}
 
 }

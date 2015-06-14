@@ -376,6 +376,11 @@ bool Model::filter(ComputeEnv *env,
 		cuda_available = false;
 	}
 
+	if (nInputPlanes == 128 && nOutputPlanes == 128) {
+	} else {
+		cuda_available = false;
+	}
+
 	if (nOutputPlanes == 1 || (nInputPlanes & 1)) {
 		if (nOutputPlanes == 32 && nInputPlanes == 1) {
 			/* in1 filter */
