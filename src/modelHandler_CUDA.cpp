@@ -217,7 +217,7 @@ filter_CUDA_impl(ComputeEnv *env,
 	size_t h = ip_height;
 	size_t w = ip_width;
 
-	if (0 && nInputPlanes == 128 && nOutputPlanes == 128) {
+	if (nInputPlanes == 128 && nOutputPlanes == 128) {
 		void *args[7] = {&packed_input,
 				 &packed_output,
 				 &d_fbiases,

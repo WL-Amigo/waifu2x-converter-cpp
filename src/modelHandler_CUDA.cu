@@ -594,6 +594,18 @@ filter_i128_o128(const float * __restrict__ packed_input,
 	float *in21_block = in21_block_buf;
 	float *in22_block = in22_block_buf;
 
+	float *in00_block_load = in00_block + lid;
+	float *in01_block_load = in01_block + lid;
+	float *in02_block_load = in02_block + lid;
+
+	float *in10_block_load = in10_block + lid;
+	float *in11_block_load = in11_block + lid;
+	float *in12_block_load = in12_block + lid;
+
+	float *in20_block_load = in20_block + lid;
+	float *in21_block_load = in21_block + lid;
+	float *in22_block_load = in22_block + lid;
+
 	int op_relu = op32*32 + lid;
 	float bv = 0;
 
@@ -606,33 +618,35 @@ filter_i128_o128(const float * __restrict__ packed_input,
 		float v1 = in1p[lid];
 		float v2 = in2p[lid];
 
-		in01_block[lid] = in02_block_buf[lid] = v0;
-		in11_block[lid] = in12_block_buf[lid] = v1;
-		in21_block[lid] = in22_block_buf[lid] = v2;
+		in01_block_buf[lid] = in02_block_buf[lid] = v0;
+		in11_block_buf[lid] = in12_block_buf[lid] = v1;
+		in21_block_buf[lid] = in22_block_buf[lid] = v2;
 	}
 
 	for (int xi=0; xi<wsz; xi++) {
-		float *tmp0 = in00_block;
-		float *tmp1 = in10_block;
-		float *tmp2 = in20_block;
+		__syncthreads();
+		if (lid < 128) {
+			in00_block_load[0] = in01_block_load[0];
+			in01_block_load[0] = in02_block_load[0];
 
-		in00_block = in01_block; in01_block = in02_block; in02_block = tmp0;
-		in10_block = in11_block; in11_block = in12_block; in12_block = tmp1;
-		in20_block = in21_block; in21_block = in22_block; in22_block = tmp2;
+			in10_block_load[0] = in11_block_load[0];
+			in11_block_load[0] = in12_block_load[0];
 
-		if (xi == wsz-1) {
-			in02_block = in01_block;
-			in12_block = in11_block;
-			in22_block = in21_block;
-		} else {
-			__syncthreads();
-			if (lid < nInputPlanes) {
-				tmp0[lid] = in0p[(xi+1)*nInputPlanes + lid];
-				tmp1[lid] = in1p[(xi+1)*nInputPlanes + lid];
-				tmp2[lid] = in2p[(xi+1)*nInputPlanes + lid];
+			in20_block_load[0] = in21_block_load[0];
+			in21_block_load[0] = in22_block_load[0];
+
+			if (xi == wsz-1) {
+				in02_block_load[0] = in01_block_load[0];
+				in12_block_load[0] = in11_block_load[0];
+				in22_block_load[0] = in21_block_load[0];
+			} else {
+				in02_block_load[0] = in0p[(xi+1)*nInputPlanes + lid];
+				in12_block_load[0] = in1p[(xi+1)*nInputPlanes + lid];
+				in22_block_load[0] = in2p[(xi+1)*nInputPlanes + lid];
 			}
-			__syncthreads();
 		}
+		__syncthreads();
+
 #if 1
 		float sum = 0;
 #define CONVOLVE(I) {							\
