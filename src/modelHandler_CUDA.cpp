@@ -226,9 +226,9 @@ filter_CUDA_impl(ComputeEnv *env,
 				 &d_weight};
 
 		r = cuLaunchKernel(dev->filter_i128_o128,
-				   4, h, 1,
-				   32, 32, 1,
-				   0,
+				   h, 1, 1,
+				   64, 1, 1,
+				   sizeof(float) * nInputPlanes * (GPU_BLOCK_SIZE+2) * 3,
 				   dev->stream, args, NULL);
 
 	} else {
