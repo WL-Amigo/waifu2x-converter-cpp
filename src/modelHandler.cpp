@@ -158,6 +158,7 @@ bool Model::filter_AVX_OpenCL(ComputeEnv *env,
 				dst[6] = src2[0];
 				dst[7] = src2[1];
 				dst[8] = src2[2];
+
 			}
 		} else {
 			for (int ii=0; ii<nInputPlanes; ii++) {
@@ -375,13 +376,13 @@ bool Model::filter(ComputeEnv *env,
 	if (nOutputPlanes == 1 || (nInputPlanes & 1)) {
 		if (nOutputPlanes == 32 && nInputPlanes == 1) {
 			/* in1 filter */
+			cuda_available = false;
 		} else if (nOutputPlanes == 1 && nInputPlanes == 128) {
 			/* out1 filter */
 		} else {
 			cl_available = false;
+			cuda_available = false;
 		}
-
-		cuda_available = false;
 	}
 
 	if (nOutputPlanes % (VEC_WIDTH*UNROLL)) {

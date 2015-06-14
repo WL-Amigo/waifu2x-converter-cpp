@@ -882,32 +882,29 @@ filter_i128_o1(const float * __restrict__ packed_input,
 	       float * __restrict__ weight)
 {
 	int nInputPlanes = 128;
-	int nOutputPlanes = 1;
-	unsigned int yi_base = blockIdx.x;
-	for (int yi0=0; yi0<1; yi0++) {
-		int yi = yi_base + yi0;
-		unsigned int lid = threadIdx.x;
+	{
+		unsigned int yi = blockIdx.x;
 
-		size_t in_step = wsz * sizeof(float) * nInputPlanes;
+		size_t in_step = wsz * nInputPlanes;
+		const float *inp = packed_input;
+		inp += yi * in_step;
 
-		char *inp = (char*)packed_input;
-
-		inp += in_step*yi;
-		char *in0p = inp - in_step;
+		const float *in0p = inp - in_step;
 		if (yi == 0) {
 			in0p = inp;
 		}
+		const float *in1p = inp;
 
-		char *in1p = inp;
-		char *in2p = inp + in_step;
-
+		const float *in2p = inp + in_step;
 		if (yi == hsz-1) {
 			in2p = in1p;
 		}
 
-		float *in01 = (float*)in0p;
-		float *in11 = (float*)in1p;
-		float *in21 = (float*)in2p;
+		const float *in01 = in0p;
+		const float *in11 = in1p;
+		const float *in21 = in2p;
+
+		unsigned int lid = threadIdx.x;
 
 		float bv = biases[0];
 
@@ -918,17 +915,17 @@ filter_i128_o1(const float * __restrict__ packed_input,
 
 		__shared__ float shared_buf[128 * 10];
 
-		float *lin00 = shared_buf + 128*0;
-		float *lin01 = shared_buf + 128*1;
-		float *lin02 = shared_buf + 128*2;
+		float lin00;
+		float lin01;
+		float lin02;
 
-		float *lin10 = shared_buf + 128*3;
-		float *lin11 = shared_buf + 128*4;
-		float *lin12 = shared_buf + 128*5;
+		float lin10;
+		float lin11;
+		float lin12;
 
-		float *lin20 = shared_buf + 128*6;
-		float *lin21 = shared_buf + 128*7;
-		float *lin22 = shared_buf + 128*8;
+		float lin20;
+		float lin21;
+		float lin22;
 
 		float *sum_buffer = shared_buf + 128*9;
 
@@ -943,87 +940,82 @@ filter_i128_o1(const float * __restrict__ packed_input,
 		float w21 = weight[lid*9 + 7];
 		float w22 = weight[lid*9 + 8];
 
-		float *pin01 = in01 + lid;
-		float *pin02 = in01 + 128 + lid;
+		const float *pin01 = in01 + lid;
+		const float *pin02 = in01 + nInputPlanes + lid;
 
-		float *pin11 = in11 + lid;
-		float *pin12 = in11 + 128 + lid;
+		const float *pin11 = in11 + lid;
+		const float *pin12 = in11 + nInputPlanes + lid;
 
-		float *pin21 = in21 + lid;
-		float *pin22 = in21 + 128 + lid;
+		const float *pin21 = in21 + lid;
+		const float *pin22 = in21 + nInputPlanes + lid;
 
-		lin01[lid] = pin01[0];
-		lin02[lid] = pin01[0];
+		lin01 = pin01[0];
+		lin02 = pin01[0];
 
-		lin11[lid] = pin11[0];
-		lin12[lid] = pin11[0];
+		lin11 = pin11[0];
+		lin12 = pin11[0];
 
-		lin21[lid] = pin21[0];
-		lin22[lid] = pin21[0];
+		lin21 = pin21[0];
+		lin22 = pin21[0];
 
 #define OUT1_BODY(LEDGE,REDGE)						\
 		{							\
 			float sum = 0;					\
 			{						\
-				int i = lid;				\
-				float *tmp0 = lin00;			\
-				float *tmp1 = lin10;			\
-				float *tmp2 = lin20;			\
-									\
-				lin00 = lin01; lin01 = lin02; lin02 = tmp0; \
-				lin10 = lin11; lin11 = lin12; lin12 = tmp1; \
-				lin20 = lin21; lin21 = lin22; lin22 = tmp2; \
+				lin00 = lin01;		\
+				lin01 = lin02;		\
+				     	     		\
+				lin10 = lin11;		\
+				lin11 = lin12;		\
+				     	     		\
+				lin20 = lin21;		\
+				lin21 = lin22;		\
 									\
 				if (REDGE) {				\
 					lin02 = lin01;			\
-					lin12 = lin11;			\
-					lin22 = lin21;			\
-				} else {				\
-					lin02[lid] = pin02[xi*128];	\
-					lin12[lid] = pin12[xi*128];	\
-					lin22[lid] = pin22[xi*128];	\
+					lin12 = lin11;		\
+					lin22 = lin21;		\
+				} else {     			\
+					lin02 = pin02[xi*128];	\
+					lin12 = pin12[xi*128];	\
+					lin22 = pin22[xi*128];	\
 				}					\
 									\
-				sum += w00 * lin00[lid];		\
-				sum += w10 * lin10[lid];		\
-				sum += w20 * lin20[lid];		\
-									\
-				sum += w01 * lin01[lid];		\
-				sum += w11 * lin11[lid];		\
-				sum += w21 * lin21[lid];		\
-									\
-				sum += w02 * lin02[lid];		\
-				sum += w12 * lin12[lid];		\
-				sum += w22 * lin22[lid];		\
+				sum += w00 * lin00;		\
+				sum += w10 * lin10;		\
+				sum += w20 * lin20;		\
+						  			\
+				sum += w01 * lin01;		\
+				sum += w11 * lin11;		\
+				sum += w21 * lin21;		\
+						  			\
+				sum += w02 * lin02;		\
+				sum += w12 * lin12;		\
+				sum += w22 * lin22;		\
 									\
 			}						\
 			__syncthreads();				\
 			sum_buffer[lid] = sum;				\
 			__syncthreads();				\
 			if (lid < 64) {					\
-				float2 v2 = *(float2*)&sum_buffer[lid*2]; \
-				sum_buffer[lid] = v2.x + v2.y;		\
+				float v2 = sum_buffer[lid+64];		\
+				sum_buffer[lid] += v2;			\
 			}						\
 			__syncthreads();				\
 			if (lid < 32) {					\
-				float2 v2 = *(float2*)&sum_buffer[lid*2]; \
-				sum_buffer[lid] = v2.x + v2.y;		\
-			}						\
-			__syncthreads();				\
+				float v2 = sum_buffer[lid+32];		\
+				sum_buffer[lid] += v2;			\
+				float sum = warp_sum(sum_buffer[lid]);	\
 									\
-			if (lid == 0) {					\
-				float sum = 0;				\
-				for (int i=0; i<32; i++) {		\
-					sum += sum_buffer[i];		\
+				if (lid == 0) {				\
+					float v = sum;			\
+					float *out = packed_output + (yi*wsz + xi); \
+					v += bv;			\
+					float mtz = max(v, 0.0f);	\
+					float ltz = min(v, 0.0f);	\
+					v = ltz * 0.1f + mtz;		\
+					out[0] = v;			\
 				}					\
-									\
-				float v = sum;				\
-				float *out = packed_output + (yi*wsz + xi); \
-				v += bv;				\
-				float mtz = max(v, 0.0f);		\
-				float ltz = min(v, 0.0f);		\
-				v = ltz * 0.1f + mtz;			\
-				out[0] = v;				\
 			}						\
 		}
 
