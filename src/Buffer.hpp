@@ -22,6 +22,7 @@ struct CUDADev {
     int dev;
     CUcontext context;
     CUmodule mod;
+    CUfunction filter_i1_o32;
     CUfunction filter_i32;
     CUfunction filter_i64;
     CUfunction filter_i128;

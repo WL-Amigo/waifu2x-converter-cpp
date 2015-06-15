@@ -103,7 +103,7 @@ initOpenCL(ComputeEnv *env)
         cl_device_id dev;
         cl_command_queue queue;
         cl_kernel ker_filter, ker_filter_in1_out32, ker_filter_in128_out1;
-        cl_program program;
+        cl_program program = 0;
 
         for (unsigned int i=0; i<num_plt; i++) {
                 size_t sz;

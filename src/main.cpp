@@ -226,5 +226,7 @@ int main(int argc, char** argv) {
 		  << flops.sec
 		  << "[sec], " << gflops_proc << "[GFLOPS])" << std::endl;
 
+	w2xc::finiCUDA(&env);
+
 	return 0;
 }

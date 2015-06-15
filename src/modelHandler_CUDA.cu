@@ -1072,3 +1072,129 @@ filter_i128_o1(const float * __restrict__ packed_input,
 		}
 	}
 }
+
+
+
+
+extern "C" __global__ void
+filter_i1_o32(const float * __restrict__ packed_input,
+	      float * __restrict__ packed_output,
+	      float * __restrict__ biases,
+	      unsigned int hsz,
+	      unsigned int wsz,
+	      float * __restrict__ weight)
+{
+	int nInputPlanes = 1;
+	int nOutputPlanes = 32;
+
+	unsigned int yi = blockIdx.x;
+	unsigned int lid = threadIdx.x;
+
+	size_t in_step = wsz;
+
+	const float *inp = packed_input;
+	inp += in_step * yi;
+	const float *in0p = inp - in_step;
+	if (yi == 0) {
+		in0p = inp;
+	}
+	const float *in1p = inp;
+
+	const float *in2p = inp + in_step;
+	if (yi == hsz-1) {
+		in2p = in1p;
+	}
+
+	const float *in01 = in0p;
+	const float *in11 = in1p;
+	const float *in21 = in2p;
+
+	__shared__ float in_block0_base[256+2];
+	__shared__ float in_block1_base[256+2];
+	__shared__ float in_block2_base[256+2];
+
+	float *in_block0 = in_block0_base + 1;
+	float *in_block1 = in_block1_base + 1;
+	float *in_block2 = in_block2_base + 1;
+
+	/* 256 item / group */
+	/* x         : (64width/group) */
+	/* 32 oplane : (8weight/item * 4item)*/
+	unsigned int xoff = lid / 4U;
+	unsigned int ooff = (lid % 4U) * 8;
+
+#define IN1_LOAD_COEF(O,Y,X)				\
+	float w##O##Y##X = weight[9 * (O + ooff) + (Y*3) + X];
+
+	UNROLL8x3x3(IN1_LOAD_COEF);
+
+	for (int xi0=0; xi0<wsz; xi0+=256) {
+		/* load */
+		__syncthreads();
+		{
+			int xi = xi0 + lid;
+
+			if (xi < wsz) {
+				in_block0[lid] = in01[xi0 + lid];
+				in_block1[lid] = in11[xi0 + lid];
+				in_block2[lid] = in21[xi0 + lid];
+
+			}
+
+			if (lid == 0) {
+				if (xi == 0) {
+					in_block0[-1] = in01[0];
+					in_block1[-1] = in11[0];
+					in_block2[-1] = in21[0];
+				}  else {
+					in_block0[-1] = in01[xi-1];
+					in_block1[-1] = in11[xi-1];
+					in_block2[-1] = in21[xi-1];
+				}
+			}
+
+			if (xi == wsz-1) {
+				in_block0[lid+1] = in01[xi];
+				in_block1[lid+1] = in11[xi];
+				in_block2[lid+1] = in21[xi];
+			}
+
+			if ((lid == 255) && (xi < wsz-1)) {
+				in_block0[256] = in01[xi+1];
+				in_block1[256] = in11[xi+1];
+				in_block2[256] = in21[xi+1];
+			}
+		}
+		__syncthreads();
+
+		for (int xi1_base=0; xi1_base<4; xi1_base++) {
+			{
+				int xi1 = xi1_base*64 + xoff;
+
+				int xi = xi0 + xi1;
+				if (xi < wsz) {
+
+#define IN1_DECLSUM(O)			float sum##O = 0;
+#define IN1_CALC(O,Y,X)			sum##O += in_block##Y[xi1+X-1] * w##O##Y##X;
+#define IN1_RELU(O)			{				\
+						float v = sum##O;	\
+						int opIndex = ooff + O;	\
+						float bv = biases[opIndex]; \
+						v += bv;		\
+						float mtz = max(v, 0.0f); \
+						float ltz = min(v, 0.0f); \
+						v = ltz * 0.1f + mtz;	\
+						out[opIndex] = v;	\
+					}
+
+					UNROLL8(IN1_DECLSUM);
+					UNROLL8x3x3(IN1_CALC);
+					float *out = packed_output + (yi*wsz + xi) * nOutputPlanes;
+					UNROLL8(IN1_RELU);
+				}
+			}
+
+		}
+
+	}
+}

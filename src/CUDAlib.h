@@ -89,6 +89,7 @@ typedef CUresult (* CUDAAPI tcuCtxSetCacheConfig)(CUfunc_cache c);
 typedef CUresult (* CUDAAPI tcuFuncSetSharedMemConfig)(CUfunction func, CUsharedconfig config);
 typedef CUresult (* CUDAAPI tcuCtxSetSharedMemConfig)(CUsharedconfig config);
 typedef CUresult (* CUDAAPI tcuDeviceGetAttribute)(int *pi, CUdevice_attribute attr, CUdevice dev);
+typedef CUresult (* CUDAAPI tcuProfilerStart)(void);
 
 #define FOR_EACH_CUDA_FUNC(F,F_V2)              \
     F(cuInit)                                   \
@@ -115,7 +116,8 @@ typedef CUresult (* CUDAAPI tcuDeviceGetAttribute)(int *pi, CUdevice_attribute a
     F(cuCtxSetCacheConfig)                           \
     F(cuFuncSetSharedMemConfig)                      \
     F(cuCtxSetSharedMemConfig)                       \
-    F(cuDeviceGetAttribute)
+    F(cuDeviceGetAttribute)                          \
+    F(cuProfilerStart)                               \
 
 
 #define CUDA_PROTOTYPE(name)                    \

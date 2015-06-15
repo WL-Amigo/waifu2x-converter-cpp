@@ -7,6 +7,7 @@ namespace w2xc {
 
 bool initOpenCL(ComputeEnv *env);
 bool initCUDA(ComputeEnv *env);
+void finiCUDA(ComputeEnv *env);
 
 extern void filter_AVX_impl(const float *packed_input,
 			    float *packed_output,
