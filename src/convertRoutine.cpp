@@ -9,24 +9,32 @@
  */
 
 #include "convertRoutine.hpp"
+#include "common.hpp"
+#include "Buffer.hpp"
+#include "sec.hpp"
 
 namespace w2xc {
 
 // converting process inside program
-static bool convertWithModelsBasic(cv::Mat &inputPlane, cv::Mat &outputPlane,
-		std::vector<std::unique_ptr<Model> > &models);
-static bool convertWithModelsBlockSplit(cv::Mat &inputPlane,
-		cv::Mat &outputPlane, std::vector<std::unique_ptr<Model> > &models);
+static bool convertWithModelsBasic(ComputeEnv *env,
+				   cv::Mat &inputPlane, cv::Mat &outputPlane,
+				   std::vector<std::unique_ptr<Model> > &models, FLOPSCounter *flops);
+static bool convertWithModelsBlockSplit(ComputeEnv *env,
+					cv::Mat &inputPlane,
+					cv::Mat &outputPlane, std::vector<std::unique_ptr<Model> > &models,
+					FLOPSCounter *flops);
 
-bool convertWithModels(cv::Mat &inputPlane, cv::Mat &outputPlane,
-		std::vector<std::unique_ptr<Model> > &models, bool blockSplitting) {
+bool convertWithModels(ComputeEnv *env,
+		       cv::Mat &inputPlane, cv::Mat &outputPlane,
+		       std::vector<std::unique_ptr<Model> > &models,
+		       FLOPSCounter *flops, bool blockSplitting) {
 
 	cv::Size blockSize = modelUtility::getInstance().getBlockSize();
 	bool requireSplitting = (inputPlane.size().width * inputPlane.size().height)
 			> blockSize.width * blockSize.height * 3 / 2;
 //	requireSplitting = true;
 	if (blockSplitting && requireSplitting) {
-		return convertWithModelsBlockSplit(inputPlane, outputPlane, models);
+		return convertWithModelsBlockSplit(env, inputPlane, outputPlane, models, flops);
 	} else {
 		//insert padding to inputPlane
 		cv::Mat tempMat;
@@ -35,7 +43,7 @@ bool convertWithModels(cv::Mat &inputPlane, cv::Mat &outputPlane,
 		cv::copyMakeBorder(inputPlane, tempMat, nModel, nModel, nModel, nModel,
 				cv::BORDER_REPLICATE);
 
-		bool ret = convertWithModelsBasic(tempMat, outputPlane, models);
+		bool ret = convertWithModelsBasic(env, tempMat, outputPlane, models, flops);
 
 		tempMat = outputPlane(cv::Range(nModel, outputSize.height + nModel),
 				cv::Range(nModel, outputSize.width + nModel));
@@ -50,40 +58,79 @@ bool convertWithModels(cv::Mat &inputPlane, cv::Mat &outputPlane,
 
 }
 
-static bool convertWithModelsBasic(cv::Mat &inputPlane, cv::Mat &outputPlane,
-		std::vector<std::unique_ptr<Model> > &models) {
-
+static bool convertWithModelsBasic(ComputeEnv *env,
+				   cv::Mat &inputPlane, cv::Mat &outputPlane,
+				   std::vector<std::unique_ptr<Model> > &models, FLOPSCounter *flops) {
 	// padding is require before calling this function
 
 	std::unique_ptr<std::vector<cv::Mat> > inputPlanes = std::unique_ptr<
 			std::vector<cv::Mat> >(new std::vector<cv::Mat>());
 	std::unique_ptr<std::vector<cv::Mat> > outputPlanes = std::unique_ptr<
 			std::vector<cv::Mat> >(new std::vector<cv::Mat>());
-
+	
 	inputPlanes->clear();
 	inputPlanes->push_back(inputPlane);
 
+	cv::Size filterSize = inputPlane.size();
+	int filterWidth = filterSize.width;
+	int filterHeight = filterSize.height;
+
+	Buffer *packed_input_buf = new Buffer(env, sizeof(float) * filterWidth * filterHeight);
+
+	float *packed_input = (float*)packed_input_buf->get_write_ptr_host(env);
+	pack_mat(packed_input, *inputPlanes, filterWidth, filterHeight, 1);
+
+	double t00 = getsec();
+	double ops_sum = 0;
+
 	for (int index = 0; index < models.size(); index++) {
-		std::cout << "Iteration #" << (index + 1) << "..." << std::endl;
-		if (!models[index]->filter(*inputPlanes, *outputPlanes)) {
+		Buffer *packed_output_buf = new Buffer(env,
+						       sizeof(float) * filterWidth * filterHeight *
+						       models[index]->getNOutputPlanes());
+		int nOutputPlanes = models[index]->getNOutputPlanes();
+		int nInputPlanes = models[index]->getNInputPlanes();
+
+		std::cout << "Iteration #" << (index + 1) << "(" << nInputPlanes << "->" << nOutputPlanes << ")..." ;
+		double t0 = getsec();
+		if (!models[index]->filter(env, packed_input_buf, packed_output_buf, filterSize)) {
 			std::exit(-1);
 		}
-		if (index != models.size() - 1) {
-			inputPlanes = std::move(outputPlanes);
-			outputPlanes = std::unique_ptr<std::vector<cv::Mat> >(
-					new std::vector<cv::Mat>());
-		}
-	}
+		double t1 = getsec();
+		double ops = filterSize.width * filterSize.height * 9.0 * 2.0 * nOutputPlanes * nInputPlanes;
+		double gflops = (ops/(1000.0*1000.0*1000.0)) / (t1-t0);
+		double bytes = filterSize.width * filterSize.height * sizeof(float) * (nOutputPlanes + nInputPlanes);
+		double GBs = (bytes/(1000.0*1000.0*1000.0)) / (t1-t0);
 
-	outputPlanes->at(0).copyTo(outputPlane);
+		std::cout << "(" << (t1-t0)*1000 << "[ms], " << gflops << "[GFLOPS], " << GBs << "[GB/s])" << std::endl;
+		ops_sum += ops;
+
+		flops->flop += ops;
+		flops->sec += t1-t0;
+
+		delete packed_input_buf;
+		packed_input_buf = packed_output_buf;
+	}
+	double t01 = getsec();
+
+
+	outputPlane = cv::Mat::zeros(filterSize, CV_32FC1);
+
+	packed_input = (float*)packed_input_buf->get_read_ptr_host(env);
+	unpack_mat1(outputPlane, packed_input, filterWidth, filterHeight);
+
+	delete packed_input_buf;
+
+	double gflops = ops_sum/(1000.0*1000.0*1000.0) / (t01-t00);
+	std::cout << "total : " << (t01-t00) << "[sec], " << gflops << "[GFLOPS]" << std::endl;
 
 	return true;
 
 }
 
-static bool convertWithModelsBlockSplit(cv::Mat &inputPlane,
-		cv::Mat &outputPlane, std::vector<std::unique_ptr<Model> > &models) {
-
+static bool convertWithModelsBlockSplit(ComputeEnv *env,
+					cv::Mat &inputPlane,
+					cv::Mat &outputPlane,
+					std::vector<std::unique_ptr<Model> > &models, FLOPSCounter *flops) {
 	// padding is not required before calling this function
 
 	// initialize local variables
@@ -132,8 +179,9 @@ static bool convertWithModelsBlockSplit(cv::Mat &inputPlane,
 
 			std::cout << "start process block (" << c << "," << r << ") ..."
 					<< std::endl;
-			if (!convertWithModelsBasic(processBlock, processBlockOutput,
-					models)) {
+			if (!convertWithModelsBasic(env,
+						    processBlock, processBlockOutput,
+						    models, flops)) {
 				std::cerr << "w2xc::convertWithModelsBasic()\n"
 						"in w2xc::convertWithModelsBlockSplit() : \n"
 						"something error has occured. stop." << std::endl;

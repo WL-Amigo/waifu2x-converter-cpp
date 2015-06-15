@@ -16,11 +16,18 @@
 #include <cmath>
 #include "picojson.h"
 #include "tclap/CmdLine.h"
+#include "sec.hpp"
+#include "common.hpp"
+#include "threadPool.hpp"
 
 #include "modelHandler.hpp"
 #include "convertRoutine.hpp"
 
 int main(int argc, char** argv) {
+
+	double time_start = getsec();
+
+	ComputeEnv env;
 
 	// definition of command line arguments
 	TCLAP::CmdLine cmd("waifu2x reimplementation using OpenCV", ' ', "1.0.0");
@@ -59,6 +66,16 @@ int main(int argc, char** argv) {
 			"number of threads launching at the same time", false, 4, "integer",
 			cmd);
 
+	TCLAP::SwitchArg cmdDisableGPU("", "disable-gpu", "disable GPU", cmd, false);
+
+	std::vector<int> cmdBlockSizeConstraintV;
+	cmdBlockSizeConstraintV.push_back(0);
+	cmdBlockSizeConstraintV.push_back(512);
+	cmdBlockSizeConstraintV.push_back(1024);
+	TCLAP::ValuesConstraint<int> cmdBlockSizeConstraint(cmdBlockSizeConstraintV);
+	TCLAP::ValueArg<int> cmdBlockSize("", "block_size", "block size",
+					  false, 1024, &cmdBlockSizeConstraint, cmd);
+
 	// definition of command line argument : end
 
 	// parse command line arguments
@@ -70,6 +87,11 @@ int main(int argc, char** argv) {
 		std::exit(-1);
 	}
 
+	if (! cmdDisableGPU.getValue()) {
+		w2xc::initOpenCL(&env);
+		w2xc::initCUDA(&env);
+	}
+
 	// load image file
 	cv::Mat image = cv::imread(cmdInputFile.getValue(), cv::IMREAD_COLOR);
 	image.convertTo(image, CV_32F, 1.0 / 255.0);
@@ -77,6 +99,14 @@ int main(int argc, char** argv) {
 
 	// set number of jobs for processing models
 	w2xc::modelUtility::getInstance().setNumberOfJobs(cmdNumberOfJobs.getValue());
+	int bs = cmdBlockSize.getValue();
+
+	if (bs == 0) {
+		bs = 65536;
+	}
+	w2xc::modelUtility::getInstance().setBlockSize(cv::Size(bs,bs));
+
+	FLOPSCounter flops;
 
 	// ===== Noise Reduction Phase =====
 	if (cmdMode.getValue() == "noise" || cmdMode.getValue() == "noise_scale") {
@@ -93,7 +123,7 @@ int main(int argc, char** argv) {
 		cv::split(image, imageSplit);
 		imageSplit[0].copyTo(imageY);
 
-		w2xc::convertWithModels(imageY, imageSplit[0], models);
+		w2xc::convertWithModels(&env, imageY, imageSplit[0], models, &flops);
 
 		cv::merge(imageSplit, image);
 		
@@ -102,7 +132,6 @@ int main(int argc, char** argv) {
 	// ===== scaling phase =====
 
 	if (cmdMode.getValue() == "scale" || cmdMode.getValue() == "noise_scale") {
-
 		// calculate iteration times of 2x scaling and shrink ratio which will use at last
 		int iterTimesTwiceScaling = static_cast<int>(std::ceil(
 				std::log2(cmdScaleRatio.getValue())));
@@ -112,14 +141,12 @@ int main(int argc, char** argv) {
 			shrinkRatio = cmdScaleRatio.getValue()
 					/ std::pow(2.0, static_cast<double>(iterTimesTwiceScaling));
 		}
-
 		std::string modelFileName(cmdModelPath.getValue());
 		modelFileName = modelFileName + "/scale2.0x_model.json";
 		std::vector<std::unique_ptr<w2xc::Model> > models;
 
 		if (!w2xc::modelUtility::generateModelFromJSON(modelFileName, models))
 			std::exit(-1);
-
 		std::cout << "start scaling" << std::endl;
 
 		// 2x scaling
@@ -138,14 +165,14 @@ int main(int argc, char** argv) {
 			cv::Mat imageY;
 			cv::split(image2xNearest, imageSplit);
 			imageSplit[0].copyTo(imageY);
-
-			// generate bicubic scaled image and split
+			// generate bicubic scaled image and
+			// convert RGB -> YUV and split
 			imageSplit.clear();
 			cv::Mat image2xBicubic;
 			cv::resize(image,image2xBicubic,imageSize,0,0,cv::INTER_CUBIC);
 			cv::split(image2xBicubic, imageSplit);
 
-			if(!w2xc::convertWithModels(imageY, imageSplit[0], models)){
+			if(!w2xc::convertWithModels(&env, imageY, imageSplit[0], models, &flops)){
 				std::cerr << "w2xc::convertWithModels : something error has occured.\n"
 						"stop." << std::endl;
 				std::exit(1);
@@ -165,7 +192,6 @@ int main(int argc, char** argv) {
 							* shrinkRatio));
 			cv::resize(image, image, lastImageSize, 0, 0, cv::INTER_LINEAR);
 		}
-
 	}
 
 	cv::cvtColor(image, image, cv::COLOR_YUV2RGB);
@@ -189,7 +215,16 @@ int main(int argc, char** argv) {
 	}
 	cv::imwrite(outputFileName, image);
 
-	std::cout << "process successfully done!" << std::endl;
+	double time_end = getsec();
+
+	double gflops_proc = (flops.flop/(1000.0*1000.0*1000.0)) / flops.sec;
+	double gflops_all = (flops.flop/(1000.0*1000.0*1000.0)) / (time_end-time_start);
+
+	std::cout << "process successfully done! (all:"
+		  << (time_end - time_start)
+		  << "[sec], " << gflops_all << "[GFLOPS], filter:"
+		  << flops.sec
+		  << "[sec], " << gflops_proc << "[GFLOPS])" << std::endl;
 
 	return 0;
 }

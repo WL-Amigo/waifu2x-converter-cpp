@@ -12,8 +12,9 @@
 #define MODEL_HANDLER_HPP_
 
 #include <opencv2/opencv.hpp>
-#include <opencv2/core/ocl.hpp>
 #include "picojson.h"
+#include "Buffer.hpp"
+#include "filters.hpp"
 #include <iostream>
 #include <memory>
 #include <cstdint>
@@ -43,6 +44,22 @@ private:
 			std::vector<cv::Mat> &outputPlanes, unsigned int beginningIndex,
 			unsigned int nWorks);
 
+	bool filter_CV(ComputeEnv *env,
+		       Buffer *packed_input,
+		       Buffer *packed_output,
+		       cv::Size size);
+	enum runtype {
+		RUN_CUDA,
+		RUN_OPENCL,
+		RUN_CPU
+	};
+
+	bool filter_AVX_OpenCL(ComputeEnv *env,
+			       Buffer *packed_input,
+                               Buffer *packed_output,
+                               cv::Size size,
+			       enum runtype rt);
+
 public:
 	// ctor and dtor
 	Model(picojson::object &jsonObj) {
@@ -69,6 +86,8 @@ public:
 			std::exit(-1);
 		}
 	}
+	Model(FILE *binfp);
+
 	;
 	~Model() {
 	}
@@ -81,11 +100,20 @@ public:
 	int getNInputPlanes();
 	int getNOutputPlanes();
 
+	std::vector<cv::Mat> &getWeigts() {
+		return weights;
+	}
+	std::vector<double> &getBiases() {
+		return biases;
+	}
 	// setter function
 
 	// public operation function
-	bool filter(std::vector<cv::Mat> &inputPlanes,
-			std::vector<cv::Mat> &outputPlanes);
+	bool filter(ComputeEnv *env,
+		    Buffer *packed_input,
+		    Buffer *packed_output,
+		    cv::Size size);
+
 
 };
 
@@ -96,7 +124,7 @@ private:
 	int nJob;
 	cv::Size blockSplittingSize;
 	modelUtility() :
-			nJob(4), blockSplittingSize(512,512) {
+		nJob(4), blockSplittingSize(1024,1024) {
 	}
 	;
 

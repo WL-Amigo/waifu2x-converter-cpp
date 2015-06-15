@@ -1,0 +1,70 @@
+# -*- mode: makefile -*-
+all: waifu2x-converter-cpp.exe
+
+OPENCV=c:/OpenCV/b64/install
+OPENCL="C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v6.5"
+
+CXXFLAGS=-I$(OPENCL)/include -I$(OPENCV)/include -I$(CURDIR)/include -O2 -std=c++11 -MMD -Wall -Wno-unknown-pragmas
+
+LDFLAGS=-L$(OPENCV)/x64/mingw/staticlib -static
+LDLIBS=-lopencv_core300 -lopencv_imgproc300 -lopencv_imgcodecs300 -lopencv_features2d300 -llibjpeg -llibpng -llibtiff -llibjasper -lopencv_hal300 -lIlmImf -lzlib -llibwebp -luser32 -lopencv_core300 -lopencv_hal300
+
+include Makefile.common
+OBJS=$(SRCS:.cpp=.o)
+
+CXX=g++
+
+%.o: %.cpp
+	$(CXX) -c $(CXXFLAGS) -c -o $@ $<
+
+src/modelHandler_OpenCL.o: src/modelHandler_OpenCL.cl.h
+src/modelHandler_CUDA.o: src/modelHandler_CUDA.ptx20.h src/modelHandler_CUDA.ptx30.h
+
+waifu2x-converter-cpp.exe: $(OBJS)
+	$(CXX) -o $@ $^ $(LDFLAGS)  $(LDLIBS)
+
+INPUT=./b.png
+
+run: waifu2x-converter-cpp.exe
+	./waifu2x-converter-cpp -i $(INPUT) --model_dir models
+
+run8: waifu2x-converter-cpp.exe
+	./waifu2x-converter-cpp -j 8 -i $(INPUT) --model_dir models
+
+run4: waifu2x-converter-cpp.exe
+	./waifu2x-converter-cpp -j 4 -i $(INPUT) --model_dir models
+
+run1: waifu2x-converter-cpp.exe
+	./waifu2x-converter-cpp -j 1 -i $(INPUT) --model_dir models
+
+conv.exe: conv.c
+	gcc -o conv.exe conv.c
+
+src/modelHandler_avx.o: src/modelHandler_avx.cpp
+	$(CXX) -c $(CXXFLAGS) -mavx -o $@ $<
+src/modelHandler_fma.o: src/modelHandler_fma.cpp
+	$(CXX) -c $(CXXFLAGS) -mfma -o $@ $<
+
+%.ptx20: %.cu
+	nvcc -Xcompiler "/wd 4819" -ptx -o $@ $< -arch=sm_20
+%.ptx30: %.cu
+	nvcc -Xcompiler "/wd 4819" -ptx -o $@ $< -arch=sm_20
+
+src/modelHandler_CUDA.ptx20.h: src/modelHandler_CUDA.ptx20
+	./conv $< $@ str
+src/modelHandler_CUDA.ptx30.h: src/modelHandler_CUDA.ptx30
+	./conv $< $@ str
+
+src/modelHandler_CUDA.ptx.h: src/modelHandler_CUDA.ptx
+	conv.exe $< $@ str
+
+src/modelHandler_OpenCL.cl.h:src/modelHandler_OpenCL.cl conv.exe
+	conv.exe $< $@ str
+
+rm.exe: rm.c
+	gcc -o $@ $<
+
+clean: rm.exe
+	rm $(OBJS) waifu2x-converter-cpp
+
+-include $(OBJS:.o=.d)

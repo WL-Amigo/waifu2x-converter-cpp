@@ -12,6 +12,7 @@
 #define CONVERTROUTINE_HPP_
 
 #include "modelHandler.hpp"
+#include "common.hpp"
 #include <memory>
 //#include "opencv2/opencv.hpp"
 //#include "opencv2/core/ocl.hpp" in modelHandler.hpp
@@ -22,10 +23,12 @@ namespace w2xc {
 /**
  * convert inputPlane to outputPlane by convoluting with models.
  */
-bool convertWithModels(cv::Mat &inputPlanes,
-		cv::Mat &outputPlanes,
-		std::vector<std::unique_ptr<Model> > &models,
-		bool blockSplitting = true);
+bool convertWithModels(ComputeEnv *env,
+                       cv::Mat &inputPlanes,
+                       cv::Mat &outputPlanes,
+                       std::vector<std::unique_ptr<Model> > &models,
+                       FLOPSCounter *flops,
+                       bool blockSplitting = true);
 
 }
 
