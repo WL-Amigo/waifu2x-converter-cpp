@@ -18,7 +18,7 @@ CXX=g++
 	$(CXX) -c $(CXXFLAGS) -c -o $@ $<
 
 src/modelHandler_OpenCL.o: src/modelHandler_OpenCL.cl.h
-src/modelHandler_CUDA.o: src/modelHandler_CUDA.ptx.h
+src/modelHandler_CUDA.o: src/modelHandler_CUDA.ptx20.h src/modelHandler_CUDA.ptx30.h
 
 waifu2x-converter-cpp.exe: $(OBJS)
 	$(CXX) -o $@ $^ $(LDFLAGS)  $(LDLIBS)
@@ -45,8 +45,15 @@ src/modelHandler_avx.o: src/modelHandler_avx.cpp
 src/modelHandler_fma.o: src/modelHandler_fma.cpp
 	$(CXX) -c $(CXXFLAGS) -mfma -o $@ $<
 
-src/modelHandler_CUDA.ptx: src/modelHandler_CUDA.cu
-	nvcc -Xcompiler "/wd 4819" -ptx -o $@ $<
+%.ptx20: %.cu
+	nvcc -Xcompiler "/wd 4819" -ptx -o $@ $< -arch=sm_20
+%.ptx30: %.cu
+	nvcc -Xcompiler "/wd 4819" -ptx -o $@ $< -arch=sm_20
+
+src/modelHandler_CUDA.ptx20.h: src/modelHandler_CUDA.ptx20
+	./conv $< $@ str
+src/modelHandler_CUDA.ptx30.h: src/modelHandler_CUDA.ptx30
+	./conv $< $@ str
 
 src/modelHandler_CUDA.ptx.h: src/modelHandler_CUDA.ptx
 	conv.exe $< $@ str
