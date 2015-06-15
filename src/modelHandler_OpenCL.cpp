@@ -49,7 +49,7 @@ cllib_init(void)
         }
 
 #define LOAD(name)                              \
-        p_##name = (__decltype(p_##name)) GetProcAddress(handle, #name); \
+        p_##name = (decltype(p_##name)) GetProcAddress(handle, #name); \
         if (p_##name == NULL) {                 \
                 return -1;                      \
         }
@@ -114,7 +114,7 @@ initOpenCL(ComputeEnv *env)
                 clGetPlatformInfo(plts[i], CL_PLATFORM_NAME, sz, &name[0], &sz);
 
                 bool is_amd = strstr(&name[0], "AMD") != NULL;
-                //bool is_intel = strstr(&name[0], "Intel") != NULL;
+                bool is_intel = strstr(&name[0], "Intel") != NULL;
                 //bool is_nvidia = strstr(&name[0], "NVIDIA") != NULL;
 
                 if (!is_amd) {
@@ -179,7 +179,7 @@ initOpenCL(ComputeEnv *env)
         stat(self_path, &self_st);
         self_path = dirname(self_path);
 #else
-        ssize_t path_len = 4;
+        size_t path_len = 4;
         char *self_path = (char*)malloc(path_len+1);
 	DWORD len;
         while (1) {

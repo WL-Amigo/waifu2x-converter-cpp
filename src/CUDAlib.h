@@ -60,37 +60,37 @@ typedef struct CUstream_st *CUstream;
 
 #define CU_CTX_SCHED_BLOCKING_SYNC 0x4
 
-typedef CUresult (* CUDAAPI tcuInit)(unsigned int Flags);
-typedef CUresult (* CUDAAPI tcuDriverGetVersion)(int *ver);
-typedef CUresult (* CUDAAPI tcuDeviceGetCount)(int *count);
-typedef CUresult (* CUDAAPI tcuDeviceGetName)(char *name, int len, CUdevice dev);
-typedef CUresult (* CUDAAPI tcuCtxCreate)(CUcontext *ret, unsigned int flags, CUdevice dev);
-typedef CUresult (* CUDAAPI tcuCtxDestroy)(CUcontext ret);
-typedef CUresult (* CUDAAPI tcuModuleLoadData)(CUmodule *module, const void *image);
-typedef CUresult (* CUDAAPI tcuModuleLoadDataEx)(CUmodule *module, const void *image, unsigned int n, CUjit_option *o, void **ov);
-typedef CUresult (* CUDAAPI tcuModuleUnload)(CUmodule mod);
-typedef CUresult (* CUDAAPI tcuModuleGetFunction)(CUfunction *hfunc, CUmodule mod, const char *name);
-typedef CUresult (* CUDAAPI tcuStreamCreate)(CUstream *str, unsigned int Flags);
-typedef CUresult (* CUDAAPI tcuStreamDestroy)(CUstream str);
-typedef CUresult (* CUDAAPI tcuMemAlloc)(CUdeviceptr *dptr, size_t bytesize);
-typedef CUresult (* CUDAAPI tcuMemFree)(CUdeviceptr dptr);
-typedef CUresult (* CUDAAPI tcuCtxSetCurrent)(CUcontext ctxt);
-typedef CUresult (* CUDAAPI tcuCtxPushCurrent)(CUcontext ctxt);
-typedef CUresult (* CUDAAPI tcuCtxPopCurrent)(CUcontext *ctxt);
-typedef CUresult (* CUDAAPI tcuStreamSynchronize)(CUstream stream);
-typedef CUresult (* CUDAAPI tcuMemcpyHtoD)(CUdeviceptr dst, const void *src, size_t byte);
-typedef CUresult (* CUDAAPI tcuMemcpyHtoDAsync)(CUdeviceptr dst, const void *src, size_t byte, CUstream str);
-typedef CUresult (* CUDAAPI tcuMemcpyDtoH)(void *dst, CUdeviceptr src, size_t byte);
-typedef CUresult (* CUDAAPI tcuLaunchKernel)(CUfunction f,
+typedef CUresult (CUDAAPI * tcuInit)(unsigned int Flags);
+typedef CUresult (CUDAAPI * tcuDriverGetVersion)(int *ver);
+typedef CUresult (CUDAAPI * tcuDeviceGetCount)(int *count);
+typedef CUresult (CUDAAPI * tcuDeviceGetName)(char *name, int len, CUdevice dev);
+typedef CUresult (CUDAAPI * tcuCtxCreate)(CUcontext *ret, unsigned int flags, CUdevice dev);
+typedef CUresult (CUDAAPI * tcuCtxDestroy)(CUcontext ret);
+typedef CUresult (CUDAAPI * tcuModuleLoadData)(CUmodule *module, const void *image);
+typedef CUresult (CUDAAPI * tcuModuleLoadDataEx)(CUmodule *module, const void *image, unsigned int n, CUjit_option *o, void **ov);
+typedef CUresult (CUDAAPI * tcuModuleUnload)(CUmodule mod);
+typedef CUresult (CUDAAPI * tcuModuleGetFunction)(CUfunction *hfunc, CUmodule mod, const char *name);
+typedef CUresult (CUDAAPI * tcuStreamCreate)(CUstream *str, unsigned int Flags);
+typedef CUresult (CUDAAPI * tcuStreamDestroy)(CUstream str);
+typedef CUresult (CUDAAPI * tcuMemAlloc)(CUdeviceptr *dptr, size_t bytesize);
+typedef CUresult (CUDAAPI * tcuMemFree)(CUdeviceptr dptr);
+typedef CUresult (CUDAAPI * tcuCtxSetCurrent)(CUcontext ctxt);
+typedef CUresult (CUDAAPI * tcuCtxPushCurrent)(CUcontext ctxt);
+typedef CUresult (CUDAAPI * tcuCtxPopCurrent)(CUcontext *ctxt);
+typedef CUresult (CUDAAPI * tcuStreamSynchronize)(CUstream stream);
+typedef CUresult (CUDAAPI * tcuMemcpyHtoD)(CUdeviceptr dst, const void *src, size_t byte);
+typedef CUresult (CUDAAPI * tcuMemcpyHtoDAsync)(CUdeviceptr dst, const void *src, size_t byte, CUstream str);
+typedef CUresult (CUDAAPI * tcuMemcpyDtoH)(void *dst, CUdeviceptr src, size_t byte);
+typedef CUresult (CUDAAPI * tcuLaunchKernel)(CUfunction f,
                                              unsigned int gridDimX, unsigned int gridDimY, unsigned int gridDimZ,
                                              unsigned int blockDimX, unsigned int blockDimY, unsigned int blockDimZ,
                                              unsigned int sharedMemBytes,
                                              CUstream str, void **kernelParams, void **extra);
-typedef CUresult (* CUDAAPI tcuCtxSetCacheConfig)(CUfunc_cache c);
-typedef CUresult (* CUDAAPI tcuFuncSetSharedMemConfig)(CUfunction func, CUsharedconfig config);
-typedef CUresult (* CUDAAPI tcuCtxSetSharedMemConfig)(CUsharedconfig config);
-typedef CUresult (* CUDAAPI tcuDeviceGetAttribute)(int *pi, CUdevice_attribute attr, CUdevice dev);
-typedef CUresult (* CUDAAPI tcuProfilerStart)(void);
+typedef CUresult (CUDAAPI * tcuCtxSetCacheConfig)(CUfunc_cache c);
+typedef CUresult (CUDAAPI * tcuFuncSetSharedMemConfig)(CUfunction func, CUsharedconfig config);
+typedef CUresult (CUDAAPI * tcuCtxSetSharedMemConfig)(CUsharedconfig config);
+typedef CUresult (CUDAAPI * tcuDeviceGetAttribute)(int *pi, CUdevice_attribute attr, CUdevice dev);
+typedef CUresult (CUDAAPI * tcuProfilerStart)(void);
 
 #define FOR_EACH_CUDA_FUNC(F,F_V2)              \
     F(cuInit)                                   \

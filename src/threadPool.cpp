@@ -3,10 +3,18 @@
 #include "threadPool.hpp"
 
 #if defined __i386__ || defined __x86_64__
+
 #include <cpuid.h>
 #define rmb() __asm__ __volatile__ ("":::"memory")
 #define wmb() __asm__ __volatile__ ("":::"memory")
+
 #endif
+
+#ifdef _MSC_VER
+#define rmb() _ReadBarrier()
+#define wmb() _WriteBarrier()
+#endif
+
 
 #ifdef linux
 #include <sys/eventfd.h>

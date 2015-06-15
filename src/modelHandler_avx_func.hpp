@@ -1,5 +1,6 @@
 #include "threadPool.hpp"
 #include "params.h"
+#include <algorithm>
 
 #define BLOCK_SIZE_HOR 256
 #define BLOCK_SIZE_VER 16

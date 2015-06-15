@@ -8,6 +8,8 @@ main(int argc, char **argv)
     FILE *out = fopen(argv[2], "w");
 
     if (strcmp(argv[3],"str") == 0) {
+        fputc('{', out);
+        fputc('\n', out);
         char line[4096];
         char buf[8192];
 
@@ -15,27 +17,14 @@ main(int argc, char **argv)
             int len = strlen(line);
             int cur=0, i;
 
-            if (len >= 1 && line[len-1] == '\n') {
-                line[len-1] = '\0';
-            }
-
             for (i=0; i<len; i++) {
-                char c = line[i];
-                if (c == '\\') {
-                    buf[cur++] = '\\';
-                    buf[cur++] = '\\';
-                } else if (c == '"') {
-                    buf[cur++] = '\\';
-                    buf[cur++] = '"';
-                } else {
-                    buf[cur++] = line[i];
-                }
+                fprintf(out, "0x%02x,", line[i]);
             }
-
-            buf[cur] = '\0';
-
-            fprintf(out, "\"%s\\n\"\n", buf);
+            fputc('\n', out);
         }
+
+        fputc('}', out);
+        fputc('\n', out);
     } else {
         printf("unknown mode : %s\n", argv[3]);
         return 1;
