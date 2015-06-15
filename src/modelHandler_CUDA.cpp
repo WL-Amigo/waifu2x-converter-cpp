@@ -222,9 +222,13 @@ filter_CUDA_impl(ComputeEnv *env,
 		 int nJob)
 {
 	CUresult r;
-	CUDADev *dev = &env->cuda_dev_list[0];
-	CUdeviceptr packed_input = packed_input_buf->get_read_ptr_cuda(env, 0);
-	CUdeviceptr packed_output = packed_output_buf->get_write_ptr_cuda(env, 0);
+	int devid = 0;
+
+	CUDADev *dev = &env->cuda_dev_list[devid];
+	size_t in_size = sizeof(float) * ip_width * ip_height * nInputPlanes;
+
+	CUdeviceptr packed_input = packed_input_buf->get_read_ptr_cuda(env, devid, in_size);
+	CUdeviceptr packed_output = packed_output_buf->get_write_ptr_cuda(env, devid);
 
 	cuCtxPushCurrent(dev->context);
 

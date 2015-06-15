@@ -23,7 +23,7 @@ src/modelHandler_CUDA.o: src/modelHandler_CUDA.ptx20.h src/modelHandler_CUDA.ptx
 waifu2x-converter-cpp.exe: $(OBJS)
 	$(CXX) -o $@ $^ $(LDFLAGS)  $(LDLIBS)
 
-INPUT=./b.png
+INPUT=./a.png
 
 run: waifu2x-converter-cpp.exe
 	./waifu2x-converter-cpp -i $(INPUT) --model_dir models

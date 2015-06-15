@@ -406,12 +406,14 @@ filter_OpenCL_impl(ComputeEnv *env,
                    int nJob)
 {
         cl_int err;
+        int dev_id = 0;
 
-        OpenCLDev *dev = &env->cl_dev_list[0];
+        OpenCLDev *dev = &env->cl_dev_list[dev_id];
+	size_t in_size = sizeof(float) * w * h * nInputPlanes;
         cl_context context = dev->context;
 
-        cl_mem cl_packed_input = packed_input_buf->get_read_ptr_cl(env, 0);
-        cl_mem cl_packed_output = packed_output_buf->get_write_ptr_cl(env, 0);
+        cl_mem cl_packed_input = packed_input_buf->get_read_ptr_cl(env, dev_id, in_size);
+        cl_mem cl_packed_output = packed_output_buf->get_write_ptr_cl(env, dev_id);
 
         cl_mem cl_fbiases = clCreateBuffer(context,
                                            CL_MEM_READ_ONLY|CL_MEM_COPY_HOST_PTR,

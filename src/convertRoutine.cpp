@@ -74,8 +74,16 @@ static bool convertWithModelsBasic(ComputeEnv *env,
 	cv::Size filterSize = inputPlane.size();
 	int filterWidth = filterSize.width;
 	int filterHeight = filterSize.height;
+	size_t max_size = 0;
 
-	Buffer *packed_input_buf = new Buffer(env, sizeof(float) * filterWidth * filterHeight);
+	for (int index = 0; index < models.size(); index++) {
+		size_t bufsize = sizeof(float) * filterWidth * filterHeight *
+			models[index]->getNOutputPlanes();
+
+		max_size = (std::max)(max_size, bufsize);
+	}
+
+	Buffer *packed_input_buf = new Buffer(env, max_size);
 
 	float *packed_input = (float*)packed_input_buf->get_write_ptr_host(env);
 	pack_mat(packed_input, *inputPlanes, filterWidth, filterHeight, 1);
@@ -83,10 +91,9 @@ static bool convertWithModelsBasic(ComputeEnv *env,
 	double t00 = getsec();
 	double ops_sum = 0;
 
+	Buffer *packed_output_buf = new Buffer(env, max_size);
+
 	for (int index = 0; index < models.size(); index++) {
-		Buffer *packed_output_buf = new Buffer(env,
-						       sizeof(float) * filterWidth * filterHeight *
-						       models[index]->getNOutputPlanes());
 		int nOutputPlanes = models[index]->getNOutputPlanes();
 		int nInputPlanes = models[index]->getNInputPlanes();
 
@@ -107,17 +114,16 @@ static bool convertWithModelsBasic(ComputeEnv *env,
 		flops->flop += ops;
 		flops->sec += t1-t0;
 
-		delete packed_input_buf;
-		packed_input_buf = packed_output_buf;
+		std::swap(packed_input_buf, packed_output_buf);
 	}
 	double t01 = getsec();
 
-
 	outputPlane = cv::Mat::zeros(filterSize, CV_32FC1);
 
-	packed_input = (float*)packed_input_buf->get_read_ptr_host(env);
+	packed_input = (float*)packed_input_buf->get_read_ptr_host(env, sizeof(float)*filterWidth*filterHeight);
 	unpack_mat1(outputPlane, packed_input, filterWidth, filterHeight);
 
+	delete packed_output_buf;
 	delete packed_input_buf;
 
 	double gflops = ops_sum/(1000.0*1000.0*1000.0) / (t01-t00);

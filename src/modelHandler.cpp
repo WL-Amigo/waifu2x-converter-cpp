@@ -39,7 +39,9 @@ Model::filter_CV(ComputeEnv *env,
 		 Buffer *packed_output_buf,
 		 cv::Size size)
 {
-	const float *packed_input = (float*)packed_input_buf->get_read_ptr_host(env);
+	size_t in_size = sizeof(float) * size.width * size.height * nInputPlanes;
+
+	const float *packed_input = (float*)packed_input_buf->get_read_ptr_host(env, in_size);
 	float *packed_output = (float*)packed_output_buf->get_write_ptr_host(env);
 
 	std::vector<cv::Mat> outputPlanes;
@@ -238,6 +240,9 @@ bool Model::filter_AVX_OpenCL(ComputeEnv *env,
 	compare_result = true;
 #endif
 
+	size_t in_size = size.width * size.height * sizeof(float) * nInputPlanes;
+	size_t out_size = size.width * size.height * sizeof(float) * nOutputPlanes;
+
 	if (compare_result) {
 		Buffer *packed_output_cv_buf = new Buffer(env, sizeof(float) * size.width * size.height * nOutputPlanes);
 
@@ -250,6 +255,7 @@ bool Model::filter_AVX_OpenCL(ComputeEnv *env,
 		/* 3x3 = 9 fma */
 		double ops = size.width * size.height * 9.0 * 2.0 * nOutputPlanes * nInputPlanes;
 		std::vector<cv::Mat> output2;
+
 		if (rt == RUN_OPENCL) {
 			filter_OpenCL_impl(env, packed_input_buf, packed_output_buf,
 					   nInputPlanes, nOutputPlanes, fbiases_flat, weight_flat,
@@ -259,7 +265,7 @@ bool Model::filter_AVX_OpenCL(ComputeEnv *env,
 					 nInputPlanes, nOutputPlanes, fbiases_flat, weight_flat,
 					 size.width, size.height, nJob);
 		} else {
-			const float *packed_input = (float*)packed_input_buf->get_read_ptr_host(env);
+			const float *packed_input = (float*)packed_input_buf->get_read_ptr_host(env, in_size);
 			float *packed_output = (float*)packed_output_buf->get_write_ptr_host(env);
 
 			if (have_fma) {
@@ -280,8 +286,8 @@ bool Model::filter_AVX_OpenCL(ComputeEnv *env,
 		printf("orig : %f [Gflops]\n", (ops/(1000.0*1000.0*1000.0)) / (t1-t0));
 		int error_count = 0;
 
-		float *packed_output_cv = (float*)packed_output_cv_buf->get_read_ptr_host(env);
-		float *packed_output = (float*)packed_output_buf->get_read_ptr_host(env);
+		float *packed_output_cv = (float*)packed_output_cv_buf->get_read_ptr_host(env, out_size);
+		float *packed_output = (float*)packed_output_buf->get_read_ptr_host(env, out_size);
 
 		for (int i=0; i<size.width * size.height * nOutputPlanes; i++) {
 			float v0 = packed_output_cv[i];
@@ -329,7 +335,7 @@ bool Model::filter_AVX_OpenCL(ComputeEnv *env,
 			if (!have_avx) {
 				filter_CV(env, packed_input_buf, packed_output_buf, size);
 			} else {
-				const float *packed_input = (float*)packed_input_buf->get_read_ptr_host(env);
+				const float *packed_input = (float*)packed_input_buf->get_read_ptr_host(env, in_size);
 				float *packed_output = (float*)packed_output_buf->get_write_ptr_host(env);
 
 				if (have_fma) {
@@ -401,7 +407,7 @@ bool Model::filter(ComputeEnv *env,
 
 	if (cuda_available) {
 		ret = filter_AVX_OpenCL(env, packed_input_buf, packed_output_buf, size, RUN_CUDA);
-	} else if (cl_available) {
+	} else if ((env->num_cuda_dev==0) && cl_available) {
 		ret = filter_AVX_OpenCL(env, packed_input_buf, packed_output_buf, size, RUN_OPENCL);
 	} else if (avx_available) {
 		ret = filter_AVX_OpenCL(env, packed_input_buf, packed_output_buf, size, RUN_CPU);

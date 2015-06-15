@@ -169,7 +169,7 @@ struct Buffer {
 
 
 
-    cl_mem get_read_ptr_cl(ComputeEnv *env,int devid) {
+    cl_mem get_read_ptr_cl(ComputeEnv *env,int devid, size_t read_byte_size) {
         if (cl_valid_list[devid]) {
             return cl_ptr_list[devid];
         }
@@ -188,7 +188,7 @@ struct Buffer {
                                                 byte_size, host_ptr, &err);
         } else {
             clEnqueueWriteBuffer(dev->queue, cl_ptr_list[devid],
-                                 CL_TRUE, 0, byte_size, host_ptr, 0, nullptr, nullptr);
+                                 CL_TRUE, 0, read_byte_size, host_ptr, 0, nullptr, nullptr);
         }
 
         cl_valid_list[devid] = true;
@@ -215,7 +215,7 @@ struct Buffer {
     }
 
 
-    CUdeviceptr get_read_ptr_cuda(ComputeEnv *env,int devid) {
+    CUdeviceptr get_read_ptr_cuda(ComputeEnv *env,int devid, size_t read_byte_size) {
         if (cuda_valid_list[devid]) {
             return cuda_ptr_list[devid];
         }
@@ -237,7 +237,7 @@ struct Buffer {
             }
         }
 
-        cuMemcpyHtoD(cuda_ptr_list[devid], host_ptr, byte_size);
+        cuMemcpyHtoD(cuda_ptr_list[devid], host_ptr, read_byte_size);
         cuda_valid_list[devid] = true;
 
         CUcontext old;
@@ -272,7 +272,7 @@ struct Buffer {
 
 
 
-    void *get_read_ptr_host(ComputeEnv *env) {
+    void *get_read_ptr_host(ComputeEnv *env, size_t read_byte_size) {
         if (host_valid) {
             return host_ptr;
         }
@@ -284,11 +284,11 @@ struct Buffer {
         if (last_write.type == Processor::OpenCL) {
             OpenCLDev *dev = &env->cl_dev_list[last_write.devid];
             clEnqueueReadBuffer(dev->queue, cl_ptr_list[last_write.devid],
-                                CL_TRUE, 0, byte_size, host_ptr, 0, nullptr, nullptr);
+                                CL_TRUE, 0, read_byte_size, host_ptr, 0, nullptr, nullptr);
         } else if (last_write.type == Processor::CUDA) {
             CUDADev *dev = &env->cuda_dev_list[last_write.devid];
             cuCtxPushCurrent(dev->context);
-            cuMemcpyDtoH(host_ptr, cuda_ptr_list[last_write.devid], byte_size);
+            cuMemcpyDtoH(host_ptr, cuda_ptr_list[last_write.devid], read_byte_size);
         } else {
             abort();
         }
