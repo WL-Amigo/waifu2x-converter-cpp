@@ -84,6 +84,6 @@ src/modelHandler_CUDA.ptx30: src/modelHandler_CUDA.cu
 
 %.sass: %.cubin
 	nvdisasm $< > $@
-%.cubin: %.ptx
+%.cubin: %.ptx30
 	ptxas -dlcm=ca -O3 --gpu-name sm_30 -o $@ $<
 

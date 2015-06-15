@@ -535,9 +535,12 @@ filter_weight_blocking(const float * __restrict__ packed_input,
 	{ // ib0
 		{ // ob0
 			int op = lid + ob0;
+
 			float bv = biases[op];
 
 			for (int xi0=0; xi0<wsz; xi0+=BLOCK_SIZE) {
+				float *out_base = packed_output + (yi*wsz + xi0)*nOutputPlanes + op;
+
 				__syncthreads();
 				int rem = wsz - xi0;
 				if (rem >= 3 && xi0 != 0) {
@@ -701,10 +704,9 @@ filter_weight_blocking(const float * __restrict__ packed_input,
 
 #define RELU(BI)							\
 					{				\
-						float *out = packed_output + (yi*wsz + (xi0+BI))*nOutputPlanes; \
 									\
 						{			\
-							float v = sum##BI + out[op]; \
+							float v = sum##BI + out_base[BI*nOutputPlanes]; \
 							v += bv; \
 									\
 							float mtz = max(v, 0.0f); \
@@ -712,34 +714,30 @@ filter_weight_blocking(const float * __restrict__ packed_input,
 									\
 							v = ltz * 0.1f + mtz; \
 									\
-							out[op] = v;	\
+							out_base[BI*nOutputPlanes] = v;	\
 						}			\
 					}
 
 					if ((ib0+INPUT_BLOCK_SIZE) == nInputPlanes) {
 						UNROLL8(RELU);
 					} else if (ib0 == 0) {
-						float *out = packed_output + (yi*wsz + (xi0))*nOutputPlanes;
-
-						out[op+nOutputPlanes*0] = sum0;
-						out[op+nOutputPlanes*1] = sum1;
-						out[op+nOutputPlanes*2] = sum2;
-						out[op+nOutputPlanes*3] = sum3;
-						out[op+nOutputPlanes*4] = sum4;
-						out[op+nOutputPlanes*5] = sum5;
-						out[op+nOutputPlanes*6] = sum6;
-						out[op+nOutputPlanes*7] = sum7;
+						out_base[nOutputPlanes*0] = sum0;
+						out_base[nOutputPlanes*1] = sum1;
+						out_base[nOutputPlanes*2] = sum2;
+						out_base[nOutputPlanes*3] = sum3;
+						out_base[nOutputPlanes*4] = sum4;
+						out_base[nOutputPlanes*5] = sum5;
+						out_base[nOutputPlanes*6] = sum6;
+						out_base[nOutputPlanes*7] = sum7;
 					} else {
-						float *out = packed_output + (yi*wsz + (xi0))*nOutputPlanes;
-
-						out[op+nOutputPlanes*0] += sum0;
-						out[op+nOutputPlanes*1] += sum1;
-						out[op+nOutputPlanes*2] += sum2;
-						out[op+nOutputPlanes*3] += sum3;
-						out[op+nOutputPlanes*4] += sum4;
-						out[op+nOutputPlanes*5] += sum5;
-						out[op+nOutputPlanes*6] += sum6;
-						out[op+nOutputPlanes*7] += sum7;
+						out_base[nOutputPlanes*0] += sum0;
+						out_base[nOutputPlanes*1] += sum1;
+						out_base[nOutputPlanes*2] += sum2;
+						out_base[nOutputPlanes*3] += sum3;
+						out_base[nOutputPlanes*4] += sum4;
+						out_base[nOutputPlanes*5] += sum5;
+						out_base[nOutputPlanes*6] += sum6;
+						out_base[nOutputPlanes*7] += sum7;
 					}
 				} else {
 					for (int bi=0; bi<X_BLOCK_SIZE; bi++) {

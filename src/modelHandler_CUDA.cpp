@@ -193,7 +193,7 @@ initCUDA(ComputeEnv *env)
 	printf("CUDA : %s\n", name);
 
 	cuCtxSetCacheConfig(CU_FUNC_CACHE_PREFER_SHARED);
-	cuCtxSetSharedMemConfig(CU_SHARED_MEM_CONFIG_FOUR_BYTE_BANK_SIZE);
+	cuCtxSetSharedMemConfig(CU_SHARED_MEM_CONFIG_EIGHT_BYTE_BANK_SIZE);
 	//cuFuncSetSharedMemConfig(filter_i32, CU_SHARED_MEM_CONFIG_EIGHT_BYTE_BANK_SIZE);
 	//cuFuncSetSharedMemConfig(filter_i64, CU_SHARED_MEM_CONFIG_EIGHT_BYTE_BANK_SIZE);
 	//cuFuncSetSharedMemConfig(filter_i128, CU_SHARED_MEM_CONFIG_EIGHT_BYTE_BANK_SIZE);
@@ -297,8 +297,8 @@ filter_CUDA_impl(ComputeEnv *env,
 			f = dev->filter_i64_o64;
 		}
 
-		for (size_t ib0=0; ib0<(size_t)nInputPlanes; ib0+=32) {
-			for (size_t ob0=0; ob0<(size_t)nOutputPlanes; ob0+=64) {
+		for (size_t ob0=0; ob0<(size_t)nOutputPlanes; ob0+=64) {
+			for (size_t ib0=0; ib0<(size_t)nInputPlanes; ib0+=32) {
 				void *args[] = {&packed_input,
 						&packed_output,
 						&d_fbiases,
