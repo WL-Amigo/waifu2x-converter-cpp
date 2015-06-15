@@ -541,17 +541,25 @@ filter_weight_blocking(const float * __restrict__ packed_input,
 			for (int xi0=0; xi0<wsz; xi0+=BLOCK_SIZE) {
 				float *out_base = packed_output + (yi*wsz + xi0)*nOutputPlanes + op;
 
+				float *linp0 = in_block0 + lid;
+				float *linp1 = in_block1 + lid;
+				float *linp2 = in_block2 + lid;
+
 				__syncthreads();
 				int rem = wsz - xi0;
+				const float *inb0 = in01 + ib0+lid;
+				const float *inb1 = in11 + ib0+lid;
+				const float *inb2 = in21 + ib0+lid;
+
 				if (rem >= 3 && xi0 != 0) {
 					if (lid < INPUT_BLOCK_SIZE) {
-						in_block0[-1*INPUT_BLOCK_SIZE + lid] = in_block0[7*INPUT_BLOCK_SIZE + lid];
-						in_block1[-1*INPUT_BLOCK_SIZE + lid] = in_block1[7*INPUT_BLOCK_SIZE + lid];
-						in_block2[-1*INPUT_BLOCK_SIZE + lid] = in_block2[7*INPUT_BLOCK_SIZE + lid];
+						linp0[-1*INPUT_BLOCK_SIZE] = linp0[7*INPUT_BLOCK_SIZE];
+						linp1[-1*INPUT_BLOCK_SIZE] = linp1[7*INPUT_BLOCK_SIZE];
+						linp2[-1*INPUT_BLOCK_SIZE] = linp2[7*INPUT_BLOCK_SIZE];
 
-						in_block0[0*INPUT_BLOCK_SIZE + lid] = in_block0[8*INPUT_BLOCK_SIZE + lid];
-						in_block1[0*INPUT_BLOCK_SIZE + lid] = in_block1[8*INPUT_BLOCK_SIZE + lid];
-						in_block2[0*INPUT_BLOCK_SIZE + lid] = in_block2[8*INPUT_BLOCK_SIZE + lid];
+						linp0[0*INPUT_BLOCK_SIZE] = linp0[8*INPUT_BLOCK_SIZE];
+						linp1[0*INPUT_BLOCK_SIZE] = linp1[8*INPUT_BLOCK_SIZE];
+						linp2[0*INPUT_BLOCK_SIZE] = linp2[8*INPUT_BLOCK_SIZE];
 					}
 					__syncthreads();
 
@@ -564,24 +572,25 @@ filter_weight_blocking(const float * __restrict__ packed_input,
 							}
 
 							/* load to shared */
-							in_block0[bi*INPUT_BLOCK_SIZE + lid] = in01[xi*nInputPlanes + ib0+lid];
-							in_block1[bi*INPUT_BLOCK_SIZE + lid] = in11[xi*nInputPlanes + ib0+lid];
-							in_block2[bi*INPUT_BLOCK_SIZE + lid] = in21[xi*nInputPlanes + ib0+lid];
+							linp0[bi*INPUT_BLOCK_SIZE] = inb0[xi*nInputPlanes];
+							linp1[bi*INPUT_BLOCK_SIZE] = inb1[xi*nInputPlanes];
+							linp2[bi*INPUT_BLOCK_SIZE] = inb2[xi*nInputPlanes];
 						}
 
 						{
 							int xi = xi0 + bi;
 							if (xi == wsz) {
-								in_block0[bi*(int)INPUT_BLOCK_SIZE + lid] = in01[(xi-1)*(int)nInputPlanes + ib0+lid];
-								in_block1[bi*(int)INPUT_BLOCK_SIZE + lid] = in11[(xi-1)*(int)nInputPlanes + ib0+lid];
-								in_block2[bi*(int)INPUT_BLOCK_SIZE + lid] = in21[(xi-1)*(int)nInputPlanes + ib0+lid];
+								linp0[bi*(int)INPUT_BLOCK_SIZE] = inb0[(xi-1)*(int)nInputPlanes];
+								linp1[bi*(int)INPUT_BLOCK_SIZE] = inb1[(xi-1)*(int)nInputPlanes];
+								linp2[bi*(int)INPUT_BLOCK_SIZE] = inb2[(xi-1)*(int)nInputPlanes];
 							} else {
-								in_block0[bi*(int)INPUT_BLOCK_SIZE + lid] = in01[xi*(int)nInputPlanes + ib0+lid];
-								in_block1[bi*(int)INPUT_BLOCK_SIZE + lid] = in11[xi*(int)nInputPlanes + ib0+lid];
-								in_block2[bi*(int)INPUT_BLOCK_SIZE + lid] = in21[xi*(int)nInputPlanes + ib0+lid];
+								linp0[bi*(int)INPUT_BLOCK_SIZE] = inb0[xi*(int)nInputPlanes];
+								linp1[bi*(int)INPUT_BLOCK_SIZE] = inb1[xi*(int)nInputPlanes];
+								linp2[bi*(int)INPUT_BLOCK_SIZE] = inb2[xi*(int)nInputPlanes];
 							}
 						}
 					}
+
 				} else {
 					if (lid < INPUT_BLOCK_SIZE) {
 						int bi;
@@ -592,34 +601,34 @@ filter_weight_blocking(const float * __restrict__ packed_input,
 							}
 
 							/* load to shared */
-							in_block0[bi*INPUT_BLOCK_SIZE + lid] = in01[xi*nInputPlanes + ib0+lid];
-							in_block1[bi*INPUT_BLOCK_SIZE + lid] = in11[xi*nInputPlanes + ib0+lid];
-							in_block2[bi*INPUT_BLOCK_SIZE + lid] = in21[xi*nInputPlanes + ib0+lid];
+							linp0[bi*INPUT_BLOCK_SIZE] = inb0[xi*nInputPlanes];
+							linp1[bi*INPUT_BLOCK_SIZE] = inb1[xi*nInputPlanes];
+							linp2[bi*INPUT_BLOCK_SIZE] = inb2[xi*nInputPlanes];
 						}
 
 						{
 							int xi = xi0 + bi;
 							if (xi == wsz) {
-								in_block0[bi*(int)INPUT_BLOCK_SIZE + lid] = in01[(xi-1)*(int)nInputPlanes + ib0+lid];
-								in_block1[bi*(int)INPUT_BLOCK_SIZE + lid] = in11[(xi-1)*(int)nInputPlanes + ib0+lid];
-								in_block2[bi*(int)INPUT_BLOCK_SIZE + lid] = in21[(xi-1)*(int)nInputPlanes + ib0+lid];
+								linp0[bi*(int)INPUT_BLOCK_SIZE] = inb0[(xi-1)*(int)nInputPlanes];
+								linp1[bi*(int)INPUT_BLOCK_SIZE] = inb1[(xi-1)*(int)nInputPlanes];
+								linp2[bi*(int)INPUT_BLOCK_SIZE] = inb2[(xi-1)*(int)nInputPlanes];
 							} else {
-								in_block0[bi*(int)INPUT_BLOCK_SIZE + lid] = in01[xi*(int)nInputPlanes + ib0+lid];
-								in_block1[bi*(int)INPUT_BLOCK_SIZE + lid] = in11[xi*(int)nInputPlanes + ib0+lid];
-								in_block2[bi*(int)INPUT_BLOCK_SIZE + lid] = in21[xi*(int)nInputPlanes + ib0+lid];
+								linp0[bi*(int)INPUT_BLOCK_SIZE] = inb0[xi*(int)nInputPlanes];
+								linp1[bi*(int)INPUT_BLOCK_SIZE] = inb1[xi*(int)nInputPlanes];
+								linp2[bi*(int)INPUT_BLOCK_SIZE] = inb2[xi*(int)nInputPlanes];
 							}
 						}
 
 						{
 							int xi = xi0-1;
 							if (xi == -1) {
-								in_block0[-1*(int)INPUT_BLOCK_SIZE + (int)lid] = in01[ib0+lid];
-								in_block1[-1*(int)INPUT_BLOCK_SIZE + (int)lid] = in11[ib0+lid];
-								in_block2[-1*(int)INPUT_BLOCK_SIZE + (int)lid] = in21[ib0+lid];
+								linp0[-1*(int)INPUT_BLOCK_SIZE] = inb0[0];
+								linp1[-1*(int)INPUT_BLOCK_SIZE] = inb1[0];
+								linp2[-1*(int)INPUT_BLOCK_SIZE] = inb2[0];
 							} else {
-								in_block0[-1*(int)INPUT_BLOCK_SIZE + (int)lid] = in01[xi*(int)nInputPlanes + ib0+lid];
-								in_block1[-1*(int)INPUT_BLOCK_SIZE + (int)lid] = in11[xi*(int)nInputPlanes + ib0+lid];
-								in_block2[-1*(int)INPUT_BLOCK_SIZE + (int)lid] = in21[xi*(int)nInputPlanes + ib0+lid];
+								linp0[-1*(int)INPUT_BLOCK_SIZE] = inb0[xi*(int)nInputPlanes];
+								linp1[-1*(int)INPUT_BLOCK_SIZE] = inb1[xi*(int)nInputPlanes];
+								linp2[-1*(int)INPUT_BLOCK_SIZE] = inb2[xi*(int)nInputPlanes];
 							}
 						}
 					}
