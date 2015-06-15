@@ -24,9 +24,6 @@
 #include "convertRoutine.hpp"
 
 int main(int argc, char** argv) {
-
-	double time_start = getsec();
-
 	ComputeEnv env;
 
 	// definition of command line arguments
@@ -91,6 +88,7 @@ int main(int argc, char** argv) {
 		w2xc::initOpenCL(&env);
 		w2xc::initCUDA(&env);
 	}
+	double time_start = getsec();
 
 	// load image file
 	cv::Mat image = cv::imread(cmdInputFile.getValue(), cv::IMREAD_COLOR);

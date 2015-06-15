@@ -79,6 +79,7 @@ typedef CUresult (* CUDAAPI tcuCtxPushCurrent)(CUcontext ctxt);
 typedef CUresult (* CUDAAPI tcuCtxPopCurrent)(CUcontext *ctxt);
 typedef CUresult (* CUDAAPI tcuStreamSynchronize)(CUstream stream);
 typedef CUresult (* CUDAAPI tcuMemcpyHtoD)(CUdeviceptr dst, const void *src, size_t byte);
+typedef CUresult (* CUDAAPI tcuMemcpyHtoDAsync)(CUdeviceptr dst, const void *src, size_t byte, CUstream str);
 typedef CUresult (* CUDAAPI tcuMemcpyDtoH)(void *dst, CUdeviceptr src, size_t byte);
 typedef CUresult (* CUDAAPI tcuLaunchKernel)(CUfunction f,
                                              unsigned int gridDimX, unsigned int gridDimY, unsigned int gridDimZ,
@@ -107,6 +108,7 @@ typedef CUresult (* CUDAAPI tcuProfilerStart)(void);
     F_V2(cuMemAlloc)                              \
     F_V2(cuMemFree)                               \
     F_V2(cuMemcpyHtoD)                               \
+    F_V2(cuMemcpyHtoDAsync)                               \
     F_V2(cuMemcpyDtoH)                               \
     F(cuCtxSetCurrent)                               \
     F(cuStreamSynchronize)                           \

@@ -260,7 +260,7 @@ filter_CUDA_impl(ComputeEnv *env,
 		printf("fail: alloc bias %d.", (int)r);
 		exit(1);
 	}
-	r = cuMemcpyHtoD(d_fbiases, biases, bias_size);
+	r = cuMemcpyHtoDAsync(d_fbiases, biases, bias_size, dev->stream);
 	if (r != CUDA_SUCCESS) {
 		puts("fail: copy to bias");
 		exit(1);
@@ -273,7 +273,7 @@ filter_CUDA_impl(ComputeEnv *env,
 		exit(1);
 	}
 
-	r = cuMemcpyHtoD(d_weight, weight, weight_size);
+	r = cuMemcpyHtoDAsync(d_weight, weight, weight_size, dev->stream);
 	if (r != CUDA_SUCCESS) {
 		puts("fail: copy to weight");
 		exit(1);
@@ -283,8 +283,6 @@ filter_CUDA_impl(ComputeEnv *env,
 	size_t nOutputPlanes2 = nOutputPlanes;
 	size_t h = ip_height;
 	size_t w = ip_width;
-
-	double t0 = getsec();
 
 	if ((nInputPlanes == 128 && nOutputPlanes == 128) ||
 	    (nInputPlanes == 64 && nOutputPlanes == 128) ||
