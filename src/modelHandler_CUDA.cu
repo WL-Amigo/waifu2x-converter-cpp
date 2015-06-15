@@ -551,7 +551,7 @@ filter_weight_blocking(const float * __restrict__ packed_input,
 				const float *inb1 = in11 + ib0+lid;
 				const float *inb2 = in21 + ib0+lid;
 
-				if (rem >= 3 && xi0 != 0) {
+				if (rem > 8 && xi0 != 0) {
 					if (lid < INPUT_BLOCK_SIZE) {
 						linp0[-1*INPUT_BLOCK_SIZE] = linp0[7*INPUT_BLOCK_SIZE];
 						linp1[-1*INPUT_BLOCK_SIZE] = linp1[7*INPUT_BLOCK_SIZE];
@@ -565,29 +565,13 @@ filter_weight_blocking(const float * __restrict__ packed_input,
 
 					if (lid < INPUT_BLOCK_SIZE) {
 						int bi;
-						for (bi=1; bi<X_BLOCK_SIZE; bi++) {
+#pragma unroll
+						for (bi=1; bi<X_BLOCK_SIZE+1; bi++) {
 							int xi = xi0 + bi;
-							if (xi == wsz) {
-								break;
-							}
-
 							/* load to shared */
 							linp0[bi*INPUT_BLOCK_SIZE] = inb0[xi*nInputPlanes];
 							linp1[bi*INPUT_BLOCK_SIZE] = inb1[xi*nInputPlanes];
 							linp2[bi*INPUT_BLOCK_SIZE] = inb2[xi*nInputPlanes];
-						}
-
-						{
-							int xi = xi0 + bi;
-							if (xi == wsz) {
-								linp0[bi*(int)INPUT_BLOCK_SIZE] = inb0[(xi-1)*(int)nInputPlanes];
-								linp1[bi*(int)INPUT_BLOCK_SIZE] = inb1[(xi-1)*(int)nInputPlanes];
-								linp2[bi*(int)INPUT_BLOCK_SIZE] = inb2[(xi-1)*(int)nInputPlanes];
-							} else {
-								linp0[bi*(int)INPUT_BLOCK_SIZE] = inb0[xi*(int)nInputPlanes];
-								linp1[bi*(int)INPUT_BLOCK_SIZE] = inb1[xi*(int)nInputPlanes];
-								linp2[bi*(int)INPUT_BLOCK_SIZE] = inb2[xi*(int)nInputPlanes];
-							}
 						}
 					}
 
