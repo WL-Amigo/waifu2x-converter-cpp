@@ -59,8 +59,7 @@ src/modelHandler_avx.o: src/modelHandler_avx.cpp
 src/modelHandler_fma.o: src/modelHandler_fma.cpp
 	g++ -c $(CXXFLAGS) -mfma -o $@ $<
 
-
--include $(OBJS:.o=.d)
+-include $(OBJS:.o=.d) $(DLL_OBJS:.o=.d)
 
 conv$(EXE): conv.c
 	$(CC) $(CCFE)o $@ $<

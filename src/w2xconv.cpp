@@ -16,13 +16,15 @@ struct W2XConvImpl {
 };
 
 W2XConv *
-w2xconv_init(bool enable_gpu,
-             int nJob)
+w2xconv_init(int enable_gpu,
+             int nJob,
+	     int enable_log)
 {
 	struct W2XConv *c = new struct W2XConv;
 	struct W2XConvImpl *impl = new W2XConvImpl;
 
 	c->impl = impl;
+	c->enable_log = enable_log;
 
 	if (nJob == 0) {
 		nJob = std::thread::hardware_concurrency();
@@ -244,11 +246,11 @@ apply_denoise(struct W2XConv *conv,
 	if (denoise_level == 1) {
 		w2xc::convertWithModels(env, imageY, imageSplit[0],
 					impl->noise1_models,
-					&conv->flops, bs);
+					&conv->flops, bs, conv->enable_log);
 	} else {
 		w2xc::convertWithModels(env, imageY, imageSplit[0],
 					impl->noise2_models,
-					&conv->flops, bs);
+					&conv->flops, bs, conv->enable_log);
 	}
 
 	cv::merge(imageSplit, image);
@@ -263,14 +265,18 @@ apply_scale(struct W2XConv *conv,
 	struct W2XConvImpl *impl = conv->impl;
 	ComputeEnv *env = &impl->env;
 
-	std::cout << "start scaling" << std::endl;
+	if (conv->enable_log) {
+		std::cout << "start scaling" << std::endl;
+	}
 
 	// 2x scaling
 	for (int nIteration = 0; nIteration < iterTimesTwiceScaling;
 	     nIteration++) {
 
-		std::cout << "#" << std::to_string(nIteration + 1)
-			  << " 2x scaling..." << std::endl;
+		if (conv->enable_log) {
+			std::cout << "#" << std::to_string(nIteration + 1)
+				  << " 2x scaling..." << std::endl;
+		}
 
 		cv::Size imageSize = image.size();
 		imageSize.width *= 2;
@@ -290,7 +296,7 @@ apply_scale(struct W2XConv *conv,
 
 		if(!w2xc::convertWithModels(env, imageY, imageSplit[0],
 					    impl->scale2_models,
-					    &conv->flops, bs)){
+					    &conv->flops, bs, conv->enable_log)){
 			std::cerr << "w2xc::convertWithModels : something error has occured.\n"
 				"stop." << std::endl;
 			std::exit(1);
@@ -487,7 +493,7 @@ w2xconv_apply_filter_y(struct W2XConv *conv,
 
 	w2xc::convertWithModels(env, dsti, srci,
 				*mp,
-				&conv->flops, bs);
+				&conv->flops, bs, conv->enable_log);
 
 	return 0;
 }

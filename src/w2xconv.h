@@ -58,8 +58,8 @@ struct W2XConvError {
 	}u;
 };
 
-char *w2xconv_strerror(W2XConvError *e); /* should be free by w2xcvonv_free() */
-void w2xconv_free(void *p);
+W2XCONV_EXPORT char *w2xconv_strerror(struct W2XConvError *e); /* should be free by w2xcvonv_free() */
+W2XCONV_EXPORT void w2xconv_free(void *p);
 
 struct W2XConvFlopsCounter {
 	double flop;
@@ -87,15 +87,18 @@ struct W2XConv {
 	struct W2XConvFlopsCounter flops;
 	struct W2XConvProcessor target_processor;
 
+	int enable_log;
+
 	/* internal */
 	struct W2XConvImpl *impl;
 };
 
-W2XCONV_EXPORT W2XConv *w2xconv_init(bool enable_gpu,
-				     int njob /* 0 = auto */);
+W2XCONV_EXPORT struct W2XConv *w2xconv_init(int enable_gpu,
+					    int njob /* 0 = auto */,
+					    int enable_log);
 
 /* return negative if failed */
-W2XCONV_EXPORT int w2xconv_load_models(W2XConv *conv,
+W2XCONV_EXPORT int w2xconv_load_models(struct W2XConv *conv,
 				       const char *model_dir);
 
 W2XCONV_EXPORT void w2xconv_fini(struct W2XConv *conv);

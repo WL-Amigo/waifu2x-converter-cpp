@@ -154,9 +154,6 @@ initOpenCL(ComputeEnv *env)
         std::vector<char> dev_name(dev_name_len+1);
         clGetDeviceInfo(dev, CL_DEVICE_NAME, dev_name_len, &dev_name[0], &dev_name_len);
 
-        printf("use GPU: %s\n",
-               &dev_name[0]);
-
         bool bin_avaiable = false;
 
 #if defined __linux || _WIN32

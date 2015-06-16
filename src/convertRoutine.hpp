@@ -30,6 +30,7 @@ bool convertWithModels(ComputeEnv *env,
                        std::vector<std::unique_ptr<Model> > &models,
                        W2XConvFlopsCounter *flops,
                        cv::Size blockSize,
+                       bool enableLog,
                        bool blockSplitting = true);
 
 }

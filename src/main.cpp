@@ -101,7 +101,25 @@ int main(int argc, char** argv) {
 	}
 
 	W2XConv *converter = w2xconv_init(!cmdDisableGPU.getValue(),
-					  cmdNumberOfJobs.getValue());
+					  cmdNumberOfJobs.getValue(), 1);
+
+
+	switch (converter->target_processor.type) {
+	case W2XCONV_PROC_HOST:
+		printf("CPU: %s\n",
+		       converter->target_processor.dev_name);
+		break;
+
+	case W2XCONV_PROC_CUDA:
+		printf("CUDA: %s\n",
+		       converter->target_processor.dev_name);
+		break;
+
+	case W2XCONV_PROC_OPENCL:
+		printf("OpenCL: %s\n",
+		       converter->target_processor.dev_name);
+		break;
+	}
 
 	int bs = cmdBlockSize.getValue();
 	if (bs == 0) {
@@ -120,7 +138,7 @@ int main(int argc, char** argv) {
 			nrLevel = cmdNRLevel.getValue();
 		}
 
-		double scaleRatio = scaleRatio = 1;
+		double scaleRatio = 1;
 		if (cmdMode.getValue() == "scale" || cmdMode.getValue() == "noise_scale") {
 			scaleRatio = cmdScaleRatio.getValue();
 		}
@@ -152,6 +170,12 @@ int main(int argc, char** argv) {
 	ret = 0;
 
 error:
+	if (ret != 0) {
+		char *err = w2xconv_strerror(&converter->last_error);
+		puts(err);
+		w2xconv_free(err);
+	}
+
 	w2xconv_fini(converter);
 
 	return ret;

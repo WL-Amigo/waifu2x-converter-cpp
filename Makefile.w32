@@ -15,6 +15,7 @@ LDFLAGS=/LIBPATH:$(OPENCV)/x86/vc12/staticlib /MT
 LDLIBS=opencv_core300.lib opencv_imgproc300.lib opencv_imgcodecs300.lib opencv_features2d300.lib ippicvmt.lib libjpeg.lib libpng.lib libtiff.lib libjasper.lib opencv_hal300.lib IlmImf.lib zlib.lib libwebp.lib user32.lib opencv_core300.lib opencv_imgproc300.lib 
 
 include Makefile.common
+
 OBJS=$(SRCS:.cpp=.obj)
 
 CXX=cl

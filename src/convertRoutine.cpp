@@ -20,25 +20,28 @@ static bool convertWithModelsBasic(ComputeEnv *env,
 				   cv::Mat &inputPlane, cv::Mat &outputPlane,
 				   Buffer *input_buf, Buffer *output_buf,
 				   std::vector<std::unique_ptr<Model> > &models,
-				   W2XConvFlopsCounter *flops);
+				   W2XConvFlopsCounter *flops,
+				   bool enableLog);
 static bool convertWithModelsBlockSplit(ComputeEnv *env,
 					cv::Mat &inputPlane,
 					cv::Mat &outputPlane, std::vector<std::unique_ptr<Model> > &models,
 					W2XConvFlopsCounter *flops,
-					cv::Size blockSize);
+					cv::Size blockSize,
+					bool enableLog);
 
 bool convertWithModels(ComputeEnv *env,
 		       cv::Mat &inputPlane, cv::Mat &outputPlane,
 		       std::vector<std::unique_ptr<Model> > &models,
 		       W2XConvFlopsCounter *flops,
 		       cv::Size blockSize,
+		       bool enableLog,
 		       bool blockSplitting)
 {
 	bool requireSplitting = (inputPlane.size().width * inputPlane.size().height)
 			> blockSize.width * blockSize.height * 3 / 2;
 //	requireSplitting = true;
 	if (blockSplitting && requireSplitting) {
-		return convertWithModelsBlockSplit(env, inputPlane, outputPlane, models, flops, blockSize);
+		return convertWithModelsBlockSplit(env, inputPlane, outputPlane, models, flops, blockSize, enableLog);
 	} else {
 		//insert padding to inputPlane
 		cv::Mat tempMat;
@@ -63,7 +66,7 @@ bool convertWithModels(ComputeEnv *env,
 
 		bool ret = convertWithModelsBasic(env, tempMat, outputPlane,
 						  input_buf, output_buf,
-						  models, flops);
+						  models, flops, enableLog);
 
 		tempMat = outputPlane(cv::Range(nModel, outputSize.height + nModel),
 				cv::Range(nModel, outputSize.width + nModel));
@@ -85,7 +88,9 @@ static bool convertWithModelsBasic(ComputeEnv *env,
 				   cv::Mat &inputPlane, cv::Mat &outputPlane,
 				   Buffer *packed_input_buf,
 				   Buffer *packed_output_buf,
-				   std::vector<std::unique_ptr<Model> > &models, W2XConvFlopsCounter *flops) {
+				   std::vector<std::unique_ptr<Model> > &models, W2XConvFlopsCounter *flops,
+				   bool enableLog)
+{
 	// padding is require before calling this function
 
 	std::unique_ptr<std::vector<cv::Mat> > inputPlanes = std::unique_ptr<
@@ -110,7 +115,9 @@ static bool convertWithModelsBasic(ComputeEnv *env,
 		int nOutputPlanes = models[index]->getNOutputPlanes();
 		int nInputPlanes = models[index]->getNInputPlanes();
 
-		std::cout << "Iteration #" << (index + 1) << "(" << nInputPlanes << "->" << nOutputPlanes << ")..." ;
+		if (enableLog) {
+			std::cout << "Iteration #" << (index + 1) << "(" << nInputPlanes << "->" << nOutputPlanes << ")..." ;
+		}
 		double t0 = getsec();
 		if (!models[index]->filter(env, packed_input_buf, packed_output_buf, filterSize)) {
 			std::exit(-1);
@@ -121,7 +128,9 @@ static bool convertWithModelsBasic(ComputeEnv *env,
 		double bytes = filterSize.width * filterSize.height * sizeof(float) * (nOutputPlanes + nInputPlanes);
 		double GBs = (bytes/(1000.0*1000.0*1000.0)) / (t1-t0);
 
-		std::cout << "(" << (t1-t0)*1000 << "[ms], " << gflops << "[GFLOPS], " << GBs << "[GB/s])" << std::endl;
+		if (enableLog) {
+			std::cout << "(" << (t1-t0)*1000 << "[ms], " << gflops << "[GFLOPS], " << GBs << "[GB/s])" << std::endl;
+		}
 		ops_sum += ops;
 
 		flops->flop += ops;
@@ -136,8 +145,10 @@ static bool convertWithModelsBasic(ComputeEnv *env,
 	packed_input = (float*)packed_input_buf->get_read_ptr_host(env, sizeof(float)*filterWidth*filterHeight);
 	unpack_mat1(outputPlane, packed_input, filterWidth, filterHeight);
 
-	double gflops = ops_sum/(1000.0*1000.0*1000.0) / (t01-t00);
-	std::cout << "total : " << (t01-t00) << "[sec], " << gflops << "[GFLOPS]" << std::endl;
+	if (enableLog) {
+		double gflops = ops_sum/(1000.0*1000.0*1000.0) / (t01-t00);
+		std::cout << "total : " << (t01-t00) << "[sec], " << gflops << "[GFLOPS]" << std::endl;
+	}
 
 	return true;
 
@@ -148,7 +159,8 @@ static bool convertWithModelsBlockSplit(ComputeEnv *env,
 					cv::Mat &outputPlane,
 					std::vector<std::unique_ptr<Model> > &models,
 					W2XConvFlopsCounter *flops,
-					cv::Size blockSize)
+					cv::Size blockSize,
+					bool enableLog)
 {
 
 	// padding is not required before calling this function
@@ -211,12 +223,14 @@ static bool convertWithModelsBlockSplit(ComputeEnv *env,
 						c * (blockSize.width - 2 * nModel) + blockSize.width);
 			}
 
-			std::cout << "start process block (" << c << "," << r << ") ..."
-					<< std::endl;
+			if (enableLog) {
+				std::cout << "start process block (" << c << "," << r << ") ..."
+					  << std::endl;
+			}
 			if (!convertWithModelsBasic(env,
 						    processBlock, processBlockOutput,
 						    input_buf, output_buf,
-						    models, flops)) {
+						    models, flops, enableLog)) {
 				std::cerr << "w2xc::convertWithModelsBasic()\n"
 						"in w2xc::convertWithModelsBlockSplit() : \n"
 						"something error has occured. stop." << std::endl;

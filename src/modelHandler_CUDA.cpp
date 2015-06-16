@@ -190,7 +190,6 @@ initCUDA(ComputeEnv *env)
 
 	char name [1024];
 	cuDeviceGetName(name, sizeof(name), dev);
-	printf("CUDA : %s\n", name);
 
 	cuCtxSetCacheConfig(CU_FUNC_CACHE_PREFER_SHARED);
 	cuCtxSetSharedMemConfig(CU_SHARED_MEM_CONFIG_EIGHT_BYTE_BANK_SIZE);
