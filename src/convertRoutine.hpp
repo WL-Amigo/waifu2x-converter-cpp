@@ -13,6 +13,7 @@
 
 #include "modelHandler.hpp"
 #include "common.hpp"
+#include "w2xconv.h"
 #include <memory>
 //#include "opencv2/opencv.hpp"
 //#include "opencv2/core/ocl.hpp" in modelHandler.hpp
@@ -27,7 +28,7 @@ bool convertWithModels(ComputeEnv *env,
                        cv::Mat &inputPlanes,
                        cv::Mat &outputPlanes,
                        std::vector<std::unique_ptr<Model> > &models,
-                       FLOPSCounter *flops,
+                       W2XConvFlopsCounter *flops,
                        cv::Size blockSize,
                        bool blockSplitting = true);
 

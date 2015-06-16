@@ -19,6 +19,7 @@
 #include "sec.hpp"
 #include "common.hpp"
 #include "threadPool.hpp"
+#include "w2xconv.h"
 
 #include "modelHandler.hpp"
 #include "convertRoutine.hpp"
@@ -107,7 +108,7 @@ int main(int argc, char** argv) {
 		bs = 65536;
 	}
 
-	FLOPSCounter flops;
+	struct W2XConvFlopsCounter flops;
 
 	// ===== Noise Reduction Phase =====
 	if (cmdMode.getValue() == "noise" || cmdMode.getValue() == "noise_scale") {
@@ -218,13 +219,13 @@ int main(int argc, char** argv) {
 
 	double time_end = getsec();
 
-	double gflops_proc = (flops.flop/(1000.0*1000.0*1000.0)) / flops.sec;
+	double gflops_proc = (flops.flop/(1000.0*1000.0*1000.0)) / flops.filter_sec;
 	double gflops_all = (flops.flop/(1000.0*1000.0*1000.0)) / (time_end-time_start);
 
 	std::cout << "process successfully done! (all:"
 		  << (time_end - time_start)
 		  << "[sec], " << gflops_all << "[GFLOPS], filter:"
-		  << flops.sec
+		  << flops.filter_sec
 		  << "[sec], " << gflops_proc << "[GFLOPS])" << std::endl;
 
 	w2xc::finiCUDA(&env);

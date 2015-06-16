@@ -19,17 +19,18 @@ namespace w2xc {
 static bool convertWithModelsBasic(ComputeEnv *env,
 				   cv::Mat &inputPlane, cv::Mat &outputPlane,
 				   Buffer *input_buf, Buffer *output_buf,
-				   std::vector<std::unique_ptr<Model> > &models, FLOPSCounter *flops);
+				   std::vector<std::unique_ptr<Model> > &models,
+				   W2XConvFlopsCounter *flops);
 static bool convertWithModelsBlockSplit(ComputeEnv *env,
 					cv::Mat &inputPlane,
 					cv::Mat &outputPlane, std::vector<std::unique_ptr<Model> > &models,
-					FLOPSCounter *flops,
+					W2XConvFlopsCounter *flops,
 					cv::Size blockSize);
 
 bool convertWithModels(ComputeEnv *env,
 		       cv::Mat &inputPlane, cv::Mat &outputPlane,
 		       std::vector<std::unique_ptr<Model> > &models,
-		       FLOPSCounter *flops,
+		       W2XConvFlopsCounter *flops,
 		       cv::Size blockSize,
 		       bool blockSplitting)
 {
@@ -84,7 +85,7 @@ static bool convertWithModelsBasic(ComputeEnv *env,
 				   cv::Mat &inputPlane, cv::Mat &outputPlane,
 				   Buffer *packed_input_buf,
 				   Buffer *packed_output_buf,
-				   std::vector<std::unique_ptr<Model> > &models, FLOPSCounter *flops) {
+				   std::vector<std::unique_ptr<Model> > &models, W2XConvFlopsCounter *flops) {
 	// padding is require before calling this function
 
 	std::unique_ptr<std::vector<cv::Mat> > inputPlanes = std::unique_ptr<
@@ -124,7 +125,7 @@ static bool convertWithModelsBasic(ComputeEnv *env,
 		ops_sum += ops;
 
 		flops->flop += ops;
-		flops->sec += t1-t0;
+		flops->filter_sec += t1-t0;
 
 		std::swap(packed_input_buf, packed_output_buf);
 	}
@@ -146,7 +147,7 @@ static bool convertWithModelsBlockSplit(ComputeEnv *env,
 					cv::Mat &inputPlane,
 					cv::Mat &outputPlane,
 					std::vector<std::unique_ptr<Model> > &models,
-					FLOPSCounter *flops,
+					W2XConvFlopsCounter *flops,
 					cv::Size blockSize)
 {
 
