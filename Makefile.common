@@ -18,7 +18,6 @@ src/modelHandler_CUDA$(OSFX): src/modelHandler_CUDA.ptx20.h src/modelHandler_CUD
 
 OBJS=$(SRCS:.cpp=$(OSFX))
 
-all: waifu2x-converter-cpp$(EXE)
 isa: filter-Spectre.isa filter_in1_out32-Spectre.isa filter_in128_out1-Spectre.isa
 sass: src/modelHandler_CUDA.sass
 

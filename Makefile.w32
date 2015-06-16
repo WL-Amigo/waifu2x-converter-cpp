@@ -6,6 +6,8 @@ OPENCL="C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v6.5"
 
 CXXFLAGS=-I$(OPENCL)/include -I$(OPENCV)/include -I$(CURDIR)/include -O2 /EHsc /wd4819 /DNONMINMAX /openmp
 CCFE=/Fe
+EXE=.exe
+OSFX=.obj
 RM=rm.exe
 
 LDFLAGS=/LIBPATH:$(OPENCV)/x86/vc12/staticlib
