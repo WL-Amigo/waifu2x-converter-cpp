@@ -9,6 +9,8 @@
 #include "threadPool.hpp"
 
 struct OpenCLDev {
+    std::string name;
+
     cl_platform_id platform;
     cl_context context;
     cl_device_id devid;
@@ -20,6 +22,8 @@ struct OpenCLDev {
 };
 
 struct CUDADev {
+    std::string name;
+
     int dev;
     CUcontext context;
     CUmodule mod;

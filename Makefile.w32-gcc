@@ -23,13 +23,13 @@ CXX=g++
 waifu2x-converter-cpp.exe: $(OBJS)
 	$(CXX) -o $@ $^ $(LDFLAGS)  $(LDLIBS)
 
-INPUT=./a.png
+INPUT=./b.png
 
 run: waifu2x-converter-cpp.exe
 	./waifu2x-converter-cpp -i $(INPUT) --model_dir models
 
 run8: waifu2x-converter-cpp.exe
-	./waifu2x-converter-cpp -j 8 -i $(INPUT) --model_dir models --disable-gpu
+	./waifu2x-converter-cpp -j 8 -i $(INPUT) --model_dir models --block_size 512 --disable-gpu
 
 run4: waifu2x-converter-cpp.exe
 	./waifu2x-converter-cpp -j 4 -i $(INPUT) --model_dir models

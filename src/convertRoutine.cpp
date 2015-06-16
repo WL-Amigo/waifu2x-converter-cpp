@@ -23,19 +23,21 @@ static bool convertWithModelsBasic(ComputeEnv *env,
 static bool convertWithModelsBlockSplit(ComputeEnv *env,
 					cv::Mat &inputPlane,
 					cv::Mat &outputPlane, std::vector<std::unique_ptr<Model> > &models,
-					FLOPSCounter *flops);
+					FLOPSCounter *flops,
+					cv::Size blockSize);
 
 bool convertWithModels(ComputeEnv *env,
 		       cv::Mat &inputPlane, cv::Mat &outputPlane,
 		       std::vector<std::unique_ptr<Model> > &models,
-		       FLOPSCounter *flops, bool blockSplitting) {
-
-	cv::Size blockSize = modelUtility::getInstance().getBlockSize();
+		       FLOPSCounter *flops,
+		       cv::Size blockSize,
+		       bool blockSplitting)
+{
 	bool requireSplitting = (inputPlane.size().width * inputPlane.size().height)
 			> blockSize.width * blockSize.height * 3 / 2;
 //	requireSplitting = true;
 	if (blockSplitting && requireSplitting) {
-		return convertWithModelsBlockSplit(env, inputPlane, outputPlane, models, flops);
+		return convertWithModelsBlockSplit(env, inputPlane, outputPlane, models, flops, blockSize);
 	} else {
 		//insert padding to inputPlane
 		cv::Mat tempMat;
@@ -143,11 +145,14 @@ static bool convertWithModelsBasic(ComputeEnv *env,
 static bool convertWithModelsBlockSplit(ComputeEnv *env,
 					cv::Mat &inputPlane,
 					cv::Mat &outputPlane,
-					std::vector<std::unique_ptr<Model> > &models, FLOPSCounter *flops) {
+					std::vector<std::unique_ptr<Model> > &models,
+					FLOPSCounter *flops,
+					cv::Size blockSize)
+{
+
 	// padding is not required before calling this function
 
 	// initialize local variables
-	cv::Size blockSize = modelUtility::getInstance().getBlockSize();
 	unsigned int nModel = models.size();
 
 	//insert padding to inputPlane

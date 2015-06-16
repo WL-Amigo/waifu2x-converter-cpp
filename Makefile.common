@@ -2,7 +2,7 @@
 
 SRCS=src/main.cpp src/modelHandler.cpp src/modelHandler_avx.cpp src/modelHandler_fma.cpp \
 	src/modelHandler_OpenCL.cpp src/convertRoutine.cpp src/threadPool.cpp \
-	src/modelHandler_CUDA.cpp
+	src/modelHandler_CUDA.cpp src/w2xconv.cpp
 
 src/modelHandler_OpenCL.cl.h:src/modelHandler_OpenCL.cl conv$(EXE)
 	./conv$(EXE) $< $@ str

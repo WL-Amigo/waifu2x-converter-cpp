@@ -122,9 +122,8 @@ class modelUtility {
 private:
 	static modelUtility* instance;
 	int nJob;
-	cv::Size blockSplittingSize;
 	modelUtility() :
-		nJob(4), blockSplittingSize(1024,1024) {
+		nJob(4) {
 	}
 	;
 
@@ -134,10 +133,6 @@ public:
 	static modelUtility& getInstance();
 	bool setNumberOfJobs(int setNJob);
 	int getNumberOfJobs();
-	bool setBlockSize(cv::Size size);
-	bool setBlockSizeExp2Square(int exp);
-	cv::Size getBlockSize();
-
 };
 
 }

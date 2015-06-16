@@ -106,7 +106,6 @@ int main(int argc, char** argv) {
 	if (bs == 0) {
 		bs = 65536;
 	}
-	w2xc::modelUtility::getInstance().setBlockSize(cv::Size(bs,bs));
 
 	FLOPSCounter flops;
 
@@ -125,7 +124,7 @@ int main(int argc, char** argv) {
 		cv::split(image, imageSplit);
 		imageSplit[0].copyTo(imageY);
 
-		w2xc::convertWithModels(&env, imageY, imageSplit[0], models, &flops);
+		w2xc::convertWithModels(&env, imageY, imageSplit[0], models, &flops, cv::Size(bs,bs));
 
 		cv::merge(imageSplit, image);
 		
@@ -174,7 +173,7 @@ int main(int argc, char** argv) {
 			cv::resize(image,image2xBicubic,imageSize,0,0,cv::INTER_CUBIC);
 			cv::split(image2xBicubic, imageSplit);
 
-			if(!w2xc::convertWithModels(&env, imageY, imageSplit[0], models, &flops)){
+			if(!w2xc::convertWithModels(&env, imageY, imageSplit[0], models, &flops, cv::Size(bs,bs))){
 				std::cerr << "w2xc::convertWithModels : something error has occured.\n"
 						"stop." << std::endl;
 				std::exit(1);

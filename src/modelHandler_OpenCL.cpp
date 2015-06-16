@@ -389,6 +389,7 @@ initOpenCL(ComputeEnv *env)
         env->cl_dev_list[0].ker_filter = ker_filter;
         env->cl_dev_list[0].ker_filter_in1_out32 = ker_filter_in1_out32;
         env->cl_dev_list[0].ker_filter_in128_out1 = ker_filter_in128_out1;
+        env->cl_dev_list[0].name = &dev_name[0];
 
         return true;
 }

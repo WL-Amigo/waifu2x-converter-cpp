@@ -212,6 +212,7 @@ initCUDA(ComputeEnv *env)
 	env->cuda_dev_list[0].filter_i128_o128 = filter_i128_o128;
 	env->cuda_dev_list[0].filter_i128_o1 = filter_i128_o1;
 	env->cuda_dev_list[0].stream = stream;
+        env->cuda_dev_list[0].name = name;
 
 	return true;
 }

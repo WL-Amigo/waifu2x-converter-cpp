@@ -28,6 +28,7 @@ bool convertWithModels(ComputeEnv *env,
                        cv::Mat &outputPlanes,
                        std::vector<std::unique_ptr<Model> > &models,
                        FLOPSCounter *flops,
+                       cv::Size blockSize,
                        bool blockSplitting = true);
 
 }
