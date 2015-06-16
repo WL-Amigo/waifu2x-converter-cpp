@@ -20,10 +20,17 @@ CXX=g++
 %.o: %.cpp
 	$(CXX) -c $(CXXFLAGS) -c -o $@ $<
 
-waifu2x-converter-cpp.exe: $(OBJS)
-	$(CXX) -o $@ $^ $(LDFLAGS)  $(LDLIBS)
+waifu2x-converter-cpp.exe: $(OBJS) w2xc.lib
+	$(CXX) -o $@ $^ $(LDFLAGS) w2xc.lib
 
-INPUT=./b.png
+w2xc.lib: w2xc.dll
+
+
+w2xc.dll: $(DLL_OBJS)
+	g++ $(LDFLAGS) -shared -o $@ $^ $(LDLIBS) -Wl,--out-implib,w2xc.lib
+
+
+INPUT=./a.png
 
 run: waifu2x-converter-cpp.exe
 	./waifu2x-converter-cpp -i $(INPUT) --model_dir models

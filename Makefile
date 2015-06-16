@@ -14,8 +14,11 @@ RM=
 
 include Makefile.common
 
-waifu2x-converter-cpp: $(OBJS)
-	g++ $(LDFLAGS) -o $@ $^ $(LDLIBS)
+waifu2x-converter-cpp: $(OBJS) libw2xc.so
+	g++ $(LDFLAGS) -o $@ $^ -lw2xc
+
+libw2xc.so: $(DLL_OBJS)
+	g++ $(LDFLAGS) -shared -o $@ $^ $(LDLIBS)
 
 #INPUT=fhd.png
 INPUT=./a.png

@@ -8,24 +8,20 @@
  *   (ここにファイルの説明を記入)
  */
 
-#include <opencv2/opencv.hpp>
 #include <iostream>
 #include <sstream>
 #include <fstream>
 #include <string>
 #include <cmath>
-#include "picojson.h"
 #include "tclap/CmdLine.h"
 #include "sec.hpp"
-#include "common.hpp"
-#include "threadPool.hpp"
+
 #include "w2xconv.h"
 
-#include "modelHandler.hpp"
-#include "convertRoutine.hpp"
-
 int main(int argc, char** argv) {
-	ComputeEnv env;
+	int ret = 1;
+
+	double time_start = getsec();
 
 	// definition of command line arguments
 	TCLAP::CmdLine cmd("waifu2x reimplementation using OpenCV", ' ', "1.0.0");
@@ -61,7 +57,7 @@ int main(int argc, char** argv) {
 			"models", "string", cmd);
 
 	TCLAP::ValueArg<int> cmdNumberOfJobs("j", "jobs",
-			"number of threads launching at the same time", false, 4, "integer",
+			"number of threads launching at the same time", false, 0, "integer",
 			cmd);
 
 	TCLAP::SwitchArg cmdDisableGPU("", "disable-gpu", "disable GPU", cmd, false);
@@ -85,119 +81,7 @@ int main(int argc, char** argv) {
 		std::exit(-1);
 	}
 
-	if (! cmdDisableGPU.getValue()) {
-		w2xc::initOpenCL(&env);
-		w2xc::initCUDA(&env);
-	}
-	double time_start = getsec();
 
-	// load image file
-	cv::Mat image = cv::imread(cmdInputFile.getValue(), cv::IMREAD_COLOR);
-	image.convertTo(image, CV_32F, 1.0 / 255.0);
-	cv::cvtColor(image, image, cv::COLOR_RGB2YUV);
-
-	// set number of jobs for processing models
-	int nJob = cmdNumberOfJobs.getValue();
-	w2xc::modelUtility::getInstance().setNumberOfJobs(nJob);
-
-	env.tpool = w2xc::initThreadPool(nJob);
-
-	int bs = cmdBlockSize.getValue();
-
-	if (bs == 0) {
-		bs = 65536;
-	}
-
-	struct W2XConvFlopsCounter flops;
-
-	// ===== Noise Reduction Phase =====
-	if (cmdMode.getValue() == "noise" || cmdMode.getValue() == "noise_scale") {
-		std::string modelFileName(cmdModelPath.getValue());
-		modelFileName = modelFileName + "/noise"
-				+ std::to_string(cmdNRLevel.getValue()) + "_model.json";
-		std::vector<std::unique_ptr<w2xc::Model> > models;
-
-		if (!w2xc::modelUtility::generateModelFromJSON(modelFileName, models))
-			std::exit(-1);
-
-		std::vector<cv::Mat> imageSplit;
-		cv::Mat imageY;
-		cv::split(image, imageSplit);
-		imageSplit[0].copyTo(imageY);
-
-		w2xc::convertWithModels(&env, imageY, imageSplit[0], models, &flops, cv::Size(bs,bs));
-
-		cv::merge(imageSplit, image);
-		
-	} // noise reduction phase : end
-
-	// ===== scaling phase =====
-
-	if (cmdMode.getValue() == "scale" || cmdMode.getValue() == "noise_scale") {
-		// calculate iteration times of 2x scaling and shrink ratio which will use at last
-		int iterTimesTwiceScaling = static_cast<int>(std::ceil(
-				std::log2(cmdScaleRatio.getValue())));
-		double shrinkRatio = 0.0;
-		if (static_cast<int>(cmdScaleRatio.getValue())
-				!= std::pow(2, iterTimesTwiceScaling)) {
-			shrinkRatio = cmdScaleRatio.getValue()
-					/ std::pow(2.0, static_cast<double>(iterTimesTwiceScaling));
-		}
-		std::string modelFileName(cmdModelPath.getValue());
-		modelFileName = modelFileName + "/scale2.0x_model.json";
-		std::vector<std::unique_ptr<w2xc::Model> > models;
-
-		if (!w2xc::modelUtility::generateModelFromJSON(modelFileName, models))
-			std::exit(-1);
-		std::cout << "start scaling" << std::endl;
-
-		// 2x scaling
-		for (int nIteration = 0; nIteration < iterTimesTwiceScaling;
-				nIteration++) {
-
-			std::cout << "#" << std::to_string(nIteration + 1)
-					<< " 2x scaling..." << std::endl;
-
-			cv::Size imageSize = image.size();
-			imageSize.width *= 2;
-			imageSize.height *= 2;
-			cv::Mat image2xNearest;
-			cv::resize(image, image2xNearest, imageSize, 0, 0, cv::INTER_NEAREST);
-			std::vector<cv::Mat> imageSplit;
-			cv::Mat imageY;
-			cv::split(image2xNearest, imageSplit);
-			imageSplit[0].copyTo(imageY);
-			// generate bicubic scaled image and
-			// convert RGB -> YUV and split
-			imageSplit.clear();
-			cv::Mat image2xBicubic;
-			cv::resize(image,image2xBicubic,imageSize,0,0,cv::INTER_CUBIC);
-			cv::split(image2xBicubic, imageSplit);
-
-			if(!w2xc::convertWithModels(&env, imageY, imageSplit[0], models, &flops, cv::Size(bs,bs))){
-				std::cerr << "w2xc::convertWithModels : something error has occured.\n"
-						"stop." << std::endl;
-				std::exit(1);
-			};
-
-			cv::merge(imageSplit, image);
-
-		} // 2x scaling : end
-
-		if (shrinkRatio != 0.0) {
-			cv::Size lastImageSize = image.size();
-			lastImageSize.width =
-					static_cast<int>(static_cast<double>(lastImageSize.width
-							* shrinkRatio));
-			lastImageSize.height =
-					static_cast<int>(static_cast<double>(lastImageSize.height
-							* shrinkRatio));
-			cv::resize(image, image, lastImageSize, 0, 0, cv::INTER_LINEAR);
-		}
-	}
-
-	cv::cvtColor(image, image, cv::COLOR_YUV2RGB);
-	image.convertTo(image, CV_8U, 255.0);
 	std::string outputFileName = cmdOutputFile.getValue();
 	if (outputFileName == "(auto)") {
 		outputFileName = cmdInputFile.getValue();
@@ -215,22 +99,60 @@ int main(int argc, char** argv) {
 		}
 		outputFileName += ".png";
 	}
-	cv::imwrite(outputFileName, image);
 
-	double time_end = getsec();
+	W2XConv *converter = w2xconv_init(!cmdDisableGPU.getValue(),
+					  cmdNumberOfJobs.getValue());
 
-	double gflops_proc = (flops.flop/(1000.0*1000.0*1000.0)) / flops.filter_sec;
-	double gflops_all = (flops.flop/(1000.0*1000.0*1000.0)) / (time_end-time_start);
+	int bs = cmdBlockSize.getValue();
+	if (bs == 0) {
+		bs = 65536;
+	}
 
-	std::cout << "process successfully done! (all:"
-		  << (time_end - time_start)
-		  << "[sec], " << gflops_all << "[GFLOPS], filter:"
-		  << flops.filter_sec
-		  << "[sec], " << gflops_proc << "[GFLOPS])" << std::endl;
+	int r = w2xconv_load_models(converter, cmdModelPath.getValue().c_str());
+	if (r < 0) {
+		goto error;
+	}
 
-	w2xc::finiCUDA(&env);
-	w2xc::finiOpenCL(&env);
-	w2xc::finiThreadPool(env.tpool);
 
-	return 0;
+	{
+		int nrLevel = 0;
+		if (cmdMode.getValue() == "noise" || cmdMode.getValue() == "noise_scale") {
+			nrLevel = cmdNRLevel.getValue();
+		}
+
+		double scaleRatio = scaleRatio = 1;
+		if (cmdMode.getValue() == "scale" || cmdMode.getValue() == "noise_scale") {
+			scaleRatio = cmdScaleRatio.getValue();
+		}
+
+		r = w2xconv_convert_file(converter,
+					 outputFileName.c_str(),
+					 cmdInputFile.getValue().c_str(),
+					 nrLevel,
+					 scaleRatio, bs);
+	}
+
+	if (r < 0) {
+		goto error;
+	}
+
+	{
+		double time_end = getsec();
+
+		double gflops_proc = (converter->flops.flop/(1000.0*1000.0*1000.0)) / converter->flops.filter_sec;
+		double gflops_all = (converter->flops.flop/(1000.0*1000.0*1000.0)) / (time_end-time_start);
+
+		std::cout << "process successfully done! (all:"
+			  << (time_end - time_start)
+			  << "[sec], " << gflops_all << "[GFLOPS], filter:"
+			  << converter->flops.filter_sec
+			  << "[sec], " << gflops_proc << "[GFLOPS])" << std::endl;
+	}
+
+	ret = 0;
+
+error:
+	w2xconv_fini(converter);
+
+	return ret;
 }

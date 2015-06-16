@@ -1,8 +1,10 @@
 # -*- mode: makefile -*-
 
-SRCS=src/main.cpp src/modelHandler.cpp src/modelHandler_avx.cpp src/modelHandler_fma.cpp \
+DLL_SRCS=src/modelHandler.cpp src/modelHandler_avx.cpp src/modelHandler_fma.cpp \
 	src/modelHandler_OpenCL.cpp src/convertRoutine.cpp src/threadPool.cpp \
 	src/modelHandler_CUDA.cpp src/w2xconv.cpp
+
+SRCS=src/main.cpp
 
 src/modelHandler_OpenCL.cl.h:src/modelHandler_OpenCL.cl conv$(EXE)
 	./conv$(EXE) $< $@ str
@@ -11,12 +13,13 @@ src/modelHandler_OpenCL.cl.h:src/modelHandler_OpenCL.cl conv$(EXE)
 	./conv$(EXE) $< $@ str
 
 clean: $(RM)
-	rm -f $(OBJS) waifu2x-converter-cpp$(EXE) src/*.cl.h src/*ptx20.h src/*ptx30.h *.ii *.s
+	rm -f $(DLL_OBJS) $(OBJS) waifu2x-converter-cpp$(EXE) src/*.cl.h src/*ptx20.h src/*ptx30.h *.ii *.s
 
 src/modelHandler_OpenCL$(OSFX): src/modelHandler_OpenCL.cl.h
 src/modelHandler_CUDA$(OSFX): src/modelHandler_CUDA.ptx20.h src/modelHandler_CUDA.ptx30.h
 
 OBJS=$(SRCS:.cpp=$(OSFX))
+DLL_OBJS=$(DLL_SRCS:.cpp=$(OSFX))
 
 isa: filter-Spectre.isa filter_in1_out32-Spectre.isa filter_in128_out1-Spectre.isa
 sass: src/modelHandler_CUDA.sass
