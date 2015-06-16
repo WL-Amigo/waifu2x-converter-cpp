@@ -375,7 +375,8 @@ filter_1elem_output1(const float *packed_input,
 
 template <bool have_fma>
 static void
-filter_AVX_impl0(const float *packed_input,
+filter_AVX_impl0(ComputeEnv *env,
+		 const float *packed_input,
 		 float *packed_output,
 		 int nInputPlanes,
 		 int nOutputPlanes,
@@ -399,7 +400,7 @@ filter_AVX_impl0(const float *packed_input,
 
 	std::atomic<unsigned int> block_counter(0U);
 
-	startFunc([&]() {
+	startFunc(env->tpool, [&]() {
 			float *intermediate = (float*)_mm_malloc(sizeof(float)*nOutputPlanes*2, 64);
 
 			while (1) {

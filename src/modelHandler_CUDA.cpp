@@ -119,7 +119,7 @@ initCUDA(ComputeEnv *env)
 	//jit_options[1] = CU_JIT_OPTIMIZATION_LEVEL;
 	//jit_optvals[1] = (void*)(uintptr_t)0;
 
-	r = cuModuleLoadDataEx(&mod, prog20, 1, jit_options, jit_optvals);
+	r = cuModuleLoadDataEx(&mod, prog, 1, jit_options, jit_optvals);
 	if (r != CUDA_SUCCESS) {
 		cuCtxDestroy(ctxt);
 		cuStreamDestroy(stream);
@@ -279,7 +279,6 @@ filter_CUDA_impl(ComputeEnv *env,
 		exit(1);
 	}
 
-	size_t nInputPlanes2 = nInputPlanes;
 	size_t nOutputPlanes2 = nOutputPlanes;
 	size_t h = ip_height;
 	size_t w = ip_width;

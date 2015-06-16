@@ -269,11 +269,11 @@ bool Model::filter_AVX_OpenCL(ComputeEnv *env,
 			float *packed_output = (float*)packed_output_buf->get_write_ptr_host(env);
 
 			if (have_fma) {
-				filter_FMA_impl(packed_input, packed_output,
+				filter_FMA_impl(env, packed_input, packed_output,
 						nInputPlanes, nOutputPlanes, fbiases_flat, weight_flat,
 						size.width, size.height, nJob);
 			} else {
-				filter_AVX_impl(packed_input, packed_output,
+				filter_AVX_impl(env, packed_input, packed_output,
 						nInputPlanes, nOutputPlanes, fbiases_flat, weight_flat,
 						size.width, size.height, nJob);
 			}
@@ -339,11 +339,11 @@ bool Model::filter_AVX_OpenCL(ComputeEnv *env,
 				float *packed_output = (float*)packed_output_buf->get_write_ptr_host(env);
 
 				if (have_fma) {
-					filter_FMA_impl(packed_input, packed_output,
+					filter_FMA_impl(env, packed_input, packed_output,
 							nInputPlanes, nOutputPlanes, fbiases_flat, weight_flat,
 							size.width, size.height, nJob);
 				} else if (have_avx) {
-					filter_AVX_impl(packed_input, packed_output,
+					filter_AVX_impl(env, packed_input, packed_output,
 							nInputPlanes, nOutputPlanes, fbiases_flat, weight_flat,
 							size.width, size.height, nJob);
 				}
@@ -601,7 +601,6 @@ bool modelUtility::generateModelFromJSON(const std::string &fileName,
 				fwrite(&nInputPlanes, 4, 1, binfp);
 				fwrite(&nOutputPlanes, 4, 1, binfp);
 
-				int kernelSize = 3;
 				std::vector<cv::Mat> &weights = m->getWeigts();
 
 				int nw = weights.size();
@@ -644,8 +643,6 @@ bool modelUtility::generateModelFromJSON(const std::string &fileName,
 bool modelUtility::setNumberOfJobs(int setNJob){
 	if(setNJob < 1)return false;
 	nJob = setNJob;
-
-	initThreadPool(nJob);
 
 	return true;
 };

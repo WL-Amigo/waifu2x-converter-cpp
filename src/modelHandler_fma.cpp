@@ -10,7 +10,8 @@
 
 namespace w2xc {
 void
-filter_FMA_impl(const float *packed_input,
+filter_FMA_impl(ComputeEnv *env,
+		const float *packed_input,
 		float *packed_output,
 		int nInputPlanes,
 		int nOutputPlanes,
@@ -20,7 +21,8 @@ filter_FMA_impl(const float *packed_input,
 		int ip_height,
 		int nJob)
 {
-	filter_AVX_impl0<true>(packed_input,
+	filter_AVX_impl0<true>(env,
+			       packed_input,
 			       packed_output,
 			       nInputPlanes,
 			       nOutputPlanes,

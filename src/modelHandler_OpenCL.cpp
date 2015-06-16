@@ -114,7 +114,7 @@ initOpenCL(ComputeEnv *env)
                 clGetPlatformInfo(plts[i], CL_PLATFORM_NAME, sz, &name[0], &sz);
 
                 bool is_amd = strstr(&name[0], "AMD") != NULL;
-                bool is_intel = strstr(&name[0], "Intel") != NULL;
+                //bool is_intel = strstr(&name[0], "Intel") != NULL;
                 //bool is_nvidia = strstr(&name[0], "NVIDIA") != NULL;
 
                 if (!is_amd) {
@@ -385,12 +385,30 @@ initOpenCL(ComputeEnv *env)
         env->cl_dev_list[0].context = context;
         env->cl_dev_list[0].devid = dev;
         env->cl_dev_list[0].queue = queue;
+        env->cl_dev_list[0].program = program;
         env->cl_dev_list[0].ker_filter = ker_filter;
         env->cl_dev_list[0].ker_filter_in1_out32 = ker_filter_in1_out32;
         env->cl_dev_list[0].ker_filter_in128_out1 = ker_filter_in128_out1;
 
         return true;
 }
+
+void
+finiOpenCL(ComputeEnv *env)
+{
+        for (int di=0; di<env->num_cl_dev; di++) {
+                OpenCLDev *d = &env->cl_dev_list[di];
+                clReleaseKernel(d->ker_filter);
+                clReleaseKernel(d->ker_filter_in128_out1);
+                clReleaseKernel(d->ker_filter_in1_out32);
+                clReleaseProgram(d->program);
+                clReleaseCommandQueue(d->queue);
+                clReleaseContext(d->context);
+        }
+
+        delete [] env->cl_dev_list;
+}
+
 
 
 void

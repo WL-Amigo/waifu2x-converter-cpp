@@ -96,7 +96,11 @@ int main(int argc, char** argv) {
 	cv::cvtColor(image, image, cv::COLOR_RGB2YUV);
 
 	// set number of jobs for processing models
-	w2xc::modelUtility::getInstance().setNumberOfJobs(cmdNumberOfJobs.getValue());
+	int nJob = cmdNumberOfJobs.getValue();
+	w2xc::modelUtility::getInstance().setNumberOfJobs(nJob);
+
+	env.tpool = w2xc::initThreadPool(nJob);
+
 	int bs = cmdBlockSize.getValue();
 
 	if (bs == 0) {
@@ -225,6 +229,8 @@ int main(int argc, char** argv) {
 		  << "[sec], " << gflops_proc << "[GFLOPS])" << std::endl;
 
 	w2xc::finiCUDA(&env);
+	w2xc::finiOpenCL(&env);
+	w2xc::finiThreadPool(env.tpool);
 
 	return 0;
 }

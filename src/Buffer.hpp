@@ -6,6 +6,7 @@
 #include <CL/cl.h>
 #include "CLlib.h"
 #include "CUDAlib.h"
+#include "threadPool.hpp"
 
 struct OpenCLDev {
     cl_platform_id platform;
@@ -39,6 +40,8 @@ struct ComputeEnv {
     int num_cuda_dev;
     OpenCLDev *cl_dev_list;
     CUDADev *cuda_dev_list;
+
+    w2xc::ThreadPool *tpool;
 
     ComputeEnv()
         :num_cl_dev(0),
@@ -289,6 +292,8 @@ struct Buffer {
             CUDADev *dev = &env->cuda_dev_list[last_write.devid];
             cuCtxPushCurrent(dev->context);
             cuMemcpyDtoH(host_ptr, cuda_ptr_list[last_write.devid], read_byte_size);
+            CUcontext old;
+            cuCtxPopCurrent(&old);
         } else {
             abort();
         }

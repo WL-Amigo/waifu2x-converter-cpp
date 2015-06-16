@@ -2,6 +2,8 @@
 #include <atomic>
 #include "threadPool.hpp"
 
+namespace w2xc {
+
 #if defined __i386__ || defined __x86_64__
 
 #include <cpuid.h>
@@ -15,46 +17,36 @@
 #define wmb() _WriteBarrier()
 #endif
 
-
-#ifdef linux
-#include <sys/eventfd.h>
-#endif
-
 #ifdef _WIN32
 
-#include <windows.h>
 #include <process.h>
 
-typedef HANDLE event_t;
-
-static void
+void
 notify_event(HANDLE ev)
 {
 	wmb();
 	SetEvent(ev);
 }
 
-static void
+void
 wait_event(HANDLE ev)
 {
 	WaitForSingleObject(ev, INFINITE);
 	rmb();
 }
 
-static HANDLE
+HANDLE
 create_event()
 {
 	return CreateEvent(nullptr, FALSE, FALSE, nullptr);
 }
-static void
+void
 delete_event(HANDLE h)
 {
 	CloseHandle(h);
 }
 
-
 #elif defined __linux
-typedef int event_t;
 
 #include <unistd.h>
 #include <sys/eventfd.h>
@@ -97,98 +89,76 @@ delete_event(int fd)
 
 #endif
 
-namespace {
-
-struct Thread {
-	event_t to_client;
-	std::thread t;
-
-	void func();
-	Thread()
-		:to_client(create_event()),
-		 t(std::thread(&Thread::func, this))
-	{}
-
-	~Thread() {
-		delete_event(to_client);
-	}
-
-	Thread(const Thread&) = delete;
-	Thread&  operator=(const Thread&) = delete;
-};
-
-
-struct ThreadPool {
-	int num_thread;
-	std::atomic<int> fini_count;
-	bool fini_all;
-
-	Thread *threads;
-	event_t to_master;
-	ThreadFuncBase *func;
-};
-
-static ThreadPool threadPool;
-
 void Thread::func() {
 	while (1) {
 		wait_event(to_client);
 		rmb();
 
-		if (threadPool.fini_all) {
+		if (this->p->fini_all) {
 			return;
 		}
 
-		(*threadPool.func)();
+		(*p->func)();
 
-		int count = ++threadPool.fini_count;
-		if (count == threadPool.num_thread) {
-			notify_event(threadPool.to_master);
+		int count = ++p->fini_count;
+		if (count == p->num_thread) {
+			notify_event(p->to_master);
 		}
 	}
 }
-
+void Thread::start(ThreadPool *p)
+{
+	this->p = p;
+	wmb();
+	t = std::thread(&Thread::func, this);
 }
 
-void
+struct ThreadPool *
 initThreadPool(int cpu)
 {
-	threadPool.to_master = create_event();
-	threadPool.threads = new Thread[cpu];
-	threadPool.num_thread = cpu;
-	threadPool.fini_all = false;
+	ThreadPool *ret = new ThreadPool;
+	ret->to_master = create_event();
+	ret->threads = new Thread[cpu];
+	for (int i=0; i<cpu; i++) {
+		ret->threads[i].start(ret);
+	}
+	ret->num_thread = cpu;
+	ret->fini_all = false;
+	return ret;
 }
 
 void
-finiThreadPool()
+finiThreadPool(struct ThreadPool *p)
 {
-	threadPool.fini_all = true;
+	p->fini_all = true;
 
-	for (int i=0; i<threadPool.num_thread; i++) {
-		notify_event(threadPool.threads[i].to_client);
+	for (int i=0; i<p->num_thread; i++) {
+		notify_event(p->threads[i].to_client);
 	}
-	for (int i=0; i<threadPool.num_thread; i++) {
-		threadPool.threads[i].t.join();
+	for (int i=0; i<p->num_thread; i++) {
+		p->threads[i].t.join();
 	}
 
-	delete [] threadPool.threads;
+	delete [] p->threads;
 
-	delete_event(threadPool.to_master);
+	delete_event(p->to_master);
 }
 
 void
-startFuncBody(ThreadFuncBase *f)
+startFuncBody(struct ThreadPool *p, ThreadFuncBase *f)
 {
-	threadPool.fini_count = 0;
-	threadPool.func = f;
-	wmb();
+	p->fini_count = 0;
+	p->func = f;
 
-	for (int i=0; i<threadPool.num_thread; i++) {
-		notify_event(threadPool.threads[i].to_client);
+	for (int i=0; i<p->num_thread; i++) {
+		notify_event(p->threads[i].to_client);
 	}
 
-	wait_event(threadPool.to_master);
-	rmb();
+	wait_event(p->to_master);
 
 	return;
 }
+
+
+}
+

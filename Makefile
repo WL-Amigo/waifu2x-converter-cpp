@@ -17,8 +17,8 @@ include Makefile.common
 waifu2x-converter-cpp: $(OBJS)
 	g++ $(LDFLAGS) -o $@ $^ $(LDLIBS)
 
-INPUT=fhd.png
-#INPUT=./a.png
+#INPUT=fhd.png
+INPUT=./a.png
 #INPUT=./b.png
 #INPUT=./c.png
 #INPUT=./d.png

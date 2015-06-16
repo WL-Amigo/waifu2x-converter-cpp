@@ -6,10 +6,12 @@
 namespace w2xc {
 
 bool initOpenCL(ComputeEnv *env);
+void finiOpenCL(ComputeEnv *env);
 bool initCUDA(ComputeEnv *env);
 void finiCUDA(ComputeEnv *env);
 
-extern void filter_AVX_impl(const float *packed_input,
+extern void filter_AVX_impl(ComputeEnv *env,
+                            const float *packed_input,
 			    float *packed_output,
 			    int nInputPlanes,
                             int nOutputPlanes,
@@ -19,7 +21,8 @@ extern void filter_AVX_impl(const float *packed_input,
                             int ip_height,
 			    int nJob);
 
-extern void filter_FMA_impl(const float *packed_input,
+extern void filter_FMA_impl(ComputeEnv *env,
+                            const float *packed_input,
 			    float *packed_output,
 			    int nInputPlanes,
 			    int nOutputPlanes,

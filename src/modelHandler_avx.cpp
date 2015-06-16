@@ -8,7 +8,8 @@
 
 namespace w2xc {
 void
-filter_AVX_impl(const float *packed_input,
+filter_AVX_impl(ComputeEnv *env,
+		const float *packed_input,
 		float *packed_output,
 		int nInputPlanes,
 		int nOutputPlanes,
@@ -18,7 +19,8 @@ filter_AVX_impl(const float *packed_input,
 		int ip_height,
 		int nJob)
 {
-	filter_AVX_impl0<false>(packed_input,
+	filter_AVX_impl0<false>(env,
+				packed_input,
 				packed_output,
 				nInputPlanes,
 				nOutputPlanes,

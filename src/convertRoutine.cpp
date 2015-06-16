@@ -48,7 +48,7 @@ bool convertWithModels(ComputeEnv *env,
 		int width = tempMat.size().width;
 		int height = tempMat.size().height;
 
-		for (int index = 0; index < models.size(); index++) {
+		for (int index = 0; index < (int)models.size(); index++) {
 			size_t bufsize = sizeof(float) * width * height *
 				models[index]->getNOutputPlanes();
 
@@ -103,7 +103,7 @@ static bool convertWithModelsBasic(ComputeEnv *env,
 	double t00 = getsec();
 	double ops_sum = 0;
 
-	for (int index = 0; index < models.size(); index++) {
+	for (int index = 0; index < (int)models.size(); index++) {
 		int nOutputPlanes = models[index]->getNOutputPlanes();
 		int nInputPlanes = models[index]->getNInputPlanes();
 
@@ -175,7 +175,7 @@ static bool convertWithModelsBlockSplit(ComputeEnv *env,
 	int width = (std::min)(tempMat.size().width, blockSize.width);
 	int height = (std::min)(tempMat.size().height, blockSize.height);
 
-	for (int index = 0; index < models.size(); index++) {
+	for (int index = 0; index < (int)models.size(); index++) {
 		size_t bufsize = sizeof(float) * width * height *
 			models[index]->getNOutputPlanes();
 
