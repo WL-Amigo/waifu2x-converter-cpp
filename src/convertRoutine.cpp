@@ -18,6 +18,7 @@ namespace w2xc {
 // converting process inside program
 static bool convertWithModelsBasic(ComputeEnv *env,
 				   cv::Mat &inputPlane, cv::Mat &outputPlane,
+				   Buffer *input_buf, Buffer *output_buf,
 				   std::vector<std::unique_ptr<Model> > &models, FLOPSCounter *flops);
 static bool convertWithModelsBlockSplit(ComputeEnv *env,
 					cv::Mat &inputPlane,
@@ -43,7 +44,23 @@ bool convertWithModels(ComputeEnv *env,
 		cv::copyMakeBorder(inputPlane, tempMat, nModel, nModel, nModel, nModel,
 				cv::BORDER_REPLICATE);
 
-		bool ret = convertWithModelsBasic(env, tempMat, outputPlane, models, flops);
+		size_t max_size = 0;
+		int width = tempMat.size().width;
+		int height = tempMat.size().height;
+
+		for (int index = 0; index < models.size(); index++) {
+			size_t bufsize = sizeof(float) * width * height *
+				models[index]->getNOutputPlanes();
+
+			max_size = (std::max)(max_size, bufsize);
+		}
+
+		Buffer *input_buf = new Buffer(env, max_size);
+		Buffer *output_buf = new Buffer(env, max_size);
+
+		bool ret = convertWithModelsBasic(env, tempMat, outputPlane,
+						  input_buf, output_buf,
+						  models, flops);
 
 		tempMat = outputPlane(cv::Range(nModel, outputSize.height + nModel),
 				cv::Range(nModel, outputSize.width + nModel));
@@ -53,6 +70,9 @@ bool convertWithModels(ComputeEnv *env,
 
 		tempMat.copyTo(outputPlane);
 
+		delete input_buf;
+		delete output_buf;
+
 		return ret;
 	}
 
@@ -60,6 +80,8 @@ bool convertWithModels(ComputeEnv *env,
 
 static bool convertWithModelsBasic(ComputeEnv *env,
 				   cv::Mat &inputPlane, cv::Mat &outputPlane,
+				   Buffer *packed_input_buf,
+				   Buffer *packed_output_buf,
 				   std::vector<std::unique_ptr<Model> > &models, FLOPSCounter *flops) {
 	// padding is require before calling this function
 
@@ -74,24 +96,12 @@ static bool convertWithModelsBasic(ComputeEnv *env,
 	cv::Size filterSize = inputPlane.size();
 	int filterWidth = filterSize.width;
 	int filterHeight = filterSize.height;
-	size_t max_size = 0;
-
-	for (int index = 0; index < models.size(); index++) {
-		size_t bufsize = sizeof(float) * filterWidth * filterHeight *
-			models[index]->getNOutputPlanes();
-
-		max_size = (std::max)(max_size, bufsize);
-	}
-
-	Buffer *packed_input_buf = new Buffer(env, max_size);
 
 	float *packed_input = (float*)packed_input_buf->get_write_ptr_host(env);
 	pack_mat(packed_input, *inputPlanes, filterWidth, filterHeight, 1);
 
 	double t00 = getsec();
 	double ops_sum = 0;
-
-	Buffer *packed_output_buf = new Buffer(env, max_size);
 
 	for (int index = 0; index < models.size(); index++) {
 		int nOutputPlanes = models[index]->getNOutputPlanes();
@@ -122,9 +132,6 @@ static bool convertWithModelsBasic(ComputeEnv *env,
 
 	packed_input = (float*)packed_input_buf->get_read_ptr_host(env, sizeof(float)*filterWidth*filterHeight);
 	unpack_mat1(outputPlane, packed_input, filterWidth, filterHeight);
-
-	delete packed_output_buf;
-	delete packed_input_buf;
 
 	double gflops = ops_sum/(1000.0*1000.0*1000.0) / (t01-t00);
 	std::cout << "total : " << (t01-t00) << "[sec], " << gflops << "[GFLOPS]" << std::endl;
@@ -163,6 +170,21 @@ static bool convertWithModelsBlockSplit(ComputeEnv *env,
 	cv::Mat processBlockOutput;
 	cv::Mat writeMatTo;
 	cv::Mat writeMatFrom;
+
+	size_t max_size = 0;
+	int width = (std::min)(tempMat.size().width, blockSize.width);
+	int height = (std::min)(tempMat.size().height, blockSize.height);
+
+	for (int index = 0; index < models.size(); index++) {
+		size_t bufsize = sizeof(float) * width * height *
+			models[index]->getNOutputPlanes();
+
+		max_size = (std::max)(max_size, bufsize);
+	}
+
+	Buffer *input_buf = new Buffer(env, max_size);
+	Buffer *output_buf = new Buffer(env, max_size);
+
 	outputPlane = cv::Mat::zeros(outputSize, CV_32FC1);
 	for (unsigned int r = 0; r < splitRows; r++) {
 		if (r == splitRows - 1) {
@@ -187,6 +209,7 @@ static bool convertWithModelsBlockSplit(ComputeEnv *env,
 					<< std::endl;
 			if (!convertWithModelsBasic(env,
 						    processBlock, processBlockOutput,
+						    input_buf, output_buf,
 						    models, flops)) {
 				std::cerr << "w2xc::convertWithModelsBasic()\n"
 						"in w2xc::convertWithModelsBlockSplit() : \n"
@@ -217,6 +240,9 @@ static bool convertWithModelsBlockSplit(ComputeEnv *env,
 		} // end process 1 column
 
 	} // end process all blocks
+
+	delete input_buf;
+	delete output_buf;
 
 	return true;
 
