@@ -185,12 +185,11 @@ struct Buffer {
         if (cl_ptr_list[devid] == nullptr) {
             cl_int err;
             cl_ptr_list[devid] = clCreateBuffer(dev->context,
-                                                CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR,
-                                                byte_size, host_ptr, &err);
-        } else {
-            clEnqueueWriteBuffer(dev->queue, cl_ptr_list[devid],
-                                 CL_TRUE, 0, read_byte_size, host_ptr, 0, nullptr, nullptr);
+                                                CL_MEM_READ_WRITE,
+                                                byte_size, nullptr, &err);
         }
+        clEnqueueWriteBuffer(dev->queue, cl_ptr_list[devid],
+                             CL_TRUE, 0, read_byte_size, host_ptr, 0, nullptr, nullptr);
 
         cl_valid_list[devid] = true;
 
