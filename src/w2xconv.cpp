@@ -227,12 +227,85 @@ w2xconv_fini(struct W2XConv *conv)
 	delete conv;
 }
 
+static void
+apply_denoise(struct W2XConv *conv,
+	      cv::Mat &image,
+	      int denoise_level,
+	      cv::Size &bs)
+{
+	struct W2XConvImpl *impl = conv->impl;
+	ComputeEnv *env = &impl->env;
+
+	std::vector<cv::Mat> imageSplit;
+	cv::Mat imageY;
+	cv::split(image, imageSplit);
+	imageSplit[0].copyTo(imageY);
+
+	if (denoise_level == 1) {
+		w2xc::convertWithModels(env, imageY, imageSplit[0],
+					impl->noise1_models,
+					&conv->flops, bs);
+	} else {
+		w2xc::convertWithModels(env, imageY, imageSplit[0],
+					impl->noise2_models,
+					&conv->flops, bs);
+	}
+
+	cv::merge(imageSplit, image);
+}
+
+static void
+apply_scale(struct W2XConv *conv,
+	    cv::Mat &image,
+	    int iterTimesTwiceScaling,
+	    cv::Size &bs)
+{
+	struct W2XConvImpl *impl = conv->impl;
+	ComputeEnv *env = &impl->env;
+
+	std::cout << "start scaling" << std::endl;
+
+	// 2x scaling
+	for (int nIteration = 0; nIteration < iterTimesTwiceScaling;
+	     nIteration++) {
+
+		std::cout << "#" << std::to_string(nIteration + 1)
+			  << " 2x scaling..." << std::endl;
+
+		cv::Size imageSize = image.size();
+		imageSize.width *= 2;
+		imageSize.height *= 2;
+		cv::Mat image2xNearest;
+		cv::resize(image, image2xNearest, imageSize, 0, 0, cv::INTER_NEAREST);
+		std::vector<cv::Mat> imageSplit;
+		cv::Mat imageY;
+		cv::split(image2xNearest, imageSplit);
+		imageSplit[0].copyTo(imageY);
+		// generate bicubic scaled image and
+		// convert RGB -> YUV and split
+		imageSplit.clear();
+		cv::Mat image2xBicubic;
+		cv::resize(image,image2xBicubic,imageSize,0,0,cv::INTER_CUBIC);
+		cv::split(image2xBicubic, imageSplit);
+
+		if(!w2xc::convertWithModels(env, imageY, imageSplit[0],
+					    impl->scale2_models,
+					    &conv->flops, bs)){
+			std::cerr << "w2xc::convertWithModels : something error has occured.\n"
+				"stop." << std::endl;
+			std::exit(1);
+		};
+
+		cv::merge(imageSplit, image);
+
+	} // 2x scaling : end
+}
 
 int
 w2xconv_convert_file(struct W2XConv *conv,
 		     const char *dst_path,
                      const char *src_path,
-                     int denoise_level, /* 0:none, 1:L1 denoise, 2:L2 denoise  */
+                     int denoise_level,
                      double scale,
 		     int block_size)
 {
@@ -252,22 +325,7 @@ w2xconv_convert_file(struct W2XConv *conv,
 	cv::Size bs(block_size, block_size);
 
 	if (denoise_level != 0) {
-		std::vector<cv::Mat> imageSplit;
-		cv::Mat imageY;
-		cv::split(image, imageSplit);
-		imageSplit[0].copyTo(imageY);
-
-		if (denoise_level == 1) {
-			w2xc::convertWithModels(env, imageY, imageSplit[0],
-						impl->noise1_models,
-						&conv->flops, bs);
-		} else {
-			w2xc::convertWithModels(env, imageY, imageSplit[0],
-						impl->noise2_models,
-						&conv->flops, bs);
-		}
-
-		cv::merge(imageSplit, image);
+		apply_denoise(conv, image, denoise_level, bs);
 	}
 
 	if (scale != 1.0) {
@@ -280,51 +338,16 @@ w2xconv_convert_file(struct W2XConv *conv,
 			shrinkRatio = scale / std::pow(2.0, static_cast<double>(iterTimesTwiceScaling));
 		}
 
-		std::cout << "start scaling" << std::endl;
-
-		// 2x scaling
-		for (int nIteration = 0; nIteration < iterTimesTwiceScaling;
-				nIteration++) {
-
-			std::cout << "#" << std::to_string(nIteration + 1)
-					<< " 2x scaling..." << std::endl;
-
-			cv::Size imageSize = image.size();
-			imageSize.width *= 2;
-			imageSize.height *= 2;
-			cv::Mat image2xNearest;
-			cv::resize(image, image2xNearest, imageSize, 0, 0, cv::INTER_NEAREST);
-			std::vector<cv::Mat> imageSplit;
-			cv::Mat imageY;
-			cv::split(image2xNearest, imageSplit);
-			imageSplit[0].copyTo(imageY);
-			// generate bicubic scaled image and
-			// convert RGB -> YUV and split
-			imageSplit.clear();
-			cv::Mat image2xBicubic;
-			cv::resize(image,image2xBicubic,imageSize,0,0,cv::INTER_CUBIC);
-			cv::split(image2xBicubic, imageSplit);
-
-			if(!w2xc::convertWithModels(env, imageY, imageSplit[0],
-						    impl->scale2_models,
-						    &conv->flops, bs)){
-				std::cerr << "w2xc::convertWithModels : something error has occured.\n"
-						"stop." << std::endl;
-				std::exit(1);
-			};
-
-			cv::merge(imageSplit, image);
-
-		} // 2x scaling : end
+		apply_scale(conv, image, iterTimesTwiceScaling, bs);
 
 		if (shrinkRatio != 0.0) {
 			cv::Size lastImageSize = image.size();
 			lastImageSize.width =
-					static_cast<int>(static_cast<double>(lastImageSize.width
-							* shrinkRatio));
+				static_cast<int>(static_cast<double>(lastImageSize.width
+								     * shrinkRatio));
 			lastImageSize.height =
-					static_cast<int>(static_cast<double>(lastImageSize.height
-							* shrinkRatio));
+				static_cast<int>(static_cast<double>(lastImageSize.height
+								     * shrinkRatio));
 			cv::resize(image, image, lastImageSize, 0, 0, cv::INTER_LINEAR);
 		}
 	}
@@ -338,6 +361,133 @@ w2xconv_convert_file(struct W2XConv *conv,
 			     dst_path);
 		return -1;
 	}
+
+	return 0;
+}
+
+static void
+convert_yuv(struct W2XConv *conv,
+	    cv::Mat &image,
+	    int denoise_level,
+	    double scale,
+	    int dst_w, int dst_h,
+	    int block_size)
+{
+	cv::Size bs(block_size, block_size);
+
+	if (denoise_level != 0) {
+		apply_denoise(conv, image, denoise_level, bs);
+	}
+
+	if (scale != 1.0) {
+		// calculate iteration times of 2x scaling and shrink ratio which will use at last
+		int iterTimesTwiceScaling = static_cast<int>(std::ceil(std::log2(scale)));
+		double shrinkRatio = 0.0;
+		if (static_cast<int>(scale)
+		    != std::pow(2, iterTimesTwiceScaling))
+		{
+			shrinkRatio = scale / std::pow(2.0, static_cast<double>(iterTimesTwiceScaling));
+		}
+
+		apply_scale(conv, image, iterTimesTwiceScaling, bs);
+
+		if (shrinkRatio != 0.0) {
+			cv::Size lastImageSize = image.size();
+			lastImageSize.width = dst_w;
+			lastImageSize.height = dst_h;
+			cv::resize(image, image, lastImageSize, 0, 0, cv::INTER_LINEAR);
+		}
+	}
+}
+
+int
+w2xconv_convert_rgb(struct W2XConv *conv,
+		    unsigned char *dst, size_t dst_step_byte, /* rgb24 (src_w*ratio, src_h*ratio) */
+		    unsigned char *src, size_t src_step_byte, /* rgb24 (src_w, src_h) */
+		    int src_w, int src_h,
+		    int denoise_level, /* 0:none, 1:L1 denoise, other:L2 denoise  */
+		    double scale,
+		    int block_size)
+{
+	int dst_h = src_h * scale;
+	int dst_w = src_w * scale;
+
+	cv::Mat dsti(src_w, src_h, CV_8UC3, src_step_byte);
+	cv::Mat srci(dst_w, dst_h, CV_8UC3, dst_step_byte);
+
+	cv::Mat image;
+
+	srci.convertTo(image, CV_32F, 1.0 / 255.0);
+	cv::cvtColor(image, image, cv::COLOR_RGB2YUV);
+
+	convert_yuv(conv, image, denoise_level, scale, dst_h, dst_h, block_size);
+
+	cv::cvtColor(image, image, cv::COLOR_YUV2RGB);
+	image.convertTo(dsti, CV_8U, 255.0);
+
+	return 0;
+}
+
+int
+w2xconv_convert_yuv(struct W2XConv *conv,
+		    unsigned char *dst, size_t dst_step_byte, /* float32x3 (src_w*ratio, src_h*ratio) */
+		    unsigned char *src, size_t src_step_byte, /* float32x3 (src_w, src_h) */
+		    int src_w, int src_h,
+		    int denoise_level, /* 0:none, 1:L1 denoise, other:L2 denoise  */
+		    double scale,
+		    int block_size)
+{
+	int dst_h = src_h * scale;
+	int dst_w = src_w * scale;
+
+	cv::Mat dsti(src_w, src_h, CV_32FC3, src_step_byte);
+	cv::Mat srci(dst_w, dst_h, CV_32FC3, dst_step_byte);
+
+	cv::Mat image = srci.clone();
+
+	convert_yuv(conv, image, denoise_level, scale, dst_h, dst_h, block_size);
+
+	image.copyTo(dsti);
+
+	return 0;
+}
+
+
+int
+w2xconv_apply_filter_y(struct W2XConv *conv,
+		       enum W2XConvFilterType type,
+		       unsigned char *dst, size_t dst_step_byte, /* float32x1 (src_w, src_h) */
+		       unsigned char *src, size_t src_step_byte, /* float32x1 (src_w, src_h) */
+		       int src_w, int src_h,
+		       int block_size)
+{
+	struct W2XConvImpl *impl = new W2XConvImpl;
+	ComputeEnv *env = &impl->env;
+
+	cv::Mat dsti(src_w, src_h, CV_32F, dst_step_byte);
+	cv::Mat srci(src_w, src_h, CV_32F, src_step_byte);
+
+	cv::Size bs(block_size, block_size);
+
+	std::vector<std::unique_ptr<w2xc::Model> > *mp;
+
+	switch (type) {
+	case W2XCONV_FILTER_DENOISE1:
+		mp = &impl->noise1_models;
+		break;
+
+	case W2XCONV_FILTER_DENOISE2:
+		mp = &impl->noise2_models;
+		break;
+
+	case W2XCONV_FILTER_SCALE2x:
+		mp = &impl->scale2_models;
+		break;
+	}
+
+	w2xc::convertWithModels(env, dsti, srci,
+				*mp,
+				&conv->flops, bs);
 
 	return 0;
 }
