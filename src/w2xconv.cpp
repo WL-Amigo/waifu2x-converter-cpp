@@ -1,6 +1,7 @@
 #define W2XCONV_IMPL
 
 #include "w2xconv.h"
+#include "sec.hpp"
 #include "Buffer.hpp"
 #include "ModelHandler.hpp"
 #include "convertRoutine.hpp"
@@ -317,6 +318,7 @@ w2xconv_convert_file(struct W2XConv *conv,
 {
 	struct W2XConvImpl *impl = conv->impl;
 	ComputeEnv *env = &impl->env;
+	double time_start = getsec();
 
 	cv::Mat image = cv::imread(src_path, cv::IMREAD_COLOR);
 	if (image.data == nullptr) {
@@ -367,6 +369,10 @@ w2xconv_convert_file(struct W2XConv *conv,
 			     dst_path);
 		return -1;
 	}
+
+	double time_end = getsec();
+
+	conv->flops.process_sec += time_end - time_start;
 
 	return 0;
 }
