@@ -121,6 +121,7 @@ initCUDA(ComputeEnv *env)
 
 	r = cuModuleLoadDataEx(&mod, prog, 1, jit_options, jit_optvals);
 	if (r != CUDA_SUCCESS) {
+		printf("load data failed %d\n", (int)r);
 		cuCtxDestroy(ctxt);
 		cuStreamDestroy(stream);
 		return false;
@@ -381,7 +382,7 @@ filter_CUDA_impl(ComputeEnv *env,
 
 	r = cuStreamSynchronize(dev->stream);
 	if (r != CUDA_SUCCESS) {
-		puts("fail: stream sync");
+		printf("fail stream sync: %d\n", r);
 		exit(1);
 	}
 

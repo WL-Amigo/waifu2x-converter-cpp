@@ -13,7 +13,7 @@ src/modelHandler_OpenCL.cl.h:src/modelHandler_OpenCL.cl conv$(EXE)
 	./conv$(EXE) $< $@ str
 
 clean: $(RM)
-	rm -f $(DLL_OBJS) $(OBJS) waifu2x-converter-cpp$(EXE) src/*.cl.h src/*ptx20.h src/*ptx30.h *.ii *.s
+	rm -f $(DLL_OBJS) $(OBJS) waifu2x-converter-cpp$(EXE) src/*.cl.h src/*ptx20.h src/*ptx30.h *.ii *.s *.dll
 
 src/modelHandler_OpenCL$(OSFX): src/modelHandler_OpenCL.cl.h
 src/modelHandler_CUDA$(OSFX): src/modelHandler_CUDA.ptx20.h src/modelHandler_CUDA.ptx30.h

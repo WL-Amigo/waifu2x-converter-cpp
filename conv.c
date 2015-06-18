@@ -23,7 +23,7 @@ main(int argc, char **argv)
             fputc('\n', out);
         }
 
-        fputc('}', out);
+        fputs("0x00, }", out);
         fputc('\n', out);
     } else {
         printf("unknown mode : %s\n", argv[3]);

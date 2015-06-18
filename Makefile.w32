@@ -10,21 +10,26 @@ EXE=.exe
 OSFX=.obj
 RM=rm.exe
 
-LDFLAGS=/LIBPATH:$(OPENCV)/x86/vc12/staticlib /MT
+LDFLAGS=/LIBPATH:$(OPENCV)/x86/vc12/staticlib
 #LDFLAGS=/LIBPATH:$(OPENCV)/x86/vc12/staticlib /LIBPATH:$(OPENCL)/lib/Win32
 LDLIBS=opencv_core300.lib opencv_imgproc300.lib opencv_imgcodecs300.lib opencv_features2d300.lib ippicvmt.lib libjpeg.lib libpng.lib libtiff.lib libjasper.lib opencv_hal300.lib IlmImf.lib zlib.lib libwebp.lib user32.lib opencv_core300.lib opencv_imgproc300.lib 
 
 include Makefile.common
-
-OBJS=$(SRCS:.cpp=.obj)
 
 CXX=cl
 
 %.obj: %.cpp
 	$(CXX) -c $(CXXFLAGS) /Fo:$@ $<
 
-waifu2x-converter-cpp.exe: $(OBJS)
-	$(CXX) /Fe:$@ $^ /link $(LDFLAGS)  $(LDLIBS)
+waifu2x-converter-cpp.exe: $(OBJS) w2xc.lib
+	$(CXX) /Fe:$@ $^ /link $(LDFLAGS)  $(LDLIBS) w2xc.lib
+
+w2xc.lib: w2xc.dll
+
+
+w2xc.dll: $(DLL_OBJS)
+	cl /LD /Fe:$@ $^  /link $(LDFLAGS) $(LDLIBS)
+
 
 INPUT=./c.png
 
@@ -46,9 +51,12 @@ src/modelHandler_fma.obj: src/modelHandler_fma.cpp
 	$(CXX) -c $(CXXFLAGS) /arch:AVX /Fo:$@ /Fa $<
 
 %.ptx20: %.cu
-	nvcc -Xcompiler "/wd 4819" -ptx -o $@ $< -arch=sm_20
+	nvcc -Xcompiler "/wd 4819" -ptx -o $@ $< -arch=sm_20 -m32
 %.ptx30: %.cu
-	nvcc -Xcompiler "/wd 4819" -ptx -o $@ $< -arch=sm_30
+	nvcc -Xcompiler "/wd 4819" -ptx -o $@ $< -arch=sm_30 -m32
 
 rm.exe: rm.c
 	cl /Fe:$@ $<
+
+conv.exe: conv.c
+	gcc -o conv.exe conv.c
