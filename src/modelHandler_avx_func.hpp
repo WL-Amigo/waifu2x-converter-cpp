@@ -464,7 +464,7 @@ filter_AVX_impl0(ComputeEnv *env,
 	}
 
 #else
-	startFunc(env->tpool, f);
+	startFunc(env->tpool, func);
 #endif
 
 }

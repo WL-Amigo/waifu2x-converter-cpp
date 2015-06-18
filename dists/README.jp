@@ -92,8 +92,6 @@ tanakmura‚ª‘‚¢‚½•”•ª
  - src/modelhandler_fma.cpp
  - src/threadPool.cpp
  - src/threadPool.hpp
- - src/CLlib.h
- - src/CUDAilb.h
  - src/Buffer.hpp
  - w32-apps/*
 

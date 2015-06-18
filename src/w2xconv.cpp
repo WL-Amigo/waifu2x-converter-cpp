@@ -1,7 +1,9 @@
 #define W2XCONV_IMPL
 
 #include <thread>
+#ifdef __APPLE__
 #include <cpuid.h>
+#endif
 #include "w2xconv.h"
 #include "sec.hpp"
 #include "Buffer.hpp"
