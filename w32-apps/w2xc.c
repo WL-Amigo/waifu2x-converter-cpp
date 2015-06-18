@@ -19,11 +19,12 @@ main(int argc, char **argv)
     src_path = argv[1];
 
     path_len = strlen(src_path);
-    dst_path = malloc(path_len + 4);
+    dst_path = malloc(path_len + 5);
     dst_path[0] = 'm';
-    dst_path[1] = 'y';
-    dst_path[2] = '_';
-    strcpy(dst_path+3, argv[1]);
+    dst_path[1] = 'a';
+    dst_path[2] = 'i';
+    dst_path[3] = '_';
+    strcpy(dst_path+4, argv[1]);
 
     c = w2xconv_init(1, 0, 0);
     r = w2xconv_load_models(c, "models");
