@@ -412,12 +412,12 @@ update_display(struct app *app)
 
         if (app->state == STATE_FINI) {
             _snprintf(line, sizeof(line),
-                      "%5.2f[GFLOPS] %s [Complete!!]",
+                      "%.2f[GFLOPS] %s [Complete!!]",
                       app->cur_flops/(1000*1000*1000.0),
                       path);
         } else {
             _snprintf(line, sizeof(line),
-                      "%5.2f[GFLOPS] %s",
+                      "%.2f[GFLOPS] %s",
                       app->cur_flops/(1000*1000*1000.0),
                       path);
         }
@@ -427,11 +427,13 @@ update_display(struct app *app)
         GetClientRect(app->win, &r);
         FillRect(dc, &r, GetStockBrush(WHITE_BRUSH));
 
-        TextOut(dc, 10, 10, line, line_len);
+        TextOut(dc, 10, 10, app->dev_name, strlen(app->dev_name));
+        TextOut(dc, 10, 28, line, line_len);
     }
     ReleaseDC(app->win, dc);
 }
 
+//#define WINMAIN
 
 #ifdef WINMAIN
 int WINAPI

@@ -141,6 +141,8 @@ W2XCONV_EXPORT int w2xconv_apply_filter_y(struct W2XConv *conv,
 					  int block_size);
 
 
+W2XCONV_EXPORT int w2xconv_test(struct W2XConv *conv, int block_size);
+
 #ifdef __cplusplus
 }
 #endif

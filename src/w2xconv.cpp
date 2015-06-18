@@ -316,8 +316,6 @@ w2xconv_convert_file(struct W2XConv *conv,
                      double scale,
 		     int block_size)
 {
-	struct W2XConvImpl *impl = conv->impl;
-	ComputeEnv *env = &impl->env;
 	double time_start = getsec();
 
 	cv::Mat image = cv::imread(src_path, cv::IMREAD_COLOR);
@@ -424,15 +422,14 @@ w2xconv_convert_rgb(struct W2XConv *conv,
 	int dst_h = src_h * scale;
 	int dst_w = src_w * scale;
 
-	cv::Mat dsti(src_w, src_h, CV_8UC3, src_step_byte);
-	cv::Mat srci(dst_w, dst_h, CV_8UC3, dst_step_byte);
+	cv::Mat srci(src_h, src_w, CV_8UC3, src, src_step_byte);
+	cv::Mat dsti(dst_h, dst_w, CV_8UC3, dst, dst_step_byte);
 
 	cv::Mat image;
 
 	srci.convertTo(image, CV_32F, 1.0 / 255.0);
 	cv::cvtColor(image, image, cv::COLOR_RGB2YUV);
-
-	convert_yuv(conv, image, denoise_level, scale, dst_h, dst_h, block_size);
+	convert_yuv(conv, image, denoise_level, scale, dst_w, dst_h, block_size);
 
 	cv::cvtColor(image, image, cv::COLOR_YUV2RGB);
 	image.convertTo(dsti, CV_8U, 255.0);
@@ -452,12 +449,12 @@ w2xconv_convert_yuv(struct W2XConv *conv,
 	int dst_h = src_h * scale;
 	int dst_w = src_w * scale;
 
-	cv::Mat dsti(src_w, src_h, CV_32FC3, src_step_byte);
-	cv::Mat srci(dst_w, dst_h, CV_32FC3, dst_step_byte);
+	cv::Mat srci(src_h, src_w, CV_32FC3, src, src_step_byte);
+	cv::Mat dsti(dst_h, dst_w, CV_32FC3, dst, dst_step_byte);
 
 	cv::Mat image = srci.clone();
 
-	convert_yuv(conv, image, denoise_level, scale, dst_h, dst_h, block_size);
+	convert_yuv(conv, image, denoise_level, scale, dst_w, dst_h, block_size);
 
 	image.copyTo(dsti);
 
@@ -473,15 +470,15 @@ w2xconv_apply_filter_y(struct W2XConv *conv,
 		       int src_w, int src_h,
 		       int block_size)
 {
-	struct W2XConvImpl *impl = new W2XConvImpl;
+	struct W2XConvImpl *impl = conv->impl;
 	ComputeEnv *env = &impl->env;
 
-	cv::Mat dsti(src_w, src_h, CV_32F, dst_step_byte);
-	cv::Mat srci(src_w, src_h, CV_32F, src_step_byte);
+	cv::Mat dsti(src_h, src_w, CV_32F, dst, dst_step_byte);
+	cv::Mat srci(src_h, src_w, CV_32F, src, src_step_byte);
 
 	cv::Size bs(block_size, block_size);
 
-	std::vector<std::unique_ptr<w2xc::Model> > *mp;
+	std::vector<std::unique_ptr<w2xc::Model> > *mp = NULL;
 
 	switch (type) {
 	case W2XCONV_FILTER_DENOISE1:
@@ -495,12 +492,104 @@ w2xconv_apply_filter_y(struct W2XConv *conv,
 	case W2XCONV_FILTER_SCALE2x:
 		mp = &impl->scale2_models;
 		break;
+
+	default:
+		return -1;
 	}
 
-	w2xc::convertWithModels(env, dsti, srci,
+	cv::Mat result;
+	w2xc::convertWithModels(env, srci, result,
 				*mp,
 				&conv->flops, bs, conv->enable_log);
+
+	result.copyTo(dsti);
 
 	return 0;
 }
 
+
+int
+w2xconv_test(struct W2XConv *conv, int block_size)
+{
+	int w = 200;
+	int h = 100;
+	cv::Mat src_rgb = cv::Mat::zeros(h, w, CV_8UC3);
+	cv::Mat dst = cv::Mat::zeros(h, w, CV_8UC3);
+
+	cv::line(src_rgb,
+		 cv::Point(10, 10),
+		 cv::Point(20, 20),
+		 cv::Scalar(255,0,0), 8);
+
+	cv::line(src_rgb,
+		 cv::Point(20, 10),
+		 cv::Point(10, 20),
+		 cv::Scalar(0,255,0), 8);
+
+	cv::line(src_rgb,
+		 cv::Point(50, 30),
+		 cv::Point(10, 30),
+		 cv::Scalar(0,0,255), 1);
+
+	cv::line(src_rgb,
+		 cv::Point(50, 80),
+		 cv::Point(10, 80),
+		 cv::Scalar(255,255,255), 3);
+
+	cv::Mat src_32fc3;
+	cv::Mat src_yuv;
+
+	src_rgb.convertTo(src_32fc3, CV_32F, 1.0 / 255.0);
+	cv::cvtColor(src_32fc3, src_yuv, cv::COLOR_RGB2YUV);
+
+	cv::Mat dst_rgb_x2(h*2, w*2, CV_8UC3);
+	cv::Mat dst_yuv_x2(h*2, w*2, CV_32FC3);
+
+	cv::imwrite("test_src.png", src_rgb);
+
+	w2xconv_convert_rgb(conv,
+			    dst_rgb_x2.data, dst_rgb_x2.step[0],
+			    src_rgb.data, src_rgb.step[0],
+			    w, h,
+			    1,
+			    2.0,
+			    block_size);
+
+	cv::imwrite("test_rgb.png", dst_rgb_x2);
+
+	w2xconv_convert_yuv(conv,
+			    dst_yuv_x2.data, dst_yuv_x2.step[0],
+			    src_yuv.data, src_yuv.step[0],
+			    w, h,
+			    1,
+			    2.0,
+			    block_size);
+
+	cv::cvtColor(dst_yuv_x2, dst_yuv_x2, cv::COLOR_YUV2RGB);
+	dst_yuv_x2.convertTo(dst_rgb_x2, CV_8U, 255.0);
+
+	cv::imwrite("test_yuv.png", dst_rgb_x2);
+
+	std::vector<cv::Mat> imageSplit;
+	cv::split(src_yuv, imageSplit);
+	cv::Mat split_src = imageSplit[0].clone();
+	cv::Mat split_dst, dst_rgb;
+	cv::Mat split_dsty(h, w, CV_32F);
+
+	w2xconv_apply_filter_y(conv,
+			       W2XCONV_FILTER_DENOISE1,
+			       split_dsty.data, split_dsty.step[0],
+			       split_src.data, split_src.step[0],
+			       w, h, block_size);
+
+	imageSplit[0] = split_dsty.clone();
+
+	cv::merge(imageSplit, split_dst);
+
+	cv::cvtColor(split_dst, split_dst, cv::COLOR_YUV2RGB);
+	split_dst.convertTo(dst_rgb, CV_8U, 255.0);
+
+	cv::imwrite("test_apply.png", dst_rgb);
+
+	return 0;
+}
