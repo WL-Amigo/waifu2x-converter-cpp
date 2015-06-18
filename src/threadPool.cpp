@@ -2,6 +2,8 @@
 #include <atomic>
 #include "threadPool.hpp"
 
+#ifndef __APPLE__
+
 namespace w2xc {
 
 #if defined __i386__ || defined __x86_64__
@@ -162,3 +164,5 @@ startFuncBody(struct ThreadPool *p, ThreadFuncBase *f)
 
 }
 
+
+#endif // __APPLE__

@@ -1,6 +1,8 @@
 #include "threadPool.hpp"
 #include "params.h"
 #include <algorithm>
+#include <vector>
+#include <x86intrin.h>
 
 #define BLOCK_SIZE_HOR 256
 #define BLOCK_SIZE_VER 16
@@ -400,56 +402,69 @@ filter_AVX_impl0(ComputeEnv *env,
 
 	std::atomic<unsigned int> block_counter(0U);
 
-	startFunc(env->tpool, [&]() {
-			float *intermediate = (float*)_mm_malloc(sizeof(float)*nOutputPlanes*2, 64);
+	auto func = [&]() {
+		float *intermediate = (float*)_mm_malloc(sizeof(float)*nOutputPlanes*2, 64);
 
-			while (1) {
-				unsigned int bi = block_counter++;
+		while (1) {
+			unsigned int bi = block_counter++;
 
-				if (bi >= total_block) {
-					_mm_free(intermediate);
-					return;
-				}
+			if (bi >= total_block) {
+				_mm_free(intermediate);
+				return;
+			}
 
-				unsigned int block_x = bi % num_block_hor;
-				unsigned int block_y = bi / num_block_hor;
+			unsigned int block_x = bi % num_block_hor;
+			unsigned int block_y = bi / num_block_hor;
 
-				unsigned int y_start = block_y * BLOCK_SIZE_VER;
-				unsigned int y_end = (std::min)(y_start + BLOCK_SIZE_VER, hsz);
+			unsigned int y_start = block_y * BLOCK_SIZE_VER;
+			unsigned int y_end = (std::min)(y_start + BLOCK_SIZE_VER, hsz);
 
-				unsigned int x_start = block_x * BLOCK_SIZE_HOR;
-				unsigned int x_end = (std::min)(x_start + BLOCK_SIZE_HOR, wsz);
+			unsigned int x_start = block_x * BLOCK_SIZE_HOR;
+			unsigned int x_end = (std::min)(x_start + BLOCK_SIZE_HOR, wsz);
 
-				if (nOutputPlanes == 1) {
-					for (unsigned int yi=y_start; yi<y_end; yi++) {
-						for (unsigned int xi=x_start; xi<x_end; xi++) {
-							if (xi ==0 || xi == (wsz-1)) {
-								filter_1elem_output1<true,have_fma>(packed_input, nInputPlanes,
-												    packed_output,
-												    fbiases, hsz, wsz, yi, xi, weight, intermediate);
-							} else {
-								filter_1elem_output1<false,have_fma>(packed_input, nInputPlanes,
-												     packed_output,
-												     fbiases, hsz, wsz, yi, xi, weight, intermediate);
-							}
+			if (nOutputPlanes == 1) {
+				for (unsigned int yi=y_start; yi<y_end; yi++) {
+					for (unsigned int xi=x_start; xi<x_end; xi++) {
+						if (xi ==0 || xi == (wsz-1)) {
+							filter_1elem_output1<true,have_fma>(packed_input, nInputPlanes,
+											    packed_output,
+											    fbiases, hsz, wsz, yi, xi, weight, intermediate);
+						} else {
+							filter_1elem_output1<false,have_fma>(packed_input, nInputPlanes,
+											     packed_output,
+											     fbiases, hsz, wsz, yi, xi, weight, intermediate);
 						}
 					}
-				} else {
-					for (unsigned int yi=y_start; yi<y_end; yi++) {
-						for (unsigned int xi=x_start; xi<x_end; xi+=2) {
-							if (xi ==0 || xi+1 == (wsz-1)) {
-								filter_2elem<true,have_fma>(packed_input, nInputPlanes,
-											    packed_output, nOutputPlanes,
-											    fbiases, hsz, wsz, yi, xi, weight, intermediate);
-							} else {
-								filter_2elem<false, have_fma>(packed_input, nInputPlanes,
-											      packed_output, nOutputPlanes,
-											      fbiases, hsz, wsz, yi, xi, weight, intermediate);
-							}
+				}
+			} else {
+				for (unsigned int yi=y_start; yi<y_end; yi++) {
+					for (unsigned int xi=x_start; xi<x_end; xi+=2) {
+						if (xi ==0 || xi+1 == (wsz-1)) {
+							filter_2elem<true,have_fma>(packed_input, nInputPlanes,
+										    packed_output, nOutputPlanes,
+										    fbiases, hsz, wsz, yi, xi, weight, intermediate);
+						} else {
+							filter_2elem<false, have_fma>(packed_input, nInputPlanes,
+										      packed_output, nOutputPlanes,
+										      fbiases, hsz, wsz, yi, xi, weight, intermediate);
 						}
 					}
 				}
 			}
 		}
-		);
+	};
+
+#ifdef __APPLE__
+	std::vector<std::thread> workerThreads;
+	for (int ji=0; ji<nJob; ji++) {
+		workerThreads.emplace_back(std::thread(func));
+	}
+	for (auto& th : workerThreads) {
+		th.join();
+	}
+
+#else
+	startFunc(env->tpool, f);
+#endif
+
 }

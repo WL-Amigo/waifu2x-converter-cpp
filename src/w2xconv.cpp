@@ -1,5 +1,7 @@
 #define W2XCONV_IMPL
 
+#include <thread>
+#include <cpuid.h>
 #include "w2xconv.h"
 #include "sec.hpp"
 #include "Buffer.hpp"
@@ -31,7 +33,9 @@ w2xconv_init(int enable_gpu,
 		nJob = std::thread::hardware_concurrency();
 	}
 
+#ifndef __APPLE__
 	impl->env.tpool = w2xc::initThreadPool(nJob);
+#endif
 
 	if (enable_gpu) {
 		w2xc::initOpenCL(&impl->env);
@@ -54,6 +58,7 @@ w2xconv_init(int enable_gpu,
 			int v[4];
 			char name[1024];
 
+#ifndef __APPLE__
 			__cpuid(v, 0x80000000);
 			if ((unsigned int)v[0] >= 0x80000004) {
 				__cpuid((int*)(name+0), 0x80000002);
@@ -83,9 +88,12 @@ w2xconv_init(int enable_gpu,
 
 				name[12] = '\0';
 			}
+			impl->dev_name = name;
+#else
+			impl->dev_name = "cpu";
+#endif
 
 			c->target_processor.type = W2XCONV_PROC_HOST;
-			impl->dev_name = name;
 		}
 	}
 
@@ -224,7 +232,9 @@ w2xconv_fini(struct W2XConv *conv)
 
 	w2xc::finiCUDA(&impl->env);
 	w2xc::finiOpenCL(&impl->env);
+#ifndef __APPLE__
 	w2xc::finiThreadPool(impl->env.tpool);
+#endif
 
 	delete impl;
 	delete conv;

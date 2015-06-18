@@ -1,9 +1,12 @@
 #ifndef BUFFER_HPP
 #define BUFFER_HPP
 
+#ifndef __APPLE__
 #include <malloc.h>
+#endif
+
 #include <stdlib.h>
-#include <CL/cl.h>
+#include <string>
 #include "CLlib.h"
 #include "CUDAlib.h"
 #include "threadPool.hpp"
@@ -45,7 +48,9 @@ struct ComputeEnv {
     OpenCLDev *cl_dev_list;
     CUDADev *cuda_dev_list;
 
+#ifndef __APPLE__
     w2xc::ThreadPool *tpool;
+#endif
 
     ComputeEnv()
         :num_cl_dev(0),

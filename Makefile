@@ -26,8 +26,6 @@ INPUT=./a.png
 #INPUT=./c.png
 #INPUT=./d.png
 #INPUT=./e.png
-#INPUT=./f.png
-#INPUT=./g.png
 
 run: waifu2x-converter-cpp
 	perf stat ./waifu2x-converter-cpp -i $(INPUT) --model_dir models
@@ -54,16 +52,15 @@ run1: waifu2x-converter-cpp
 	perf stat ./waifu2x-converter-cpp -m scale -j 1 -i $(INPUT) --model_dir models
 
 src/modelHandler_avx.o: src/modelHandler_avx.cpp
-	g++ -c $(CXXFLAGS) -mavx -o $@ $<
+	$(CXX) -c $(CXXFLAGS) -mavx -o $@ $<
 
 src/modelHandler_fma.o: src/modelHandler_fma.cpp
-	g++ -c $(CXXFLAGS) -mfma -o $@ $<
+	$(CXX) -c $(CXXFLAGS) -mfma -o $@ $<
 
 -include $(OBJS:.o=.d) $(DLL_OBJS:.o=.d)
 
 conv$(EXE): conv.c
 	$(CC) $(CCFE)o $@ $<
-
 
 src/modelHandler_CUDA.ptx20: src/modelHandler_CUDA.cu
 	nvcc -use_fast_math -arch=sm_20 -ccbin /usr/bin/gcc-4.7 -m64 -ptx -o $@ $< -O2

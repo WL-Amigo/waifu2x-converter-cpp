@@ -1,6 +1,8 @@
 #ifndef THREAD_POOL_HPP
 #define THREAD_POOL_HPP
 
+#ifndef __APPLE__
+
 #include <thread>
 #include <atomic>
 
@@ -95,5 +97,7 @@ struct ThreadPool * initThreadPool(int cpu);
 void finiThreadPool(struct ThreadPool *p);
 
 }
+
+#endif // __APPLE__
 
 #endif
