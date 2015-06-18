@@ -1,0 +1,77 @@
+<How to Use>
+
+Run install.bat.
+The waifu2x.lnk shortcut is appended to SendTo folder.
+And send your image file or directory to waifu2x.
+
+(or drag & drop to w2xcr.exe)
+
+
+This application is run on
+ - CUDA Device
+ - AMD OpenCL Device
+ - x86 FMA
+ - x86 AVX
+ - OpenCV filter2D
+
+These functions is not fastest. but it has descent speed.
+
+
+If you want to use as waifu2x-converter-cpp comaptible software.
+copy both files:
+ - waifu2x-converter_x64.exe
+ - w2xc.dll
+
+
+<Update models>
+Remove models/*.bin when you update model data.
+
+If parameter was changed in model,
+slowdown or fault may cause.
+To fix it, updating sourcecode is required.
+
+
+<Report Bugs>
+
+If you got some errors,
+send email to tanakmura _at_ gmail.
+or mention to @tanakmura.
+
+The main error causes are image size or device problem,
+so, please report with:
+ - image size
+ - CPU name
+ - GPU name
+
+
+
+<acknowledgment>
+
+This software is inspired follows:
+
+
+Original waifu2x is
+http://ultraist.hatenablog.com/entry/2015/05/17/183436
+
+
+This program is forked from
+https://github.com/WL-Amigo/waifu2x-converter-cpp (by @WL_Amigo)
+
+
+The speed target are
+ * https://github.com/logicmachine/waifu2x-opt (by @logicmachine)
+ * https://github.com/lltcggie/waifu2x-caffe (by @mhhpnvu)
+
+
+<distribution>
+see LICENSE
+
+<use w2xc.dll>
+see samples/Makefile, samples/*.c
+
+or if you want to use lowlevel API,
+see
+https://github.com/tanakamura/waifu2x-converter-cpp/blob/master/src/w2xconv.cpp#L511
+
+--
+tanakmura<tanakmura@gmail.com>

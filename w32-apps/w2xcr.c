@@ -433,7 +433,7 @@ update_display(struct app *app)
     ReleaseDC(app->win, dc);
 }
 
-//#define WINMAIN
+#define WINMAIN
 
 #ifdef WINMAIN
 int WINAPI
