@@ -1,0 +1,1 @@
+wscript install.js
