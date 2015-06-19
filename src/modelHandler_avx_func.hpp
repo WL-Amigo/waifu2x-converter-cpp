@@ -2,7 +2,7 @@
 #include "params.h"
 #include <algorithm>
 #include <vector>
-#include <x86intrin.h>
+#include <immintrin.h>
 
 #define BLOCK_SIZE_HOR 256
 #define BLOCK_SIZE_VER 16
