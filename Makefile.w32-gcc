@@ -4,11 +4,11 @@ all: waifu2x-converter-cpp.exe
 OPENCV=c:/OpenCV/b64/install
 OPENCL="C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v6.5"
 
-CXXFLAGS=-I$(OPENCL)/include -I$(OPENCV)/include -I$(CURDIR)/include -O2 -std=c++11 -MMD -Wall -Wno-unknown-pragmas
+CXXFLAGS=-I$(OPENCL)/include -I$(OPENCV)/include -I$(CURDIR)/include -O2 -s -std=c++11 -MMD -Wall -Wno-unknown-pragmas
 EXE=.exe
 OSFX=.o
 
-LDFLAGS=-L$(OPENCV)/x64/mingw/staticlib -static
+LDFLAGS=-L$(OPENCV)/x64/mingw/staticlib -static -s
 LDLIBS=-lopencv_core300 -lopencv_imgproc300 -lopencv_imgcodecs300 -lopencv_features2d300 -llibjpeg -llibpng -llibtiff -llibjasper -lopencv_hal300 -lIlmImf -lzlib -llibwebp -luser32 -lopencv_core300 -lopencv_hal300
 RM=rm.exe
 

@@ -56,7 +56,7 @@ src/modelHandler_fma.obj: src/modelHandler_fma.cpp
 	nvcc -Xcompiler "/wd 4819" -ptx -o $@ $< -arch=sm_30 -m32
 
 rm.exe: rm.c
-	cl /Fe:$@ $<
+	cl /Fe:$@ $< setargv.obj
 
 conv.exe: conv.c
 	gcc -o conv.exe conv.c
