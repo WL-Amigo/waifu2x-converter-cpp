@@ -37,9 +37,11 @@ cllib_init(void)
 {
 #ifdef _WIN32
 	handle = LoadLibrary("OpenCL.dll");
+#elif defined __APPLE__
+	handle = dlopen("/System/Library/Frameworks/OpenCL.framework/Versions/A/OpenCL", RTLD_LAZY);
+#define GetProcAddress dlsym
 #else
         handle = dlopen("libOpenCL.so.1", RTLD_LAZY);
-
 #define GetProcAddress dlsym
 
 #endif
@@ -114,10 +116,11 @@ initOpenCL(ComputeEnv *env)
                 clGetPlatformInfo(plts[i], CL_PLATFORM_NAME, sz, &name[0], &sz);
 
                 bool is_amd = strstr(&name[0], "AMD") != NULL;
+                bool is_apple = strstr(&name[0], "Apple") != NULL;
                 //bool is_intel = strstr(&name[0], "Intel") != NULL;
                 //bool is_nvidia = strstr(&name[0], "NVIDIA") != NULL;
 
-                if (!is_amd) {
+                if (!is_amd && !is_apple) {
                         continue;
                 }
 

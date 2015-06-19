@@ -34,6 +34,10 @@ cudalib_init(void)
 {
 #ifdef _WIN32
 	handle = LoadLibrary("nvcuda.dll");
+#elif defined __APPLE__
+	handle = dlopen("libcuda.dylib", RTLD_LAZY);
+#define GetProcAddress dlsym
+
 #else
 	handle = dlopen("libcuda.so.1", RTLD_LAZY);
 
@@ -121,7 +125,7 @@ initCUDA(ComputeEnv *env)
 
 	r = cuModuleLoadDataEx(&mod, prog, 1, jit_options, jit_optvals);
 	if (r != CUDA_SUCCESS) {
-		printf("load data failed %d\n", (int)r);
+		//printf("load data failed %d\n", (int)r);
 		cuCtxDestroy(ctxt);
 		cuStreamDestroy(stream);
 		return false;
