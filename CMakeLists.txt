@@ -35,6 +35,8 @@ if(${CMAKE_SYSTEM_NAME} STREQUAL "Windows")
   endif()
 
   link_directories(${OPENCV_PREFIX}/${OCV_SYSTEM_DIRNAME}/${OCV_COMPILER_DIRNAME}/staticlib)
+else()
+  link_directories(${OPENCV_PREFIX}/lib)
 endif()
 
 add_executable(waifu2x-converter-cpp
@@ -46,7 +48,8 @@ add_library(w2xc SHARED
 
 add_dependencies(w2xc gensrcs)
 
-if(CMAKE_COMPILER_IS_GNUCXX)
+
+if(CMAKE_COMPILER_IS_GNUCXX OR ${CMAKE_CXX_COMPILER_ID} STREQUAL "Clang")
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=gnu++11")
   set(CMAKE_CXX_FLAGS_RELEASE "-s")
 
@@ -84,8 +87,8 @@ if(${CMAKE_SYSTEM_NAME} STREQUAL "Windows")
   add_executable(w2xcr WIN32 w32-apps/w2xcr.c)
   target_link_libraries(w2xcr w2xc user32 shlwapi gdi32)
 else()
-  link_directories(${OPENCV_PREFIX}/lib)
   target_link_libraries(w2xc opencv_core opencv_imgproc opencv_highgui opencv_features2d)
+  target_link_libraries(w2xc opencv_imgcodecs)
 endif()
 
 set(CONV_EXE "$<TARGET_FILE_DIR:conv>/conv")
