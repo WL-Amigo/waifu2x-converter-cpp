@@ -1,13 +1,13 @@
 #define W2XCONV_IMPL
 
 #include <thread>
-#ifdef __APPLE__
+#if (defined __GNUC__) || (defined __clang__)
 #include <cpuid.h>
 #endif
 #include "w2xconv.h"
 #include "sec.hpp"
 #include "Buffer.hpp"
-#include "ModelHandler.hpp"
+#include "modelHandler.hpp"
 #include "convertRoutine.hpp"
 
 struct W2XConvImpl {
@@ -57,43 +57,30 @@ w2xconv_init(int enable_gpu,
 		impl->dev_name = impl->env.cl_dev_list[0].name.c_str();
 	} else {
 		{
-			int v[4];
-			char name[1024];
 
-#ifndef __APPLE__
-			__cpuid(v, 0x80000000);
-			if ((unsigned int)v[0] >= 0x80000004) {
-				__cpuid((int*)(name+0), 0x80000002);
-				__cpuid((int*)(name+16), 0x80000003);
-				__cpuid((int*)(name+32), 0x80000004);
-				name[48] = '\0';
-			} else {
-				char data[16];
-				int data4[4];
-				__cpuid((int*)data, 0x0);
-				__cpuid(data4, 0x1);
-
-				name[0] = data[4];
-				name[1] = data[5];
-				name[2] = data[6];
-				name[3] = data[7];
-
-				name[4] = data[12];
-				name[5] = data[13];
-				name[6] = data[14];
-				name[7] = data[15];
-
-				name[8] = data[8];
-				name[9] = data[9];
-				name[10] = data[10];
-				name[11] = data[11];
-
-				name[12] = '\0';
-			}
-			impl->dev_name = name;
+#ifdef _MSC_VER
+#define x_cpuid(p,eax) __cpuid(p, eax)
+			typedef int cpuid_t;
 #else
-			impl->dev_name = "cpu";
+#define x_cpuid(p,eax) __get_cpuid(eax, &(p)[0], &(p)[1], &(p)[2], &(p)[3]);
+			typedef unsigned int cpuid_t;
 #endif
+			cpuid_t v[4];
+			cpuid_t data[4*3+1];
+
+			x_cpuid(v, 0x80000000);
+			if ((unsigned int)v[0] >= 0x80000004) {
+				x_cpuid(data+4*0, 0x80000002);
+				x_cpuid(data+4*1, 0x80000003);
+				x_cpuid(data+4*2, 0x80000004);
+				data[12] = 0;
+
+				impl->dev_name = (char*)data;
+			} else {
+				x_cpuid(data, 0x0);
+				data[4] = 0;
+				impl->dev_name = (char*)(data + 1);
+			}
 
 			c->target_processor.type = W2XCONV_PROC_HOST;
 		}

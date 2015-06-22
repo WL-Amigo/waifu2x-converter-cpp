@@ -6,7 +6,8 @@
 #include <thread>
 #include <atomic>
 
-#ifdef linux
+#ifdef __linux
+
 typedef int event_t;
 #endif
 

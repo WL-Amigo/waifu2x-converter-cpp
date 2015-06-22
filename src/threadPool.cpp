@@ -53,13 +53,13 @@ delete_event(HANDLE h)
 #include <unistd.h>
 #include <sys/eventfd.h>
 
-static int
+int
 create_event()
 {
 	return eventfd(0,EFD_CLOEXEC);
 }
 
-static void
+void
 notify_event(int fd)
 {
 	uint64_t ev_val = 1;
@@ -70,7 +70,7 @@ notify_event(int fd)
 	}
 }
 
-static void
+void
 wait_event(int fd)
 {
 	uint64_t ev_val;
@@ -83,7 +83,7 @@ wait_event(int fd)
 	rmb();
 }
 
-static void
+void
 delete_event(int fd)
 {
 	close(fd);
