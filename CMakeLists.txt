@@ -23,6 +23,11 @@ if(${CMAKE_SYSTEM_NAME} STREQUAL "Windows")
     set(OCV_COMPILER_DIRNAME "vc12")
   endif()
 
+  if(MSVC)
+    set(CMAKE_CXX_FLAGS_RELEASE "/MT")
+    set(CMAKE_CXX_FLAGS_DEBUG "/MT")
+  endif()
+
   if(CMAKE_SIZEOF_VOID_P EQUAL 8)
     set(OCV_SYSTEM_DIRNAME "x64")
   else()
@@ -47,7 +52,9 @@ if(CMAKE_COMPILER_IS_GNUCXX)
 
   set_source_files_properties(src/modelHandler_avx.cpp PROPERTIES COMPILE_FLAGS -mavx)
   set_source_files_properties(src/modelHandler_fma.cpp PROPERTIES COMPILE_FLAGS -mfma)
-
+elseif(MSVC)
+  set_source_files_properties(src/modelHandler_avx.cpp PROPERTIES COMPILE_FLAGS /arch:AVX)
+  set_source_files_properties(src/modelHandler_fma.cpp PROPERTIES COMPILE_FLAGS /arch:AVX2)
 endif()
 
 if(${CMAKE_SYSTEM_NAME} STREQUAL "Linux")
@@ -64,16 +71,24 @@ endif()
 target_link_libraries(waifu2x-converter-cpp PUBLIC w2xc)
 
 if(${CMAKE_SYSTEM_NAME} STREQUAL "Windows")
-  target_link_libraries(w2xc
-    opencv_core300 opencv_imgproc300 opencv_imgcodecs300 opencv_features2d300 libjpeg libpng libtiff libjasper opencv_hal300
-    IlmImf zlib libwebp user32 opencv_core300 opencv_hal300) # xx 300
+  if(CMAKE_COMPILER_IS_GNUCXX)
+    target_link_libraries(w2xc
+      opencv_core300 opencv_imgproc300 opencv_imgcodecs300 opencv_features2d300 libjpeg libpng libtiff libjasper opencv_hal300
+      IlmImf zlib libwebp user32 opencv_core300 opencv_hal300) # xx 300
+  else()
+    target_link_libraries(w2xc opencv_core300 opencv_imgproc300 opencv_imgcodecs300
+      opencv_features2d300 ippicvmt libjpeg libpng libtiff libjasper
+      opencv_hal300 IlmImf zlib libwebp user32 opencv_core300 opencv_imgproc300)
+  endif()
 
-  add_executable(w2xcr w32-apps/w2xcr.c)
-  target_link_libraries(w2xcr w2xc  user32 shlwapi gdi32)
+  add_executable(w2xcr WIN32 w32-apps/w2xcr.c)
+  target_link_libraries(w2xcr w2xc user32 shlwapi gdi32)
 else()
   link_directories(${OPENCV_PREFIX}/lib)
   target_link_libraries(w2xc opencv_core opencv_imgproc opencv_highgui opencv_features2d)
 endif()
+
+set(CONV_EXE "$<TARGET_FILE_DIR:conv>/conv")
 
 cuda_compile_ptx(src/modelHandler_CUDA.ptx20
   src/modelHandler_CUDA.cu
@@ -86,14 +101,14 @@ cuda_compile_ptx(src/modelHandler_CUDA.ptx30
 
 add_custom_command(
   OUTPUT modelHandler_CUDA.ptx20.h
-  COMMAND ${CMAKE_CURRENT_BINARY_DIR}/conv modelHandler_CUDA.ptx20 modelHandler_CUDA.ptx20.h str
-  DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/modelHandler_CUDA.ptx20
+  COMMAND ${CONV_EXE} modelHandler_CUDA.ptx20 modelHandler_CUDA.ptx20.h str
+  DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/modelHandler_CUDA.ptx20 conv
   )
 
 add_custom_command(
   OUTPUT modelHandler_CUDA.ptx30.h
-  COMMAND ${CMAKE_CURRENT_BINARY_DIR}/conv modelHandler_CUDA.ptx30 modelHandler_CUDA.ptx30.h str
-  DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/modelHandler_CUDA.ptx30
+  COMMAND ${CONV_EXE} modelHandler_CUDA.ptx30 modelHandler_CUDA.ptx30.h str
+  DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/modelHandler_CUDA.ptx30 conv
   )
 
 
@@ -111,8 +126,8 @@ add_custom_command(
 
 add_custom_command(
   OUTPUT modelHandler_OpenCL.cl.h
-  COMMAND ${CMAKE_CURRENT_BINARY_DIR}/conv ${CMAKE_CURRENT_SOURCE_DIR}/src/modelHandler_OpenCL.cl ${CMAKE_CURRENT_BINARY_DIR}/modelHandler_OpenCL.cl.h  str
-  DEPENDS src/modelHandler_OpenCL.cl
+  COMMAND ${CONV_EXE} ${CMAKE_CURRENT_SOURCE_DIR}/src/modelHandler_OpenCL.cl ${CMAKE_CURRENT_BINARY_DIR}/modelHandler_OpenCL.cl.h  str
+  DEPENDS src/modelHandler_OpenCL.cl conv
   )
 
 add_custom_target(gensrcs ALL
