@@ -1,7 +1,8 @@
 #define W2XCONV_IMPL
 
 #include <thread>
-#if (defined __GNUC__) || (defined __clang__)
+//#if (defined __GNUC__) || (defined __clang__)
+#ifndef _WIN32
 #include <cpuid.h>
 #endif
 #include "w2xconv.h"
@@ -58,7 +59,7 @@ w2xconv_init(int enable_gpu,
 	} else {
 		{
 
-#ifdef _MSC_VER
+#ifdef _WIN32
 #define x_cpuid(p,eax) __cpuid(p, eax)
 			typedef int cpuid_t;
 #else

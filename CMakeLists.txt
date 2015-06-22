@@ -5,10 +5,32 @@ add_executable(conv conv.c)
 set(OPENCV_PREFIX "/usr"
   CACHE FILEPATH "OpenCV 2.x path")
 
+find_package(OpenCL REQUIRED)
+find_package(CUDA REQUIRED)
+
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/src)
 include_directories(${CMAKE_CURRENT_BINARY_DIR})
 include_directories(${OPENCV_PREFIX}/include)
-link_directories(${OPENCV_PREFIX}/lib)
+include_directories(${OpenCL_INCLUDE_DIRS})
+
+if(${CMAKE_SYSTEM_NAME} STREQUAL "Windows")
+  if(CMAKE_COMPILER_IS_GNUCXX)
+    set(OCV_COMPILER_DIRNAME "mingw")
+  elseif(MSVC11)
+    set(OCV_COMPILER_DIRNAME "vc11")
+  else()
+    set(OCV_COMPILER_DIRNAME "vc12")
+  endif()
+
+  if(CMAKE_SIZEOF_VOID_P EQUAL 8)
+    set(OCV_SYSTEM_DIRNAME "x64")
+  else()
+    set(OCV_SYSTEM_DIRNAME "x86")
+  endif()
+
+  link_directories(${OPENCV_PREFIX}/${OCV_SYSTEM_DIRNAME}/${OCV_COMPILER_DIRNAME}/staticlib)
+endif()
 
 add_executable(waifu2x-converter-cpp
   src/main.cpp)
@@ -19,21 +41,39 @@ add_library(w2xc SHARED
 
 add_dependencies(w2xc gensrcs)
 
-
-find_package(CUDA REQUIRED)
-
-
 if(CMAKE_COMPILER_IS_GNUCXX)
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=gnu++11")
+  set(CMAKE_CXX_FLAGS_RELEASE "-s")
 
   set_source_files_properties(src/modelHandler_avx.cpp PROPERTIES COMPILE_FLAGS -mavx)
   set_source_files_properties(src/modelHandler_fma.cpp PROPERTIES COMPILE_FLAGS -mfma)
 
+endif()
+
+if(${CMAKE_SYSTEM_NAME} STREQUAL "Linux")
   set(NVCC "${CUDA_TOOLKIT_ROOT_DIR}/bin/nvcc" "-ccbin" "/usr/bin/g++-4.7")
+elseif(${CMAKE_SYSTEM_NAME} STREQUAL "Windows")
+  set(NVCC "${CUDA_TOOLKIT_ROOT_DIR}/bin/nvcc" "-Xcompiler" "/wd 4819")
+  set_target_properties(w2xc PROPERTIES PREFIX "")
+  set_target_properties(w2xc PROPERTIES IMPORT_PREFIX "")
+  set_target_properties(w2xc PROPERTIES IMPORT_SUFFIX ".lib")
+else()
+  set(NVCC "${CUDA_TOOLKIT_ROOT_DIR}/bin/nvcc")
 endif()
 
 target_link_libraries(waifu2x-converter-cpp PUBLIC w2xc)
-target_link_libraries(w2xc opencv_core opencv_imgproc opencv_highgui opencv_features2d)
+
+if(${CMAKE_SYSTEM_NAME} STREQUAL "Windows")
+  target_link_libraries(w2xc
+    opencv_core300 opencv_imgproc300 opencv_imgcodecs300 opencv_features2d300 libjpeg libpng libtiff libjasper opencv_hal300
+    IlmImf zlib libwebp user32 opencv_core300 opencv_hal300) # xx 300
+
+  add_executable(w2xcr w32-apps/w2xcr.c)
+  target_link_libraries(w2xcr w2xc  user32 shlwapi gdi32)
+else()
+  link_directories(${OPENCV_PREFIX}/lib)
+  target_link_libraries(w2xc opencv_core opencv_imgproc opencv_highgui opencv_features2d)
+endif()
 
 cuda_compile_ptx(src/modelHandler_CUDA.ptx20
   src/modelHandler_CUDA.cu
