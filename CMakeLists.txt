@@ -5,14 +5,19 @@ add_executable(conv conv.c)
 set(OPENCV_PREFIX "/usr"
   CACHE FILEPATH "OpenCV 2.x path")
 
-find_package(OpenCL REQUIRED)
+if(${CMAKE_SYSTEM_NAME} STREQUAL "Linux")
+  # include_directories("/usr")
+else()
+  find_package(OpenCL REQUIRED)
+  include_directories(${OpenCL_INCLUDE_DIRS})
+endif()
+
 find_package(CUDA REQUIRED)
 
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/src)
 include_directories(${CMAKE_CURRENT_BINARY_DIR})
 include_directories(${OPENCV_PREFIX}/include)
-include_directories(${OpenCL_INCLUDE_DIRS})
 
 if(${CMAKE_SYSTEM_NAME} STREQUAL "Windows")
   if(CMAKE_COMPILER_IS_GNUCXX)
@@ -38,6 +43,9 @@ if(${CMAKE_SYSTEM_NAME} STREQUAL "Windows")
 else()
   link_directories(${OPENCV_PREFIX}/lib)
 endif()
+
+find_library(IMGCODECS_LIBRARY NAMES opencv_imgcodecs opencv_highgui
+  HINTS ${OPENCV_PREFIX}/lib)
 
 add_executable(waifu2x-converter-cpp
   src/main.cpp)
@@ -87,8 +95,7 @@ if(${CMAKE_SYSTEM_NAME} STREQUAL "Windows")
   add_executable(w2xcr WIN32 w32-apps/w2xcr.c)
   target_link_libraries(w2xcr w2xc user32 shlwapi gdi32)
 else()
-  target_link_libraries(w2xc opencv_core opencv_imgproc opencv_highgui opencv_features2d)
-  target_link_libraries(w2xc opencv_imgcodecs)
+  target_link_libraries(w2xc opencv_core opencv_imgproc ${IMGCODECS_LIBRARY} opencv_features2d)
 endif()
 
 set(CONV_EXE "$<TARGET_FILE_DIR:conv>/conv")
