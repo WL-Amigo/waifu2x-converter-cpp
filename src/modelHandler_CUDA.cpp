@@ -89,8 +89,6 @@ initCUDA(ComputeEnv *env)
 	CUmodule mod;
 	CUstream stream;
 
-	r = cuStreamCreate(&stream, 0);
-
 	r = cuCtxCreate(&ctxt, CU_CTX_SCHED_BLOCKING_SYNC, dev);
 	if (r != CUDA_SUCCESS) {
 		return false;
