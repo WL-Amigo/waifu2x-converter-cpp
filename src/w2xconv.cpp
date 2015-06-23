@@ -234,34 +234,45 @@ static void
 apply_denoise(struct W2XConv *conv,
 	      cv::Mat &image,
 	      int denoise_level,
-	      cv::Size &bs)
+	      cv::Size &bs,
+	      bool is_rgb)
 {
 	struct W2XConvImpl *impl = conv->impl;
 	ComputeEnv *env = &impl->env;
 
 	std::vector<cv::Mat> imageSplit;
+	cv::Mat *input;
 	cv::Mat imageY;
-	cv::split(image, imageSplit);
-	imageSplit[0].copyTo(imageY);
 
-	if (denoise_level == 1) {
-		w2xc::convertWithModels(env, imageY, imageSplit[0],
-					impl->noise1_models,
-					&conv->flops, bs, conv->enable_log);
+	if (is_rgb) {
+		input = &image;
 	} else {
-		w2xc::convertWithModels(env, imageY, imageSplit[0],
-					impl->noise2_models,
-					&conv->flops, bs, conv->enable_log);
+		cv::split(image, imageSplit);
+		imageSplit[0].copyTo(imageY);
+		input = &imageY;
 	}
 
-	cv::merge(imageSplit, image);
+	if (denoise_level == 1) {
+		w2xc::convertWithModels(env, *input, imageSplit[0],
+					impl->noise1_models,
+					&conv->flops, bs, is_rgb, conv->enable_log);
+	} else {
+		w2xc::convertWithModels(env, *input, imageSplit[0],
+					impl->noise2_models,
+					&conv->flops, bs, is_rgb, conv->enable_log);
+	}
+
+	if (! is_rgb) {
+		cv::merge(imageSplit, image);
+	}
 }
 
 static void
 apply_scale(struct W2XConv *conv,
 	    cv::Mat &image,
 	    int iterTimesTwiceScaling,
-	    cv::Size &bs)
+	    cv::Size &bs,
+	    bool is_rgb)
 {
 	struct W2XConvImpl *impl = conv->impl;
 	ComputeEnv *env = &impl->env;
@@ -283,27 +294,40 @@ apply_scale(struct W2XConv *conv,
 		imageSize.width *= 2;
 		imageSize.height *= 2;
 		cv::Mat image2xNearest;
-		cv::resize(image, image2xNearest, imageSize, 0, 0, cv::INTER_NEAREST);
-		std::vector<cv::Mat> imageSplit;
 		cv::Mat imageY;
-		cv::split(image2xNearest, imageSplit);
-		imageSplit[0].copyTo(imageY);
-		// generate bicubic scaled image and
-		// convert RGB -> YUV and split
-		imageSplit.clear();
+		std::vector<cv::Mat> imageSplit;
 		cv::Mat image2xBicubic;
-		cv::resize(image,image2xBicubic,imageSize,0,0,cv::INTER_CUBIC);
-		cv::split(image2xBicubic, imageSplit);
+		cv::Mat *input;
 
-		if(!w2xc::convertWithModels(env, imageY, imageSplit[0],
+		cv::resize(image, image2xNearest, imageSize, 0, 0, cv::INTER_NEAREST);
+
+		if (is_rgb) {
+			input = &image;
+		} else {
+			cv::split(image2xNearest, imageSplit);
+			imageSplit[0].copyTo(imageY);
+			// generate bicubic scaled image and
+			// convert RGB -> YUV and split
+			imageSplit.clear();
+			cv::resize(image,image2xBicubic,imageSize,0,0,cv::INTER_CUBIC);
+			cv::split(image2xBicubic, imageSplit);
+			input = &imageSplit[0];
+		}
+
+		if(!w2xc::convertWithModels(env, imageY,
+					    *input,
 					    impl->scale2_models,
-					    &conv->flops, bs, conv->enable_log)){
+					    &conv->flops, bs, is_rgb,
+					    conv->enable_log))
+		{
 			std::cerr << "w2xc::convertWithModels : something error has occured.\n"
 				"stop." << std::endl;
 			std::exit(1);
 		};
 
-		cv::merge(imageSplit, image);
+		if (!is_rgb) {
+			cv::merge(imageSplit, image);
+		}
 
 	} // 2x scaling : end
 }
@@ -317,6 +341,7 @@ w2xconv_convert_file(struct W2XConv *conv,
 		     int block_size)
 {
 	double time_start = getsec();
+	bool is_rgb = (conv->impl->scale2_models[0]->getNInputPlanes() == 3);
 
 	cv::Mat image = cv::imread(src_path, cv::IMREAD_COLOR);
 	if (image.data == nullptr) {
@@ -326,12 +351,15 @@ w2xconv_convert_file(struct W2XConv *conv,
 		return -1;
 	}
 
-	image.convertTo(image, CV_32F, 1.0 / 255.0);
-	cv::cvtColor(image, image, cv::COLOR_RGB2YUV);
+	if (! is_rgb) {
+		image.convertTo(image, CV_32F, 1.0 / 255.0);
+		cv::cvtColor(image, image, cv::COLOR_RGB2YUV);
+	}
+
 	cv::Size bs(block_size, block_size);
 
 	if (denoise_level != 0) {
-		apply_denoise(conv, image, denoise_level, bs);
+		apply_denoise(conv, image, denoise_level, bs, is_rgb);
 	}
 
 	if (scale != 1.0) {
@@ -344,7 +372,7 @@ w2xconv_convert_file(struct W2XConv *conv,
 			shrinkRatio = scale / std::pow(2.0, static_cast<double>(iterTimesTwiceScaling));
 		}
 
-		apply_scale(conv, image, iterTimesTwiceScaling, bs);
+		apply_scale(conv, image, iterTimesTwiceScaling, bs, is_rgb);
 
 		if (shrinkRatio != 0.0) {
 			cv::Size lastImageSize = image.size();
@@ -386,7 +414,7 @@ convert_yuv(struct W2XConv *conv,
 	cv::Size bs(block_size, block_size);
 
 	if (denoise_level != 0) {
-		apply_denoise(conv, image, denoise_level, bs);
+		apply_denoise(conv, image, denoise_level, bs, false);
 	}
 
 	if (scale != 1.0) {
@@ -399,7 +427,7 @@ convert_yuv(struct W2XConv *conv,
 			shrinkRatio = scale / std::pow(2.0, static_cast<double>(iterTimesTwiceScaling));
 		}
 
-		apply_scale(conv, image, iterTimesTwiceScaling, bs);
+		apply_scale(conv, image, iterTimesTwiceScaling, bs, false);
 
 		if (shrinkRatio != 0.0) {
 			cv::Size lastImageSize = image.size();
@@ -409,6 +437,7 @@ convert_yuv(struct W2XConv *conv,
 		}
 	}
 }
+
 
 int
 w2xconv_convert_rgb(struct W2XConv *conv,
@@ -500,7 +529,7 @@ w2xconv_apply_filter_y(struct W2XConv *conv,
 	cv::Mat result;
 	w2xc::convertWithModels(env, srci, result,
 				*mp,
-				&conv->flops, bs, conv->enable_log);
+				&conv->flops, bs, false, conv->enable_log);
 
 	result.copyTo(dsti);
 

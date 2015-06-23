@@ -21,12 +21,14 @@ static bool convertWithModelsBasic(ComputeEnv *env,
 				   Buffer *input_buf, Buffer *output_buf,
 				   std::vector<std::unique_ptr<Model> > &models,
 				   W2XConvFlopsCounter *flops,
+				   bool is_rgb,
 				   bool enableLog);
 static bool convertWithModelsBlockSplit(ComputeEnv *env,
 					cv::Mat &inputPlane,
 					cv::Mat &outputPlane, std::vector<std::unique_ptr<Model> > &models,
 					W2XConvFlopsCounter *flops,
 					cv::Size blockSize,
+					bool is_rgb,
 					bool enableLog);
 
 bool convertWithModels(ComputeEnv *env,
@@ -34,14 +36,14 @@ bool convertWithModels(ComputeEnv *env,
 		       std::vector<std::unique_ptr<Model> > &models,
 		       W2XConvFlopsCounter *flops,
 		       cv::Size blockSize,
-		       bool enableLog,
-		       bool blockSplitting)
+		       bool is_rgb,
+		       bool enableLog)
 {
 	bool requireSplitting = (inputPlane.size().width * inputPlane.size().height)
 			> blockSize.width * blockSize.height * 3 / 2;
 //	requireSplitting = true;
-	if (blockSplitting && requireSplitting) {
-		return convertWithModelsBlockSplit(env, inputPlane, outputPlane, models, flops, blockSize, enableLog);
+	if (requireSplitting) {
+		return convertWithModelsBlockSplit(env, inputPlane, outputPlane, models, flops, blockSize, is_rgb, enableLog);
 	} else {
 		//insert padding to inputPlane
 		cv::Mat tempMat;
@@ -66,7 +68,7 @@ bool convertWithModels(ComputeEnv *env,
 
 		bool ret = convertWithModelsBasic(env, tempMat, outputPlane,
 						  input_buf, output_buf,
-						  models, flops, enableLog);
+						  models, flops, is_rgb, enableLog);
 
 		tempMat = outputPlane(cv::Range(nModel, outputSize.height + nModel),
 				cv::Range(nModel, outputSize.width + nModel));
@@ -89,6 +91,7 @@ static bool convertWithModelsBasic(ComputeEnv *env,
 				   Buffer *packed_input_buf,
 				   Buffer *packed_output_buf,
 				   std::vector<std::unique_ptr<Model> > &models, W2XConvFlopsCounter *flops,
+				   bool is_rgb,
 				   bool enableLog)
 {
 	// padding is require before calling this function
@@ -160,6 +163,7 @@ static bool convertWithModelsBlockSplit(ComputeEnv *env,
 					std::vector<std::unique_ptr<Model> > &models,
 					W2XConvFlopsCounter *flops,
 					cv::Size blockSize,
+					bool is_rgb,
 					bool enableLog)
 {
 
@@ -230,7 +234,7 @@ static bool convertWithModelsBlockSplit(ComputeEnv *env,
 			if (!convertWithModelsBasic(env,
 						    processBlock, processBlockOutput,
 						    input_buf, output_buf,
-						    models, flops, enableLog)) {
+						    models, flops, is_rgb, enableLog)) {
 				std::cerr << "w2xc::convertWithModelsBasic()\n"
 						"in w2xc::convertWithModelsBlockSplit() : \n"
 						"something error has occured. stop." << std::endl;
