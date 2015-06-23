@@ -124,7 +124,7 @@ int main(int argc, char** argv) {
 
 	int bs = cmdBlockSize.getValue();
 	if (bs == 0) {
-		bs = 65536;
+		bs = 8192;
 	}
 
 	int r = w2xconv_load_models(converter, cmdModelPath.getValue().c_str());

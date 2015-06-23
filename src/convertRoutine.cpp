@@ -41,7 +41,6 @@ bool convertWithModels(ComputeEnv *env,
 {
 	bool requireSplitting = (inputPlane.size().width * inputPlane.size().height)
 			> blockSize.width * blockSize.height * 3 / 2;
-//	requireSplitting = true;
 	if (requireSplitting) {
 		return convertWithModelsBlockSplit(env, inputPlane, outputPlane, models, flops, blockSize, is_rgb, enableLog);
 	} else {
