@@ -64,6 +64,7 @@ int main(int argc, char** argv) {
 
 	std::vector<int> cmdBlockSizeConstraintV;
 	cmdBlockSizeConstraintV.push_back(0);
+	cmdBlockSizeConstraintV.push_back(128);
 	cmdBlockSizeConstraintV.push_back(512);
 	cmdBlockSizeConstraintV.push_back(1024);
 	TCLAP::ValuesConstraint<int> cmdBlockSizeConstraint(cmdBlockSizeConstraintV);

@@ -100,7 +100,7 @@ static bool convertWithModelsBasic(ComputeEnv *env,
 			std::vector<cv::Mat> >(new std::vector<cv::Mat>());
 	std::unique_ptr<std::vector<cv::Mat> > outputPlanes = std::unique_ptr<
 			std::vector<cv::Mat> >(new std::vector<cv::Mat>());
-	
+
 	inputPlanes->clear();
 	inputPlanes->push_back(inputPlane);
 
@@ -109,7 +109,12 @@ static bool convertWithModelsBasic(ComputeEnv *env,
 	int filterHeight = filterSize.height;
 
 	float *packed_input = (float*)packed_input_buf->get_write_ptr_host(env);
-	pack_mat(packed_input, *inputPlanes, filterWidth, filterHeight, 1);
+
+	if (is_rgb) {
+		pack_mat_rgb(packed_input, inputPlane, filterWidth, filterHeight);
+	} else {
+		pack_mat(packed_input, *inputPlanes, filterWidth, filterHeight, 1);
+	}
 
 	double t00 = getsec();
 	double ops_sum = 0;
@@ -143,10 +148,19 @@ static bool convertWithModelsBasic(ComputeEnv *env,
 	}
 	double t01 = getsec();
 
-	outputPlane = cv::Mat::zeros(filterSize, CV_32FC1);
+	if (is_rgb) {
+		packed_input = (float*)packed_input_buf->get_read_ptr_host(env, sizeof(float)*filterWidth*filterHeight*3);
+	} else {
+		packed_input = (float*)packed_input_buf->get_read_ptr_host(env, sizeof(float)*filterWidth*filterHeight);
+	}
 
-	packed_input = (float*)packed_input_buf->get_read_ptr_host(env, sizeof(float)*filterWidth*filterHeight);
-	unpack_mat1(outputPlane, packed_input, filterWidth, filterHeight);
+	if (is_rgb) {
+		outputPlane = cv::Mat::zeros(filterSize, CV_8UC3);
+		unpack_mat_rgb(outputPlane, packed_input, filterWidth, filterHeight);
+	} else {
+		outputPlane = cv::Mat::zeros(filterSize, CV_32FC1);
+		unpack_mat1(outputPlane, packed_input, filterWidth, filterHeight);
+	}
 
 	if (enableLog) {
 		double gflops = ops_sum/(1000.0*1000.0*1000.0) / (t01-t00);
@@ -207,7 +221,11 @@ static bool convertWithModelsBlockSplit(ComputeEnv *env,
 	Buffer *input_buf = new Buffer(env, max_size);
 	Buffer *output_buf = new Buffer(env, max_size);
 
-	outputPlane = cv::Mat::zeros(outputSize, CV_32FC1);
+	if (is_rgb) {
+		outputPlane = cv::Mat::zeros(outputSize, CV_8UC3);
+	} else {
+		outputPlane = cv::Mat::zeros(outputSize, CV_32FC1);
+	}
 	for (unsigned int r = 0; r < splitRows; r++) {
 		if (r == splitRows - 1) {
 			processRow = tempMat.rowRange(r * (blockSize.height - 2 * nModel),

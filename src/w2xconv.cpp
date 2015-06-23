@@ -242,22 +242,25 @@ apply_denoise(struct W2XConv *conv,
 
 	std::vector<cv::Mat> imageSplit;
 	cv::Mat *input;
+	cv::Mat *output;
 	cv::Mat imageY;
 
 	if (is_rgb) {
 		input = &image;
+		output = &image;
 	} else {
 		cv::split(image, imageSplit);
 		imageSplit[0].copyTo(imageY);
 		input = &imageY;
+		output = &imageSplit[0];
 	}
 
 	if (denoise_level == 1) {
-		w2xc::convertWithModels(env, *input, imageSplit[0],
+		w2xc::convertWithModels(env, *input, *output,
 					impl->noise1_models,
 					&conv->flops, bs, is_rgb, conv->enable_log);
 	} else {
-		w2xc::convertWithModels(env, *input, imageSplit[0],
+		w2xc::convertWithModels(env, *input, *output,
 					impl->noise2_models,
 					&conv->flops, bs, is_rgb, conv->enable_log);
 	}
@@ -297,12 +300,13 @@ apply_scale(struct W2XConv *conv,
 		cv::Mat imageY;
 		std::vector<cv::Mat> imageSplit;
 		cv::Mat image2xBicubic;
-		cv::Mat *input;
+		cv::Mat *input, *output;
 
 		cv::resize(image, image2xNearest, imageSize, 0, 0, cv::INTER_NEAREST);
 
 		if (is_rgb) {
-			input = &image;
+			input = &image2xNearest;
+			output = &image;
 		} else {
 			cv::split(image2xNearest, imageSplit);
 			imageSplit[0].copyTo(imageY);
@@ -311,11 +315,13 @@ apply_scale(struct W2XConv *conv,
 			imageSplit.clear();
 			cv::resize(image,image2xBicubic,imageSize,0,0,cv::INTER_CUBIC);
 			cv::split(image2xBicubic, imageSplit);
-			input = &imageSplit[0];
+			input = &imageY;
+			output = &imageSplit[0];
 		}
 
-		if(!w2xc::convertWithModels(env, imageY,
+		if(!w2xc::convertWithModels(env,
 					    *input,
+					    *output,
 					    impl->scale2_models,
 					    &conv->flops, bs, is_rgb,
 					    conv->enable_log))
@@ -344,6 +350,7 @@ w2xconv_convert_file(struct W2XConv *conv,
 	bool is_rgb = (conv->impl->scale2_models[0]->getNInputPlanes() == 3);
 
 	cv::Mat image = cv::imread(src_path, cv::IMREAD_COLOR);
+
 	if (image.data == nullptr) {
 		setPathError(conv,
 			     W2XCONV_ERROR_IMREAD_FAILED,
@@ -351,7 +358,11 @@ w2xconv_convert_file(struct W2XConv *conv,
 		return -1;
 	}
 
-	if (! is_rgb) {
+	if (is_rgb) {
+		if (image.channels() == 4) {
+			cv::cvtColor(image, image, cv::COLOR_RGBA2RGB);
+		}
+	} else {
 		image.convertTo(image, CV_32F, 1.0 / 255.0);
 		cv::cvtColor(image, image, cv::COLOR_RGB2YUV);
 	}
@@ -386,8 +397,11 @@ w2xconv_convert_file(struct W2XConv *conv,
 		}
 	}
 
-	cv::cvtColor(image, image, cv::COLOR_YUV2RGB);
-	image.convertTo(image, CV_8U, 255.0);
+	if (is_rgb) {
+	} else {
+		cv::cvtColor(image, image, cv::COLOR_YUV2RGB);
+		image.convertTo(image, CV_8U, 255.0);
+	}
 
 	if (!cv::imwrite(dst_path, image)) {
 		setPathError(conv,
