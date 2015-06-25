@@ -344,7 +344,6 @@ bool Model::filter_AVX_OpenCL(ComputeEnv *env,
 					exit(1);
 				}
 			}
-
 		}
 
 		if (error_count != 0) {
@@ -406,6 +405,11 @@ bool Model::filter(ComputeEnv *env,
 		cuda_available = false;
 	}
 
+	if (nOutputPlanes & 31) {
+		cl_available = false;
+		cuda_available = false;
+	}
+
 	if (nInputPlanes == 1 || nInputPlanes == 32 || nInputPlanes == 64 || nInputPlanes == 128) {
 		/* ok */
 	} else {
@@ -438,6 +442,11 @@ bool Model::filter(ComputeEnv *env,
 	if (size.width&1) {
 		avx_available = false;
 	}
+
+	printf("%d %d %d\n",
+	       (int)cuda_available,
+	       (int)cl_available,
+	       (int)avx_available);
 
 	if (cuda_available) {
 		ret = filter_AVX_OpenCL(env, packed_input_buf, packed_output_buf, size, RUN_CUDA);

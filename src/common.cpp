@@ -75,9 +75,9 @@ void unpack_mat_rgb(cv::Mat &outputMat,
 		const float *packed_line = in + (yi * w * 3);
 
 		for (int xi=0; xi<w; xi++) {
-			mat_line[xi*3 + 2] = (unsigned char)std::min(255.0f, packed_line[xi*3 + 0] * 255.0f);
-			mat_line[xi*3 + 1] = (unsigned char)std::min(255.0f, packed_line[xi*3 + 1] * 255.0f);
-			mat_line[xi*3 + 0] = (unsigned char)std::min(255.0f, packed_line[xi*3 + 2] * 255.0f);
+			mat_line[xi*3 + 2] = (unsigned char)std::max(0.0f, std::min(255.0f, packed_line[xi*3 + 0] * 255.0f));
+			mat_line[xi*3 + 1] = (unsigned char)std::max(0.0f, std::min(255.0f, packed_line[xi*3 + 1] * 255.0f));
+			mat_line[xi*3 + 0] = (unsigned char)std::max(0.0f, std::min(255.0f, packed_line[xi*3 + 2] * 255.0f));
 		}
 	}
 }
