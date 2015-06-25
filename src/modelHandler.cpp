@@ -443,10 +443,10 @@ bool Model::filter(ComputeEnv *env,
 		avx_available = false;
 	}
 
-	printf("%d %d %d\n",
-	       (int)cuda_available,
-	       (int)cl_available,
-	       (int)avx_available);
+	//printf("%d %d %d\n",
+	//       (int)cuda_available,
+	//       (int)cl_available,
+	//       (int)avx_available);
 
 	if (cuda_available) {
 		ret = filter_AVX_OpenCL(env, packed_input_buf, packed_output_buf, size, RUN_CUDA);

@@ -131,7 +131,7 @@ initCUDA(ComputeEnv *env)
 
 	CUfunction filter_i32=0, filter_i64=0, filter_i128=0;
 	CUfunction filter_i64_o64=0, filter_i128_o128=0, filter_i64_o128=0;
-	CUfunction filter_i128_o1=0, filter_i1_o32 = 0;
+	CUfunction filter_i128_o1=0, filter_i1_o32 = 0, filter_i3_o32 = 0;
 
 	r = cuModuleGetFunction(&filter_i1_o32, mod, "filter_i1_o32");
 	if (r != CUDA_SUCCESS) {
@@ -190,6 +190,13 @@ initCUDA(ComputeEnv *env)
 		cuStreamDestroy(stream);
 		return false;
 	}
+	r = cuModuleGetFunction(&filter_i3_o32, mod, "filter_i3_o32");
+	if (r != CUDA_SUCCESS) {
+		cuModuleUnload(mod);
+		cuCtxDestroy(ctxt);
+		cuStreamDestroy(stream);
+		return false;
+	}
 
 	char name [1024];
 	cuDeviceGetName(name, sizeof(name), dev);
@@ -213,6 +220,7 @@ initCUDA(ComputeEnv *env)
 	env->cuda_dev_list[0].filter_i64_o128 = filter_i64_o128;
 	env->cuda_dev_list[0].filter_i128_o128 = filter_i128_o128;
 	env->cuda_dev_list[0].filter_i128_o1 = filter_i128_o1;
+	env->cuda_dev_list[0].filter_i3_o32 = filter_i3_o32;
 	env->cuda_dev_list[0].stream = stream;
         env->cuda_dev_list[0].name = name;
 
