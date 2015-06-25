@@ -206,7 +206,39 @@ bool Model::filter_AVX_OpenCL(ComputeEnv *env,
 			dst[7] = src2[1];
 			dst[8] = src2[2];
 		}
+	} else if (nOutputPlanes == 3) {
+		/* |       o0        |       o1        | o2 ... |
+		 * |i0 i1 i2 ... i31 |i0 i1 i2 ... i31 | ...    |*/
+
+		for (int oi=0; oi<nOutputPlanes; oi++) {
+			for (int ii=0; ii<nInputPlanes; ii++) {
+				int mi = oi*nInputPlanes+ii;
+				cv::Mat &wm = weights[mi];
+				const float *src0 = (float*)wm.ptr(0);
+				const float *src1 = (float*)wm.ptr(1);
+				const float *src2 = (float*)wm.ptr(2);
+
+				float *dst = weight_flat + (oi * nInputPlanes * 9) + ii;
+				dst[0*nInputPlanes] = src0[0];
+				dst[1*nInputPlanes] = src0[1];
+				dst[2*nInputPlanes] = src0[2];
+
+				dst[3*nInputPlanes] = src1[0];
+				dst[4*nInputPlanes] = src1[1];
+				dst[5*nInputPlanes] = src1[2];
+
+				dst[6*nInputPlanes] = src2[0];
+				dst[7*nInputPlanes] = src2[1];
+				dst[8*nInputPlanes] = src2[2];
+			}
+		}
 	} else {
+		/* | o0        | o1        | o2 .. oN-1|   o0      | o1        | ..
+		 * |i0 i1 i2 i3|i0 i1 i2 i3| ....      |i4 i5 i6 i7|i4 i5 i6 i7| ..
+		 * |<-       ->|
+		 * | VEC_WIDTH |
+		 */
+
 		for (int oi=0; oi<nOutputPlanes; oi++) {
 			for (int ii=0; ii<nInputPlanes; ii++) {
 				int mi = oi*nInputPlanes+ii;
@@ -396,6 +428,8 @@ bool Model::filter(ComputeEnv *env,
 			if (nInputPlanes % VEC_WIDTH) {
 				avx_available = false;
 			}
+		} else if (nOutputPlanes == 3) {
+			/* out3 filter */
 		} else {
 			avx_available = false;
 		}

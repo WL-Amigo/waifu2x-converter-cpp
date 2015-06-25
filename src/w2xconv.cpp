@@ -329,7 +329,7 @@ apply_scale(struct W2XConv *conv,
 			std::cerr << "w2xc::convertWithModels : something error has occured.\n"
 				"stop." << std::endl;
 			std::exit(1);
-		};
+		}
 
 		if (!is_rgb) {
 			cv::merge(imageSplit, image);
