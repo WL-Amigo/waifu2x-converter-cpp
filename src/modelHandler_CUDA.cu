@@ -1207,7 +1207,7 @@ filter_i3_o32(const float * __restrict__ packed_input,
 	unsigned int yi = blockIdx.x;
 	unsigned int lid = threadIdx.x;
 
-	size_t in_step = wsz;
+	size_t in_step = wsz * nInputPlanes;
 
 	const float *inp = packed_input;
 	inp += in_step * yi;
@@ -1231,9 +1231,9 @@ filter_i3_o32(const float * __restrict__ packed_input,
 	__shared__ float in_block2_base[(64+2)*3];
 	__shared__ float sum_buffer[192];
 
-	float *in_block0 = in_block0_base + 1;
-	float *in_block1 = in_block1_base + 1;
-	float *in_block2 = in_block2_base + 1;
+	float *in_block0 = in_block0_base + 3;
+	float *in_block1 = in_block1_base + 3;
+	float *in_block2 = in_block2_base + 3;
 
 	/* 192 item / group */
 	/* load 192 item */
@@ -1245,42 +1245,43 @@ filter_i3_o32(const float * __restrict__ packed_input,
 	unsigned int ooff = lid % 32U;
 
 #define I3_O32_LOAD_COEF(I)						\
-	float w##I = weight[9 * ooff * nInputPlanes + ioff + I*nInputPlanes];
+	float w##I = weight[9*nOutputPlanes*ioff+ooff+I*nOutputPlanes];
 
 	UNROLL9(I3_O32_LOAD_COEF);
 
-	for (int xi0=0; xi0<wsz; xi0+=32) {
+	for (int xi0=0; xi0<wsz; xi0+=64) {
 		/* load */
-		int nelem = min(wsz - xi0, 32);
+		int nelem = min(wsz - xi0, 64);
 		int nload = nelem * 3;
 
 		if (lid < nload) {
-			int xi = xi0 + lid;
+			int xi = xi0*3 + lid;
 
-			if (xi < wsz*3) {
-				in_block0[lid] = in01[xi0 + lid];
-				in_block1[lid] = in11[xi0 + lid];
-				in_block2[lid] = in21[xi0 + lid];
-			}
+			in_block0[lid] = in01[xi];
+			in_block1[lid] = in11[xi];
+			in_block2[lid] = in21[xi];
 
 			if (lid < 3) {
-				if (xi == 0) {
+				if (xi <= 2) {
+					/* left edge */
 					in_block0[-3+(int)lid] = in01[lid];
 					in_block1[-3+(int)lid] = in11[lid];
 					in_block2[-3+(int)lid] = in21[lid];
 				}  else {
-					in_block0[-3+(int)lid] = in01[(int)xi-3+(int)lid];
-					in_block1[-3+(int)lid] = in11[(int)xi-3+(int)lid];
-					in_block2[-3+(int)lid] = in21[(int)xi-3+(int)lid];
+					/* 0, 1, 2 */
+					in_block0[-3+(int)lid] = in01[-3+(int)xi];
+					in_block1[-3+(int)lid] = in11[-3+(int)xi];
+					in_block2[-3+(int)lid] = in21[-3+(int)xi];
 				}
 			}
 
 			if (xi >= wsz*3-3) {
+				/* right edge */
 				in_block0[lid+3] = in01[xi];
 				in_block1[lid+3] = in11[xi];
 				in_block2[lid+3] = in21[xi];
-			} else if (lid >= 190) {
-				/* 190, 191, 192 */
+			} else if (lid >= 189) {
+				/* 189, 190, 191 */
 				in_block0[lid+3] = in01[xi+3];
 				in_block1[lid+3] = in11[xi+3];
 				in_block2[lid+3] = in21[xi+3];
@@ -1291,41 +1292,46 @@ filter_i3_o32(const float * __restrict__ packed_input,
 		for (int xi1=0; xi1<nelem; xi1++) {
 			int xi = xi0 + xi1;
 
-			if (lid < 96) {
+			if (lid < 96) { // 3input x 32output
 				float sum = 0;
-				sum += w0 * in_block0[(xi1 - 1)*3];
-				sum += w1 * in_block0[(xi1    )*3];
-				sum += w2 * in_block0[(xi1 + 1)*3];
 
-				sum += w3 * in_block1[(xi1 - 1)*3];
-				sum += w4 * in_block1[(xi1    )*3];
-				sum += w5 * in_block1[(xi1 + 1)*3];
+				sum += w0 * in_block0[(xi1 - 1)*3+ioff];
+				sum += w1 * in_block0[(xi1    )*3+ioff];
+				sum += w2 * in_block0[(xi1 + 1)*3+ioff];
 
-				sum += w6 * in_block2[(xi1 - 1)*3];
-				sum += w7 * in_block2[(xi1    )*3];
-				sum += w8 * in_block2[(xi1 + 1)*3];
+				sum += w3 * in_block1[(xi1 - 1)*3+ioff];
+				sum += w4 * in_block1[(xi1    )*3+ioff];
+				sum += w5 * in_block1[(xi1 + 1)*3+ioff];
+
+				sum += w6 * in_block2[(xi1 - 1)*3+ioff];
+				sum += w7 * in_block2[(xi1    )*3+ioff];
+				sum += w8 * in_block2[(xi1 + 1)*3+ioff];
 
 				sum_buffer[lid] = sum;
 			}
 
 			__syncthreads();
 
-			/* 96 to 32 reduction */
-			if (ooff == 0) {
+			if (lid < 32) {
+				int oi = lid;
 				float v = 0;
 				float *out = packed_output + (yi*wsz + xi) * nOutputPlanes;
 
-				v += sum_buffer[32 * 0];
-				v += sum_buffer[32 * 1];
-				v += sum_buffer[32 * 2];
+				/* 96 to 32 reduction */
+				v += sum_buffer[32 * 0 + lid];
+				v += sum_buffer[32 * 1 + lid];
+				v += sum_buffer[32 * 2 + lid];
 
-				float bv = biases[ooff];
+				float bv = biases[oi];
 				v += bv;
 				float mtz = max(v, 0.0f);
 				float ltz = min(v, 0.0f);
 				v = ltz * 0.1f + mtz;
-				out[ooff] = v;
+
+				out[oi] = v;
 			}
+
+			__syncthreads();
 		}
 	}
 }

@@ -354,6 +354,19 @@ filter_CUDA_impl(ComputeEnv *env,
 				   256, 1, 1,
 				   0,
 				   dev->stream, args, NULL);
+	} else if (nInputPlanes == 3 && nOutputPlanes == 32) {
+		void *args[] = {&packed_input,
+				&packed_output,
+				&d_fbiases,
+				&h,
+				&w,
+				&d_weight};
+
+		r = cuLaunchKernel(dev->filter_i3_o32,
+				   h, 1, 1,
+				   192, 1, 1,
+				   0,
+				   dev->stream, args, NULL);
 	} else {
 		void *args[8] = {&packed_input,
 				 &packed_output,

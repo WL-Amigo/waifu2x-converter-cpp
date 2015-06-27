@@ -232,11 +232,42 @@ bool Model::filter_AVX_OpenCL(ComputeEnv *env,
 				dst[8*nInputPlanes] = src2[2];
 			}
 		}
+	} else if (gpu && (nInputPlanes == 3) && (nOutputPlanes == 32)) {
+		/* | i0             | i1        | i2 .. iN-1|
+		 * |o0 o1 o2 o3..o31|o0 .... o32| ....      |
+		 * |<-            ->|
+		 * |    32          |
+		 * |   x  9         |
+		 */
+
+		for (int oi=0; oi<nOutputPlanes; oi++) {
+			for (int ii=0; ii<nInputPlanes; ii++) {
+				int mi = oi*nInputPlanes+ii;
+				cv::Mat &wm = weights[mi];
+				const float *src0 = (float*)wm.ptr(0);
+				const float *src1 = (float*)wm.ptr(1);
+				const float *src2 = (float*)wm.ptr(2);
+
+				float *dst = weight_flat + (ii * nOutputPlanes * 9) + oi;
+				dst[0*nOutputPlanes] = src0[0];
+				dst[1*nOutputPlanes] = src0[1];
+				dst[2*nOutputPlanes] = src0[2];
+
+				dst[3*nOutputPlanes] = src1[0];
+				dst[4*nOutputPlanes] = src1[1];
+				dst[5*nOutputPlanes] = src1[2];
+
+				dst[6*nOutputPlanes] = src2[0];
+				dst[7*nOutputPlanes] = src2[1];
+				dst[8*nOutputPlanes] = src2[2];
+			}
+		}
 	} else {
-		/* | o0        | o1        | o2 .. oN-1|   o0      | o1        | ..
-		 * |i0 i1 i2 i3|i0 i1 i2 i3| ....      |i4 i5 i6 i7|i4 i5 i6 i7| ..
+		/* | i0        | i1        | i2 .. iN-1|   i0      | i1        | ..
+		 * |o0 o1 o2 o3|o0 o1 o2 o3| ....      |o4 o5 o6 o7|o4 o5 o6 o7| ..
 		 * |<-       ->|
 		 * | VEC_WIDTH |
+		 * |   x  9    |
 		 */
 
 		for (int oi=0; oi<nOutputPlanes; oi++) {
@@ -331,7 +362,7 @@ bool Model::filter_AVX_OpenCL(ComputeEnv *env,
 
 			float r = (std::max)(r0, r1);
 
-			if (r > 0.1f && d > 0.0000001f) {
+			if (r > 0.1f && d > 0.000001f) {
 				int plane = i % nOutputPlanes;
 				int pixpos = i / nOutputPlanes;
 				int xpos = pixpos % size.width;
@@ -400,32 +431,36 @@ bool Model::filter(ComputeEnv *env,
 	bool cl_available = env->num_cl_dev > 0;
 	bool cuda_available = env->num_cuda_dev > 0;
 
-	if (nOutputPlanes > GPU_VEC_WIDTH && nOutputPlanes % GPU_VEC_WIDTH) {
+	if (nOutputPlanes > GPU_VEC_WIDTH) {
 		cl_available = false;
 		cuda_available = false;
 	}
 
-	if (nOutputPlanes & 31) {
+	if (nOutputPlanes == 32 && nInputPlanes == 1) {
+		/* i1 o32 filter */
+	} else if (nOutputPlanes == 1 && nInputPlanes == 128) {
+		/* i128 o32 filter */
+	} else if (nOutputPlanes == 32 && nInputPlanes == 3) {
+		/* i3 o32 filter */
 		cl_available = false;
-		cuda_available = false;
-	}
-
-	if (nInputPlanes == 1 || nInputPlanes == 32 || nInputPlanes == 64 || nInputPlanes == 128) {
-		/* ok */
 	} else {
-		cuda_available = false;
-	}
-
-	if (nOutputPlanes == 1 || (nInputPlanes & 1)) {
-		if (nOutputPlanes == 32 && nInputPlanes == 1) {
-			/* in1 filter */
-		} else if (nOutputPlanes == 1 && nInputPlanes == 128) {
-			/* out1 filter */
-		} else {
+		if (nInputPlanes & 1) {
 			cl_available = false;
 			cuda_available = false;
 		}
+
+		if (nOutputPlanes & 31) {
+			cl_available = false;
+			cuda_available = false;
+		}
+
+		if (nInputPlanes == 32 || nInputPlanes == 64 || nInputPlanes == 128) {
+			/* ok */
+		} else {
+			cuda_available = false;
+		}
 	}
+
 
 	if (nOutputPlanes % (VEC_WIDTH*UNROLL)) {
 		if (nOutputPlanes == 1) {
