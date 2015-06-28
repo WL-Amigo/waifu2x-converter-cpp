@@ -10,6 +10,7 @@
 #include "CLlib.h"
 #include "CUDAlib.h"
 #include "threadPool.hpp"
+#include "sec.hpp"
 
 struct OpenCLDev {
     std::string name;
@@ -49,6 +50,7 @@ struct ComputeEnv {
     int num_cuda_dev;
     OpenCLDev *cl_dev_list;
     CUDADev *cuda_dev_list;
+    double transfer_wait;
 
 #ifndef __APPLE__
     w2xc::ThreadPool *tpool;
@@ -58,7 +60,8 @@ struct ComputeEnv {
         :num_cl_dev(0),
          num_cuda_dev(0),
          cl_dev_list(nullptr),
-         cuda_dev_list(nullptr)
+         cuda_dev_list(nullptr),
+         transfer_wait(0)
     {}
 };
 
@@ -251,7 +254,11 @@ struct Buffer {
             }
         }
 
+        //double t0 = getsec();
         cuMemcpyHtoD(cuda_ptr_list[devid], host_ptr, read_byte_size);
+        //double t1 = getsec();
+        //env->transfer_wait = t1-t0;
+
         cuda_valid_list[devid] = true;
 
         CUcontext old;
@@ -302,7 +309,11 @@ struct Buffer {
         } else if (last_write.type == Processor::CUDA) {
             CUDADev *dev = &env->cuda_dev_list[last_write.devid];
             cuCtxPushCurrent(dev->context);
+            //double t0 = getsec();
             cuMemcpyDtoH(host_ptr, cuda_ptr_list[last_write.devid], read_byte_size);
+            //double t1 = getsec();
+            //env->transfer_wait = t1-t0;
+
             CUcontext old;
             cuCtxPopCurrent(&old);
         } else {

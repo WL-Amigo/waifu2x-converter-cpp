@@ -414,6 +414,8 @@ w2xconv_convert_file(struct W2XConv *conv,
 
 	conv->flops.process_sec += time_end - time_start;
 
+	//printf("== %f == \n", conv->impl->env.transfer_wait);
+
 	return 0;
 }
 

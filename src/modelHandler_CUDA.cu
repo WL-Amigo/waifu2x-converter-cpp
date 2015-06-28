@@ -1338,7 +1338,7 @@ filter_i3_o32(const float * __restrict__ packed_input,
 }
 
 
-/* blockDim.x == 192 */
+/* blockDim.x == 128 */
 extern "C" __global__ void
 filter_i128_o3(const float * __restrict__ packed_input,
 	       float * __restrict__ packed_output,
@@ -1403,56 +1403,32 @@ filter_i128_o3(const float * __restrict__ packed_input,
 
 	UNROLL9(I128_O3_LOAD_COEF);
 
-	//in_block0[lid+nInputPlanes] = in_block0[lid] = in01[x*nInputPlanes + lid];
-	//in_block1[lid+nInputPlanes] = in_block1[lid] = in11[x*nInputPlanes + lid];
-	//in_block2[lid+nInputPlanes] = in_block2[lid] = in21[x*nInputPlanes + lid];
+	in_block0[lid+nInputPlanes] = in_block0[lid] = in01[lid];
+	in_block1[lid+nInputPlanes] = in_block1[lid] = in11[lid];
+	in_block2[lid+nInputPlanes] = in_block2[lid] = in21[lid];
 
 	for (int xi=0; xi<wsz; xi++) {
-		in_block0[slid] = in01[xi*nInputPlanes + slid];
-		in_block1[slid] = in11[xi*nInputPlanes + slid];
-		in_block2[slid] = in21[xi*nInputPlanes + slid];
+		in_block0[slid-nInputPlanes] = in_block0[slid];
+		in_block1[slid-nInputPlanes] = in_block1[slid];
+		in_block2[slid-nInputPlanes] = in_block2[slid];
 
-		__syncthreads();
+		float v0 = in_block0[slid + nInputPlanes];
+		float v1 = in_block1[slid + nInputPlanes];
+		float v2 = in_block2[slid + nInputPlanes];
 
-		if (xi==0) {
-			in_block0[slid-nInputPlanes] = in_block0[slid];
-			in_block1[slid-nInputPlanes] = in_block1[slid];
-			in_block2[slid-nInputPlanes] = in_block2[slid];
-		} else {
-			in_block0[slid-nInputPlanes] = in01[(xi-1)*nInputPlanes + slid];
-			in_block1[slid-nInputPlanes] = in11[(xi-1)*nInputPlanes + slid];
-			in_block2[slid-nInputPlanes] = in21[(xi-1)*nInputPlanes + slid];
-		}
+		in_block0[slid] = v0;
+		in_block1[slid] = v1;
+		in_block2[slid] = v2;
 
 		if (xi == wsz-1) {
-			in_block0[slid+nInputPlanes] = in_block0[slid];
-			in_block1[slid+nInputPlanes] = in_block1[slid];
-			in_block2[slid+nInputPlanes] = in_block2[slid];
+			in_block0[slid+nInputPlanes] = v0;
+			in_block1[slid+nInputPlanes] = v1;
+			in_block2[slid+nInputPlanes] = v2;
 		} else {
 			in_block0[slid+nInputPlanes] = in01[(xi+1)*nInputPlanes + slid];
 			in_block1[slid+nInputPlanes] = in11[(xi+1)*nInputPlanes + slid];
 			in_block2[slid+nInputPlanes] = in21[(xi+1)*nInputPlanes + slid];
 		}
-
-#if __CUDA_ARCH__ >= 300
-#undef SUM_RELU
-#define SUM_RELU(OI)							\
-		if (lid < 32) {						\
-			float v0 = sum_buffer[lid] + sum_buffer[lid+32];			\
-			float sum = warp_sum(v0);			\
-									\
-			if (lid == 0) {					\
-				float v = sum;				\
-				float *out = packed_output + (yi*wsz + xi)*nOutputPlanes; \
-				v += bv##OI;				\
-				float mtz = max(v, 0.0f);		\
-				float ltz = min(v, 0.0f);		\
-				v = ltz * 0.1f + mtz;			\
-				out[OI] = v;				\
-			}						\
-		}							\
-
-#endif
 
 #define I128_O3(OI)							\
 		{							\

@@ -1,3 +1,6 @@
+#ifndef W2XC_SEC_HPP
+#define W2XC_SEC_HPP
+
 #include "compiler.h"
 
 #ifdef _WIN32
@@ -55,5 +58,7 @@ getsec(void)
 
     return (ts.tv_sec) + (ts.tv_nsec / (1000.0*1000.0*1000.0));
 }
+
+#endif
 
 #endif
