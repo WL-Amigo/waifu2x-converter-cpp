@@ -62,3 +62,11 @@ Usage of this program can be seen by executing this with `--help` option.
 
 
 (My native language is not English, then I'm sorry for my broken English.)
+
+## modifided by tanakamura
+ * Added CUDA, OpenCL(AMD GPU), x86 FMA, x86 AVX Support (That is selected automatically at runtime)
+  * OpenCL(AMD GPU) version achieves 40% of peak performance (291GFLOPS @ A10-7850K)
+ * Added CMakeLists.txt
+  * You can build it by cmake ($ cmake -D OPENCV_PREFIX=&lt;OpenCV include/lib dir&gt;)
+ * [DLL interface](src/w2xconv.h)
+  * You can use waifu2x as library. include w2xconv.h & link w2xc.lib.
