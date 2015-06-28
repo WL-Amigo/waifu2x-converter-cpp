@@ -21,7 +21,7 @@ src/modelHandler_CUDA$(OSFX): src/modelHandler_CUDA.ptx20.h src/modelHandler_CUD
 OBJS=$(SRCS:.cpp=$(OSFX))
 DLL_OBJS=$(DLL_SRCS:.cpp=$(OSFX))
 
-isa: filter-Spectre.isa filter_in1_out32-Spectre.isa filter_in128_out1-Spectre.isa
+isa: filter-Spectre.isa filter_in1_out32-Spectre.isa filter_in128_out1-Spectre.isa filter_in128_out3-Spectre.isa
 sass: src/modelHandler_CUDA.sass
 
 %-Spectre.isa: src/modelHandler_OpenCL.cl

@@ -690,14 +690,11 @@ filter_in128_out3(__global const float * __restrict__ packed_input,
 	__global const float *in21 = in2p;
 
 	/* 5120byte */
-	__local float in_block0_base[3*128];
-	__local float in_block1_base[3*128];
-	__local float in_block2_base[3*128];
-	__local float sum_buffer[128];
+	float lin00, lin01, lin02;
+	float lin10, lin11, lin12;
+	float lin20, lin21, lin22;
 
-	__local float *in_block0 = in_block0_base + 128;
-	__local float *in_block1 = in_block1_base + 128;
-	__local float *in_block2 = in_block2_base + 128;
+	__local float sum_buffer[128];
 
 	/* 128 item / group */
 	/* load 128 item (load 3elem/item) */
@@ -719,47 +716,49 @@ filter_in128_out3(__global const float * __restrict__ packed_input,
 
 	UNROLL9(I128_O3_LOAD_COEF);
 
-	in_block0[lid+nInputPlanes] = in_block0[lid] = in01[lid];
-	in_block1[lid+nInputPlanes] = in_block1[lid] = in11[lid];
-	in_block2[lid+nInputPlanes] = in_block2[lid] = in21[lid];
+	lin01 = lin02 = in01[lid];
+	lin11 = lin12 = in11[lid];
+	lin21 = lin22 = in21[lid];
+
+	__global char *p0 = (__global char*)(in01 + lid + nInputPlanes);
+	__global char *p1 = (__global char*)(in11 + lid + nInputPlanes);
+	__global char *p2 = (__global char*)(in21 + lid + nInputPlanes);
+
+	int addroff = 0;
 
 	for (int xi=0; xi<wsz; xi++) {
-		in_block0[slid-nInputPlanes] = in_block0[slid];
-		in_block1[slid-nInputPlanes] = in_block1[slid];
-		in_block2[slid-nInputPlanes] = in_block2[slid];
+		lin00 = lin01;
+		lin01 = lin02;
 
-		float v0 = in_block0[slid + nInputPlanes];
-		float v1 = in_block1[slid + nInputPlanes];
-		float v2 = in_block2[slid + nInputPlanes];
+		lin10 = lin11;
+		lin11 = lin12;
 
-		in_block0[slid] = v0;
-		in_block1[slid] = v1;
-		in_block2[slid] = v2;
+		lin20 = lin21;
+		lin21 = lin22;
 
 		if (xi == wsz-1) {
-			in_block0[slid+nInputPlanes] = v0;
-			in_block1[slid+nInputPlanes] = v1;
-			in_block2[slid+nInputPlanes] = v2;
+			/* nop */
 		} else {
-			in_block0[slid+nInputPlanes] = in01[(xi+1)*nInputPlanes + slid];
-			in_block1[slid+nInputPlanes] = in11[(xi+1)*nInputPlanes + slid];
-			in_block2[slid+nInputPlanes] = in21[(xi+1)*nInputPlanes + slid];
+			lin02 = *(__global float *)(p0 + addroff);
+			lin12 = *(__global float *)(p1 + addroff);
+			lin22 = *(__global float *)(p2 + addroff);
 		}
+		addroff += nInputPlanes * sizeof(float);
 
 #define I128_O3(OI)							\
 		{							\
 			float sum = 0;					\
-			sum += w##OI##0 * in_block0[slid - nInputPlanes]; \
-			sum += w##OI##1 * in_block0[slid];		\
-			sum += w##OI##2 * in_block0[slid + nInputPlanes]; \
+			sum += w##OI##0 * lin00; \
+			sum += w##OI##1 * lin01;		\
+			sum += w##OI##2 * lin02; \
 									\
-			sum += w##OI##3 * in_block1[slid - nInputPlanes]; \
-			sum += w##OI##4 * in_block1[slid];		\
-			sum += w##OI##5 * in_block1[slid + nInputPlanes]; \
+			sum += w##OI##3 * lin10; \
+			sum += w##OI##4 * lin11;		\
+			sum += w##OI##5 * lin12; \
 									\
-			sum += w##OI##6 * in_block2[slid - nInputPlanes]; \
-			sum += w##OI##7 * in_block2[slid];		\
-			sum += w##OI##8 * in_block2[slid + nInputPlanes]; \
+			sum += w##OI##6 * lin20; \
+			sum += w##OI##7 * lin21;		\
+			sum += w##OI##8 * lin22; \
 									\
 			barrier(CLK_LOCAL_MEM_FENCE);			\
 			sum_buffer[lid] = sum;				\
