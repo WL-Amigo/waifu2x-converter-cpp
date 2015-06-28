@@ -361,7 +361,7 @@ initOpenCL(ComputeEnv *env)
                 return false;
         }
 
-        ker_filter_in128_out1 = clCreateKernel(program, "filter_in128_out1", &err);
+        ker_filter_in3_out32 = clCreateKernel(program, "filter_in3_out32", &err);
         if (err != CL_SUCCESS) {
                 clReleaseProgram(program);
                 clReleaseContext(context);
@@ -370,7 +370,7 @@ initOpenCL(ComputeEnv *env)
                 return false;
         }
 
-        ker_filter_in3_out32 = clCreateKernel(program, "filter_in3_out32", &err);
+        ker_filter_in128_out1 = clCreateKernel(program, "filter_in128_out1", &err);
         if (err != CL_SUCCESS) {
                 clReleaseProgram(program);
                 clReleaseContext(context);
@@ -387,7 +387,6 @@ initOpenCL(ComputeEnv *env)
                 clReleaseKernel(ker_filter_in1_out32);
                 return false;
         }
-
 
         queue = clCreateCommandQueue(context, dev, 0, &err);
         if (err != CL_SUCCESS) {
@@ -465,10 +464,12 @@ filter_OpenCL_impl(ComputeEnv *env,
                 FILTER_GENERIC,
                 FILTER_IN1,
                 FILTER_IN3,
-                FILTER_OUT1
+                FILTER_OUT1,
+                FILTER_OUT3,
         } type = FILTER_GENERIC;
 
         cl_kernel ker = dev->ker_filter;
+        bool static_nplane = false;
 
         if (nInputPlanes == 1 && nOutputPlanes == 32) {
                 type = FILTER_IN1;
@@ -476,9 +477,14 @@ filter_OpenCL_impl(ComputeEnv *env,
         } else if (nInputPlanes == 3 && nOutputPlanes == 32) {
                 type = FILTER_IN3;
                 ker = dev->ker_filter_in3_out32;
+                static_nplane = true;
         } else if (nOutputPlanes == 1 && nInputPlanes == 128) {
                 type = FILTER_OUT1;
                 ker = dev->ker_filter_in128_out1;
+        } else if (nOutputPlanes == 3 && nInputPlanes == 128) {
+                type = FILTER_OUT3;
+                ker = dev->ker_filter_in128_out3;
+                static_nplane = true;
         }
 
 
@@ -499,9 +505,13 @@ filter_OpenCL_impl(ComputeEnv *env,
         int ai = 0;
 
         clSetKernelArg(ker, ai++, sizeof(cl_mem), &cl_packed_input);
-        clSetKernelArg(ker, ai++, sizeof(cl_int), &nInputPlanes);
+        if (! static_nplane) {
+                clSetKernelArg(ker, ai++, sizeof(cl_int), &nInputPlanes);
+        }
         clSetKernelArg(ker, ai++, sizeof(cl_mem), &cl_packed_output);
-        clSetKernelArg(ker, ai++, sizeof(cl_int), &nOutputPlanes);
+        if (! static_nplane) {
+                clSetKernelArg(ker, ai++, sizeof(cl_int), &nOutputPlanes);
+        }
         clSetKernelArg(ker, ai++, sizeof(cl_mem), &cl_fbiases);
         clSetKernelArg(ker, ai++, sizeof(cl_int), &h);
         clSetKernelArg(ker, ai++, sizeof(cl_int), &w);
@@ -526,7 +536,7 @@ filter_OpenCL_impl(ComputeEnv *env,
         } else if (type == FILTER_IN1) {
                 gws[0] = h * 256;
                 lws[0] = 256;
-        } else if (type == FILTER_OUT1) {
+        } else if (type == FILTER_OUT1 || type == FILTER_OUT3) {
                 gws[0] = h*128;
                 lws[0] = 128;
         } else if (type == FILTER_IN3) {

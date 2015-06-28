@@ -91,7 +91,7 @@ Model::filter_CV(ComputeEnv *env,
 	return true;
 }
 
-#define COMPARE_RESULT
+//#define COMPARE_RESULT
 
 bool Model::filter_AVX_OpenCL(ComputeEnv *env,
 			      Buffer *packed_input_buf,
@@ -442,10 +442,8 @@ bool Model::filter(ComputeEnv *env,
 		/* i128 o32 filter */
 	} else if (nOutputPlanes == 32 && nInputPlanes == 3) {
 		/* i3 o32 filter */
-		//cl_available = false;
 	} else if (nOutputPlanes == 3 && nInputPlanes == 128) {
 		/* i128 o3 filter */
-		cl_available = false;
 	} else {
 		if (nInputPlanes & 1) {
 			cl_available = false;
