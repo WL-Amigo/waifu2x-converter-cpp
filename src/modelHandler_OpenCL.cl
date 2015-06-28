@@ -655,7 +655,9 @@ filter_in3_out32(__global const float * __restrict__ packed_input,
 
 
 /* item / group == 128 */
-__kernel void
+__kernel 
+__attribute__((reqd_work_group_size(128, 1, 1)))
+void
 filter_in128_out3(__global const float * __restrict__ packed_input,
 		  __global float * __restrict__ packed_output,
 		  __global float * __restrict__ biases,
@@ -694,7 +696,7 @@ filter_in128_out3(__global const float * __restrict__ packed_input,
 	float lin10, lin11, lin12;
 	float lin20, lin21, lin22;
 
-	__local float sum_buffer[128];
+	__local float sum_buffer[3][128];
 
 	/* 128 item / group */
 	/* load 128 item (load 3elem/item) */
@@ -705,9 +707,20 @@ filter_in128_out3(__global const float * __restrict__ packed_input,
 	 */
 
 	int ioff = lid;
-	float bv0 = biases[0];
-	float bv1 = biases[1];
-	float bv2 = biases[2];
+	float bv = 0;
+
+	int reduce_oi_32 = lid / 32U;
+	int reduce_li_32 = lid % 32U;
+
+	int reduce_oi_16 = lid / 16U;
+	int reduce_li_16 = lid % 16U;
+
+	int reduce_oi_8 = lid / 8U;
+	int reduce_li_8 = lid % 8U;
+
+	if (lid < 3) {
+		bv = biases[lid];
+	}
 
 #define I128_O3_LOAD_COEF(I)						\
 	float w0##I = weight[9*0*nInputPlanes + I*nInputPlanes + ioff]; \
@@ -761,21 +774,44 @@ filter_in128_out3(__global const float * __restrict__ packed_input,
 			sum += w##OI##8 * lin22; \
 									\
 			barrier(CLK_LOCAL_MEM_FENCE);			\
-			sum_buffer[lid] = sum;				\
-									\
-			/* 128 to 1 */					\
+			sum_buffer[OI][lid] = sum;				\
 			barrier(CLK_LOCAL_MEM_FENCE);			\
 			if (lid < 64) {					\
-				sum_buffer[lid] += sum_buffer[lid + 64]; \
+				sum_buffer[OI][lid] += sum_buffer[OI][lid+64]; \
 			}						\
 			barrier(CLK_LOCAL_MEM_FENCE);			\
-									\
-			SUM_RELU(OI);					\
 		}
 
 		I128_O3(0);
 		I128_O3(1);
 		I128_O3(2);
+
+
+		barrier(CLK_LOCAL_MEM_FENCE);
+		if (lid < 32*3) { /* 64x3 to 32x3 */
+			sum_buffer[reduce_oi_32][reduce_li_32] += sum_buffer[reduce_oi_32][reduce_li_32+32];
+		}
+		barrier(CLK_LOCAL_MEM_FENCE);
+		if (lid < 16*3) { /* 32x3 to 16x3 */
+			sum_buffer[reduce_oi_16][reduce_li_16] += sum_buffer[reduce_oi_16][reduce_li_16+16];
+		}
+		barrier(CLK_LOCAL_MEM_FENCE);
+
+		if (lid < 3) {
+			float sum = 0;
+			for (int i=0; i<16; i++) {
+				sum += sum_buffer[lid][i];
+			}
+
+			float v = sum;
+			__global float *out = packed_output + (yi*wsz + xi)*nOutputPlanes;
+			v += bv;
+			float mtz = max(v, 0.0f);
+			float ltz = min(v, 0.0f);
+			v = ltz * 0.1f + mtz;
+			out[lid] = v;
+		}
+
 	}
 }
 
