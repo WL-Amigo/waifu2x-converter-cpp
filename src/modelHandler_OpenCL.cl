@@ -1,6 +1,5 @@
 /* -*- mode: c -*- */
 
-
 #define UNROLL9(F)				\
 	F(0);					\
 	F(1);					\
@@ -167,6 +166,39 @@
 	F(2,7);					\
 	F(2,8);					\
 	F(2,9);					\
+
+
+#define SUM_RELU(OI)							\
+	if (lid < 32) {							\
+		sum_buffer[lid] += sum_buffer[lid+32];			\
+	}								\
+	barrier(CLK_LOCAL_MEM_FENCE);					\
+	if (lid < 16) {							\
+		sum_buffer[lid] += sum_buffer[lid+16];			\
+	}								\
+	barrier(CLK_LOCAL_MEM_FENCE);					\
+	if (lid < 8) {							\
+		sum_buffer[lid] += sum_buffer[lid+8];			\
+	}								\
+	barrier(CLK_LOCAL_MEM_FENCE);					\
+	if (lid < 4) {							\
+		sum_buffer[lid] += sum_buffer[lid+4];			\
+	}								\
+	barrier(CLK_LOCAL_MEM_FENCE);					\
+	if (lid < 2) {							\
+		sum_buffer[lid] += sum_buffer[lid+2];			\
+	}								\
+	barrier(CLK_LOCAL_MEM_FENCE);					\
+	if (lid == 0) {							\
+		float sum = sum_buffer[0] + sum_buffer[1];		\
+		float v = sum;						\
+		__global float *out = packed_output + (yi*wsz + xi)*nOutputPlanes; \
+		v += bv##OI;						\
+		float mtz = max(v, 0.0f);			\
+		float ltz = min(v, 0.0f);			\
+		v = ltz * 0.1f + mtz;				\
+		out[OI] = v;					\
+	}
 
 
 #define BLOCK_SIZE 8
@@ -621,6 +653,132 @@ filter_in3_out32(__global const float * __restrict__ packed_input,
 	}
 }
 
+
+/* item / group == 128 */
+__kernel void
+filter_in128_out3(__global const float * __restrict__ packed_input,
+		  __global float * __restrict__ packed_output,
+		  __global float * __restrict__ biases,
+		  unsigned int hsz,
+		  unsigned int wsz,
+		  __global float * __restrict__ weight)
+{
+	int nInputPlanes = 128;
+	int nOutputPlanes = 3;
+
+	unsigned int yi = get_group_id(0);
+	unsigned int lid = get_local_id(0);
+	int slid = get_local_id(0);
+
+	size_t in_step = wsz * nInputPlanes;
+
+	__global const float *inp = packed_input;
+	inp += in_step * yi;
+	__global const float *in0p = inp - in_step;
+	if (yi == 0) {
+		in0p = inp;
+	}
+	__global const float *in1p = inp;
+
+	__global const float *in2p = inp + in_step;
+	if (yi == hsz-1) {
+		in2p = in1p;
+	}
+
+	__global const float *in01 = in0p;
+	__global const float *in11 = in1p;
+	__global const float *in21 = in2p;
+
+	/* 5120byte */
+	__local float in_block0_base[3*128];
+	__local float in_block1_base[3*128];
+	__local float in_block2_base[3*128];
+	__local float sum_buffer[128];
+
+	__local float *in_block0 = in_block0_base + 128;
+	__local float *in_block1 = in_block1_base + 128;
+	__local float *in_block2 = in_block2_base + 128;
+
+	/* 128 item / group */
+	/* load 128 item (load 3elem/item) */
+
+	/* 128  iplane
+	 * 1    input
+	 * 3    output  (27coeff)
+	 */
+
+	int ioff = lid;
+	float bv0 = biases[0];
+	float bv1 = biases[1];
+	float bv2 = biases[2];
+
+#define I128_O3_LOAD_COEF(I)						\
+	float w0##I = weight[9*0*nInputPlanes + I*nInputPlanes + ioff]; \
+	float w1##I = weight[9*1*nInputPlanes + I*nInputPlanes + ioff]; \
+	float w2##I = weight[9*2*nInputPlanes + I*nInputPlanes + ioff];
+
+	UNROLL9(I128_O3_LOAD_COEF);
+
+	in_block0[lid+nInputPlanes] = in_block0[lid] = in01[lid];
+	in_block1[lid+nInputPlanes] = in_block1[lid] = in11[lid];
+	in_block2[lid+nInputPlanes] = in_block2[lid] = in21[lid];
+
+	for (int xi=0; xi<wsz; xi++) {
+		in_block0[slid-nInputPlanes] = in_block0[slid];
+		in_block1[slid-nInputPlanes] = in_block1[slid];
+		in_block2[slid-nInputPlanes] = in_block2[slid];
+
+		float v0 = in_block0[slid + nInputPlanes];
+		float v1 = in_block1[slid + nInputPlanes];
+		float v2 = in_block2[slid + nInputPlanes];
+
+		in_block0[slid] = v0;
+		in_block1[slid] = v1;
+		in_block2[slid] = v2;
+
+		if (xi == wsz-1) {
+			in_block0[slid+nInputPlanes] = v0;
+			in_block1[slid+nInputPlanes] = v1;
+			in_block2[slid+nInputPlanes] = v2;
+		} else {
+			in_block0[slid+nInputPlanes] = in01[(xi+1)*nInputPlanes + slid];
+			in_block1[slid+nInputPlanes] = in11[(xi+1)*nInputPlanes + slid];
+			in_block2[slid+nInputPlanes] = in21[(xi+1)*nInputPlanes + slid];
+		}
+
+#define I128_O3(OI)							\
+		{							\
+			float sum = 0;					\
+			sum += w##OI##0 * in_block0[slid - nInputPlanes]; \
+			sum += w##OI##1 * in_block0[slid];		\
+			sum += w##OI##2 * in_block0[slid + nInputPlanes]; \
+									\
+			sum += w##OI##3 * in_block1[slid - nInputPlanes]; \
+			sum += w##OI##4 * in_block1[slid];		\
+			sum += w##OI##5 * in_block1[slid + nInputPlanes]; \
+									\
+			sum += w##OI##6 * in_block2[slid - nInputPlanes]; \
+			sum += w##OI##7 * in_block2[slid];		\
+			sum += w##OI##8 * in_block2[slid + nInputPlanes]; \
+									\
+			barrier(CLK_LOCAL_MEM_FENCE);			\
+			sum_buffer[lid] = sum;				\
+									\
+			/* 128 to 1 */					\
+			barrier(CLK_LOCAL_MEM_FENCE);			\
+			if (lid < 64) {					\
+				sum_buffer[lid] += sum_buffer[lid + 64]; \
+			}						\
+			barrier(CLK_LOCAL_MEM_FENCE);			\
+									\
+			SUM_RELU(OI);					\
+		}
+
+		I128_O3(0);
+		I128_O3(1);
+		I128_O3(2);
+	}
+}
 
 
 __kernel void

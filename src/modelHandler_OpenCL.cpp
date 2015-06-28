@@ -379,6 +379,16 @@ initOpenCL(ComputeEnv *env)
                 return false;
         }
 
+        ker_filter_in128_out3 = clCreateKernel(program, "filter_in128_out3", &err);
+        if (err != CL_SUCCESS) {
+                clReleaseProgram(program);
+                clReleaseContext(context);
+                clReleaseKernel(ker_filter);
+                clReleaseKernel(ker_filter_in1_out32);
+                return false;
+        }
+
+
         queue = clCreateCommandQueue(context, dev, 0, &err);
         if (err != CL_SUCCESS) {
                 clReleaseProgram(program);
@@ -400,6 +410,7 @@ initOpenCL(ComputeEnv *env)
         env->cl_dev_list[0].ker_filter_in1_out32 = ker_filter_in1_out32;
         env->cl_dev_list[0].ker_filter_in128_out1 = ker_filter_in128_out1;
         env->cl_dev_list[0].ker_filter_in3_out32 = ker_filter_in3_out32;
+        env->cl_dev_list[0].ker_filter_in128_out3 = ker_filter_in128_out3;
         env->cl_dev_list[0].name = &dev_name[0];
 
         return true;
