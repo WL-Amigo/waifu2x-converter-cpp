@@ -874,6 +874,7 @@ filter_i128_o1(const float * __restrict__ packed_input,
 	       float * __restrict__ weight)
 {
 	int nInputPlanes = 128;
+	int nOutputPlanes = 1;
 	{
 		unsigned int yi = blockIdx.x;
 
@@ -898,7 +899,7 @@ filter_i128_o1(const float * __restrict__ packed_input,
 
 		unsigned int lid = threadIdx.x;
 
-		float bv = biases[0];
+		float bv0 = biases[0];
 
 		/* 128 item */
 		/* x      : (1width/group) */
@@ -994,29 +995,29 @@ filter_i128_o1(const float * __restrict__ packed_input,
 				sum_buffer[lid] += v2;			\
 			}						\
 			__syncthreads();				\
-			SUM_RELU();					\
+			SUM_RELU(0);					\
 		}
 
 #if __CUDA_ARCH__ >= 300
-#define SUM_RELU()							\
+#define SUM_RELU(OI)							\
 		if (lid < 32) {						\
 			float v0 = sum_buffer[lid] + sum_buffer[lid+32];			\
 			float sum = warp_sum(v0);			\
 									\
 			if (lid == 0) {					\
 				float v = sum;				\
-				float *out = packed_output + (yi*wsz + xi); \
-				v += bv;				\
+				float *out = packed_output + (yi*wsz + xi)*nOutputPlanes; \
+				v += bv##OI;				\
 				float mtz = max(v, 0.0f);		\
 				float ltz = min(v, 0.0f);		\
 				v = ltz * 0.1f + mtz;			\
-				out[0] = v;				\
+				out[OI] = v;				\
 			}						\
 		}							\
 
 #else
 
-#define SUM_RELU()							\
+#define SUM_RELU(OI)							\
 		if (lid < 32) {						\
 			sum_buffer[lid] += sum_buffer[lid+32];		\
 		}							\
@@ -1040,12 +1041,12 @@ filter_i128_o1(const float * __restrict__ packed_input,
 		if (lid == 0) {						\
 			float sum = sum_buffer[0] + sum_buffer[1];	\
 			float v = sum;					\
-			float *out = packed_output + (yi*wsz + xi);	\
-			v += bv;					\
+			float *out = packed_output + (yi*wsz + xi)*nOutputPlanes; \
+			v += bv##OI;					\
 			float mtz = max(v, 0.0f);			\
 			float ltz = min(v, 0.0f);			\
 			v = ltz * 0.1f + mtz;				\
-			out[0] = v;					\
+			out[OI] = v;					\
 		}
 
 #endif
@@ -1333,5 +1334,138 @@ filter_i3_o32(const float * __restrict__ packed_input,
 
 			__syncthreads();
 		}
+	}
+}
+
+
+/* blockDim.x == 192 */
+extern "C" __global__ void
+filter_i128_o3(const float * __restrict__ packed_input,
+	       float * __restrict__ packed_output,
+	       float * __restrict__ biases,
+	       unsigned int hsz,
+	       unsigned int wsz,
+	       float * __restrict__ weight)
+{
+	int nInputPlanes = 128;
+	int nOutputPlanes = 3;
+
+	unsigned int yi = blockIdx.x;
+	unsigned int lid = threadIdx.x;
+
+	size_t in_step = wsz * nInputPlanes;
+
+	const float *inp = packed_input;
+	inp += in_step * yi;
+	const float *in0p = inp - in_step;
+	if (yi == 0) {
+		in0p = inp;
+	}
+	const float *in1p = inp;
+
+	const float *in2p = inp + in_step;
+	if (yi == hsz-1) {
+		in2p = in1p;
+	}
+
+	const float *in01 = in0p;
+	const float *in11 = in1p;
+	const float *in21 = in2p;
+
+	/* 5120byte */
+	__shared__ float in_block0_base[3*128];
+	__shared__ float in_block1_base[3*128];
+	__shared__ float in_block2_base[3*128];
+	__shared__ float sum_buffer[128];
+
+	float *in_block0 = in_block0_base + 3;
+	float *in_block1 = in_block1_base + 3;
+	float *in_block2 = in_block2_base + 3;
+
+	/* 128 item / group */
+	/* load 128 item (load 3elem/item) */
+
+	/* 128  iplane
+	 * 1    input
+	 * 3    output  (27coeff)
+	 */
+
+	int ioff = lid;
+	float bv0 = biases[0];
+	float bv1 = biases[1];
+	float bv2 = biases[2];
+
+#define I128_O3_LOAD_COEF(I)						\
+	float w0##I = weight[9*0*nInputPlanes + 9*I*nInputPlanes + ioff]; \
+	float w1##I = weight[9*1*nInputPlanes + 9*I*nInputPlanes + ioff]; \
+	float w2##I = weight[9*2*nInputPlanes + 9*I*nInputPlanes + ioff];
+
+	UNROLL9(I128_O3_LOAD_COEF);
+
+	//in_block0[lid+nInputPlanes] = in_block0[lid] = in01[x*nInputPlanes + lid];
+	//in_block1[lid+nInputPlanes] = in_block1[lid] = in11[x*nInputPlanes + lid];
+	//in_block2[lid+nInputPlanes] = in_block2[lid] = in21[x*nInputPlanes + lid];
+
+	for (int xi=0; xi<wsz; xi++) {
+		in_block0[lid] = in01[xi*nInputPlanes + lid];
+		in_block1[lid] = in11[xi*nInputPlanes + lid];
+		in_block2[lid] = in21[xi*nInputPlanes + lid];
+
+		__syncthreads();
+
+		if (xi==0) {
+			in_block0[lid-nInputPlanes] = in_block0[lid];
+			in_block1[lid-nInputPlanes] = in_block1[lid];
+			in_block2[lid-nInputPlanes] = in_block2[lid];
+		} else {
+			in_block0[lid-nInputPlanes] = in01[(xi-1)*nInputPlanes + lid];
+			in_block1[lid-nInputPlanes] = in11[(xi-1)*nInputPlanes + lid];
+			in_block2[lid-nInputPlanes] = in21[(xi-1)*nInputPlanes + lid];
+		}
+
+		if (xi == wsz-1) {
+			in_block0[lid+nInputPlanes] = in_block0[lid];
+			in_block1[lid+nInputPlanes] = in_block1[lid];
+			in_block2[lid+nInputPlanes] = in_block2[lid];
+		} else {
+			in_block0[lid+nInputPlanes] = in01[(xi+1)*nInputPlanes + lid];
+			in_block1[lid+nInputPlanes] = in11[(xi+1)*nInputPlanes + lid];
+			in_block2[lid+nInputPlanes] = in21[(xi+1)*nInputPlanes + lid];
+		}
+
+#define I128_O3(OI)							\
+		{							\
+			float sum = 0;					\
+			sum += w##OI##0 * in_block0[lid - nInputPlanes]; \
+			sum += w##OI##1 * in_block0[lid];		\
+			sum += w##OI##2 * in_block0[lid + nInputPlanes]; \
+									\
+			sum += w##OI##3 * in_block1[lid - nInputPlanes]; \
+			sum += w##OI##4 * in_block1[lid];		\
+			sum += w##OI##5 * in_block1[lid + nInputPlanes]; \
+									\
+			sum += w##OI##6 * in_block2[lid - nInputPlanes]; \
+			sum += w##OI##7 * in_block2[lid];		\
+			sum += w##OI##8 * in_block2[lid + nInputPlanes]; \
+									\
+			sum_buffer[lid] = sum;				\
+									\
+			/* 128 to 1 */					\
+			__syncthreads();				\
+			if (lid < 64) {					\
+				sum_buffer[lid] += sum_buffer[lid + 64]; \
+			}						\
+			__syncthreads();				\
+			if (lid < 32) {					\
+				sum_buffer[lid] += sum_buffer[lid + 32]; \
+			}						\
+			__syncthreads();				\
+									\
+			SUM_RELU(OI);					\
+		}
+
+		I128_O3(0);
+		I128_O3(1);
+		I128_O3(2);
 	}
 }
