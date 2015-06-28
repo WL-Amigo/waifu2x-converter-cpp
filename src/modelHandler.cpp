@@ -208,7 +208,7 @@ bool Model::filter_AVX_OpenCL(ComputeEnv *env,
 		}
 	} else if (nOutputPlanes == 3) {
 		/* |       o0        |       o1        | o2 ... |
-		 * |i0 i1 i2 ... i31 |i0 i1 i2 ... i31 | ...    |*/
+		 * |i0 i1 i2 ... i127|i0 i1 i2 ... i127| ...    |*/
 
 		for (int oi=0; oi<nOutputPlanes; oi++) {
 			for (int ii=0; ii<nInputPlanes; ii++) {
@@ -300,7 +300,9 @@ bool Model::filter_AVX_OpenCL(ComputeEnv *env,
 	bool compare_result = false;
 
 #ifdef COMPARE_RESULT
-	compare_result = true;
+	if (nOutputPlanes == 3) {
+		compare_result = true;
+	}
 #endif
 
 	size_t in_size = size.width * size.height * sizeof(float) * nInputPlanes;
@@ -442,6 +444,9 @@ bool Model::filter(ComputeEnv *env,
 		/* i128 o32 filter */
 	} else if (nOutputPlanes == 32 && nInputPlanes == 3) {
 		/* i3 o32 filter */
+		cl_available = false;
+	} else if (nOutputPlanes == 3 && nInputPlanes == 128) {
+		/* i128 o3 filter */
 		cl_available = false;
 	} else {
 		if (nInputPlanes & 1) {

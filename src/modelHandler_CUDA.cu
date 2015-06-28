@@ -1296,17 +1296,17 @@ filter_i3_o32(const float * __restrict__ packed_input,
 			if (lid < 96) { // 3input x 32output
 				float sum = 0;
 
-				sum += w0 * in_block0[(xi1 - 1)*3+ioff];
-				sum += w1 * in_block0[(xi1    )*3+ioff];
-				sum += w2 * in_block0[(xi1 + 1)*3+ioff];
+				sum += w0 * in_block0[(xi1 - 1)*3+(int)ioff];
+				sum += w1 * in_block0[(xi1    )*3+(int)ioff];
+				sum += w2 * in_block0[(xi1 + 1)*3+(int)ioff];
 
-				sum += w3 * in_block1[(xi1 - 1)*3+ioff];
-				sum += w4 * in_block1[(xi1    )*3+ioff];
-				sum += w5 * in_block1[(xi1 + 1)*3+ioff];
+				sum += w3 * in_block1[(xi1 - 1)*3+(int)ioff];
+				sum += w4 * in_block1[(xi1    )*3+(int)ioff];
+				sum += w5 * in_block1[(xi1 + 1)*3+(int)ioff];
 
-				sum += w6 * in_block2[(xi1 - 1)*3+ioff];
-				sum += w7 * in_block2[(xi1    )*3+ioff];
-				sum += w8 * in_block2[(xi1 + 1)*3+ioff];
+				sum += w6 * in_block2[(xi1 - 1)*3+(int)ioff];
+				sum += w7 * in_block2[(xi1    )*3+(int)ioff];
+				sum += w8 * in_block2[(xi1 + 1)*3+(int)ioff];
 
 				sum_buffer[lid] = sum;
 			}
@@ -1352,6 +1352,7 @@ filter_i128_o3(const float * __restrict__ packed_input,
 
 	unsigned int yi = blockIdx.x;
 	unsigned int lid = threadIdx.x;
+	int slid = threadIdx.x;
 
 	size_t in_step = wsz * nInputPlanes;
 
@@ -1378,9 +1379,9 @@ filter_i128_o3(const float * __restrict__ packed_input,
 	__shared__ float in_block2_base[3*128];
 	__shared__ float sum_buffer[128];
 
-	float *in_block0 = in_block0_base + 3;
-	float *in_block1 = in_block1_base + 3;
-	float *in_block2 = in_block2_base + 3;
+	float *in_block0 = in_block0_base + 128;
+	float *in_block1 = in_block1_base + 128;
+	float *in_block2 = in_block2_base + 128;
 
 	/* 128 item / group */
 	/* load 128 item (load 3elem/item) */
@@ -1396,9 +1397,9 @@ filter_i128_o3(const float * __restrict__ packed_input,
 	float bv2 = biases[2];
 
 #define I128_O3_LOAD_COEF(I)						\
-	float w0##I = weight[9*0*nInputPlanes + 9*I*nInputPlanes + ioff]; \
-	float w1##I = weight[9*1*nInputPlanes + 9*I*nInputPlanes + ioff]; \
-	float w2##I = weight[9*2*nInputPlanes + 9*I*nInputPlanes + ioff];
+	float w0##I = weight[9*0*nInputPlanes + I*nInputPlanes + ioff]; \
+	float w1##I = weight[9*1*nInputPlanes + I*nInputPlanes + ioff]; \
+	float w2##I = weight[9*2*nInputPlanes + I*nInputPlanes + ioff];
 
 	UNROLL9(I128_O3_LOAD_COEF);
 
@@ -1407,57 +1408,74 @@ filter_i128_o3(const float * __restrict__ packed_input,
 	//in_block2[lid+nInputPlanes] = in_block2[lid] = in21[x*nInputPlanes + lid];
 
 	for (int xi=0; xi<wsz; xi++) {
-		in_block0[lid] = in01[xi*nInputPlanes + lid];
-		in_block1[lid] = in11[xi*nInputPlanes + lid];
-		in_block2[lid] = in21[xi*nInputPlanes + lid];
+		in_block0[slid] = in01[xi*nInputPlanes + slid];
+		in_block1[slid] = in11[xi*nInputPlanes + slid];
+		in_block2[slid] = in21[xi*nInputPlanes + slid];
 
 		__syncthreads();
 
 		if (xi==0) {
-			in_block0[lid-nInputPlanes] = in_block0[lid];
-			in_block1[lid-nInputPlanes] = in_block1[lid];
-			in_block2[lid-nInputPlanes] = in_block2[lid];
+			in_block0[slid-nInputPlanes] = in_block0[slid];
+			in_block1[slid-nInputPlanes] = in_block1[slid];
+			in_block2[slid-nInputPlanes] = in_block2[slid];
 		} else {
-			in_block0[lid-nInputPlanes] = in01[(xi-1)*nInputPlanes + lid];
-			in_block1[lid-nInputPlanes] = in11[(xi-1)*nInputPlanes + lid];
-			in_block2[lid-nInputPlanes] = in21[(xi-1)*nInputPlanes + lid];
+			in_block0[slid-nInputPlanes] = in01[(xi-1)*nInputPlanes + slid];
+			in_block1[slid-nInputPlanes] = in11[(xi-1)*nInputPlanes + slid];
+			in_block2[slid-nInputPlanes] = in21[(xi-1)*nInputPlanes + slid];
 		}
 
 		if (xi == wsz-1) {
-			in_block0[lid+nInputPlanes] = in_block0[lid];
-			in_block1[lid+nInputPlanes] = in_block1[lid];
-			in_block2[lid+nInputPlanes] = in_block2[lid];
+			in_block0[slid+nInputPlanes] = in_block0[slid];
+			in_block1[slid+nInputPlanes] = in_block1[slid];
+			in_block2[slid+nInputPlanes] = in_block2[slid];
 		} else {
-			in_block0[lid+nInputPlanes] = in01[(xi+1)*nInputPlanes + lid];
-			in_block1[lid+nInputPlanes] = in11[(xi+1)*nInputPlanes + lid];
-			in_block2[lid+nInputPlanes] = in21[(xi+1)*nInputPlanes + lid];
+			in_block0[slid+nInputPlanes] = in01[(xi+1)*nInputPlanes + slid];
+			in_block1[slid+nInputPlanes] = in11[(xi+1)*nInputPlanes + slid];
+			in_block2[slid+nInputPlanes] = in21[(xi+1)*nInputPlanes + slid];
 		}
+
+#if __CUDA_ARCH__ >= 300
+#undef SUM_RELU
+#define SUM_RELU(OI)							\
+		if (lid < 32) {						\
+			float v0 = sum_buffer[lid] + sum_buffer[lid+32];			\
+			float sum = warp_sum(v0);			\
+									\
+			if (lid == 0) {					\
+				float v = sum;				\
+				float *out = packed_output + (yi*wsz + xi)*nOutputPlanes; \
+				v += bv##OI;				\
+				float mtz = max(v, 0.0f);		\
+				float ltz = min(v, 0.0f);		\
+				v = ltz * 0.1f + mtz;			\
+				out[OI] = v;				\
+			}						\
+		}							\
+
+#endif
 
 #define I128_O3(OI)							\
 		{							\
 			float sum = 0;					\
-			sum += w##OI##0 * in_block0[lid - nInputPlanes]; \
-			sum += w##OI##1 * in_block0[lid];		\
-			sum += w##OI##2 * in_block0[lid + nInputPlanes]; \
+			sum += w##OI##0 * in_block0[slid - nInputPlanes]; \
+			sum += w##OI##1 * in_block0[slid];		\
+			sum += w##OI##2 * in_block0[slid + nInputPlanes]; \
 									\
-			sum += w##OI##3 * in_block1[lid - nInputPlanes]; \
-			sum += w##OI##4 * in_block1[lid];		\
-			sum += w##OI##5 * in_block1[lid + nInputPlanes]; \
+			sum += w##OI##3 * in_block1[slid - nInputPlanes]; \
+			sum += w##OI##4 * in_block1[slid];		\
+			sum += w##OI##5 * in_block1[slid + nInputPlanes]; \
 									\
-			sum += w##OI##6 * in_block2[lid - nInputPlanes]; \
-			sum += w##OI##7 * in_block2[lid];		\
-			sum += w##OI##8 * in_block2[lid + nInputPlanes]; \
+			sum += w##OI##6 * in_block2[slid - nInputPlanes]; \
+			sum += w##OI##7 * in_block2[slid];		\
+			sum += w##OI##8 * in_block2[slid + nInputPlanes]; \
 									\
+			__syncthreads();				\
 			sum_buffer[lid] = sum;				\
 									\
 			/* 128 to 1 */					\
 			__syncthreads();				\
 			if (lid < 64) {					\
 				sum_buffer[lid] += sum_buffer[lid + 64]; \
-			}						\
-			__syncthreads();				\
-			if (lid < 32) {					\
-				sum_buffer[lid] += sum_buffer[lid + 32]; \
 			}						\
 			__syncthreads();				\
 									\
