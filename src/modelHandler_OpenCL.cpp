@@ -105,6 +105,7 @@ initOpenCL(ComputeEnv *env)
         cl_device_id dev;
         cl_command_queue queue;
         cl_kernel ker_filter, ker_filter_in1_out32, ker_filter_in128_out1;
+        cl_kernel ker_filter_in3_out32, ker_filter_in128_out3;
         cl_program program = 0;
 
         for (unsigned int i=0; i<num_plt; i++) {
@@ -369,6 +370,15 @@ initOpenCL(ComputeEnv *env)
                 return false;
         }
 
+        ker_filter_in3_out32 = clCreateKernel(program, "filter_in3_out32", &err);
+        if (err != CL_SUCCESS) {
+                clReleaseProgram(program);
+                clReleaseContext(context);
+                clReleaseKernel(ker_filter);
+                clReleaseKernel(ker_filter_in1_out32);
+                return false;
+        }
+
         queue = clCreateCommandQueue(context, dev, 0, &err);
         if (err != CL_SUCCESS) {
                 clReleaseProgram(program);
@@ -389,6 +399,7 @@ initOpenCL(ComputeEnv *env)
         env->cl_dev_list[0].ker_filter = ker_filter;
         env->cl_dev_list[0].ker_filter_in1_out32 = ker_filter_in1_out32;
         env->cl_dev_list[0].ker_filter_in128_out1 = ker_filter_in128_out1;
+        env->cl_dev_list[0].ker_filter_in3_out32 = ker_filter_in3_out32;
         env->cl_dev_list[0].name = &dev_name[0];
 
         return true;
@@ -442,6 +453,7 @@ filter_OpenCL_impl(ComputeEnv *env,
         enum filter_type {
                 FILTER_GENERIC,
                 FILTER_IN1,
+                FILTER_IN3,
                 FILTER_OUT1
         } type = FILTER_GENERIC;
 
@@ -450,6 +462,9 @@ filter_OpenCL_impl(ComputeEnv *env,
         if (nInputPlanes == 1 && nOutputPlanes == 32) {
                 type = FILTER_IN1;
                 ker = dev->ker_filter_in1_out32;
+        } else if (nInputPlanes == 3 && nOutputPlanes == 32) {
+                type = FILTER_IN3;
+                ker = dev->ker_filter_in3_out32;
         } else if (nOutputPlanes == 1 && nInputPlanes == 128) {
                 type = FILTER_OUT1;
                 ker = dev->ker_filter_in128_out1;
@@ -503,6 +518,9 @@ filter_OpenCL_impl(ComputeEnv *env,
         } else if (type == FILTER_OUT1) {
                 gws[0] = h*128;
                 lws[0] = 128;
+        } else if (type == FILTER_IN3) {
+                gws[0] = h * 192;
+                lws[0] = 192;
         }
 
         err = clEnqueueNDRangeKernel(dev->queue,

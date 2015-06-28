@@ -91,7 +91,7 @@ Model::filter_CV(ComputeEnv *env,
 	return true;
 }
 
-//#define COMPARE_RESULT
+#define COMPARE_RESULT
 
 bool Model::filter_AVX_OpenCL(ComputeEnv *env,
 			      Buffer *packed_input_buf,
@@ -300,9 +300,7 @@ bool Model::filter_AVX_OpenCL(ComputeEnv *env,
 	bool compare_result = false;
 
 #ifdef COMPARE_RESULT
-	if (nOutputPlanes == 3) {
-		compare_result = true;
-	}
+	compare_result = true;
 #endif
 
 	size_t in_size = size.width * size.height * sizeof(float) * nInputPlanes;
@@ -346,7 +344,7 @@ bool Model::filter_AVX_OpenCL(ComputeEnv *env,
 
 		double t2 = getsec();
 
-		printf("(w=%d,h=%d) (ip=%d,op=%d) %f %f %f[gops]\n", size.width, size.height, nInputPlanes, nOutputPlanes, t1-t0, t2-t1, ops/(1000*1000*1000));
+		printf("(w=%d,h=%d) (ip=%d,op=%d) %f %f %f[gflops]\n", size.width, size.height, nInputPlanes, nOutputPlanes, t1-t0, t2-t1, ops/(1000*1000*1000));
 		printf("ver2 : %f [Gflops]\n", (ops/(1000.0*1000.0*1000.0)) / (t2-t1));
 		printf("orig : %f [Gflops]\n", (ops/(1000.0*1000.0*1000.0)) / (t1-t0));
 		int error_count = 0;
@@ -444,7 +442,7 @@ bool Model::filter(ComputeEnv *env,
 		/* i128 o32 filter */
 	} else if (nOutputPlanes == 32 && nInputPlanes == 3) {
 		/* i3 o32 filter */
-		cl_available = false;
+		//cl_available = false;
 	} else if (nOutputPlanes == 3 && nInputPlanes == 128) {
 		/* i128 o3 filter */
 		cl_available = false;

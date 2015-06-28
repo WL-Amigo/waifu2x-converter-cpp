@@ -22,6 +22,7 @@ struct OpenCLDev {
     cl_kernel ker_filter;
     cl_kernel ker_filter_in1_out32;
     cl_kernel ker_filter_in128_out1;
+    cl_kernel ker_filter_in3_out32;
     cl_program program;
 };
 
