@@ -173,7 +173,7 @@ static bool convertWithModelsBlockSplit(ComputeEnv *env,
 	int ok_count = 0;
 
 	while (1) {
-		size_t max_size = 0;
+		long long max_size = 0;
 
 		int width = (std::min)(tempMat.size().width, blockSize);
 		int height = (std::min)(tempMat.size().height, blockSize);
@@ -182,20 +182,24 @@ static bool convertWithModelsBlockSplit(ComputeEnv *env,
 			size_t bufsize = sizeof(float) * width * height *
 				models[index]->getNOutputPlanes();
 
-			max_size = (std::max)(max_size, bufsize);
+			max_size = (std::max)(max_size, (long long)bufsize);
 		}
 
-		input_buf = new Buffer(env, max_size);
-		output_buf = new Buffer(env, max_size);
+		if ((sizeof(void*)==4) && max_size >= INT_MAX) {
+			/* pass */
+		} else {
+			input_buf = new Buffer(env, max_size);
+			output_buf = new Buffer(env, max_size);
 
-		if (input_buf->prealloc(env) &&
-		    output_buf->prealloc(env))
-		{
-			break;
+			if (input_buf->prealloc(env) &&
+			    output_buf->prealloc(env))
+			{
+				break;
+			}
+
+			delete input_buf;
+			delete output_buf;
 		}
-
-		delete input_buf;
-		delete output_buf;
 
 		blockSize /= 2;
 		//printf("blockSize = %d\n", blockSize);
@@ -204,15 +208,18 @@ static bool convertWithModelsBlockSplit(ComputeEnv *env,
 		}
 	}
 
+	int blockWidth = (std::min)(blockSize, tempMat.size().width);
+	int blockHeight = (std::min)(blockSize, tempMat.size().height);
+
 	//printf("blockSize = %d\n", blockSize);
 
 	// calcurate split rows/cols
 	unsigned int splitColumns = static_cast<unsigned int>(std::ceil(
 			static_cast<float>(outputSize.width)
-					/ static_cast<float>(blockSize - 2 * nModel)));
+					/ static_cast<float>(blockWidth - 2 * nModel)));
 	unsigned int splitRows = static_cast<unsigned int>(std::ceil(
 			static_cast<float>(outputSize.height)
-					/ static_cast<float>(blockSize - 2 * nModel)));
+					/ static_cast<float>(blockHeight - 2 * nModel)));
 
 	if (IS_3CHANNEL(fmt)) {
 		outputPlane = cv::Mat::zeros(outputSize, CV_8UC3);
@@ -221,21 +228,21 @@ static bool convertWithModelsBlockSplit(ComputeEnv *env,
 	}
 	for (unsigned int r = 0; r < splitRows; r++) {
 		if (r == splitRows - 1) {
-			processRow = tempMat.rowRange(r * (blockSize - 2 * nModel),
+			processRow = tempMat.rowRange(r * (blockHeight - 2 * nModel),
 					tempMat.size().height);
 		} else {
-			processRow = tempMat.rowRange(r * (blockSize - 2 * nModel),
-					r * (blockSize - 2 * nModel) + blockSize);
+			processRow = tempMat.rowRange(r * (blockHeight - 2 * nModel),
+					r * (blockHeight - 2 * nModel) + blockHeight);
 		}
 		for (unsigned int c = 0; c < splitColumns; c++) {
 			if (c == splitColumns - 1) {
 				processBlock = processRow.colRange(
-						c * (blockSize- 2 * nModel),
+						c * (blockWidth- 2 * nModel),
 						tempMat.size().width);
 			} else {
 				processBlock = processRow.colRange(
-						c * (blockSize - 2 * nModel),
-						c * (blockSize - 2 * nModel) + blockSize);
+						c * (blockWidth - 2 * nModel),
+						c * (blockWidth - 2 * nModel) + blockWidth);
 			}
 
 			if (enableLog) {
@@ -258,14 +265,14 @@ static bool convertWithModelsBlockSplit(ComputeEnv *env,
 					cv::Range(nModel,
 							processBlockOutput.size().width - nModel));
 			writeMatTo = outputPlane(
-					cv::Range(r * (blockSize - 2 * nModel),
-							r * (blockSize - 2 * nModel)
-									+ processBlockOutput.size().height
-									- 2 * nModel),
-					cv::Range(c * (blockSize - 2 * nModel),
-							c * (blockSize - 2 * nModel)
-									+ processBlockOutput.size().width
-									- 2 * nModel));
+					cv::Range(r * (blockHeight - 2 * nModel),
+						  r * (blockHeight - 2 * nModel)
+						  + processBlockOutput.size().height
+						  - 2 * nModel),
+					cv::Range(c * (blockWidth - 2 * nModel),
+						  c * (blockWidth - 2 * nModel)
+						  + processBlockOutput.size().width
+						  - 2 * nModel));
 			assert(
 					writeMatTo.size().height == writeMatFrom.size().height
 							&& writeMatTo.size().width

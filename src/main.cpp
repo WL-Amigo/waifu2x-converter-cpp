@@ -54,7 +54,7 @@ int main(int argc, char** argv) {
 
 	TCLAP::ValueArg<std::string> cmdModelPath("", "model_dir",
 			"path to custom model directory (don't append last / )", false,
-			"models", "string", cmd);
+			"models_rgb", "string", cmd);
 
 	TCLAP::ValueArg<int> cmdNumberOfJobs("j", "jobs",
 			"number of threads launching at the same time", false, 0, "integer",
@@ -69,7 +69,7 @@ int main(int argc, char** argv) {
 	cmdBlockSizeConstraintV.push_back(1024);
 	TCLAP::ValuesConstraint<int> cmdBlockSizeConstraint(cmdBlockSizeConstraintV);
 	TCLAP::ValueArg<int> cmdBlockSize("", "block_size", "block size",
-					  false, 1024, &cmdBlockSizeConstraint, cmd);
+					  false, 0, &cmdBlockSizeConstraint, cmd);
 
 	// definition of command line argument : end
 

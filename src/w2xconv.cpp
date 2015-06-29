@@ -52,9 +52,11 @@ w2xconv_init(int enable_gpu,
 
 	if (impl->env.num_cuda_dev != 0) {
 		c->target_processor.type = W2XCONV_PROC_CUDA;
+		c->target_processor.devid = 0;
 		impl->dev_name = impl->env.cuda_dev_list[0].name.c_str();
 	} else if (impl->env.num_cl_dev != 0) {
 		c->target_processor.type = W2XCONV_PROC_OPENCL;
+		c->target_processor.devid = 0;
 		impl->dev_name = impl->env.cl_dev_list[0].name.c_str();
 	} else {
 		{

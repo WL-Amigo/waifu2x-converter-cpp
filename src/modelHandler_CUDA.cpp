@@ -370,7 +370,6 @@ filter_CUDA_impl(ComputeEnv *env,
 				&h,
 				&w,
 				&d_weight};
-
 		r = cuLaunchKernel(dev->filter_i3_o32,
 				   h, 1, 1,
 				   192, 1, 1,

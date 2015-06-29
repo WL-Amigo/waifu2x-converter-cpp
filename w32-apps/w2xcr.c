@@ -1,6 +1,7 @@
 #include <string.h>
 #include <stdint.h>
 #include <stdlib.h>
+#include <stdio.h>
 #include <windows.h>
 #include <Shlwapi.h>
 #include <windowsx.h>
@@ -187,7 +188,7 @@ run1(struct app *app, struct W2XConv *c, const char *src_path)
         }
     }
 
-    r = w2xconv_convert_file(c, dst_path, src_path, 1, 2.0, 512);
+    r = w2xconv_convert_file(c, dst_path, src_path, 1, 2.0, 0);
     free(dst_path);
 
     pkt.tp = PKT_PROGRESS;
@@ -281,7 +282,7 @@ proc_thread(void *ap)
 
         char *models_path = malloc(strlen(self_path) + 7 + 1);
 
-        sprintf(models_path, "%s\\models", self_path);
+        sprintf(models_path, "%s\\models_rgb", self_path);
         r = w2xconv_load_models(c, models_path);
         free(self_path);
         free(models_path);
@@ -413,7 +414,7 @@ update_display(struct app *app)
         if (app->state == STATE_FINI) {
             _snprintf(line, sizeof(line),
                       "%.2f[GFLOPS] %s [Complete!!]",
-                      app->cur_flops/(1000*1000*1000.0),
+                      app->cur_flops/(1000.0*1000.0*1000.0),
                       path);
         } else {
             _snprintf(line, sizeof(line),
