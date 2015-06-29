@@ -18,10 +18,11 @@ pack_mat(float *out,
 }
 
 void
-pack_mat_rgb(float *out,
+pack_mat_bgr(float *out,
 	     cv::Mat &inputPlane,
 	     int w, int h)
 {
+#pragma parallel for
 	for (int yi=0; yi<h; yi++) {
 		const unsigned char *mat_line = (unsigned char*)inputPlane.ptr(yi);
 		float *packed_line = out + (yi * 3 * w);
@@ -30,6 +31,23 @@ pack_mat_rgb(float *out,
 			packed_line[xi*3 + 0] = mat_line[xi*3 + 2] * (1.0f/255.0f);
 			packed_line[xi*3 + 1] = mat_line[xi*3 + 1] * (1.0f/255.0f);
 			packed_line[xi*3 + 2] = mat_line[xi*3 + 0] * (1.0f/255.0f);
+		}
+	}
+}
+void
+pack_mat_rgb(float *out,
+	     cv::Mat &inputPlane,
+	     int w, int h)
+{
+#pragma parallel for
+	for (int yi=0; yi<h; yi++) {
+		const unsigned char *mat_line = (unsigned char*)inputPlane.ptr(yi);
+		float *packed_line = out + (yi * 3 * w);
+
+		for (int xi=0; xi<w; xi++) {
+			packed_line[xi*3 + 0] = mat_line[xi*3 + 0] * (1.0f/255.0f);
+			packed_line[xi*3 + 1] = mat_line[xi*3 + 1] * (1.0f/255.0f);
+			packed_line[xi*3 + 2] = mat_line[xi*3 + 2] * (1.0f/255.0f);
 		}
 	}
 }
@@ -66,10 +84,11 @@ void unpack_mat1(cv::Mat &outputMat,
 }
 
 
-void unpack_mat_rgb(cv::Mat &outputMat,
+void unpack_mat_bgr(cv::Mat &outputMat,
 		    const float *in,
 		    int w, int h)
 {
+#pragma omp parallel for
 	for (int yi=0; yi<h; yi++) {
 		unsigned char *mat_line = (unsigned char*)outputMat.ptr(yi);
 		const float *packed_line = in + (yi * w * 3);
@@ -78,6 +97,23 @@ void unpack_mat_rgb(cv::Mat &outputMat,
 			mat_line[xi*3 + 2] = (unsigned char)std::max(0.0f, std::min(255.0f, packed_line[xi*3 + 0] * 255.0f));
 			mat_line[xi*3 + 1] = (unsigned char)std::max(0.0f, std::min(255.0f, packed_line[xi*3 + 1] * 255.0f));
 			mat_line[xi*3 + 0] = (unsigned char)std::max(0.0f, std::min(255.0f, packed_line[xi*3 + 2] * 255.0f));
+		}
+	}
+}
+
+void unpack_mat_rgb(cv::Mat &outputMat,
+		    const float *in,
+		    int w, int h)
+{
+#pragma omp parallel for
+	for (int yi=0; yi<h; yi++) {
+		unsigned char *mat_line = (unsigned char*)outputMat.ptr(yi);
+		const float *packed_line = in + (yi * w * 3);
+
+		for (int xi=0; xi<w; xi++) {
+			mat_line[xi*3 + 0] = (unsigned char)std::max(0.0f, std::min(255.0f, packed_line[xi*3 + 0] * 255.0f));
+			mat_line[xi*3 + 1] = (unsigned char)std::max(0.0f, std::min(255.0f, packed_line[xi*3 + 1] * 255.0f));
+			mat_line[xi*3 + 2] = (unsigned char)std::max(0.0f, std::min(255.0f, packed_line[xi*3 + 2] * 255.0f));
 		}
 	}
 }

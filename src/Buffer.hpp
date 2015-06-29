@@ -11,6 +11,7 @@
 #include "CUDAlib.h"
 #include "threadPool.hpp"
 #include "sec.hpp"
+#include "w2xconv.h"
 
 struct OpenCLDev {
     std::string name;
@@ -53,6 +54,8 @@ struct ComputeEnv {
     OpenCLDev *cl_dev_list;
     CUDADev *cuda_dev_list;
     double transfer_wait;
+
+    struct W2XConvProcessor target_processor;
 
 #ifndef __APPLE__
     w2xc::ThreadPool *tpool;
@@ -339,6 +342,54 @@ struct Buffer {
         host_valid = true;
 
         return host_ptr;
+    }
+
+    bool prealloc(ComputeEnv *env) {
+        int devid;
+        switch (env->target_processor.type) {
+        case W2XCONV_PROC_HOST:
+            if (host_ptr == nullptr) {
+                host_ptr = _mm_malloc(byte_size, 64);
+                if (host_ptr == nullptr) {
+                    return false;
+                }
+            }
+            break;
+
+        case W2XCONV_PROC_OPENCL:
+            devid = env->target_processor.devid;
+            if (cl_ptr_list[devid] == nullptr) {
+                cl_int err;
+                OpenCLDev *dev = &env->cl_dev_list[devid];
+                cl_ptr_list[devid] = clCreateBuffer(dev->context,
+                                                    CL_MEM_READ_WRITE,
+                                                    byte_size, nullptr, &err);
+                if (cl_ptr_list[devid] == nullptr) {
+                    return false;
+                }
+            }
+            break;
+
+        case W2XCONV_PROC_CUDA:
+            devid = env->target_processor.devid;
+
+            if (cuda_ptr_list[devid] == 0) {
+                CUresult err;
+                CUDADev *dev = &env->cuda_dev_list[devid];
+                cuCtxPushCurrent(dev->context);
+                err = cuMemAlloc(&cuda_ptr_list[devid], byte_size);
+                CUcontext old;
+                cuCtxPopCurrent(&old);
+
+                if (err != CUDA_SUCCESS) {
+                    return false;
+                }
+            }
+            break;
+
+        }
+
+        return true;
     }
 };
 

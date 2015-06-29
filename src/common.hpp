@@ -22,7 +22,13 @@ void unpack_mat1(cv::Mat &outputMat,
 void pack_mat_rgb(float *out,
                   cv::Mat &inputPlane,
                   int w, int h);
+void pack_mat_bgr(float *out,
+                  cv::Mat &inputPlane,
+                  int w, int h);
 void unpack_mat_rgb(cv::Mat &outputMat,
+                    const float *in,
+                    int w, int h);
+void unpack_mat_bgr(cv::Mat &outputMat,
                     const float *in,
                     int w, int h);
 

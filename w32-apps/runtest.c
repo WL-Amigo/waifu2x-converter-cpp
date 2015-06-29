@@ -1,10 +1,14 @@
 #include "w2xconv.h"
 
 int
-main()
+main(int argc, char **argv)
 {
     struct W2XConv *c = w2xconv_init(1, 0, 1);
-    w2xconv_load_models(c, "models");
-    w2xconv_test(c, 512);
+    const char *models = "models";
+    if (argc >= 2) {
+        models = argv[1];
+    }
+    w2xconv_load_models(c, models);
+    w2xconv_test(c, 0);
     w2xconv_fini(c);
 }

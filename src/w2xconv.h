@@ -37,6 +37,8 @@ enum W2XConvErrorCode {
 
 	W2XCONV_ERROR_IMREAD_FAILED,	/* u.path */
 	W2XCONV_ERROR_IMWRITE_FAILED,	/* u.path */
+
+	W2XCONV_ERROR_RGB_MODEL_MISMATCH_TO_Y,
 };
 
 struct W2XConvError {
@@ -139,7 +141,6 @@ W2XCONV_EXPORT int w2xconv_apply_filter_y(struct W2XConv *conv,
 					  unsigned char *src, size_t src_step_byte, /* float32x1 normalized[0-1] (src_w, src_h) */
 					  int src_w, int src_h,
 					  int block_size);
-
 
 W2XCONV_EXPORT int w2xconv_test(struct W2XConv *conv, int block_size);
 

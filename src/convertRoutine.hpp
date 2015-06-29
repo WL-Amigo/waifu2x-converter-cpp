@@ -21,6 +21,14 @@
 
 namespace w2xc {
 
+enum image_format {
+    IMAGE_BGR,
+    IMAGE_RGB,
+    IMAGE_Y
+};
+
+#define IS_3CHANNEL(f) ((f)==w2xc::IMAGE_BGR || (f)==w2xc::IMAGE_RGB)
+
 /**
  * convert inputPlane to outputPlane by convoluting with models.
  */
@@ -29,8 +37,8 @@ bool convertWithModels(ComputeEnv *env,
                        cv::Mat &outputPlanes,
                        std::vector<std::unique_ptr<Model> > &models,
                        W2XConvFlopsCounter *flops,
-                       cv::Size blockSize,
-                       bool is_rgb,
+                       int blockSize,
+                       enum image_format fmt,
                        bool enableLog);
 
 }

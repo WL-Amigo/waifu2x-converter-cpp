@@ -142,3 +142,7 @@ add_custom_command(
 
 add_custom_target(gensrcs ALL
   DEPENDS modelHandler_OpenCL.cl.h modelHandler_CUDA.ptx30.h modelHandler_CUDA.ptx20.h)
+
+
+add_executable(runtest w32-apps/runtest.c)
+target_link_libraries(runtest w2xc)

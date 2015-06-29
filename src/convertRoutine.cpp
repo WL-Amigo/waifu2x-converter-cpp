@@ -21,68 +21,25 @@ static bool convertWithModelsBasic(ComputeEnv *env,
 				   Buffer *input_buf, Buffer *output_buf,
 				   std::vector<std::unique_ptr<Model> > &models,
 				   W2XConvFlopsCounter *flops,
-				   bool is_rgb,
+				   enum image_format fmt,
 				   bool enableLog);
 static bool convertWithModelsBlockSplit(ComputeEnv *env,
 					cv::Mat &inputPlane,
 					cv::Mat &outputPlane, std::vector<std::unique_ptr<Model> > &models,
 					W2XConvFlopsCounter *flops,
-					cv::Size blockSize,
-					bool is_rgb,
+					int blockSize,
+					enum image_format fmt,
 					bool enableLog);
 
 bool convertWithModels(ComputeEnv *env,
 		       cv::Mat &inputPlane, cv::Mat &outputPlane,
 		       std::vector<std::unique_ptr<Model> > &models,
 		       W2XConvFlopsCounter *flops,
-		       cv::Size blockSize,
-		       bool is_rgb,
+		       int blockSize,
+		       enum image_format fmt,
 		       bool enableLog)
 {
-	bool requireSplitting = (inputPlane.size().width * inputPlane.size().height)
-			> blockSize.width * blockSize.height * 3 / 2;
-	if (requireSplitting) {
-		return convertWithModelsBlockSplit(env, inputPlane, outputPlane, models, flops, blockSize, is_rgb, enableLog);
-	} else {
-		//insert padding to inputPlane
-		cv::Mat tempMat;
-		int nModel = models.size();
-		cv::Size outputSize = inputPlane.size();
-		cv::copyMakeBorder(inputPlane, tempMat, nModel, nModel, nModel, nModel,
-				cv::BORDER_REPLICATE);
-
-		size_t max_size = 0;
-		int width = tempMat.size().width;
-		int height = tempMat.size().height;
-
-		for (int index = 0; index < (int)models.size(); index++) {
-			size_t bufsize = sizeof(float) * width * height *
-				models[index]->getNOutputPlanes();
-
-			max_size = (std::max)(max_size, bufsize);
-		}
-
-		Buffer *input_buf = new Buffer(env, max_size);
-		Buffer *output_buf = new Buffer(env, max_size);
-
-		bool ret = convertWithModelsBasic(env, tempMat, outputPlane,
-						  input_buf, output_buf,
-						  models, flops, is_rgb, enableLog);
-
-		tempMat = outputPlane(cv::Range(nModel, outputSize.height + nModel),
-				cv::Range(nModel, outputSize.width + nModel));
-		assert(
-				tempMat.size().width == outputSize.width
-						&& tempMat.size().height == outputSize.height);
-
-		tempMat.copyTo(outputPlane);
-
-		delete input_buf;
-		delete output_buf;
-
-		return ret;
-	}
-
+	return convertWithModelsBlockSplit(env, inputPlane, outputPlane, models, flops, blockSize, fmt, enableLog);
 }
 
 static bool convertWithModelsBasic(ComputeEnv *env,
@@ -90,7 +47,7 @@ static bool convertWithModelsBasic(ComputeEnv *env,
 				   Buffer *packed_input_buf,
 				   Buffer *packed_output_buf,
 				   std::vector<std::unique_ptr<Model> > &models, W2XConvFlopsCounter *flops,
-				   bool is_rgb,
+				   enum image_format fmt,
 				   bool enableLog)
 {
 	// padding is require before calling this function
@@ -109,10 +66,16 @@ static bool convertWithModelsBasic(ComputeEnv *env,
 
 	float *packed_input = (float*)packed_input_buf->get_write_ptr_host(env);
 
-	if (is_rgb) {
+	switch (fmt) {
+	case IMAGE_BGR:
+		pack_mat_bgr(packed_input, inputPlane, filterWidth, filterHeight);
+		break;
+	case IMAGE_RGB:
 		pack_mat_rgb(packed_input, inputPlane, filterWidth, filterHeight);
-	} else {
+		break;
+	case IMAGE_Y:
 		pack_mat(packed_input, *inputPlanes, filterWidth, filterHeight, 1);
+		break;
 	}
 
 	double t00 = getsec();
@@ -147,15 +110,19 @@ static bool convertWithModelsBasic(ComputeEnv *env,
 	}
 	double t01 = getsec();
 
-	if (is_rgb) {
+	if (IS_3CHANNEL(fmt)) {
 		packed_input = (float*)packed_input_buf->get_read_ptr_host(env, sizeof(float)*filterWidth*filterHeight*3);
 	} else {
 		packed_input = (float*)packed_input_buf->get_read_ptr_host(env, sizeof(float)*filterWidth*filterHeight);
 	}
 
-	if (is_rgb) {
+	if (IS_3CHANNEL(fmt)) {
 		outputPlane = cv::Mat::zeros(filterSize, CV_8UC3);
-		unpack_mat_rgb(outputPlane, packed_input, filterWidth, filterHeight);
+		if (fmt == IMAGE_BGR) {
+			unpack_mat_bgr(outputPlane, packed_input, filterWidth, filterHeight);
+		} else {
+			unpack_mat_rgb(outputPlane, packed_input, filterWidth, filterHeight);
+		}
 	} else {
 		outputPlane = cv::Mat::zeros(filterSize, CV_32FC1);
 		unpack_mat1(outputPlane, packed_input, filterWidth, filterHeight);
@@ -175,8 +142,8 @@ static bool convertWithModelsBlockSplit(ComputeEnv *env,
 					cv::Mat &outputPlane,
 					std::vector<std::unique_ptr<Model> > &models,
 					W2XConvFlopsCounter *flops,
-					cv::Size blockSize,
-					bool is_rgb,
+					int blockSize,
+					enum image_format fmt,
 					bool enableLog)
 {
 
@@ -191,14 +158,6 @@ static bool convertWithModelsBlockSplit(ComputeEnv *env,
 	cv::copyMakeBorder(inputPlane, tempMat, nModel, nModel, nModel, nModel,
 			cv::BORDER_REPLICATE);
 
-	// calcurate split rows/cols
-	unsigned int splitColumns = static_cast<unsigned int>(std::ceil(
-			static_cast<float>(outputSize.width)
-					/ static_cast<float>(blockSize.width - 2 * nModel)));
-	unsigned int splitRows = static_cast<unsigned int>(std::ceil(
-			static_cast<float>(outputSize.height)
-					/ static_cast<float>(blockSize.height - 2 * nModel)));
-
 	// start to convert
 	cv::Mat processRow;
 	cv::Mat processBlock;
@@ -206,42 +165,77 @@ static bool convertWithModelsBlockSplit(ComputeEnv *env,
 	cv::Mat writeMatTo;
 	cv::Mat writeMatFrom;
 
-	size_t max_size = 0;
-	int width = (std::min)(tempMat.size().width, blockSize.width);
-	int height = (std::min)(tempMat.size().height, blockSize.height);
-
-	for (int index = 0; index < (int)models.size(); index++) {
-		size_t bufsize = sizeof(float) * width * height *
-			models[index]->getNOutputPlanes();
-
-		max_size = (std::max)(max_size, bufsize);
+	if (blockSize == 0) {
+		blockSize = 4096;
 	}
 
-	Buffer *input_buf = new Buffer(env, max_size);
-	Buffer *output_buf = new Buffer(env, max_size);
+	Buffer *input_buf, *output_buf;
+	int ok_count = 0;
 
-	if (is_rgb) {
+	while (1) {
+		size_t max_size = 0;
+
+		int width = (std::min)(tempMat.size().width, blockSize);
+		int height = (std::min)(tempMat.size().height, blockSize);
+
+		for (int index = 0; index < (int)models.size(); index++) {
+			size_t bufsize = sizeof(float) * width * height *
+				models[index]->getNOutputPlanes();
+
+			max_size = (std::max)(max_size, bufsize);
+		}
+
+		input_buf = new Buffer(env, max_size);
+		output_buf = new Buffer(env, max_size);
+
+		if (input_buf->prealloc(env) &&
+		    output_buf->prealloc(env))
+		{
+			break;
+		}
+
+		delete input_buf;
+		delete output_buf;
+
+		blockSize /= 2;
+		//printf("blockSize = %d\n", blockSize);
+		if (blockSize == 0) {
+			abort();
+		}
+	}
+
+	//printf("blockSize = %d\n", blockSize);
+
+	// calcurate split rows/cols
+	unsigned int splitColumns = static_cast<unsigned int>(std::ceil(
+			static_cast<float>(outputSize.width)
+					/ static_cast<float>(blockSize - 2 * nModel)));
+	unsigned int splitRows = static_cast<unsigned int>(std::ceil(
+			static_cast<float>(outputSize.height)
+					/ static_cast<float>(blockSize - 2 * nModel)));
+
+	if (IS_3CHANNEL(fmt)) {
 		outputPlane = cv::Mat::zeros(outputSize, CV_8UC3);
 	} else {
 		outputPlane = cv::Mat::zeros(outputSize, CV_32FC1);
 	}
 	for (unsigned int r = 0; r < splitRows; r++) {
 		if (r == splitRows - 1) {
-			processRow = tempMat.rowRange(r * (blockSize.height - 2 * nModel),
+			processRow = tempMat.rowRange(r * (blockSize - 2 * nModel),
 					tempMat.size().height);
 		} else {
-			processRow = tempMat.rowRange(r * (blockSize.height - 2 * nModel),
-					r * (blockSize.height - 2 * nModel) + blockSize.height);
+			processRow = tempMat.rowRange(r * (blockSize - 2 * nModel),
+					r * (blockSize - 2 * nModel) + blockSize);
 		}
 		for (unsigned int c = 0; c < splitColumns; c++) {
 			if (c == splitColumns - 1) {
 				processBlock = processRow.colRange(
-						c * (blockSize.width - 2 * nModel),
+						c * (blockSize- 2 * nModel),
 						tempMat.size().width);
 			} else {
 				processBlock = processRow.colRange(
-						c * (blockSize.width - 2 * nModel),
-						c * (blockSize.width - 2 * nModel) + blockSize.width);
+						c * (blockSize - 2 * nModel),
+						c * (blockSize - 2 * nModel) + blockSize);
 			}
 
 			if (enableLog) {
@@ -251,7 +245,7 @@ static bool convertWithModelsBlockSplit(ComputeEnv *env,
 			if (!convertWithModelsBasic(env,
 						    processBlock, processBlockOutput,
 						    input_buf, output_buf,
-						    models, flops, is_rgb, enableLog)) {
+						    models, flops, fmt, enableLog)) {
 				std::cerr << "w2xc::convertWithModelsBasic()\n"
 						"in w2xc::convertWithModelsBlockSplit() : \n"
 						"something error has occured. stop." << std::endl;
@@ -264,12 +258,12 @@ static bool convertWithModelsBlockSplit(ComputeEnv *env,
 					cv::Range(nModel,
 							processBlockOutput.size().width - nModel));
 			writeMatTo = outputPlane(
-					cv::Range(r * (blockSize.height - 2 * nModel),
-							r * (blockSize.height - 2 * nModel)
+					cv::Range(r * (blockSize - 2 * nModel),
+							r * (blockSize - 2 * nModel)
 									+ processBlockOutput.size().height
 									- 2 * nModel),
-					cv::Range(c * (blockSize.height - 2 * nModel),
-							c * (blockSize.height - 2 * nModel)
+					cv::Range(c * (blockSize - 2 * nModel),
+							c * (blockSize - 2 * nModel)
 									+ processBlockOutput.size().width
 									- 2 * nModel));
 			assert(
