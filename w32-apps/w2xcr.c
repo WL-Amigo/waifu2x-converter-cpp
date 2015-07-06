@@ -7,6 +7,8 @@
 #include <windowsx.h>
 #include "w2xconv.h"
 
+static int block_size = 0;
+
 #define WIN_WIDTH 600
 #define WIN_HEIGHT 100
 
@@ -188,7 +190,7 @@ run1(struct app *app, struct W2XConv *c, const char *src_path)
         }
     }
 
-    r = w2xconv_convert_file(c, dst_path, src_path, 1, 2.0, 0);
+    r = w2xconv_convert_file(c, dst_path, src_path, 1, 2.0, block_size);
     free(dst_path);
 
     pkt.tp = PKT_PROGRESS;
@@ -457,13 +459,24 @@ int main(int argc, char **argv)
     struct app app;
     HWND win;
     int run = 1;
+    int argi;
 
-    if (__argc < 2) {
-        MessageBox(NULL, "usage : w2xc <in>", "w2xcr", MB_OK);
+    for (argi=1; argi < argc; argi++) {
+        if (strcmp(argv[argi],"--block_size") == 0) {
+            block_size = atoi(argv[argi+1]);
+            argi++;
+        } else {
+            break;
+        }
+    }
+
+    int rem = argc - argi;
+    if (rem == 0) {
+        MessageBox(NULL, "usage : w2xcr [--block_size <size>] <in>", "w2xcr", MB_OK);
         return 1;
     }
 
-    app.src_path = __argv[1];
+    app.src_path = argv[argi];
 
     cls.cbSize = sizeof(cls);
     cls.style = CS_CLASSDC;
