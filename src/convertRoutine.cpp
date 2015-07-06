@@ -179,8 +179,11 @@ static bool convertWithModelsBlockSplit(ComputeEnv *env,
 		int height = (std::min)(tempMat.size().height, blockSize);
 
 		for (int index = 0; index < (int)models.size(); index++) {
-			size_t bufsize = sizeof(float) * width * height *
-				models[index]->getNOutputPlanes();
+			long long bufsize =
+				(long long)sizeof(float) *
+				(long long)width *
+				(long long)height *
+				(long long)models[index]->getNOutputPlanes();
 
 			max_size = (std::max)(max_size, (long long)bufsize);
 		}
