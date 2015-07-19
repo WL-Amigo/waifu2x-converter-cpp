@@ -371,7 +371,7 @@ on_create(HWND wnd, LPCREATESTRUCT cp)
     unsigned threadID;
     SetWindowLongPtr(wnd, GWLP_USERDATA, (LONG_PTR)app);
 
-    app->worker_thread = (HANDLE)_beginthreadex(NULL, 0, proc_thread, app, 0, &threadID);
+    app->worker_thread = (HANDLE)(uintptr_t)_beginthreadex(NULL, 0, proc_thread, app, 0, &threadID);
 
     return TRUE;
 }

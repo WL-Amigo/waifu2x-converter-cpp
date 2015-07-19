@@ -163,6 +163,10 @@ w2xconv_strerror(W2XConvError *e)
 	case W2XCONV_ERROR_RGB_MODEL_MISMATCH_TO_Y:
 		oss << "cannot apply rgb model to yuv.";
 		break;
+
+	case W2XCONV_ERROR_Y_MODEL_MISMATCH_TO_RGB_F32:
+		oss << "cannot apply y model to rgb_f32.";
+		break;
 	}
 
 	return strdup(oss.str().c_str());
@@ -503,6 +507,38 @@ w2xconv_convert_rgb(struct W2XConv *conv,
 }
 
 int
+w2xconv_convert_rgb_f32(struct W2XConv *conv,
+			unsigned char *dst, size_t dst_step_byte, /* rgb float32x3 normalized[0-1] (src_w*ratio, src_h*ratio) */
+			unsigned char *src, size_t src_step_byte, /* rgb float32x3 normalized[0-1] (src_w, src_h) */
+			int src_w, int src_h,
+			int denoise_level, /* 0:none, 1:L1 denoise, other:L2 denoise  */
+			double scale,
+			int block_size)
+{
+	bool is_rgb = (conv->impl->scale2_models[0]->getNInputPlanes() == 3);
+
+	if (!is_rgb) {
+		setError(conv, W2XCONV_ERROR_Y_MODEL_MISMATCH_TO_RGB_F32);
+		return -1;
+	}
+
+	int dst_h = src_h * scale;
+	int dst_w = src_w * scale;
+
+	cv::Mat srci(src_h, src_w, CV_32FC3, src, src_step_byte);
+	cv::Mat dsti(dst_h, dst_w, CV_32FC3, dst, dst_step_byte);
+
+	cv::Mat image;
+
+	srci.copyTo(image);
+	convert_mat(conv, image, denoise_level, scale, dst_w, dst_h, block_size, w2xc::IMAGE_RGB_F32);
+	image.copyTo(dsti);
+
+	return 0;
+}
+
+
+int
 w2xconv_convert_yuv(struct W2XConv *conv,
 		    unsigned char *dst, size_t dst_step_byte, /* float32x3 (src_w*ratio, src_h*ratio) */
 		    unsigned char *src, size_t src_step_byte, /* float32x3 (src_w, src_h) */
@@ -620,6 +656,7 @@ w2xconv_test(struct W2XConv *conv, int block_size)
 	cv::cvtColor(src_32fc3, src_yuv, cv::COLOR_RGB2YUV);
 
 	cv::Mat dst_rgb_x2(h*2, w*2, CV_8UC3);
+	cv::Mat dst_rgb_f32_x2(h*2, w*2, CV_32FC3);
 	cv::Mat dst_yuv_x2(h*2, w*2, CV_32FC3);
 
 	cv::imwrite("test_src.png", src_rgb);
@@ -633,6 +670,18 @@ w2xconv_test(struct W2XConv *conv, int block_size)
 			    block_size);
 
 	cv::imwrite("test_rgb.png", dst_rgb_x2);
+
+
+	w2xconv_convert_rgb_f32(conv,
+				dst_rgb_f32_x2.data, dst_rgb_f32_x2.step[0],
+				src_32fc3.data, src_32fc3.step[0],
+				w, h,
+				1,
+				2.0,
+				block_size);
+
+	dst_rgb_f32_x2.convertTo(dst_rgb_x2, CV_8U, 255.0);
+	cv::imwrite("test_rgb_f32.png", dst_rgb_x2);
 
 	r = w2xconv_convert_yuv(conv,
 				dst_yuv_x2.data, dst_yuv_x2.step[0],

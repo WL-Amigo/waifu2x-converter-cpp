@@ -73,6 +73,9 @@ static bool convertWithModelsBasic(ComputeEnv *env,
 	case IMAGE_RGB:
 		pack_mat_rgb(packed_input, inputPlane, filterWidth, filterHeight);
 		break;
+	case IMAGE_RGB_F32:
+		pack_mat_rgb_f32(packed_input, inputPlane, filterWidth, filterHeight);
+		break;
 	case IMAGE_Y:
 		pack_mat(packed_input, *inputPlanes, filterWidth, filterHeight, 1);
 		break;
@@ -116,16 +119,23 @@ static bool convertWithModelsBasic(ComputeEnv *env,
 		packed_input = (float*)packed_input_buf->get_read_ptr_host(env, sizeof(float)*filterWidth*filterHeight);
 	}
 
-	if (IS_3CHANNEL(fmt)) {
+	switch (fmt) {
+	case IMAGE_BGR:
 		outputPlane = cv::Mat::zeros(filterSize, CV_8UC3);
-		if (fmt == IMAGE_BGR) {
-			unpack_mat_bgr(outputPlane, packed_input, filterWidth, filterHeight);
-		} else {
-			unpack_mat_rgb(outputPlane, packed_input, filterWidth, filterHeight);
-		}
-	} else {
+		unpack_mat_bgr(outputPlane, packed_input, filterWidth, filterHeight);
+		break;
+	case IMAGE_RGB:
+		outputPlane = cv::Mat::zeros(filterSize, CV_8UC3);
+		unpack_mat_rgb(outputPlane, packed_input, filterWidth, filterHeight);
+		break;
+	case IMAGE_RGB_F32:
+		outputPlane = cv::Mat::zeros(filterSize, CV_32FC3);
+		unpack_mat_rgb_f32(outputPlane, packed_input, filterWidth, filterHeight);
+		break;
+	case IMAGE_Y:
 		outputPlane = cv::Mat::zeros(filterSize, CV_32FC1);
 		unpack_mat1(outputPlane, packed_input, filterWidth, filterHeight);
+		break;
 	}
 
 	if (enableLog) {
@@ -224,10 +234,19 @@ static bool convertWithModelsBlockSplit(ComputeEnv *env,
 			static_cast<float>(outputSize.height)
 					/ static_cast<float>(blockHeight - 2 * nModel)));
 
-	if (IS_3CHANNEL(fmt)) {
+	switch (fmt) {
+	case IMAGE_BGR:
+	case IMAGE_RGB:
 		outputPlane = cv::Mat::zeros(outputSize, CV_8UC3);
-	} else {
+		break;
+
+	case IMAGE_RGB_F32:
+		outputPlane = cv::Mat::zeros(outputSize, CV_32FC3);
+		break;
+
+	case IMAGE_Y:
 		outputPlane = cv::Mat::zeros(outputSize, CV_32FC1);
+		break;
 	}
 	for (unsigned int r = 0; r < splitRows; r++) {
 		if (r == splitRows - 1) {
