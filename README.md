@@ -70,3 +70,8 @@ Usage of this program can be seen by executing this with `--help` option.
   * You can build it by cmake ($ cmake -D OPENCV_PREFIX=&lt;OpenCV include/lib dir&gt;)
  * [DLL interface](src/w2xconv.h)
   * You can use waifu2x as library. include w2xconv.h & link w2xc.lib.
+
+There are prebuilt binaries for Windows.
+
+- http://int.main.jp/files/waifu2x-converter_x64_0719.zip
+- http://int.main.jp/files/waifu2x-converter_x86_0719.zip

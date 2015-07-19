@@ -346,14 +346,15 @@ struct Buffer {
 
     bool prealloc(ComputeEnv *env) {
         int devid;
+        if (host_ptr == nullptr) {
+            host_ptr = _mm_malloc(byte_size, 64);
+            if (host_ptr == nullptr) {
+                return false;
+            }
+        }
+
         switch (env->target_processor.type) {
         case W2XCONV_PROC_HOST:
-            if (host_ptr == nullptr) {
-                host_ptr = _mm_malloc(byte_size, 64);
-                if (host_ptr == nullptr) {
-                    return false;
-                }
-            }
             break;
 
         case W2XCONV_PROC_OPENCL:
