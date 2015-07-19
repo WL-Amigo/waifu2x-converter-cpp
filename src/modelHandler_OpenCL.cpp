@@ -422,7 +422,9 @@ finiOpenCL(ComputeEnv *env)
                 OpenCLDev *d = &env->cl_dev_list[di];
                 clReleaseKernel(d->ker_filter);
                 clReleaseKernel(d->ker_filter_in128_out1);
+                clReleaseKernel(d->ker_filter_in128_out3);
                 clReleaseKernel(d->ker_filter_in1_out32);
+                clReleaseKernel(d->ker_filter_in3_out32);
                 clReleaseProgram(d->program);
                 clReleaseCommandQueue(d->queue);
                 clReleaseContext(d->context);
