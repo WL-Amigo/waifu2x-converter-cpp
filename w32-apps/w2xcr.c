@@ -147,7 +147,9 @@ run1(struct app *app, struct W2XConv *c, const char *src_path)
                ext);
 
     if ((strcmp(ext,".png") != 0) &&
-        (strcmp(ext,".jpg") != 0))
+        (strcmp(ext,".jpg") != 0) &&
+        (strcmp(ext,".jpeg") != 0) &&
+        (strcmp(ext,".bmp") != 0))
     {
         return 0;
     }

@@ -21,8 +21,6 @@
 int main(int argc, char** argv) {
 	int ret = 1;
 
-	double time_start = getsec();
-
 	// definition of command line arguments
 	TCLAP::CmdLine cmd("waifu2x reimplementation using OpenCV", ' ', "1.0.0");
 
@@ -104,6 +102,7 @@ int main(int argc, char** argv) {
 	W2XConv *converter = w2xconv_init(!cmdDisableGPU.getValue(),
 					  cmdNumberOfJobs.getValue(), 1);
 
+	double time_start = getsec();
 
 	switch (converter->target_processor.type) {
 	case W2XCONV_PROC_HOST:
