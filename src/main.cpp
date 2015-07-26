@@ -58,11 +58,16 @@ int main(int argc, char** argv) {
 			"number of threads launching at the same time", false, 0, "integer",
 			cmd);
 
+	TCLAP::SwitchArg cmdForceGPU("", "force-gpu",
+				     "force to use OpenCL on Intel Platform",
+				     cmd, false);
+
 	TCLAP::SwitchArg cmdDisableGPU("", "disable-gpu", "disable GPU", cmd, false);
 
 	std::vector<int> cmdBlockSizeConstraintV;
 	cmdBlockSizeConstraintV.push_back(0);
 	cmdBlockSizeConstraintV.push_back(128);
+	cmdBlockSizeConstraintV.push_back(256);
 	cmdBlockSizeConstraintV.push_back(512);
 	cmdBlockSizeConstraintV.push_back(1024);
 	TCLAP::ValuesConstraint<int> cmdBlockSizeConstraint(cmdBlockSizeConstraintV);
@@ -99,7 +104,15 @@ int main(int argc, char** argv) {
 		outputFileName += ".png";
 	}
 
-	W2XConv *converter = w2xconv_init(!cmdDisableGPU.getValue(),
+	enum W2XConvGPUMode gpu = W2XCONV_GPU_AUTO;
+
+	if (cmdDisableGPU.getValue()) {
+		gpu = W2XCONV_GPU_DISABLE;
+	} else if (cmdForceGPU.getValue()) {
+		gpu = W2XCONV_GPU_FORCE_OPENCL;
+	}
+
+	W2XConv *converter = w2xconv_init(gpu,
 					  cmdNumberOfJobs.getValue(), 1);
 
 	double time_start = getsec();

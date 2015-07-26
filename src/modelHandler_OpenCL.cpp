@@ -16,6 +16,13 @@
 #include "CLlib.h"
 #include "params.h"
 
+#ifdef __GNUC__
+#include <cpuid.h>
+#else
+#include <intrin.h>
+#endif
+
+
 static const char prog[] = 
 #include "modelHandler_OpenCL.cl.h"
 	;
@@ -87,7 +94,7 @@ cllib_init(void)
 }
 
 bool
-initOpenCL(ComputeEnv *env)
+initOpenCL(ComputeEnv *env, enum W2XConvGPUMode gpu)
 {
         int r = cllib_init();
         if (r < 0) {
@@ -118,10 +125,12 @@ initOpenCL(ComputeEnv *env)
 
                 bool is_amd = strstr(&name[0], "AMD") != NULL;
                 bool is_apple = strstr(&name[0], "Apple") != NULL;
-                //bool is_intel = strstr(&name[0], "Intel") != NULL;
+                bool is_intel = strstr(&name[0], "Intel") != NULL;
                 //bool is_nvidia = strstr(&name[0], "NVIDIA") != NULL;
 
-                if (!is_amd && !is_apple) {
+                if ((gpu == W2XCONV_GPU_FORCE_OPENCL) || (! (env->flags & ComputeEnv::HAVE_AVX))) {
+                        /* use opencl */
+                } else if (!is_amd && !is_apple) {
                         continue;
                 }
 
@@ -146,6 +155,10 @@ initOpenCL(ComputeEnv *env)
                 context = ctxt;
 
                 found = true;
+                if (is_intel) {
+                        env->pref_block_size = 256;
+                }
+
                 break;
         }
 

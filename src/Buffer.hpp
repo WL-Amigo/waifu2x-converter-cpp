@@ -11,6 +11,7 @@
 #include "CUDAlib.h"
 #include "threadPool.hpp"
 #include "sec.hpp"
+#include "Env.hpp"
 #include "w2xconv.h"
 
 struct OpenCLDev {
@@ -46,28 +47,6 @@ struct CUDADev {
     CUfunction filter_i128_o3;
 
     CUstream stream;
-};
-
-struct ComputeEnv {
-    int num_cl_dev;
-    int num_cuda_dev;
-    OpenCLDev *cl_dev_list;
-    CUDADev *cuda_dev_list;
-    double transfer_wait;
-
-    struct W2XConvProcessor target_processor;
-
-#ifndef __APPLE__
-    w2xc::ThreadPool *tpool;
-#endif
-
-    ComputeEnv()
-        :num_cl_dev(0),
-         num_cuda_dev(0),
-         cl_dev_list(nullptr),
-         cuda_dev_list(nullptr),
-         transfer_wait(0)
-    {}
 };
 
 struct Processor {

@@ -176,7 +176,7 @@ static bool convertWithModelsBlockSplit(ComputeEnv *env,
 	cv::Mat writeMatFrom;
 
 	if (blockSize == 0) {
-		blockSize = 4096;
+		blockSize = env->pref_block_size;
 	}
 
 	Buffer *input_buf, *output_buf;

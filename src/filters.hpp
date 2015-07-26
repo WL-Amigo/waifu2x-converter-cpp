@@ -5,7 +5,7 @@
 
 namespace w2xc {
 
-bool initOpenCL(ComputeEnv *env);
+bool initOpenCL(ComputeEnv *env, enum W2XConvGPUMode gpu);
 void finiOpenCL(ComputeEnv *env);
 bool initCUDA(ComputeEnv *env);
 void finiCUDA(ComputeEnv *env);

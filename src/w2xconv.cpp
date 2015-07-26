@@ -22,7 +22,7 @@ struct W2XConvImpl {
 };
 
 W2XConv *
-w2xconv_init(int enable_gpu,
+w2xconv_init(enum W2XConvGPUMode gpu,
              int nJob,
 	     int enable_log)
 {
@@ -40,8 +40,10 @@ w2xconv_init(int enable_gpu,
 	impl->env.tpool = w2xc::initThreadPool(nJob);
 #endif
 
-	if (enable_gpu) {
-		w2xc::initOpenCL(&impl->env);
+	if (gpu == W2XCONV_GPU_DISABLE) {
+		/* disable */
+	} else {
+		w2xc::initOpenCL(&impl->env, gpu);
 		w2xc::initCUDA(&impl->env);
 	}
 

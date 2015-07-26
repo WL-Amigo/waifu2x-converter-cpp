@@ -57,7 +57,9 @@ add_executable(waifu2x-converter-cpp
 add_library(w2xc SHARED
   src/modelHandler.cpp src/modelHandler_avx.cpp src/modelHandler_fma.cpp
   src/modelHandler_OpenCL.cpp src/convertRoutine.cpp src/threadPool.cpp
-  src/modelHandler_CUDA.cpp src/w2xconv.cpp src/common.cpp)
+  src/modelHandler_CUDA.cpp src/w2xconv.cpp src/common.cpp
+  src/Env.cpp
+)
 
 add_dependencies(w2xc gensrcs)
 

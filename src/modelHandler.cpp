@@ -12,11 +12,6 @@
 // #include <iostream> in modelHandler.hpp
 #include <fstream>
 #include <thread>
-#ifdef __GNUC__
-#include <cpuid.h>
-#else
-#include <intrin.h>
-#endif
 #include "sec.hpp"
 //#include "threadPool.hpp"
 #include "common.hpp"
@@ -101,27 +96,10 @@ bool Model::filter_AVX_OpenCL(ComputeEnv *env,
 {
 	int vec_width;
 	int weight_step;
-	unsigned int eax=0, ebx=0, ecx=0, edx=0;
-	bool have_fma = false, have_avx = false;
 	int nJob = modelUtility::getInstance().getNumberOfJobs();
 
-#ifdef __GNUC__
-	__get_cpuid(1, &eax, &ebx, &ecx, &edx);
-#else
-	int cpuInfo[4];
-	__cpuid(cpuInfo, 1);
-	eax = cpuInfo[0];
-	ebx = cpuInfo[1];
-	ecx = cpuInfo[2];
-	edx = cpuInfo[3];
-#endif
-	if ((ecx & 0x18000000) == 0x18000000) {
-		have_avx = true;
-	}
-
-	if (ecx & (1<<12)) {
-		have_fma = true;
-	}
+	bool have_fma = env->flags & ComputeEnv::HAVE_FMA;
+	bool have_avx = env->flags & ComputeEnv::HAVE_AVX;
 
 	bool gpu = (rt == RUN_OPENCL) || (rt == RUN_CUDA);
 

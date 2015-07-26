@@ -264,7 +264,7 @@ proc_thread(void *ap)
     char fname[_MAX_FNAME];
     char ext[_MAX_EXT];
 
-    c = w2xconv_init(1, 0, 0);
+    c = w2xconv_init(W2XCONV_GPU_AUTO, 0, 0);
     while (1) {
         len = GetModuleFileName(NULL, self_path, path_len);
         if (len > 0 && len != path_len) {

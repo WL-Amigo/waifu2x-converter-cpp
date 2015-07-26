@@ -26,6 +26,12 @@ extern "C" {
 
 #endif
 
+enum W2XConvGPUMode {
+	W2XCONV_GPU_DISABLE = 0,
+	W2XCONV_GPU_AUTO = 1,
+	W2XCONV_GPU_FORCE_OPENCL = 2
+};
+
 enum W2XConvErrorCode {
 	W2XCONV_NOERROR,
 	W2XCONV_ERROR_WIN32_ERROR,	/* errno_ = GetLastError() */
@@ -96,7 +102,7 @@ struct W2XConv {
 	struct W2XConvImpl *impl;
 };
 
-W2XCONV_EXPORT struct W2XConv *w2xconv_init(int enable_gpu,
+W2XCONV_EXPORT struct W2XConv *w2xconv_init(enum W2XConvGPUMode gpu,
 					    int njob /* 0 = auto */,
 					    int enable_log);
 
