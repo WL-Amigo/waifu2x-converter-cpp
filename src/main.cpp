@@ -58,9 +58,9 @@ int main(int argc, char** argv) {
 			"number of threads launching at the same time", false, 0, "integer",
 			cmd);
 
-	TCLAP::SwitchArg cmdForceGPU("", "force-gpu",
-				     "force to use OpenCL on Intel Platform",
-				     cmd, false);
+	TCLAP::SwitchArg cmdForceOpenCL("", "force-OpenCL",
+					"force to use OpenCL on Intel Platform",
+					cmd, false);
 
 	TCLAP::SwitchArg cmdDisableGPU("", "disable-gpu", "disable GPU", cmd, false);
 
@@ -108,7 +108,7 @@ int main(int argc, char** argv) {
 
 	if (cmdDisableGPU.getValue()) {
 		gpu = W2XCONV_GPU_DISABLE;
-	} else if (cmdForceGPU.getValue()) {
+	} else if (cmdForceOpenCL.getValue()) {
 		gpu = W2XCONV_GPU_FORCE_OPENCL;
 	}
 

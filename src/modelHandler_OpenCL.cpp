@@ -128,7 +128,7 @@ initOpenCL(ComputeEnv *env, enum W2XConvGPUMode gpu)
                 bool is_intel = strstr(&name[0], "Intel") != NULL;
                 //bool is_nvidia = strstr(&name[0], "NVIDIA") != NULL;
 
-                if ((gpu == W2XCONV_GPU_FORCE_OPENCL) || (! (env->flags & ComputeEnv::HAVE_AVX))) {
+                if ((gpu == W2XCONV_GPU_FORCE_OPENCL) || (! (env->flags & ComputeEnv::HAVE_CPU_AVX))) {
                         /* use opencl */
                 } else if (!is_amd && !is_apple) {
                         continue;

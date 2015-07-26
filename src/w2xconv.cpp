@@ -44,7 +44,9 @@ w2xconv_init(enum W2XConvGPUMode gpu,
 		/* disable */
 	} else {
 		w2xc::initOpenCL(&impl->env, gpu);
-		w2xc::initCUDA(&impl->env);
+		if (gpu != W2XCONV_GPU_FORCE_OPENCL) {
+			w2xc::initCUDA(&impl->env);
+		}
 	}
 
 	c->last_error.code = W2XCONV_NOERROR;

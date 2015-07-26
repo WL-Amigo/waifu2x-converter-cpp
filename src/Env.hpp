@@ -17,10 +17,10 @@ struct ComputeEnv {
     CUDADev *cuda_dev_list;
     double transfer_wait;
 
-    static const int HAVE_FMA = 1<<0;
-    static const int HAVE_AVX = 1<<1;
+    static const int HAVE_CPU_FMA = 1<<0;
+    static const int HAVE_CPU_AVX = 1<<1;
 
-    bool flags;
+    int flags;
 
     unsigned int pref_block_size;
 

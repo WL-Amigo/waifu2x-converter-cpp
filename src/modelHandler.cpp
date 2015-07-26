@@ -98,8 +98,8 @@ bool Model::filter_AVX_OpenCL(ComputeEnv *env,
 	int weight_step;
 	int nJob = modelUtility::getInstance().getNumberOfJobs();
 
-	bool have_fma = env->flags & ComputeEnv::HAVE_FMA;
-	bool have_avx = env->flags & ComputeEnv::HAVE_AVX;
+	bool have_fma = env->flags & ComputeEnv::HAVE_CPU_FMA;
+	bool have_avx = env->flags & ComputeEnv::HAVE_CPU_AVX;
 
 	bool gpu = (rt == RUN_OPENCL) || (rt == RUN_CUDA);
 
