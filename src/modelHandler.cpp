@@ -313,8 +313,12 @@ bool Model::filter_AVX_OpenCL(ComputeEnv *env,
 				filter_FMA_impl(env, packed_input, packed_output,
 						nInputPlanes, nOutputPlanes, fbiases_flat, weight_flat,
 						size.width, size.height, nJob);
-			} else {
+			} else if (have_avx) {
 				filter_AVX_impl(env, packed_input, packed_output,
+						nInputPlanes, nOutputPlanes, fbiases_flat, weight_flat,
+						size.width, size.height, nJob);
+			} else {
+				filter_SSE_impl(env, packed_input, packed_output,
 						nInputPlanes, nOutputPlanes, fbiases_flat, weight_flat,
 						size.width, size.height, nJob);
 			}
@@ -372,12 +376,15 @@ bool Model::filter_AVX_OpenCL(ComputeEnv *env,
 					 nInputPlanes, nOutputPlanes, fbiases_flat, weight_flat,
 					 size.width, size.height, nJob);
 		} else {
-			if (!have_avx) {
-				filter_CV(env, packed_input_buf, packed_output_buf, size);
-			} else {
-				const float *packed_input = (float*)packed_input_buf->get_read_ptr_host(env, in_size);
-				float *packed_output = (float*)packed_output_buf->get_write_ptr_host(env);
+			const float *packed_input = (float*)packed_input_buf->get_read_ptr_host(env, in_size);
+			float *packed_output = (float*)packed_output_buf->get_write_ptr_host(env);
 
+			if (!have_avx) {
+				filter_SSE_impl(env, packed_input, packed_output,
+						nInputPlanes, nOutputPlanes, fbiases_flat, weight_flat,
+						size.width, size.height, nJob);
+				//filter_CV(env, packed_input_buf, packed_output_buf, size);
+			} else {
 				if (have_fma) {
 					filter_FMA_impl(env, packed_input, packed_output,
 							nInputPlanes, nOutputPlanes, fbiases_flat, weight_flat,
