@@ -278,9 +278,7 @@ bool Model::filter_AVX_OpenCL(ComputeEnv *env,
 	bool compare_result = false;
 
 #ifdef COMPARE_RESULT
-	if (nOutputPlanes == 3) {
-		compare_result = true;
-	}
+	compare_result = true;
 #endif
 
 	size_t in_size = size.width * size.height * sizeof(float) * nInputPlanes;

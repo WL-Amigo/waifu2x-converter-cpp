@@ -28,11 +28,31 @@ madd256(__m256 v0, __m256 v1, __m256 v2)
 
 #define load_broadcast _mm256_broadcast_ss
 #define loadu _mm256_loadu_ps
+#define storeu _mm256_storeu_ps
+#define add256 _mm256_add_ps
+#define max256 _mm256_max_ps
+#define min256 _mm256_min_ps
+#define zero _mm256_setzero_ps
+#define set1 _mm256_set1_ps
+#define mul256 _mm256_mul_ps
+
+static inline float
+hadd8(__m256 v)
+{
+	v = _mm256_hadd_ps(v, v);
+	v = _mm256_hadd_ps(v, v);
+
+	float v0 = _mm_cvtss_f32(_mm256_extractf128_ps(v,0));
+	float v1 = _mm_cvtss_f32(_mm256_extractf128_ps(v,1));
+
+	return v0 + v1;
+}
+
 
 #else
 
 struct v256_t {
-	__m128 v[2];
+	__m128 v0, v1;
 };
 
 
@@ -40,8 +60,8 @@ static inline v256_t
 madd256(v256_t v0, v256_t v1, v256_t v2)
 {
 	v256_t ret;
-	ret.v[0] = _mm_add_ps(_mm_mul_ps(v0.v[0],v1.v[0]), v2.v[0]);
-	ret.v[1] = _mm_add_ps(_mm_mul_ps(v0.v[1],v1.v[1]), v2.v[1]);
+	ret.v0 = _mm_add_ps(_mm_mul_ps(v0.v0,v1.v0), v2.v0);
+	ret.v1 = _mm_add_ps(_mm_mul_ps(v0.v1,v1.v1), v2.v1);
 	return ret;
 }
 
@@ -49,19 +69,69 @@ static inline v256_t
 load_broadcast(const float *p)
 {
 	v256_t ret;
-	ret.v[0] = _mm_set1_ps(p[0]);
-	ret.v[1] = _mm_set1_ps(p[0]);
+	ret.v0 = _mm_set1_ps(p[0]);
+	ret.v1 = _mm_set1_ps(p[0]);
 	return ret;
 }
 
 static inline v256_t
-loadu(const flota *p)
+loadu(const float *p)
 {
 	v256_t ret;
-	ret.v[0] = _mm_loadu_ps(p);
-	ret.v[1] = _mm_loadu_ps(p+4);
+	ret.v0 = _mm_loadu_ps(p);
+	ret.v1 = _mm_loadu_ps(p+4);
 	return ret;
 }
+
+
+static inline void
+storeu(float *p, v256_t v)
+{
+	_mm_storeu_ps(p, v.v0);
+	_mm_storeu_ps(p+4, v.v1);
+}
+
+static inline v256_t
+zero()
+{
+	v256_t ret;
+	ret.v0 = _mm_setzero_ps();
+	ret.v1 = _mm_setzero_ps();
+	return ret;
+}
+
+static inline v256_t
+set1(float a)
+{
+	v256_t ret;
+	ret.v0 = _mm_set1_ps(a);
+	ret.v1 = _mm_set1_ps(a);
+	return ret;
+}
+
+static inline float
+hadd8(v256_t v)
+{
+	__m128 sum4 = _mm_add_ps(v.v0, v.v1);
+	sum4 = _mm_hadd_ps(sum4, sum4);
+	sum4 = _mm_hadd_ps(sum4, sum4);
+	return _mm_cvtss_f32(sum4);
+}
+
+#define SSE_GEN_BINARY(func_name, intrin_name)	\
+static inline v256_t				\
+func_name(v256_t a, v256_t b)			\
+{						\
+	v256_t ret;				\
+	ret.v0 = intrin_name(a.v0, b.v0);	\
+	ret.v1 = intrin_name(a.v1, b.v1);	\
+	return ret;				\
+}
+
+SSE_GEN_BINARY(add256, _mm_add_ps)
+SSE_GEN_BINARY(mul256, _mm_mul_ps)
+SSE_GEN_BINARY(max256, _mm_max_ps)
+SSE_GEN_BINARY(min256, _mm_min_ps)
 
 #endif
 
@@ -117,8 +187,8 @@ apply_filter(unsigned long xi, unsigned long wsz,
 	     opIndex += VEC_WIDTH*UNROLL)
 	{
 		v256_t v00, v01, v10, v11;
-		v00 = _mm256_setzero_ps();
-		v01 = _mm256_setzero_ps();
+		v00 = zero();
+		v01 = zero();
 
 		v00 = madd256(loadu(&w[0*VEC_WIDTH]), i00, v00);
 		v01 = madd256(loadu(&w[0*VEC_WIDTH]), i01, v01);
@@ -152,18 +222,18 @@ apply_filter(unsigned long xi, unsigned long wsz,
 		w += 9 * VEC_WIDTH;
 
 		if (ip0) {
-			_mm256_storeu_ps(&intermediate0[opIndex+0], v00);
-			_mm256_storeu_ps(&intermediate1[opIndex+0], v01);
+			storeu(&intermediate0[opIndex+0], v00);
+			storeu(&intermediate1[opIndex+0], v01);
 		} else {					\
 			v256_t prev00 = loadu(&intermediate0[opIndex+0]);
 			v256_t prev01 = loadu(&intermediate1[opIndex+0]);
 
-			_mm256_storeu_ps(&intermediate0[opIndex+0], _mm256_add_ps(prev00,v00));
-			_mm256_storeu_ps(&intermediate1[opIndex+0], _mm256_add_ps(prev01,v01));
+			storeu(&intermediate0[opIndex+0], add256(prev00,v00));
+			storeu(&intermediate1[opIndex+0], add256(prev01,v01));
 		}
 
-		v10 = _mm256_setzero_ps();
-		v11 = _mm256_setzero_ps();
+		v10 = zero();
+		v11 = zero();
 
 		v10 = madd256(loadu(&w[0*VEC_WIDTH]), i00, v10);
 		v11 = madd256(loadu(&w[0*VEC_WIDTH]), i01, v11);
@@ -197,20 +267,20 @@ apply_filter(unsigned long xi, unsigned long wsz,
 		w += 9 * VEC_WIDTH;
 
 		if (ip0) {
-			_mm256_storeu_ps(&intermediate0[opIndex+8], v10);
-			_mm256_storeu_ps(&intermediate1[opIndex+8], v11);
+			storeu(&intermediate0[opIndex+8], v10);
+			storeu(&intermediate1[opIndex+8], v11);
 		} else {
 			v256_t prev10 = loadu(&intermediate0[opIndex+8]);
 			v256_t prev11 = loadu(&intermediate1[opIndex+8]);
 
-			_mm256_storeu_ps(&intermediate0[opIndex+8], _mm256_add_ps(prev10,v10));
-			_mm256_storeu_ps(&intermediate1[opIndex+8], _mm256_add_ps(prev11,v11));
+			storeu(&intermediate0[opIndex+8], add256(prev10,v10));
+			storeu(&intermediate1[opIndex+8], add256(prev11,v11));
 		}
 	}
 
 }
 
-template <bool border> void
+template <bool border> inline void
 filter_2elem(const float *packed_input,
 	     int nInputPlanes,
 	     float *packed_output,
@@ -274,18 +344,18 @@ filter_2elem(const float *packed_input,
 		v256_t v, mtz, ltz;
 
 		v = loadu(&intermediate0[opIndex]);
-		v = _mm256_add_ps(v, bv);
-		mtz = _mm256_max_ps(v, _mm256_setzero_ps());
-		ltz = _mm256_min_ps(v, _mm256_setzero_ps());
-		v = madd256(ltz, _mm256_set1_ps(0.1f), mtz);
-		_mm256_storeu_ps(&out0[opIndex], v);
+		v = add256(v, bv);
+		mtz = max256(v, zero());
+		ltz = min256(v, zero());
+		v = madd256(ltz, set1(0.1f), mtz);
+		storeu(&out0[opIndex], v);
 
 		v = loadu(&intermediate1[opIndex]);
-		v = _mm256_add_ps(v, bv);
-		mtz = _mm256_max_ps(v, _mm256_setzero_ps());
-		ltz = _mm256_min_ps(v, _mm256_setzero_ps());
-		v = madd256(ltz, _mm256_set1_ps(0.1f), mtz);
-		_mm256_storeu_ps(&out1[opIndex], v);
+		v = add256(v, bv);
+		mtz = max256(v, zero());
+		ltz = min256(v, zero());
+		v = madd256(ltz, set1(0.1f), mtz);
+		storeu(&out1[opIndex], v);
 	}
 }
 
@@ -339,7 +409,7 @@ filter_1elem_output1(const float *packed_input,
 	in11 += xi * nInputPlanes;
 	in21 += xi * nInputPlanes;
 
-	v256_t sum = _mm256_setzero_ps();
+	v256_t sum = zero();
 	const float *w = weight;
 
 	for (int ipIndex = 0; ipIndex < nInputPlanes; ipIndex+=VEC_WIDTH) {
@@ -377,7 +447,7 @@ filter_1elem_output1(const float *packed_input,
 
 		v256_t v;
 
-		v = _mm256_mul_ps(loadu(&w[0*VEC_WIDTH]), i00);
+		v = mul256(loadu(&w[0*VEC_WIDTH]), i00);
 		v = madd256(loadu(&w[1*VEC_WIDTH]), i01, v);
 		v = madd256(loadu(&w[2*VEC_WIDTH]), i02, v);
 
@@ -389,18 +459,12 @@ filter_1elem_output1(const float *packed_input,
 		v = madd256(loadu(&w[7*VEC_WIDTH]), i21, v);
 		v = madd256(loadu(&w[8*VEC_WIDTH]), i22, v);
 
-		sum = _mm256_add_ps(v, sum);
+		sum = add256(v, sum);
 
 		w += 9 * VEC_WIDTH;
 	}
 
-	sum = _mm256_hadd_ps(sum, sum);
-	sum = _mm256_hadd_ps(sum, sum);
-
-	float v0 = _mm_cvtss_f32(_mm256_extractf128_ps(sum,0));
-	float v1 = _mm_cvtss_f32(_mm256_extractf128_ps(sum,1));
-
-	float v = v0 + v1;
+	float v = hadd8(sum);
 
 	float *out0 = packed_output + (yi*wsz + xi);
 
@@ -451,9 +515,9 @@ filter_1elem_output3(const float *packed_input,
 	in11 += xi * nInputPlanes;
 	in21 += xi * nInputPlanes;
 
-	v256_t sum0 = _mm256_setzero_ps();
-	v256_t sum1 = _mm256_setzero_ps();
-	v256_t sum2 = _mm256_setzero_ps();
+	v256_t sum0 = zero();
+	v256_t sum1 = zero();
+	v256_t sum2 = zero();
 	const float *w0 = weight + 9 * nInputPlanes * 0;
 	const float *w1 = weight + 9 * nInputPlanes * 1;
 	const float *w2 = weight + 9 * nInputPlanes * 2;
@@ -494,7 +558,7 @@ filter_1elem_output3(const float *packed_input,
 		v256_t v0, v1, v2;
 
 #define OUT3_CONV9(I)							\
-		v##I = _mm256_mul_ps(loadu(&w##I[0*nInputPlanes]), i00); \
+		v##I = mul256(loadu(&w##I[0*nInputPlanes]), i00); \
 		v##I = madd256(loadu(&w##I[1*nInputPlanes]), i01, v##I); \
 		v##I = madd256(loadu(&w##I[2*nInputPlanes]), i02, v##I); \
 									\
@@ -506,7 +570,7 @@ filter_1elem_output3(const float *packed_input,
 		v##I = madd256(loadu(&w##I[7*nInputPlanes]), i21, v##I); \
 		v##I = madd256(loadu(&w##I[8*nInputPlanes]), i22, v##I); \
 									\
-		sum##I = _mm256_add_ps(v##I, sum##I);
+		sum##I = add256(v##I, sum##I);
 
 		OUT3_CONV9(0);
 		OUT3_CONV9(1);
@@ -521,13 +585,7 @@ filter_1elem_output3(const float *packed_input,
 
 #define OUT3_RELU(I)							\
 	{								\
-		sum##I = _mm256_hadd_ps(sum##I, sum##I);		\
-		sum##I = _mm256_hadd_ps(sum##I, sum##I);		\
-									\
-		float v0 = _mm_cvtss_f32(_mm256_extractf128_ps(sum##I,0));\
-		float v1 = _mm_cvtss_f32(_mm256_extractf128_ps(sum##I,1));\
-									\
-		float v = v0 + v1;					\
+		float v = hadd8(sum##I);;				\
 									\
 		float bv = biases[I];					\
 		v += bv;						\

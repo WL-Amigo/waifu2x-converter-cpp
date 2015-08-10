@@ -55,7 +55,7 @@ find_library(IMGCODECS_LIBRARY NAMES opencv_imgcodecs opencv_highgui
 add_executable(waifu2x-converter-cpp
   src/main.cpp)
 add_library(w2xc SHARED
-  src/modelHandler.cpp src/modelHandler_avx.cpp src/modelHandler_fma.cpp
+  src/modelHandler.cpp src/modelHandler_avx.cpp src/modelHandler_fma.cpp src/modelHandler_sse.cpp
   src/modelHandler_OpenCL.cpp src/convertRoutine.cpp src/threadPool.cpp
   src/modelHandler_CUDA.cpp src/w2xconv.cpp src/common.cpp
   src/Env.cpp
@@ -70,6 +70,7 @@ if(CMAKE_COMPILER_IS_GNUCXX OR ${CMAKE_CXX_COMPILER_ID} STREQUAL "Clang")
 
   set_source_files_properties(src/modelHandler_avx.cpp PROPERTIES COMPILE_FLAGS "${CMAKE_CXX_FLAGS} -O2 -mavx -s")
   set_source_files_properties(src/modelHandler_fma.cpp PROPERTIES COMPILE_FLAGS "${CMAKE_CXX_FLAGS} -O2 -mfma -s")
+  set_source_files_properties(src/modelHandler_sse.cpp PROPERTIES COMPILE_FLAGS "${CMAKE_CXX_FLAGS} -O2 -msse3 -s")
 elseif(MSVC)
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /wd 4819")
   set_source_files_properties(src/modelHandler_avx.cpp PROPERTIES COMPILE_FLAGS "${CMAKE_CXX_FLAGS} /O2 /arch:AVX")
