@@ -4,6 +4,8 @@
 #include "filters.hpp"
 #include "sec.hpp"
 
+#define HAVE_AVX
+
 #include "modelHandler_avx_func.hpp"
 
 namespace w2xc {
@@ -19,16 +21,16 @@ filter_AVX_impl(ComputeEnv *env,
 		int ip_height,
 		int nJob)
 {
-	filter_AVX_impl0<false>(env,
-				packed_input,
-				packed_output,
-				nInputPlanes,
-				nOutputPlanes,
-				fbiases,
-				weight,
-				ip_width,
-				ip_height,
-				nJob);
+	filter_AVX_impl0(env,
+			 packed_input,
+			 packed_output,
+			 nInputPlanes,
+			 nOutputPlanes,
+			 fbiases,
+			 weight,
+			 ip_width,
+			 ip_height,
+			 nJob);
 }
 
 

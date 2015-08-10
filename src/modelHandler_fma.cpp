@@ -5,6 +5,7 @@
 #include "sec.hpp"
 
 #define HAVE_FMA
+#define HAVE_AVX
 
 #include "modelHandler_avx_func.hpp"
 
@@ -21,16 +22,16 @@ filter_FMA_impl(ComputeEnv *env,
 		int ip_height,
 		int nJob)
 {
-	filter_AVX_impl0<true>(env,
-			       packed_input,
-			       packed_output,
-			       nInputPlanes,
-			       nOutputPlanes,
-			       fbiases,
-			       weight,
-			       ip_width,
-			       ip_height,
-			       nJob);
+	filter_AVX_impl0(env,
+			 packed_input,
+			 packed_output,
+			 nInputPlanes,
+			 nOutputPlanes,
+			 fbiases,
+			 weight,
+			 ip_width,
+			 ip_height,
+			 nJob);
 }
 
 

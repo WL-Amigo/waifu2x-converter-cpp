@@ -7,24 +7,66 @@
 #define BLOCK_SIZE_HOR 256
 #define BLOCK_SIZE_VER 16
 
-template <bool have_fma> __m256 MADD(__m256 v0, __m256 v1, __m256 v2);
+#ifdef HAVE_AVX
+
+typedef __m256 v256_t;
 
 #ifdef HAVE_FMA
-template <> inline ALWAYS_INLINE __m256
-MADD<true>(__m256 v0, __m256 v1, __m256 v2)
+static inline __m256
+madd256(__m256 v0, __m256 v1, __m256 v2)
 {
 	return _mm256_fmadd_ps(v0, v1, v2);
 }
-#endif
+#else
 
-template <> inline ALWAYS_INLINE __m256
-MADD<false>(__m256 v0, __m256 v1, __m256 v2)
+static inline __m256
+madd256(__m256 v0, __m256 v1, __m256 v2)
 {
 	return _mm256_add_ps(_mm256_mul_ps(v0, v1), v2);
 }
+#endif
+
+#define load_broadcast _mm256_broadcast_ss
+#define loadu _mm256_loadu_ps
+
+#else
+
+struct v256_t {
+	__m128 v[2];
+};
 
 
-template <bool border, bool ip0, bool have_fma>
+static inline v256_t
+madd256(v256_t v0, v256_t v1, v256_t v2)
+{
+	v256_t ret;
+	ret.v[0] = _mm_add_ps(_mm_mul_ps(v0.v[0],v1.v[0]), v2.v[0]);
+	ret.v[1] = _mm_add_ps(_mm_mul_ps(v0.v[1],v1.v[1]), v2.v[1]);
+	return ret;
+}
+
+static inline v256_t
+load_broadcast(const float *p)
+{
+	v256_t ret;
+	ret.v[0] = _mm_set1_ps(p[0]);
+	ret.v[1] = _mm_set1_ps(p[0]);
+	return ret;
+}
+
+static inline v256_t
+loadu(const flota *p)
+{
+	v256_t ret;
+	ret.v[0] = _mm_loadu_ps(p);
+	ret.v[1] = _mm_loadu_ps(p+4);
+	return ret;
+}
+
+#endif
+
+
+template <bool border, bool ip0>
 static void
 apply_filter(unsigned long xi, unsigned long wsz,
 	     const float *in01,
@@ -38,74 +80,74 @@ apply_filter(unsigned long xi, unsigned long wsz,
 {
 	float *intermediate1 = intermediate0 + nOutputPlanes;
 
-	__m256 i01 = _mm256_broadcast_ss(in01);
-	__m256 i11 = _mm256_broadcast_ss(in11);
-	__m256 i21 = _mm256_broadcast_ss(in21);
+	v256_t i01 = load_broadcast(in01);
+	v256_t i11 = load_broadcast(in11);
+	v256_t i21 = load_broadcast(in21);
 
-	__m256 i00, i10, i20;
-	__m256 i02, i12, i22;
-	__m256 i03, i13, i23;
+	v256_t i00, i10, i20;
+	v256_t i02, i12, i22;
+	v256_t i03, i13, i23;
 
 	if (border && xi == 0) {
 		i00 = i01;
 		i10 = i11;
 		i20 = i21;
 	} else {
-		i00 = _mm256_broadcast_ss(in01-nInputPlanes);
-		i10 = _mm256_broadcast_ss(in11-nInputPlanes);
-		i20 = _mm256_broadcast_ss(in21-nInputPlanes);
+		i00 = load_broadcast(in01-nInputPlanes);
+		i10 = load_broadcast(in11-nInputPlanes);
+		i20 = load_broadcast(in21-nInputPlanes);
 	}
 
-	i02 = _mm256_broadcast_ss(in01+nInputPlanes);
-	i12 = _mm256_broadcast_ss(in11+nInputPlanes);
-	i22 = _mm256_broadcast_ss(in21+nInputPlanes);
+	i02 = load_broadcast(in01+nInputPlanes);
+	i12 = load_broadcast(in11+nInputPlanes);
+	i22 = load_broadcast(in21+nInputPlanes);
 
 	if (border && xi+1 == wsz-1) {
 		i03 = i02;
 		i13 = i12;
 		i23 = i22;
 	} else {
-		i03 = _mm256_broadcast_ss(in01+nInputPlanes*2);
-		i13 = _mm256_broadcast_ss(in11+nInputPlanes*2);
-		i23 = _mm256_broadcast_ss(in21+nInputPlanes*2);
+		i03 = load_broadcast(in01+nInputPlanes*2);
+		i13 = load_broadcast(in11+nInputPlanes*2);
+		i23 = load_broadcast(in21+nInputPlanes*2);
 	}
 
 	for (unsigned int opIndex = 0;
 	     opIndex < (unsigned int)nOutputPlanes;
 	     opIndex += VEC_WIDTH*UNROLL)
 	{
-		__m256 v00, v01, v10, v11;
+		v256_t v00, v01, v10, v11;
 		v00 = _mm256_setzero_ps();
 		v01 = _mm256_setzero_ps();
 
-		v00 = MADD<have_fma>(_mm256_loadu_ps(&w[0*VEC_WIDTH]), i00, v00);
-		v01 = MADD<have_fma>(_mm256_loadu_ps(&w[0*VEC_WIDTH]), i01, v01);
+		v00 = madd256(loadu(&w[0*VEC_WIDTH]), i00, v00);
+		v01 = madd256(loadu(&w[0*VEC_WIDTH]), i01, v01);
 
-		v00 = MADD<have_fma>(_mm256_loadu_ps(&w[1*VEC_WIDTH]), i01, v00);
-		v01 = MADD<have_fma>(_mm256_loadu_ps(&w[1*VEC_WIDTH]), i02, v01);
+		v00 = madd256(loadu(&w[1*VEC_WIDTH]), i01, v00);
+		v01 = madd256(loadu(&w[1*VEC_WIDTH]), i02, v01);
 
-		v00 = MADD<have_fma>(_mm256_loadu_ps(&w[2*VEC_WIDTH]), i02, v00);
-		v01 = MADD<have_fma>(_mm256_loadu_ps(&w[2*VEC_WIDTH]), i03, v01);
-
-
-		v00 = MADD<have_fma>(_mm256_loadu_ps(&w[3*VEC_WIDTH]), i10, v00);
-		v01 = MADD<have_fma>(_mm256_loadu_ps(&w[3*VEC_WIDTH]), i11, v01);
-
-		v00 = MADD<have_fma>(_mm256_loadu_ps(&w[4*VEC_WIDTH]), i11, v00);
-		v01 = MADD<have_fma>(_mm256_loadu_ps(&w[4*VEC_WIDTH]), i12, v01);
-
-		v00 = MADD<have_fma>(_mm256_loadu_ps(&w[5*VEC_WIDTH]), i12, v00);
-		v01 = MADD<have_fma>(_mm256_loadu_ps(&w[5*VEC_WIDTH]), i13, v01);
+		v00 = madd256(loadu(&w[2*VEC_WIDTH]), i02, v00);
+		v01 = madd256(loadu(&w[2*VEC_WIDTH]), i03, v01);
 
 
-		v00 = MADD<have_fma>(_mm256_loadu_ps(&w[6*VEC_WIDTH]), i20, v00);
-		v01 = MADD<have_fma>(_mm256_loadu_ps(&w[6*VEC_WIDTH]), i21, v01);
+		v00 = madd256(loadu(&w[3*VEC_WIDTH]), i10, v00);
+		v01 = madd256(loadu(&w[3*VEC_WIDTH]), i11, v01);
 
-		v00 = MADD<have_fma>(_mm256_loadu_ps(&w[7*VEC_WIDTH]), i21, v00);
-		v01 = MADD<have_fma>(_mm256_loadu_ps(&w[7*VEC_WIDTH]), i22, v01);
+		v00 = madd256(loadu(&w[4*VEC_WIDTH]), i11, v00);
+		v01 = madd256(loadu(&w[4*VEC_WIDTH]), i12, v01);
 
-		v00 = MADD<have_fma>(_mm256_loadu_ps(&w[8*VEC_WIDTH]), i22, v00);
-		v01 = MADD<have_fma>(_mm256_loadu_ps(&w[8*VEC_WIDTH]), i23, v01);
+		v00 = madd256(loadu(&w[5*VEC_WIDTH]), i12, v00);
+		v01 = madd256(loadu(&w[5*VEC_WIDTH]), i13, v01);
+
+
+		v00 = madd256(loadu(&w[6*VEC_WIDTH]), i20, v00);
+		v01 = madd256(loadu(&w[6*VEC_WIDTH]), i21, v01);
+
+		v00 = madd256(loadu(&w[7*VEC_WIDTH]), i21, v00);
+		v01 = madd256(loadu(&w[7*VEC_WIDTH]), i22, v01);
+
+		v00 = madd256(loadu(&w[8*VEC_WIDTH]), i22, v00);
+		v01 = madd256(loadu(&w[8*VEC_WIDTH]), i23, v01);
 
 		w += 9 * VEC_WIDTH;
 
@@ -113,8 +155,8 @@ apply_filter(unsigned long xi, unsigned long wsz,
 			_mm256_storeu_ps(&intermediate0[opIndex+0], v00);
 			_mm256_storeu_ps(&intermediate1[opIndex+0], v01);
 		} else {					\
-			__m256 prev00 = _mm256_loadu_ps(&intermediate0[opIndex+0]);
-			__m256 prev01 = _mm256_loadu_ps(&intermediate1[opIndex+0]);
+			v256_t prev00 = loadu(&intermediate0[opIndex+0]);
+			v256_t prev01 = loadu(&intermediate1[opIndex+0]);
 
 			_mm256_storeu_ps(&intermediate0[opIndex+0], _mm256_add_ps(prev00,v00));
 			_mm256_storeu_ps(&intermediate1[opIndex+0], _mm256_add_ps(prev01,v01));
@@ -123,34 +165,34 @@ apply_filter(unsigned long xi, unsigned long wsz,
 		v10 = _mm256_setzero_ps();
 		v11 = _mm256_setzero_ps();
 
-		v10 = MADD<have_fma>(_mm256_loadu_ps(&w[0*VEC_WIDTH]), i00, v10);
-		v11 = MADD<have_fma>(_mm256_loadu_ps(&w[0*VEC_WIDTH]), i01, v11);
+		v10 = madd256(loadu(&w[0*VEC_WIDTH]), i00, v10);
+		v11 = madd256(loadu(&w[0*VEC_WIDTH]), i01, v11);
 
-		v10 = MADD<have_fma>(_mm256_loadu_ps(&w[1*VEC_WIDTH]), i01, v10);
-		v11 = MADD<have_fma>(_mm256_loadu_ps(&w[1*VEC_WIDTH]), i02, v11);
+		v10 = madd256(loadu(&w[1*VEC_WIDTH]), i01, v10);
+		v11 = madd256(loadu(&w[1*VEC_WIDTH]), i02, v11);
 
-		v10 = MADD<have_fma>(_mm256_loadu_ps(&w[2*VEC_WIDTH]), i02, v10);
-		v11 = MADD<have_fma>(_mm256_loadu_ps(&w[2*VEC_WIDTH]), i03, v11);
-
-
-		v10 = MADD<have_fma>(_mm256_loadu_ps(&w[3*VEC_WIDTH]), i10, v10);
-		v11 = MADD<have_fma>(_mm256_loadu_ps(&w[3*VEC_WIDTH]), i11, v11);
-
-		v10 = MADD<have_fma>(_mm256_loadu_ps(&w[4*VEC_WIDTH]), i11, v10);
-		v11 = MADD<have_fma>(_mm256_loadu_ps(&w[4*VEC_WIDTH]), i12, v11);
-
-		v10 = MADD<have_fma>(_mm256_loadu_ps(&w[5*VEC_WIDTH]), i12, v10);
-		v11 = MADD<have_fma>(_mm256_loadu_ps(&w[5*VEC_WIDTH]), i13, v11);
+		v10 = madd256(loadu(&w[2*VEC_WIDTH]), i02, v10);
+		v11 = madd256(loadu(&w[2*VEC_WIDTH]), i03, v11);
 
 
-		v10 = MADD<have_fma>(_mm256_loadu_ps(&w[6*VEC_WIDTH]), i20, v10);
-		v11 = MADD<have_fma>(_mm256_loadu_ps(&w[6*VEC_WIDTH]), i21, v11);
+		v10 = madd256(loadu(&w[3*VEC_WIDTH]), i10, v10);
+		v11 = madd256(loadu(&w[3*VEC_WIDTH]), i11, v11);
 
-		v10 = MADD<have_fma>(_mm256_loadu_ps(&w[7*VEC_WIDTH]), i21, v10);
-		v11 = MADD<have_fma>(_mm256_loadu_ps(&w[7*VEC_WIDTH]), i22, v11);
+		v10 = madd256(loadu(&w[4*VEC_WIDTH]), i11, v10);
+		v11 = madd256(loadu(&w[4*VEC_WIDTH]), i12, v11);
 
-		v10 = MADD<have_fma>(_mm256_loadu_ps(&w[8*VEC_WIDTH]), i22, v10);
-		v11 = MADD<have_fma>(_mm256_loadu_ps(&w[8*VEC_WIDTH]), i23, v11);
+		v10 = madd256(loadu(&w[5*VEC_WIDTH]), i12, v10);
+		v11 = madd256(loadu(&w[5*VEC_WIDTH]), i13, v11);
+
+
+		v10 = madd256(loadu(&w[6*VEC_WIDTH]), i20, v10);
+		v11 = madd256(loadu(&w[6*VEC_WIDTH]), i21, v11);
+
+		v10 = madd256(loadu(&w[7*VEC_WIDTH]), i21, v10);
+		v11 = madd256(loadu(&w[7*VEC_WIDTH]), i22, v11);
+
+		v10 = madd256(loadu(&w[8*VEC_WIDTH]), i22, v10);
+		v11 = madd256(loadu(&w[8*VEC_WIDTH]), i23, v11);
 
 		w += 9 * VEC_WIDTH;
 
@@ -158,8 +200,8 @@ apply_filter(unsigned long xi, unsigned long wsz,
 			_mm256_storeu_ps(&intermediate0[opIndex+8], v10);
 			_mm256_storeu_ps(&intermediate1[opIndex+8], v11);
 		} else {
-			__m256 prev10 = _mm256_loadu_ps(&intermediate0[opIndex+8]);
-			__m256 prev11 = _mm256_loadu_ps(&intermediate1[opIndex+8]);
+			v256_t prev10 = loadu(&intermediate0[opIndex+8]);
+			v256_t prev11 = loadu(&intermediate1[opIndex+8]);
 
 			_mm256_storeu_ps(&intermediate0[opIndex+8], _mm256_add_ps(prev10,v10));
 			_mm256_storeu_ps(&intermediate1[opIndex+8], _mm256_add_ps(prev11,v11));
@@ -168,7 +210,7 @@ apply_filter(unsigned long xi, unsigned long wsz,
 
 }
 
-template <bool border, bool have_fma> void
+template <bool border> void
 filter_2elem(const float *packed_input,
 	     int nInputPlanes,
 	     float *packed_output,
@@ -209,13 +251,13 @@ filter_2elem(const float *packed_input,
 		const float *w = weight + (ipIndex * nOutputPlanes) * 9;
 
 		if (ipIndex == 0) {
-			apply_filter<border, true, have_fma>(xi, wsz, in01, in11, in21, w, intermediate0,
-							     ipIndex,
-							     nInputPlanes, nOutputPlanes);
+			apply_filter<border, true>(xi, wsz, in01, in11, in21, w, intermediate0,
+						   ipIndex,
+						   nInputPlanes, nOutputPlanes);
 		} else {
-			apply_filter<border, false, have_fma>(xi, wsz, in01, in11, in21, w, intermediate0,
-							      ipIndex,
-							      nInputPlanes, nOutputPlanes);
+			apply_filter<border, false>(xi, wsz, in01, in11, in21, w, intermediate0,
+						    ipIndex,
+						    nInputPlanes, nOutputPlanes);
 		}
 
 		in01++;
@@ -228,21 +270,21 @@ filter_2elem(const float *packed_input,
 	float *intermediate1 = intermediate0 + nOutputPlanes;
 
 	for (int opIndex = 0; opIndex < nOutputPlanes; opIndex+=VEC_WIDTH) {
-		__m256 bv = _mm256_loadu_ps(&biases[opIndex]);
-		__m256 v, mtz, ltz;
+		v256_t bv = loadu(&biases[opIndex]);
+		v256_t v, mtz, ltz;
 
-		v = _mm256_loadu_ps(&intermediate0[opIndex]);
+		v = loadu(&intermediate0[opIndex]);
 		v = _mm256_add_ps(v, bv);
 		mtz = _mm256_max_ps(v, _mm256_setzero_ps());
 		ltz = _mm256_min_ps(v, _mm256_setzero_ps());
-		v = MADD<have_fma>(ltz, _mm256_set1_ps(0.1f), mtz);
+		v = madd256(ltz, _mm256_set1_ps(0.1f), mtz);
 		_mm256_storeu_ps(&out0[opIndex], v);
 
-		v = _mm256_loadu_ps(&intermediate1[opIndex]);
+		v = loadu(&intermediate1[opIndex]);
 		v = _mm256_add_ps(v, bv);
 		mtz = _mm256_max_ps(v, _mm256_setzero_ps());
 		ltz = _mm256_min_ps(v, _mm256_setzero_ps());
-		v = MADD<have_fma>(ltz, _mm256_set1_ps(0.1f), mtz);
+		v = madd256(ltz, _mm256_set1_ps(0.1f), mtz);
 		_mm256_storeu_ps(&out1[opIndex], v);
 	}
 }
@@ -261,7 +303,7 @@ get_data(const float *p, int wsz, int xi, int num_plane, int plane)
 	}
 }
 
-template <bool border, bool have_fma> void
+template <bool border> void
 filter_1elem_output1(const float *packed_input,
 		     int nInputPlanes,
 		     float *packed_output,
@@ -297,26 +339,26 @@ filter_1elem_output1(const float *packed_input,
 	in11 += xi * nInputPlanes;
 	in21 += xi * nInputPlanes;
 
-	__m256 sum = _mm256_setzero_ps();
+	v256_t sum = _mm256_setzero_ps();
 	const float *w = weight;
 
 	for (int ipIndex = 0; ipIndex < nInputPlanes; ipIndex+=VEC_WIDTH) {
-		__m256 i00, i01, i02;
-		__m256 i10, i11, i12;
-		__m256 i20, i21, i22;
+		v256_t i00, i01, i02;
+		v256_t i10, i11, i12;
+		v256_t i20, i21, i22;
 
-		i01 = _mm256_loadu_ps(&in01[0]);
-		i11 = _mm256_loadu_ps(&in11[0]);
-		i21 = _mm256_loadu_ps(&in21[0]);
+		i01 = loadu(&in01[0]);
+		i11 = loadu(&in11[0]);
+		i21 = loadu(&in21[0]);
 
 		if (border && xi == 0) {
 			i00 = i01;
 			i10 = i11;
 			i20 = i21;
 		} else {
-			i00 = _mm256_loadu_ps(&in01[-nInputPlanes]);
-			i10 = _mm256_loadu_ps(&in11[-nInputPlanes]);
-			i20 = _mm256_loadu_ps(&in21[-nInputPlanes]);
+			i00 = loadu(&in01[-nInputPlanes]);
+			i10 = loadu(&in11[-nInputPlanes]);
+			i20 = loadu(&in21[-nInputPlanes]);
 		}
 
 		if (border && xi == wsz-1) {
@@ -324,28 +366,28 @@ filter_1elem_output1(const float *packed_input,
 			i12 = i11;
 			i22 = i21;
 		} else {
-			i02 = _mm256_loadu_ps(&in01[+nInputPlanes]);
-			i12 = _mm256_loadu_ps(&in11[+nInputPlanes]);
-			i22 = _mm256_loadu_ps(&in21[+nInputPlanes]);
+			i02 = loadu(&in01[+nInputPlanes]);
+			i12 = loadu(&in11[+nInputPlanes]);
+			i22 = loadu(&in21[+nInputPlanes]);
 		}
 
 		in01+=VEC_WIDTH;
 		in11+=VEC_WIDTH;
 		in21+=VEC_WIDTH;
 
-		__m256 v;
+		v256_t v;
 
-		v = _mm256_mul_ps(_mm256_loadu_ps(&w[0*VEC_WIDTH]), i00);
-		v = MADD<have_fma>(_mm256_loadu_ps(&w[1*VEC_WIDTH]), i01, v);
-		v = MADD<have_fma>(_mm256_loadu_ps(&w[2*VEC_WIDTH]), i02, v);
+		v = _mm256_mul_ps(loadu(&w[0*VEC_WIDTH]), i00);
+		v = madd256(loadu(&w[1*VEC_WIDTH]), i01, v);
+		v = madd256(loadu(&w[2*VEC_WIDTH]), i02, v);
 
-		v = MADD<have_fma>(_mm256_loadu_ps(&w[3*VEC_WIDTH]), i10, v);
-		v = MADD<have_fma>(_mm256_loadu_ps(&w[4*VEC_WIDTH]), i11, v);
-		v = MADD<have_fma>(_mm256_loadu_ps(&w[5*VEC_WIDTH]), i12, v);
+		v = madd256(loadu(&w[3*VEC_WIDTH]), i10, v);
+		v = madd256(loadu(&w[4*VEC_WIDTH]), i11, v);
+		v = madd256(loadu(&w[5*VEC_WIDTH]), i12, v);
 
-		v = MADD<have_fma>(_mm256_loadu_ps(&w[6*VEC_WIDTH]), i20, v);
-		v = MADD<have_fma>(_mm256_loadu_ps(&w[7*VEC_WIDTH]), i21, v);
-		v = MADD<have_fma>(_mm256_loadu_ps(&w[8*VEC_WIDTH]), i22, v);
+		v = madd256(loadu(&w[6*VEC_WIDTH]), i20, v);
+		v = madd256(loadu(&w[7*VEC_WIDTH]), i21, v);
+		v = madd256(loadu(&w[8*VEC_WIDTH]), i22, v);
 
 		sum = _mm256_add_ps(v, sum);
 
@@ -373,7 +415,7 @@ filter_1elem_output1(const float *packed_input,
 }
 
 
-template <bool border, bool have_fma> void
+template <bool border> void
 filter_1elem_output3(const float *packed_input,
 		     int nInputPlanes,
 		     float *packed_output,
@@ -409,30 +451,30 @@ filter_1elem_output3(const float *packed_input,
 	in11 += xi * nInputPlanes;
 	in21 += xi * nInputPlanes;
 
-	__m256 sum0 = _mm256_setzero_ps();
-	__m256 sum1 = _mm256_setzero_ps();
-	__m256 sum2 = _mm256_setzero_ps();
+	v256_t sum0 = _mm256_setzero_ps();
+	v256_t sum1 = _mm256_setzero_ps();
+	v256_t sum2 = _mm256_setzero_ps();
 	const float *w0 = weight + 9 * nInputPlanes * 0;
 	const float *w1 = weight + 9 * nInputPlanes * 1;
 	const float *w2 = weight + 9 * nInputPlanes * 2;
 
 	for (int ipIndex = 0; ipIndex < nInputPlanes; ipIndex+=VEC_WIDTH) {
-		__m256 i00, i01, i02;
-		__m256 i10, i11, i12;
-		__m256 i20, i21, i22;
+		v256_t i00, i01, i02;
+		v256_t i10, i11, i12;
+		v256_t i20, i21, i22;
 
-		i01 = _mm256_loadu_ps(&in01[0]);
-		i11 = _mm256_loadu_ps(&in11[0]);
-		i21 = _mm256_loadu_ps(&in21[0]);
+		i01 = loadu(&in01[0]);
+		i11 = loadu(&in11[0]);
+		i21 = loadu(&in21[0]);
 
 		if (border && xi == 0) {
 			i00 = i01;
 			i10 = i11;
 			i20 = i21;
 		} else {
-			i00 = _mm256_loadu_ps(&in01[-nInputPlanes]);
-			i10 = _mm256_loadu_ps(&in11[-nInputPlanes]);
-			i20 = _mm256_loadu_ps(&in21[-nInputPlanes]);
+			i00 = loadu(&in01[-nInputPlanes]);
+			i10 = loadu(&in11[-nInputPlanes]);
+			i20 = loadu(&in21[-nInputPlanes]);
 		}
 
 		if (border && xi == wsz-1) {
@@ -440,29 +482,29 @@ filter_1elem_output3(const float *packed_input,
 			i12 = i11;
 			i22 = i21;
 		} else {
-			i02 = _mm256_loadu_ps(&in01[+nInputPlanes]);
-			i12 = _mm256_loadu_ps(&in11[+nInputPlanes]);
-			i22 = _mm256_loadu_ps(&in21[+nInputPlanes]);
+			i02 = loadu(&in01[+nInputPlanes]);
+			i12 = loadu(&in11[+nInputPlanes]);
+			i22 = loadu(&in21[+nInputPlanes]);
 		}
 
 		in01+=VEC_WIDTH;
 		in11+=VEC_WIDTH;
 		in21+=VEC_WIDTH;
 
-		__m256 v0, v1, v2;
+		v256_t v0, v1, v2;
 
 #define OUT3_CONV9(I)							\
-		v##I = _mm256_mul_ps(_mm256_loadu_ps(&w##I[0*nInputPlanes]), i00); \
-		v##I = MADD<have_fma>(_mm256_loadu_ps(&w##I[1*nInputPlanes]), i01, v##I); \
-		v##I = MADD<have_fma>(_mm256_loadu_ps(&w##I[2*nInputPlanes]), i02, v##I); \
+		v##I = _mm256_mul_ps(loadu(&w##I[0*nInputPlanes]), i00); \
+		v##I = madd256(loadu(&w##I[1*nInputPlanes]), i01, v##I); \
+		v##I = madd256(loadu(&w##I[2*nInputPlanes]), i02, v##I); \
 									\
-		v##I = MADD<have_fma>(_mm256_loadu_ps(&w##I[3*nInputPlanes]), i10, v##I); \
-		v##I = MADD<have_fma>(_mm256_loadu_ps(&w##I[4*nInputPlanes]), i11, v##I); \
-		v##I = MADD<have_fma>(_mm256_loadu_ps(&w##I[5*nInputPlanes]), i12, v##I); \
+		v##I = madd256(loadu(&w##I[3*nInputPlanes]), i10, v##I); \
+		v##I = madd256(loadu(&w##I[4*nInputPlanes]), i11, v##I); \
+		v##I = madd256(loadu(&w##I[5*nInputPlanes]), i12, v##I); \
 									\
-		v##I = MADD<have_fma>(_mm256_loadu_ps(&w##I[6*nInputPlanes]), i20, v##I); \
-		v##I = MADD<have_fma>(_mm256_loadu_ps(&w##I[7*nInputPlanes]), i21, v##I); \
-		v##I = MADD<have_fma>(_mm256_loadu_ps(&w##I[8*nInputPlanes]), i22, v##I); \
+		v##I = madd256(loadu(&w##I[6*nInputPlanes]), i20, v##I); \
+		v##I = madd256(loadu(&w##I[7*nInputPlanes]), i21, v##I); \
+		v##I = madd256(loadu(&w##I[8*nInputPlanes]), i22, v##I); \
 									\
 		sum##I = _mm256_add_ps(v##I, sum##I);
 
@@ -505,7 +547,6 @@ filter_1elem_output3(const float *packed_input,
 
 #define CEIL_DIV(a,b) (((a)+(b-1))/(b))
 
-template <bool have_fma>
 static void
 filter_AVX_impl0(ComputeEnv *env,
 		 const float *packed_input,
@@ -556,13 +597,13 @@ filter_AVX_impl0(ComputeEnv *env,
 				for (unsigned int yi=y_start; yi<y_end; yi++) {
 					for (unsigned int xi=x_start; xi<x_end; xi++) {
 						if (xi ==0 || xi == (wsz-1)) {
-							filter_1elem_output1<true,have_fma>(packed_input, nInputPlanes,
-											    packed_output,
-											    fbiases, hsz, wsz, yi, xi, weight, intermediate);
+							filter_1elem_output1<true>(packed_input, nInputPlanes,
+										   packed_output,
+										   fbiases, hsz, wsz, yi, xi, weight, intermediate);
 						} else {
-							filter_1elem_output1<false,have_fma>(packed_input, nInputPlanes,
-											     packed_output,
-											     fbiases, hsz, wsz, yi, xi, weight, intermediate);
+							filter_1elem_output1<false>(packed_input, nInputPlanes,
+										    packed_output,
+										    fbiases, hsz, wsz, yi, xi, weight, intermediate);
 						}
 					}
 				}
@@ -570,13 +611,13 @@ filter_AVX_impl0(ComputeEnv *env,
 				for (unsigned int yi=y_start; yi<y_end; yi++) {
 					for (unsigned int xi=x_start; xi<x_end; xi++) {
 						if (xi ==0 || xi == (wsz-1)) {
-							filter_1elem_output3<true,have_fma>(packed_input, nInputPlanes,
-											    packed_output,
-											    fbiases, hsz, wsz, yi, xi, weight, intermediate);
+							filter_1elem_output3<true>(packed_input, nInputPlanes,
+										   packed_output,
+										   fbiases, hsz, wsz, yi, xi, weight, intermediate);
 						} else {
-							filter_1elem_output3<false,have_fma>(packed_input, nInputPlanes,
-											     packed_output,
-											     fbiases, hsz, wsz, yi, xi, weight, intermediate);
+							filter_1elem_output3<false>(packed_input, nInputPlanes,
+										    packed_output,
+										    fbiases, hsz, wsz, yi, xi, weight, intermediate);
 						}
 					}
 				}
@@ -584,13 +625,13 @@ filter_AVX_impl0(ComputeEnv *env,
 				for (unsigned int yi=y_start; yi<y_end; yi++) {
 					for (unsigned int xi=x_start; xi<x_end; xi+=2) {
 						if (xi ==0 || xi+1 == (wsz-1)) {
-							filter_2elem<true,have_fma>(packed_input, nInputPlanes,
-										    packed_output, nOutputPlanes,
-										    fbiases, hsz, wsz, yi, xi, weight, intermediate);
+							filter_2elem<true>(packed_input, nInputPlanes,
+									   packed_output, nOutputPlanes,
+									   fbiases, hsz, wsz, yi, xi, weight, intermediate);
 						} else {
-							filter_2elem<false, have_fma>(packed_input, nInputPlanes,
-										      packed_output, nOutputPlanes,
-										      fbiases, hsz, wsz, yi, xi, weight, intermediate);
+							filter_2elem<false>(packed_input, nInputPlanes,
+									    packed_output, nOutputPlanes,
+									    fbiases, hsz, wsz, yi, xi, weight, intermediate);
 						}
 					}
 				}
