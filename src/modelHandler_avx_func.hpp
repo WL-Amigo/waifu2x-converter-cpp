@@ -57,7 +57,7 @@ struct v256_t {
 
 
 static inline ALWAYS_INLINE v256_t
-madd256(v256_t &v0, v256_t &v1, v256_t &v2)
+madd256(v256_t const &v0, v256_t const &v1, v256_t const &v2)
 {
 	v256_t ret;
 	ret.v0 = _mm_add_ps(_mm_mul_ps(v0.v0,v1.v0), v2.v0);
@@ -85,7 +85,7 @@ loadu(const float *p)
 
 
 static inline void
-storeu(float *p, v256_t &v)
+storeu(float *p, v256_t const &v)
 {
 	_mm_storeu_ps(p, v.v0);
 	_mm_storeu_ps(p+4, v.v1);
@@ -110,7 +110,7 @@ set1(float a)
 }
 
 static inline float
-hadd8(v256_t &v)
+hadd8(v256_t const &v)
 {
 	__m128 sum4 = _mm_add_ps(v.v0, v.v1);
 	sum4 = _mm_hadd_ps(sum4, sum4);
@@ -120,7 +120,7 @@ hadd8(v256_t &v)
 
 #define SSE_GEN_BINARY(func_name, intrin_name)	\
 static inline v256_t				\
-func_name(v256_t &a, v256_t &b)			\
+func_name(v256_t const &a, v256_t const &b)			\
 {						\
 	v256_t ret;				\
 	ret.v0 = intrin_name(a.v0, b.v0);	\
