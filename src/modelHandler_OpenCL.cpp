@@ -532,15 +532,6 @@ filter_OpenCL_impl(ComputeEnv *env,
         clSetKernelArg(ker, ai++, sizeof(cl_int), &w);
         clSetKernelArg(ker, ai++, sizeof(cl_mem), &cl_weight);
 
-        size_t local_size = 0;
-        //local_size += sizeof(float) * 256;
-        //local_size += sizeof(float) * GPU_VEC_WIDTH;
-
-        if (type == FILTER_GENERIC) {
-                local_size += sizeof(float) * nInputPlanes * (GPU_BLOCK_SIZE+2) * 3;
-                clSetKernelArg(ker, ai++, local_size, nullptr);
-        }
-
         cl_event event;
 
         size_t gws[3] = {1, 1, 1};

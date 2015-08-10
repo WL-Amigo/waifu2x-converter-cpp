@@ -347,6 +347,17 @@ struct Buffer {
                 if (cl_ptr_list[devid] == nullptr) {
                     return false;
                 }
+
+                /* touch memory to force allocation */
+                char data = 0;
+                err = clEnqueueWriteBuffer(dev->queue, cl_ptr_list[devid],
+                                           CL_TRUE, 0, 1, &data, 0, nullptr, nullptr);
+                if (err != CL_SUCCESS) {
+                    clReleaseMemObject(cl_ptr_list[devid]);
+                    cl_ptr_list[devid] = nullptr;
+                    return false;
+                }
+
             }
             break;
 

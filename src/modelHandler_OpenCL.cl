@@ -824,11 +824,13 @@ filter(__global const float * __restrict__ packed_input,
        __global float * __restrict__ biases,
        unsigned int hsz,
        unsigned int wsz,
-       __global float * __restrict__ weight,
-       __local float * __restrict__ local_mem)
+       __global float * __restrict__ weight)
 {
 	unsigned int yi = get_group_id(0);
 	unsigned int lid = get_local_id(0);
+
+	__local float2 local_mem_base[(128/2) * (BLOCK_SIZE+2) * 3];
+	__local float *local_mem = (__local float*)local_mem_base;
 
 	__global const float * __restrict__ in = packed_input;
 	size_t in_step = wsz * sizeof(float) * nInputPlanes;
