@@ -4,6 +4,8 @@
 #include <vector>
 #include <immintrin.h>
 
+namespace {
+
 #define BLOCK_SIZE_HOR 256
 #define BLOCK_SIZE_VER 16
 
@@ -280,7 +282,7 @@ apply_filter(unsigned long xi, unsigned long wsz,
 
 }
 
-template <bool border> inline void
+template <bool border> static inline void
 filter_2elem(const float *packed_input,
 	     int nInputPlanes,
 	     float *packed_output,
@@ -359,7 +361,7 @@ filter_2elem(const float *packed_input,
 	}
 }
 
-template <bool border> inline
+template <bool border> static inline
 float
 get_data(const float *p, int wsz, int xi, int num_plane, int plane)
 {
@@ -373,7 +375,7 @@ get_data(const float *p, int wsz, int xi, int num_plane, int plane)
 	}
 }
 
-template <bool border> void
+template <bool border> static void
 filter_1elem_output1(const float *packed_input,
 		     int nInputPlanes,
 		     float *packed_output,
@@ -479,7 +481,7 @@ filter_1elem_output1(const float *packed_input,
 }
 
 
-template <bool border> void
+template <bool border> static void
 filter_1elem_output3(const float *packed_input,
 		     int nInputPlanes,
 		     float *packed_output,
@@ -711,3 +713,5 @@ filter_AVX_impl0(ComputeEnv *env,
 #endif
 
 }
+
+} // namespace

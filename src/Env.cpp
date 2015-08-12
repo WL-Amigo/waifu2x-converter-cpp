@@ -36,5 +36,5 @@ ComputeEnv::ComputeEnv()
 		this->flags |= ComputeEnv::HAVE_CPU_FMA;
 	}
 
-	this->pref_block_size = 4096;
+	this->pref_block_size = 512;
 }
