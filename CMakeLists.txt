@@ -73,7 +73,7 @@ endif()
 
 if(${CMAKE_SYSTEM_NAME} STREQUAL "Linux")
   set(NVCC "${CUDA_TOOLKIT_ROOT_DIR}/bin/nvcc" "-ccbin" "/usr/bin/g++-4.7")
- elseif(${CMAKE_SYSTEM_NAME} STREQUAL "Windows")
+elseif(${CMAKE_SYSTEM_NAME} STREQUAL "Windows")
   set(NVCC "${CUDA_TOOLKIT_ROOT_DIR}/bin/nvcc" "-Xcompiler" "/wd 4819")
   set_target_properties(w2xc PROPERTIES PREFIX "")
   set_target_properties(w2xc PROPERTIES IMPORT_PREFIX "")
