@@ -29,8 +29,8 @@ madd256(__m256 v0, __m256 v1, __m256 v2)
 #endif
 
 #define load_broadcast _mm256_broadcast_ss
-#define loadu _mm256_loadu_ps
-#define storeu _mm256_storeu_ps
+#define load256 _mm256_load_ps
+#define store256 _mm256_store_ps
 #define add256 _mm256_add_ps
 #define max256 _mm256_max_ps
 #define min256 _mm256_min_ps
@@ -77,17 +77,17 @@ load_broadcast(const float *p)
 }
 
 static inline v256_t
-loadu(const float *p)
+load256(const float *p)
 {
 	v256_t ret;
-	ret.v0 = _mm_loadu_ps(p);
-	ret.v1 = _mm_loadu_ps(p+4);
+	ret.v0 = _mm_load_ps(p);
+	ret.v1 = _mm_load_ps(p+4);
 	return ret;
 }
 
 
 static inline void
-storeu(float *p, v256_t const &v)
+store256(float *p, v256_t const &v)
 {
 	_mm_storeu_ps(p, v.v0);
 	_mm_storeu_ps(p+4, v.v1);
@@ -192,91 +192,91 @@ apply_filter(unsigned long xi, unsigned long wsz,
 		v00 = zero();
 		v01 = zero();
 
-		v00 = madd256(loadu(&w[0*VEC_WIDTH]), i00, v00);
-		v01 = madd256(loadu(&w[0*VEC_WIDTH]), i01, v01);
+		v00 = madd256(load256(&w[0*VEC_WIDTH]), i00, v00);
+		v01 = madd256(load256(&w[0*VEC_WIDTH]), i01, v01);
 
-		v00 = madd256(loadu(&w[1*VEC_WIDTH]), i01, v00);
-		v01 = madd256(loadu(&w[1*VEC_WIDTH]), i02, v01);
+		v00 = madd256(load256(&w[1*VEC_WIDTH]), i01, v00);
+		v01 = madd256(load256(&w[1*VEC_WIDTH]), i02, v01);
 
-		v00 = madd256(loadu(&w[2*VEC_WIDTH]), i02, v00);
-		v01 = madd256(loadu(&w[2*VEC_WIDTH]), i03, v01);
-
-
-		v00 = madd256(loadu(&w[3*VEC_WIDTH]), i10, v00);
-		v01 = madd256(loadu(&w[3*VEC_WIDTH]), i11, v01);
-
-		v00 = madd256(loadu(&w[4*VEC_WIDTH]), i11, v00);
-		v01 = madd256(loadu(&w[4*VEC_WIDTH]), i12, v01);
-
-		v00 = madd256(loadu(&w[5*VEC_WIDTH]), i12, v00);
-		v01 = madd256(loadu(&w[5*VEC_WIDTH]), i13, v01);
+		v00 = madd256(load256(&w[2*VEC_WIDTH]), i02, v00);
+		v01 = madd256(load256(&w[2*VEC_WIDTH]), i03, v01);
 
 
-		v00 = madd256(loadu(&w[6*VEC_WIDTH]), i20, v00);
-		v01 = madd256(loadu(&w[6*VEC_WIDTH]), i21, v01);
+		v00 = madd256(load256(&w[3*VEC_WIDTH]), i10, v00);
+		v01 = madd256(load256(&w[3*VEC_WIDTH]), i11, v01);
 
-		v00 = madd256(loadu(&w[7*VEC_WIDTH]), i21, v00);
-		v01 = madd256(loadu(&w[7*VEC_WIDTH]), i22, v01);
+		v00 = madd256(load256(&w[4*VEC_WIDTH]), i11, v00);
+		v01 = madd256(load256(&w[4*VEC_WIDTH]), i12, v01);
 
-		v00 = madd256(loadu(&w[8*VEC_WIDTH]), i22, v00);
-		v01 = madd256(loadu(&w[8*VEC_WIDTH]), i23, v01);
+		v00 = madd256(load256(&w[5*VEC_WIDTH]), i12, v00);
+		v01 = madd256(load256(&w[5*VEC_WIDTH]), i13, v01);
+
+
+		v00 = madd256(load256(&w[6*VEC_WIDTH]), i20, v00);
+		v01 = madd256(load256(&w[6*VEC_WIDTH]), i21, v01);
+
+		v00 = madd256(load256(&w[7*VEC_WIDTH]), i21, v00);
+		v01 = madd256(load256(&w[7*VEC_WIDTH]), i22, v01);
+
+		v00 = madd256(load256(&w[8*VEC_WIDTH]), i22, v00);
+		v01 = madd256(load256(&w[8*VEC_WIDTH]), i23, v01);
 
 		w += 9 * VEC_WIDTH;
 
 		if (ip0) {
-			storeu(&intermediate0[opIndex+0], v00);
-			storeu(&intermediate1[opIndex+0], v01);
+			store256(&intermediate0[opIndex+0], v00);
+			store256(&intermediate1[opIndex+0], v01);
 		} else {					\
-			v256_t prev00 = loadu(&intermediate0[opIndex+0]);
-			v256_t prev01 = loadu(&intermediate1[opIndex+0]);
+			v256_t prev00 = load256(&intermediate0[opIndex+0]);
+			v256_t prev01 = load256(&intermediate1[opIndex+0]);
 
-			storeu(&intermediate0[opIndex+0], add256(prev00,v00));
-			storeu(&intermediate1[opIndex+0], add256(prev01,v01));
+			store256(&intermediate0[opIndex+0], add256(prev00,v00));
+			store256(&intermediate1[opIndex+0], add256(prev01,v01));
 		}
 
 		v10 = zero();
 		v11 = zero();
 
-		v10 = madd256(loadu(&w[0*VEC_WIDTH]), i00, v10);
-		v11 = madd256(loadu(&w[0*VEC_WIDTH]), i01, v11);
+		v10 = madd256(load256(&w[0*VEC_WIDTH]), i00, v10);
+		v11 = madd256(load256(&w[0*VEC_WIDTH]), i01, v11);
 
-		v10 = madd256(loadu(&w[1*VEC_WIDTH]), i01, v10);
-		v11 = madd256(loadu(&w[1*VEC_WIDTH]), i02, v11);
+		v10 = madd256(load256(&w[1*VEC_WIDTH]), i01, v10);
+		v11 = madd256(load256(&w[1*VEC_WIDTH]), i02, v11);
 
-		v10 = madd256(loadu(&w[2*VEC_WIDTH]), i02, v10);
-		v11 = madd256(loadu(&w[2*VEC_WIDTH]), i03, v11);
-
-
-		v10 = madd256(loadu(&w[3*VEC_WIDTH]), i10, v10);
-		v11 = madd256(loadu(&w[3*VEC_WIDTH]), i11, v11);
-
-		v10 = madd256(loadu(&w[4*VEC_WIDTH]), i11, v10);
-		v11 = madd256(loadu(&w[4*VEC_WIDTH]), i12, v11);
-
-		v10 = madd256(loadu(&w[5*VEC_WIDTH]), i12, v10);
-		v11 = madd256(loadu(&w[5*VEC_WIDTH]), i13, v11);
+		v10 = madd256(load256(&w[2*VEC_WIDTH]), i02, v10);
+		v11 = madd256(load256(&w[2*VEC_WIDTH]), i03, v11);
 
 
-		v10 = madd256(loadu(&w[6*VEC_WIDTH]), i20, v10);
-		v11 = madd256(loadu(&w[6*VEC_WIDTH]), i21, v11);
+		v10 = madd256(load256(&w[3*VEC_WIDTH]), i10, v10);
+		v11 = madd256(load256(&w[3*VEC_WIDTH]), i11, v11);
 
-		v10 = madd256(loadu(&w[7*VEC_WIDTH]), i21, v10);
-		v11 = madd256(loadu(&w[7*VEC_WIDTH]), i22, v11);
+		v10 = madd256(load256(&w[4*VEC_WIDTH]), i11, v10);
+		v11 = madd256(load256(&w[4*VEC_WIDTH]), i12, v11);
 
-		v10 = madd256(loadu(&w[8*VEC_WIDTH]), i22, v10);
-		v11 = madd256(loadu(&w[8*VEC_WIDTH]), i23, v11);
+		v10 = madd256(load256(&w[5*VEC_WIDTH]), i12, v10);
+		v11 = madd256(load256(&w[5*VEC_WIDTH]), i13, v11);
+
+
+		v10 = madd256(load256(&w[6*VEC_WIDTH]), i20, v10);
+		v11 = madd256(load256(&w[6*VEC_WIDTH]), i21, v11);
+
+		v10 = madd256(load256(&w[7*VEC_WIDTH]), i21, v10);
+		v11 = madd256(load256(&w[7*VEC_WIDTH]), i22, v11);
+
+		v10 = madd256(load256(&w[8*VEC_WIDTH]), i22, v10);
+		v11 = madd256(load256(&w[8*VEC_WIDTH]), i23, v11);
 
 		w += 9 * VEC_WIDTH;
 
 		if (ip0) {
-			storeu(&intermediate0[opIndex+8], v10);
-			storeu(&intermediate1[opIndex+8], v11);
+			store256(&intermediate0[opIndex+8], v10);
+			store256(&intermediate1[opIndex+8], v11);
 		} else {
-			v256_t prev10 = loadu(&intermediate0[opIndex+8]);
-			v256_t prev11 = loadu(&intermediate1[opIndex+8]);
+			v256_t prev10 = load256(&intermediate0[opIndex+8]);
+			v256_t prev11 = load256(&intermediate1[opIndex+8]);
 
-			storeu(&intermediate0[opIndex+8], add256(prev10,v10));
-			storeu(&intermediate1[opIndex+8], add256(prev11,v11));
+			store256(&intermediate0[opIndex+8], add256(prev10,v10));
+			store256(&intermediate1[opIndex+8], add256(prev11,v11));
 		}
 	}
 
@@ -342,22 +342,22 @@ filter_2elem(const float *packed_input,
 	float *intermediate1 = intermediate0 + nOutputPlanes;
 
 	for (int opIndex = 0; opIndex < nOutputPlanes; opIndex+=VEC_WIDTH) {
-		v256_t bv = loadu(&biases[opIndex]);
+		v256_t bv = load256(&biases[opIndex]);
 		v256_t v, mtz, ltz;
 
-		v = loadu(&intermediate0[opIndex]);
+		v = load256(&intermediate0[opIndex]);
 		v = add256(v, bv);
 		mtz = max256(v, zero());
 		ltz = min256(v, zero());
 		v = madd256(ltz, set1(0.1f), mtz);
-		storeu(&out0[opIndex], v);
+		store256(&out0[opIndex], v);
 
-		v = loadu(&intermediate1[opIndex]);
+		v = load256(&intermediate1[opIndex]);
 		v = add256(v, bv);
 		mtz = max256(v, zero());
 		ltz = min256(v, zero());
 		v = madd256(ltz, set1(0.1f), mtz);
-		storeu(&out1[opIndex], v);
+		store256(&out1[opIndex], v);
 	}
 }
 
@@ -419,18 +419,18 @@ filter_1elem_output1(const float *packed_input,
 		v256_t i10, i11, i12;
 		v256_t i20, i21, i22;
 
-		i01 = loadu(&in01[0]);
-		i11 = loadu(&in11[0]);
-		i21 = loadu(&in21[0]);
+		i01 = load256(&in01[0]);
+		i11 = load256(&in11[0]);
+		i21 = load256(&in21[0]);
 
 		if (border && xi == 0) {
 			i00 = i01;
 			i10 = i11;
 			i20 = i21;
 		} else {
-			i00 = loadu(&in01[-nInputPlanes]);
-			i10 = loadu(&in11[-nInputPlanes]);
-			i20 = loadu(&in21[-nInputPlanes]);
+			i00 = load256(&in01[-nInputPlanes]);
+			i10 = load256(&in11[-nInputPlanes]);
+			i20 = load256(&in21[-nInputPlanes]);
 		}
 
 		if (border && xi == wsz-1) {
@@ -438,9 +438,9 @@ filter_1elem_output1(const float *packed_input,
 			i12 = i11;
 			i22 = i21;
 		} else {
-			i02 = loadu(&in01[+nInputPlanes]);
-			i12 = loadu(&in11[+nInputPlanes]);
-			i22 = loadu(&in21[+nInputPlanes]);
+			i02 = load256(&in01[+nInputPlanes]);
+			i12 = load256(&in11[+nInputPlanes]);
+			i22 = load256(&in21[+nInputPlanes]);
 		}
 
 		in01+=VEC_WIDTH;
@@ -449,17 +449,17 @@ filter_1elem_output1(const float *packed_input,
 
 		v256_t v;
 
-		v = mul256(loadu(&w[0*VEC_WIDTH]), i00);
-		v = madd256(loadu(&w[1*VEC_WIDTH]), i01, v);
-		v = madd256(loadu(&w[2*VEC_WIDTH]), i02, v);
+		v = mul256(load256(&w[0*VEC_WIDTH]), i00);
+		v = madd256(load256(&w[1*VEC_WIDTH]), i01, v);
+		v = madd256(load256(&w[2*VEC_WIDTH]), i02, v);
 
-		v = madd256(loadu(&w[3*VEC_WIDTH]), i10, v);
-		v = madd256(loadu(&w[4*VEC_WIDTH]), i11, v);
-		v = madd256(loadu(&w[5*VEC_WIDTH]), i12, v);
+		v = madd256(load256(&w[3*VEC_WIDTH]), i10, v);
+		v = madd256(load256(&w[4*VEC_WIDTH]), i11, v);
+		v = madd256(load256(&w[5*VEC_WIDTH]), i12, v);
 
-		v = madd256(loadu(&w[6*VEC_WIDTH]), i20, v);
-		v = madd256(loadu(&w[7*VEC_WIDTH]), i21, v);
-		v = madd256(loadu(&w[8*VEC_WIDTH]), i22, v);
+		v = madd256(load256(&w[6*VEC_WIDTH]), i20, v);
+		v = madd256(load256(&w[7*VEC_WIDTH]), i21, v);
+		v = madd256(load256(&w[8*VEC_WIDTH]), i22, v);
 
 		sum = add256(v, sum);
 
@@ -529,18 +529,18 @@ filter_1elem_output3(const float *packed_input,
 		v256_t i10, i11, i12;
 		v256_t i20, i21, i22;
 
-		i01 = loadu(&in01[0]);
-		i11 = loadu(&in11[0]);
-		i21 = loadu(&in21[0]);
+		i01 = load256(&in01[0]);
+		i11 = load256(&in11[0]);
+		i21 = load256(&in21[0]);
 
 		if (border && xi == 0) {
 			i00 = i01;
 			i10 = i11;
 			i20 = i21;
 		} else {
-			i00 = loadu(&in01[-nInputPlanes]);
-			i10 = loadu(&in11[-nInputPlanes]);
-			i20 = loadu(&in21[-nInputPlanes]);
+			i00 = load256(&in01[-nInputPlanes]);
+			i10 = load256(&in11[-nInputPlanes]);
+			i20 = load256(&in21[-nInputPlanes]);
 		}
 
 		if (border && xi == wsz-1) {
@@ -548,9 +548,9 @@ filter_1elem_output3(const float *packed_input,
 			i12 = i11;
 			i22 = i21;
 		} else {
-			i02 = loadu(&in01[+nInputPlanes]);
-			i12 = loadu(&in11[+nInputPlanes]);
-			i22 = loadu(&in21[+nInputPlanes]);
+			i02 = load256(&in01[+nInputPlanes]);
+			i12 = load256(&in11[+nInputPlanes]);
+			i22 = load256(&in21[+nInputPlanes]);
 		}
 
 		in01+=VEC_WIDTH;
@@ -560,17 +560,17 @@ filter_1elem_output3(const float *packed_input,
 		v256_t v0, v1, v2;
 
 #define OUT3_CONV9(I)							\
-		v##I = mul256(loadu(&w##I[0*nInputPlanes]), i00); \
-		v##I = madd256(loadu(&w##I[1*nInputPlanes]), i01, v##I); \
-		v##I = madd256(loadu(&w##I[2*nInputPlanes]), i02, v##I); \
+		v##I = mul256(load256(&w##I[0*nInputPlanes]), i00); \
+		v##I = madd256(load256(&w##I[1*nInputPlanes]), i01, v##I); \
+		v##I = madd256(load256(&w##I[2*nInputPlanes]), i02, v##I); \
 									\
-		v##I = madd256(loadu(&w##I[3*nInputPlanes]), i10, v##I); \
-		v##I = madd256(loadu(&w##I[4*nInputPlanes]), i11, v##I); \
-		v##I = madd256(loadu(&w##I[5*nInputPlanes]), i12, v##I); \
+		v##I = madd256(load256(&w##I[3*nInputPlanes]), i10, v##I); \
+		v##I = madd256(load256(&w##I[4*nInputPlanes]), i11, v##I); \
+		v##I = madd256(load256(&w##I[5*nInputPlanes]), i12, v##I); \
 									\
-		v##I = madd256(loadu(&w##I[6*nInputPlanes]), i20, v##I); \
-		v##I = madd256(loadu(&w##I[7*nInputPlanes]), i21, v##I); \
-		v##I = madd256(loadu(&w##I[8*nInputPlanes]), i22, v##I); \
+		v##I = madd256(load256(&w##I[6*nInputPlanes]), i20, v##I); \
+		v##I = madd256(load256(&w##I[7*nInputPlanes]), i21, v##I); \
+		v##I = madd256(load256(&w##I[8*nInputPlanes]), i22, v##I); \
 									\
 		sum##I = add256(v##I, sum##I);
 
