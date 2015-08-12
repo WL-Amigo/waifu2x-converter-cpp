@@ -66,7 +66,10 @@ add_dependencies(w2xc gensrcs)
 
 if(CMAKE_COMPILER_IS_GNUCXX OR ${CMAKE_CXX_COMPILER_ID} STREQUAL "Clang")
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=gnu++11")
-  set(CMAKE_CXX_FLAGS_RELEASE "-O2 -s")
+
+  if (NOT ${CMAKE_SYSTEM_NAME} STREQUAL "Darwin")
+    set(CMAKE_CXX_FLAGS_RELEASE "-O2 -s")
+  endif()
 
   set_source_files_properties(src/modelHandler_avx.cpp PROPERTIES COMPILE_FLAGS "${CMAKE_CXX_FLAGS} -O2 -mavx -s")
   set_source_files_properties(src/modelHandler_fma.cpp PROPERTIES COMPILE_FLAGS "${CMAKE_CXX_FLAGS} -O2 -mfma -s")
