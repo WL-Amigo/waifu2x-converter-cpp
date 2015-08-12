@@ -6,7 +6,7 @@ then
     exit 1
 fi
 
-dst_dir=waifu2x-converter_$mode
+dst_dir=`date '+waifu2x-converter_'$mode'_%m%d'`
 
 /bin/rm -rf $dst_dir
 

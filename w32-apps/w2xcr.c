@@ -284,7 +284,7 @@ proc_thread(void *ap)
             }
         }
 
-        char *models_path = malloc(strlen(self_path) + 7 + 1);
+        char *models_path = malloc(strlen(self_path) + 11 + 1);
 
         sprintf(models_path, "%s\\models_rgb", self_path);
         r = w2xconv_load_models(c, models_path);
