@@ -59,7 +59,10 @@ add_dependencies(w2xc gensrcs)
 
 if(CMAKE_COMPILER_IS_GNUCXX OR ${CMAKE_CXX_COMPILER_ID} STREQUAL "Clang")
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=gnu++11")
-  set(CMAKE_CXX_FLAGS_RELEASE "-s")
+
+  if (NOT ${CMAKE_SYSTEM_NAME} STREQUAL "Darwin")
+    set(CMAKE_CXX_FLAGS_RELEASE "-s")
+  endif()
 
   set_source_files_properties(src/modelHandler_avx.cpp PROPERTIES COMPILE_FLAGS -mavx)
   set_source_files_properties(src/modelHandler_fma.cpp PROPERTIES COMPILE_FLAGS -mfma)
@@ -70,7 +73,7 @@ endif()
 
 if(${CMAKE_SYSTEM_NAME} STREQUAL "Linux")
   set(NVCC "${CUDA_TOOLKIT_ROOT_DIR}/bin/nvcc" "-ccbin" "/usr/bin/g++-4.7")
-elseif(${CMAKE_SYSTEM_NAME} STREQUAL "Windows")
+ elseif(${CMAKE_SYSTEM_NAME} STREQUAL "Windows")
   set(NVCC "${CUDA_TOOLKIT_ROOT_DIR}/bin/nvcc" "-Xcompiler" "/wd 4819")
   set_target_properties(w2xc PROPERTIES PREFIX "")
   set_target_properties(w2xc PROPERTIES IMPORT_PREFIX "")
