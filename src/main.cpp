@@ -64,15 +64,8 @@ int main(int argc, char** argv) {
 
 	TCLAP::SwitchArg cmdDisableGPU("", "disable-gpu", "disable GPU", cmd, false);
 
-	std::vector<int> cmdBlockSizeConstraintV;
-	cmdBlockSizeConstraintV.push_back(0);
-	cmdBlockSizeConstraintV.push_back(128);
-	cmdBlockSizeConstraintV.push_back(256);
-	cmdBlockSizeConstraintV.push_back(512);
-	cmdBlockSizeConstraintV.push_back(1024);
-	TCLAP::ValuesConstraint<int> cmdBlockSizeConstraint(cmdBlockSizeConstraintV);
 	TCLAP::ValueArg<int> cmdBlockSize("", "block_size", "block size",
-					  false, 0, &cmdBlockSizeConstraint, cmd);
+					  false, 0, "integer", cmd);
 
 	// definition of command line argument : end
 
