@@ -12,7 +12,13 @@ else()
   include_directories(${OpenCL_INCLUDE_DIRS})
 endif()
 
-find_package(CUDA REQUIRED)
+#find_package(CUDA)
+
+if(CUDA_FOUND) 
+  add_definitions(-DHAVE_CUDA)
+else()
+  message(WARNING "cuda not found. disabled.")
+endif()
 
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/src)
@@ -90,14 +96,20 @@ endif()
 
 
 if(${CMAKE_SYSTEM_NAME} STREQUAL "Linux")
-  set(NVCC "${CUDA_TOOLKIT_ROOT_DIR}/bin/nvcc" "-ccbin" "/usr/bin/g++-4.7" "${NVCC_FLAGS}")
+  if(CUDA_FOUND)
+    set(NVCC "${CUDA_TOOLKIT_ROOT_DIR}/bin/nvcc" "-ccbin" "/usr/bin/g++-4.7" "${NVCC_FLAGS}")
+  endif()
 elseif(${CMAKE_SYSTEM_NAME} STREQUAL "Windows")
-  set(NVCC "${CUDA_TOOLKIT_ROOT_DIR}/bin/nvcc" "-Xcompiler" "/wd 4819" "${NVCC_FLAGS}")
+  if(CUDA_FOUND)
+    set(NVCC "${CUDA_TOOLKIT_ROOT_DIR}/bin/nvcc" "-Xcompiler" "/wd 4819" "${NVCC_FLAGS}")
+  endif()
   set_target_properties(w2xc PROPERTIES PREFIX "")
   set_target_properties(w2xc PROPERTIES IMPORT_PREFIX "")
   set_target_properties(w2xc PROPERTIES IMPORT_SUFFIX ".lib")
 else()
-  set(NVCC "${CUDA_TOOLKIT_ROOT_DIR}/bin/nvcc")
+  if(CUDA_FOUND)
+    set(NVCC "${CUDA_TOOLKIT_ROOT_DIR}/bin/nvcc")
+  endif()
 endif()
 
 target_link_libraries(waifu2x-converter-cpp PUBLIC w2xc)
@@ -121,49 +133,43 @@ endif()
 
 set(CONV_EXE "$<TARGET_FILE_DIR:conv>/conv")
 
-cuda_compile_ptx(src/modelHandler_CUDA.ptx20
-  src/modelHandler_CUDA.cu
-  OPTIONS -arch=sm_20)
-
-cuda_compile_ptx(src/modelHandler_CUDA.ptx30
-  src/modelHandler_CUDA.cu
-  OPTIONS -arch=sm_30)
-
-
-add_custom_command(
-  OUTPUT modelHandler_CUDA.ptx20.h
-  COMMAND ${CONV_EXE} modelHandler_CUDA.ptx20 modelHandler_CUDA.ptx20.h str
-  DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/modelHandler_CUDA.ptx20 conv
-  )
-
-add_custom_command(
-  OUTPUT modelHandler_CUDA.ptx30.h
-  COMMAND ${CONV_EXE} modelHandler_CUDA.ptx30 modelHandler_CUDA.ptx30.h str
-  DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/modelHandler_CUDA.ptx30 conv
-  )
-
-
-add_custom_command(
-  OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/modelHandler_CUDA.ptx20
-  COMMAND ${NVCC} -arch=sm_20 -ptx -o ${CMAKE_CURRENT_BINARY_DIR}/modelHandler_CUDA.ptx20 ${CMAKE_CURRENT_SOURCE_DIR}/src/modelHandler_CUDA.cu
-  DEPENDS src/modelHandler_CUDA.cu
-  )
-add_custom_command(
-  OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/modelHandler_CUDA.ptx30
-  COMMAND ${NVCC} -arch=sm_30 -ptx -o ${CMAKE_CURRENT_BINARY_DIR}/modelHandler_CUDA.ptx30 ${CMAKE_CURRENT_SOURCE_DIR}/src/modelHandler_CUDA.cu
-  DEPENDS src/modelHandler_CUDA.cu
-  )
-
-
 add_custom_command(
   OUTPUT modelHandler_OpenCL.cl.h
   COMMAND ${CONV_EXE} ${CMAKE_CURRENT_SOURCE_DIR}/src/modelHandler_OpenCL.cl ${CMAKE_CURRENT_BINARY_DIR}/modelHandler_OpenCL.cl.h  str
   DEPENDS src/modelHandler_OpenCL.cl conv
   )
 
-add_custom_target(gensrcs ALL
-  DEPENDS modelHandler_OpenCL.cl.h modelHandler_CUDA.ptx30.h modelHandler_CUDA.ptx20.h)
+set(GPU_CODE modelHandler_OpenCL.cl.h)
 
+if(CUDA_FOUND)
+  add_custom_command(
+    OUTPUT modelHandler_CUDA.ptx20.h
+    COMMAND ${CONV_EXE} modelHandler_CUDA.ptx20 modelHandler_CUDA.ptx20.h str
+    DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/modelHandler_CUDA.ptx20 conv
+    )
+
+  add_custom_command(
+    OUTPUT modelHandler_CUDA.ptx30.h
+    COMMAND ${CONV_EXE} modelHandler_CUDA.ptx30 modelHandler_CUDA.ptx30.h str
+    DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/modelHandler_CUDA.ptx30 conv
+    )
+
+  add_custom_command(
+    OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/modelHandler_CUDA.ptx20
+    COMMAND ${NVCC} -arch=sm_20 -ptx -o ${CMAKE_CURRENT_BINARY_DIR}/modelHandler_CUDA.ptx20 ${CMAKE_CURRENT_SOURCE_DIR}/src/modelHandler_CUDA.cu
+    DEPENDS src/modelHandler_CUDA.cu
+    )
+  add_custom_command(
+    OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/modelHandler_CUDA.ptx30
+    COMMAND ${NVCC} -arch=sm_30 -ptx -o ${CMAKE_CURRENT_BINARY_DIR}/modelHandler_CUDA.ptx30 ${CMAKE_CURRENT_SOURCE_DIR}/src/modelHandler_CUDA.cu
+    DEPENDS src/modelHandler_CUDA.cu
+    )
+
+  set(GPU_CODE ${GPU_CODE} modelHandler_CUDA.ptx30.h modelHandler_CUDA.ptx20.h)
+endif()
+
+add_custom_target(gensrcs ALL
+  DEPENDS ${GPU_CODE})
 
 add_executable(runtest w32-apps/runtest.c)
 target_link_libraries(runtest w2xc)

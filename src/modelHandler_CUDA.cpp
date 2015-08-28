@@ -14,12 +14,16 @@ static HMODULE handle;
 static void *handle;
 #endif
 
+#ifdef HAVE_CUDA
 static const char prog20[] = 
 #include "modelHandler_CUDA.ptx20.h"
 	;
 static const char prog30[] = 
 #include "modelHandler_CUDA.ptx30.h"
 	;
+#else
+
+#endif
 
 
 #define CUDA_DECL(name)				\
@@ -68,6 +72,7 @@ cudalib_init(void)
 bool
 initCUDA(ComputeEnv *env)
 {
+#ifdef HAVE_CUDA
 	if (cudalib_init() < 0) {
 		return false;
 	}
@@ -234,6 +239,9 @@ initCUDA(ComputeEnv *env)
         env->cuda_dev_list[0].name = name;
 
 	return true;
+#else
+	return false;
+#endif
 }
 
 void
