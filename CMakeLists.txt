@@ -12,7 +12,7 @@ else()
   include_directories(${OpenCL_INCLUDE_DIRS})
 endif()
 
-#find_package(CUDA)
+find_package(CUDA)
 
 if(CUDA_FOUND) 
   add_definitions(-DHAVE_CUDA)
