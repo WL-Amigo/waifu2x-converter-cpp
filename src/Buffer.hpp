@@ -1,8 +1,10 @@
 #ifndef BUFFER_HPP
 #define BUFFER_HPP
 
-#ifndef __APPLE__
+#if defined(_MSC_VER)
 #include <malloc.h>
+#elif defined(__GNUC__)
+#include <mm_malloc.h>
 #endif
 
 #include <stdlib.h>
