@@ -1,11 +1,13 @@
 #include "Env.hpp"
 #include "Buffer.hpp"
 
+#ifdef X86OPT
 #ifdef __GNUC__
 #include <cpuid.h>
 #else
 #include <intrin.h>
 #endif
+#endif // X86OPT
 
 ComputeEnv::ComputeEnv()
 	:num_cl_dev(0),
@@ -14,6 +16,9 @@ ComputeEnv::ComputeEnv()
          cuda_dev_list(nullptr),
          transfer_wait(0)
 {
+	this->flags = 0;
+
+#ifdef X86OPT
 	unsigned int eax=0, ebx=0, ecx=0, edx=0;
 
 #ifdef __GNUC__
@@ -26,8 +31,6 @@ ComputeEnv::ComputeEnv()
 	ecx = cpuInfo[2];
 	edx = cpuInfo[3];
 #endif
-	this->flags = 0;
-
 	if ((ecx & 0x18000000) == 0x18000000) {
 		this->flags |= ComputeEnv::HAVE_CPU_AVX;
 	}
@@ -35,6 +38,7 @@ ComputeEnv::ComputeEnv()
 	if (ecx & (1<<12)) {
 		this->flags |= ComputeEnv::HAVE_CPU_FMA;
 	}
+#endif // X86OPT
 
 	this->pref_block_size = 512;
 }

@@ -58,10 +58,17 @@ endif()
 find_library(IMGCODECS_LIBRARY NAMES opencv_imgcodecs opencv_highgui
   HINTS ${OPENCV_PREFIX}/lib)
 
+if(CMAKE_SYSTEM_PROCESSOR STREQUAL "amd64" OR
+    CMAKE_SYSTEM_PROCESSOR STREQUAL "x86_64" OR
+    CMAKE_SYSTEM_PROCESSOR MATCHES "^i.86$")
+  add_definitions(-DX86OPT)
+  set(X86OPT_SOURCES src/modelHandler_avx.cpp src/modelHandler_fma.cpp src/modelHandler_sse.cpp)
+endif()
+
 add_executable(waifu2x-converter-cpp
   src/main.cpp)
 add_library(w2xc SHARED
-  src/modelHandler.cpp src/modelHandler_avx.cpp src/modelHandler_fma.cpp src/modelHandler_sse.cpp
+  src/modelHandler.cpp ${X86OPT_SOURCES}
   src/modelHandler_OpenCL.cpp src/convertRoutine.cpp src/threadPool.cpp
   src/modelHandler_CUDA.cpp src/w2xconv.cpp src/common.cpp
   src/Env.cpp

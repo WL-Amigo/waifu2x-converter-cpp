@@ -16,13 +16,6 @@
 #include "CLlib.h"
 #include "params.h"
 
-#ifdef __GNUC__
-#include <cpuid.h>
-#else
-#include <intrin.h>
-#endif
-
-
 static const char prog[] = 
 #include "modelHandler_OpenCL.cl.h"
 	;
