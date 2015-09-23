@@ -28,6 +28,10 @@ ComputeEnv::ComputeEnv()
 #endif
 	this->flags = 0;
 
+	if (ecx & (1<<0)) {
+		this->flags |= ComputeEnv::HAVE_CPU_SSE3;
+	}
+
 	if ((ecx & 0x18000000) == 0x18000000) {
 		this->flags |= ComputeEnv::HAVE_CPU_AVX;
 	}
