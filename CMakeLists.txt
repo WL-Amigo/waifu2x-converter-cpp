@@ -187,3 +187,24 @@ add_custom_target(gensrcs ALL
 
 add_executable(runtest w32-apps/runtest.c)
 target_link_libraries(runtest w2xc)
+
+install(TARGETS w2xc waifu2x-converter-cpp
+  RUNTIME DESTINATION bin
+  LIBRARY DESTINATION "lib${LIB_SUFFIX}"
+  ARCHIVE DESTINATION "lib${LIB_SUFFIX}"
+)
+install(FILES src/w2xconv.h DESTINATION include)
+
+# Better add support for multiple directories where to find models
+# with paths separated by : (a la PATH) then install unconditionally
+option(INSTALL_MODELS "Install waifu2x RGB models" false)
+if(INSTALL_MODELS)
+  add_definitions(-DDEFAULT_MODELS_DIRECTORY="${CMAKE_INSTALL_PREFIX}/share/waifu2x-converter-cpp")
+  install(DIRECTORY models_rgb/ DESTINATION share/waifu2x-converter-cpp)
+endif()
+
+option(INSTALL_DOCS "Install developer documentation" false)
+if(INSTALL_DOCS)
+  install(DIRECTORY appendix docs/internals
+    DESTINATION share/doc/waifu2x-converter-cpp)
+endif()
