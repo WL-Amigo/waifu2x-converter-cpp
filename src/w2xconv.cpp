@@ -38,7 +38,7 @@ w2xconv_init(enum W2XConvGPUMode gpu,
 		nJob = std::thread::hardware_concurrency();
 	}
 
-#ifndef __APPLE__
+#if defined(_WIN32) || defined(__linux)
 	impl->env.tpool = w2xc::initThreadPool(nJob);
 #endif
 
@@ -252,7 +252,7 @@ w2xconv_fini(struct W2XConv *conv)
 
 	w2xc::finiCUDA(&impl->env);
 	w2xc::finiOpenCL(&impl->env);
-#ifndef __APPLE__
+#if defined(_WIN32) || defined(__linux)
 	w2xc::finiThreadPool(impl->env.tpool);
 #endif
 

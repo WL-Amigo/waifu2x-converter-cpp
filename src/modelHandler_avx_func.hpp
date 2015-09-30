@@ -699,7 +699,7 @@ filter_AVX_impl0(ComputeEnv *env,
 		}
 	};
 
-#ifdef __APPLE__
+#if !defined(_WIN32) && !defined(__linux)
 	std::vector<std::thread> workerThreads;
 	for (int ji=0; ji<nJob; ji++) {
 		workerThreads.emplace_back(std::thread(func));
