@@ -100,6 +100,7 @@ bool Model::filter_AVX_OpenCL(ComputeEnv *env,
 
 	bool have_fma = env->flags & ComputeEnv::HAVE_CPU_FMA;
 	bool have_avx = env->flags & ComputeEnv::HAVE_CPU_AVX;
+	bool have_sse3 = env->flags & ComputeEnv::HAVE_CPU_SSE3;
 
 	bool gpu = (rt == RUN_OPENCL) || (rt == RUN_CUDA);
 
@@ -317,10 +318,12 @@ bool Model::filter_AVX_OpenCL(ComputeEnv *env,
 				filter_AVX_impl(env, packed_input, packed_output,
 						nInputPlanes, nOutputPlanes, fbiases_flat, weight_flat,
 						size.width, size.height, nJob);
-			} else {
+			} else if (have_sse3) {
 				filter_SSE_impl(env, packed_input, packed_output,
 						nInputPlanes, nOutputPlanes, fbiases_flat, weight_flat,
 						size.width, size.height, nJob);
+			} else {
+				filter_CV(env, packed_input_buf, packed_output_buf, size);
 			}
 		}
 
@@ -379,11 +382,12 @@ bool Model::filter_AVX_OpenCL(ComputeEnv *env,
 			const float *packed_input = (float*)packed_input_buf->get_read_ptr_host(env, in_size);
 			float *packed_output = (float*)packed_output_buf->get_write_ptr_host(env);
 
-			if (!have_avx) {
+			if (!have_sse3) {
+				filter_CV(env, packed_input_buf, packed_output_buf, size);
+			} else if (!have_avx) {
 				filter_SSE_impl(env, packed_input, packed_output,
 						nInputPlanes, nOutputPlanes, fbiases_flat, weight_flat,
 						size.width, size.height, nJob);
-				//filter_CV(env, packed_input_buf, packed_output_buf, size);
 			} else {
 				if (have_fma) {
 					filter_FMA_impl(env, packed_input, packed_output,
