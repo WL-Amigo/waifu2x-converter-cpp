@@ -2,7 +2,7 @@
 #include <atomic>
 #include "threadPool.hpp"
 
-#ifndef __APPLE__
+#if defined(_WIN32) || defined(__linux)
 
 namespace w2xc {
 

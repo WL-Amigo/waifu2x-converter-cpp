@@ -1,7 +1,7 @@
 #ifndef THREAD_POOL_HPP
 #define THREAD_POOL_HPP
 
-#ifndef __APPLE__
+#if defined(_WIN32) || defined(__linux)
 
 #include <thread>
 #include <atomic>

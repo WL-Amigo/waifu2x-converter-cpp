@@ -27,7 +27,7 @@ struct ComputeEnv {
 
     struct W2XConvProcessor target_processor;
 
-#ifndef __APPLE__
+#if defined(_WIN32) || defined(__linux)
     w2xc::ThreadPool *tpool;
 #endif
     ComputeEnv();
