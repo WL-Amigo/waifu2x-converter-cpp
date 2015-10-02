@@ -1,10 +1,12 @@
 #define W2XCONV_IMPL
 
 #include <thread>
+#ifdef X86OPT
 //#if (defined __GNUC__) || (defined __clang__)
 #ifndef _WIN32
 #include <cpuid.h>
 #endif
+#endif // X86OPT
 #include "w2xconv.h"
 #include "sec.hpp"
 #include "Buffer.hpp"
@@ -63,6 +65,7 @@ w2xconv_init(enum W2XConvGPUMode gpu,
 		c->target_processor.devid = 0;
 		impl->dev_name = impl->env.cl_dev_list[0].name.c_str();
 	} else {
+#ifdef X86OPT
 		{
 
 #ifdef _WIN32
@@ -91,6 +94,7 @@ w2xconv_init(enum W2XConvGPUMode gpu,
 
 			c->target_processor.type = W2XCONV_PROC_HOST;
 		}
+#endif // X86OPT
 	}
 
 	c->target_processor.dev_name = impl->dev_name.c_str();

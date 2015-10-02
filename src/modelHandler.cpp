@@ -307,6 +307,7 @@ bool Model::filter_AVX_OpenCL(ComputeEnv *env,
 					 nInputPlanes, nOutputPlanes, fbiases_flat, weight_flat,
 					 size.width, size.height, nJob);
 		} else {
+#ifdef X86OPT
 			const float *packed_input = (float*)packed_input_buf->get_read_ptr_host(env, in_size);
 			float *packed_output = (float*)packed_output_buf->get_write_ptr_host(env);
 
@@ -325,6 +326,9 @@ bool Model::filter_AVX_OpenCL(ComputeEnv *env,
 			} else {
 				filter_CV(env, packed_input_buf, packed_output_buf, size);
 			}
+#else
+			filter_CV(env, packed_input_buf, packed_output_buf, size);
+#endif
 		}
 
 		double t2 = getsec();
@@ -379,6 +383,7 @@ bool Model::filter_AVX_OpenCL(ComputeEnv *env,
 					 nInputPlanes, nOutputPlanes, fbiases_flat, weight_flat,
 					 size.width, size.height, nJob);
 		} else {
+#ifdef X86OPT
 			const float *packed_input = (float*)packed_input_buf->get_read_ptr_host(env, in_size);
 			float *packed_output = (float*)packed_output_buf->get_write_ptr_host(env);
 
@@ -399,6 +404,9 @@ bool Model::filter_AVX_OpenCL(ComputeEnv *env,
 							size.width, size.height, nJob);
 				}
 			}
+#else
+			filter_CV(env, packed_input_buf, packed_output_buf, size);
+#endif
 		}
 	}
 
