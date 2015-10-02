@@ -73,5 +73,5 @@ Usage of this program can be seen by executing this with `--help` option.
 
 There are prebuilt binaries for Windows.
 
-- http://int.main.jp/files/waifu2x-converter_x64_0719.zip
-- http://int.main.jp/files/waifu2x-converter_x86_0719.zip
+- http://int.main.jp/files/waifu2x-converter_x64_0813.zip
+- http://int.main.jp/files/waifu2x-converter_x86_0813.zip
