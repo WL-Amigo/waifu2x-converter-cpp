@@ -185,8 +185,10 @@ endif()
 add_custom_target(gensrcs ALL
   DEPENDS ${GPU_CODE})
 
+enable_testing()
 add_executable(runtest w32-apps/runtest.c)
 target_link_libraries(runtest w2xc)
+add_test(runtest runtest)
 
 install(TARGETS w2xc waifu2x-converter-cpp
   RUNTIME DESTINATION bin
