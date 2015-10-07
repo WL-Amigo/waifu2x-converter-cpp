@@ -12,6 +12,7 @@
 #include "Buffer.hpp"
 #include "modelHandler.hpp"
 #include "convertRoutine.hpp"
+#include "filters.hpp"
 
 struct W2XConvImpl {
 	std::string dev_name;
@@ -23,11 +24,66 @@ struct W2XConvImpl {
 	std::vector<std::unique_ptr<w2xc::Model> > scale2_models;
 };
 
+static std::vector<struct W2XConvProcessor> processor_list;
+
+static void
+global_init2(void)
+{
+	w2xc::initOpenCLGlobal();
+	w2xc::initCUDAGlobal();
+}
+
+#ifdef _WIN32
+#include <windows.h>
+static INIT_ONCE global_init_once = INIT_ONCE_STATIC_INIT;
+
+static BOOL CALLBACK
+global_init1(PINIT_ONCE initOnce,
+	     PVOID Parameter,
+	     PVOID *Context)
+{
+	global_init2();
+	return TRUE;
+}
+
+static void
+global_init(void)
+{
+	InitOnceExecuteOnce(&global_init_once,
+			    global_init1,
+			    nullptr, nullptr);
+}
+#else
+
+#include <pthread.h>
+
+static pthread_once_t global_init_once = PTHREAD_ONCE_INIT;
+static void
+global_init1()
+{
+	global_init2();
+}
+static void
+global_init()
+{
+	pthread_once(&global_init_once, global_init1);
+}
+#endif
+
+
+const struct W2XConvProcessor *
+w2xconv_get_processor_list(int *ret_num)
+{
+	global_init();
+}
+
 W2XConv *
 w2xconv_init(enum W2XConvGPUMode gpu,
              int nJob,
 	     int enable_log)
 {
+	global_init();
+
 	struct W2XConv *c = new struct W2XConv;
 	struct W2XConvImpl *impl = new W2XConvImpl;
 

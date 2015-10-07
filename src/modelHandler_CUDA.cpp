@@ -33,47 +33,52 @@ FOR_EACH_CUDA_FUNC(CUDA_DECL, CUDA_DECL)
 
 namespace w2xc {
 
-static int
-cudalib_init(void)
+void
+initCUDAGlobal()
 {
 #ifdef _WIN32
 	handle = LoadLibrary("nvcuda.dll");
 #elif defined __APPLE__
 	handle = dlopen("libcuda.dylib", RTLD_LAZY);
 #define GetProcAddress dlsym
-
+#define FreeLibrary dlclose
 #else
 	handle = dlopen("libcuda.so.1", RTLD_LAZY);
 
 #define GetProcAddress dlsym
+#define FreeLibrary dlclose
 
 #endif
 	if (!handle) {
-		return -1;
+		return;
 	}
 
 #define LOAD(name)					\
 	name = (t##name) GetProcAddress(handle, #name); \
 	if (name == NULL) {				\
-		return -1;				\
+		FreeLibrary(handle);			\
+		handle = NULL;				\
+		return;					\
 	}
 
 #define LOAD_V2(name)					\
 	name = (t##name) GetProcAddress(handle, #name "_v2"); \
 	if (name == NULL) {				\
-		return -1;				\
+		FreeLibrary(handle);			\
+		handle = NULL;				\
+		return;					\
 	}
 
 	FOR_EACH_CUDA_FUNC(LOAD, LOAD_V2);
 
-	return 0;
+	return;
 }
 
 bool
 initCUDA(ComputeEnv *env)
 {
 #ifdef HAVE_CUDA
-	if (cudalib_init() < 0) {
+	if (handle == NULL) {
 		return false;
 	}
 

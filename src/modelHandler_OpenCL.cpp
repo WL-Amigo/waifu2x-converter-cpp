@@ -32,28 +32,33 @@ static HMODULE handle;
 static void *handle;
 #endif
 
-static int
-cllib_init(void)
+void
+initOpenCLGlobal()
 {
 #ifdef _WIN32
 	handle = LoadLibrary("OpenCL.dll");
 #elif defined __APPLE__
 	handle = dlopen("/System/Library/Frameworks/OpenCL.framework/Versions/A/OpenCL", RTLD_LAZY);
 #define GetProcAddress dlsym
+#define FreeLibrary dlclose
+
 #else
         handle = dlopen("libOpenCL.so.1", RTLD_LAZY);
 #define GetProcAddress dlsym
+#define FreeLibrary dlclose
 
 #endif
 
         if (!handle) {
-                return -1;
+                return;
         }
 
 #define LOAD(name)                              \
         p_##name = (decltype(p_##name)) GetProcAddress(handle, #name); \
         if (p_##name == NULL) {                 \
-                return -1;                      \
+                FreeLibrary(handle);            \
+                handle = NULL;                  \
+                return;                         \
         }
 
         LOAD(clGetDeviceInfo);
@@ -83,14 +88,13 @@ cllib_init(void)
         LOAD(clWaitForEvents);
         LOAD(clReleaseEvent);
 
-        return 0;
+        return;
 }
 
 bool
 initOpenCL(ComputeEnv *env, enum W2XConvGPUMode gpu)
 {
-        int r = cllib_init();
-        if (r < 0) {
+        if (handle == NULL) {
                 return false;
         }
 

@@ -82,9 +82,25 @@ enum W2XConvProcessorType {
 	W2XCONV_PROC_OPENCL
 };
 
+enum W2XConvProcessorSubType {
+	W2XCONV_PROC_HOST_OPENCV,
+	W2XCONV_PROC_HOST_SSE,
+	W2XCONV_PROC_HOST_AVX,
+	W2XCONV_PROC_HOST_FMA,
+
+	W2XCONV_PROC_CUDA_NVIDIA,
+	W2XCONV_PROC_OPENCL_NVIDIA,
+	W2XCONV_PROC_OPENCL_AMD_GPU,
+	W2XCONV_PROC_OPENCL_INTEL_GPU,
+	W2XCONV_PROC_OPENCL_INTEL_CPU,
+	W2XCONV_PROC_OPENCL_UNKNOWN
+};
+
 struct W2XConvProcessor {
 	enum W2XConvProcessorType type;
+	enum W2XConvProcessorSubType sub_type;
 	int devid;
+	int num_core;
 	const char *dev_name;
 };
 
@@ -102,9 +118,14 @@ struct W2XConv {
 	struct W2XConvImpl *impl;
 };
 
+W2XCONV_EXPORT const struct W2XConvProcessor *w2xconv_get_processor_list(int *ret_num);
+
 W2XCONV_EXPORT struct W2XConv *w2xconv_init(enum W2XConvGPUMode gpu,
 					    int njob /* 0 = auto */,
 					    int enable_log);
+
+W2XCONV_EXPORT struct W2XConv *w2xconv_init_with_processor(int processor_idx,
+							   int njob);
 
 /* return negative if failed */
 W2XCONV_EXPORT int w2xconv_load_models(struct W2XConv *conv,
