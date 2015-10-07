@@ -14,7 +14,7 @@ endif()
 
 find_package(CUDA)
 
-if(CUDA_FOUND) 
+if(CUDA_FOUND)
   add_definitions(-DHAVE_CUDA)
 else()
   message(WARNING "cuda not found. disabled.")
