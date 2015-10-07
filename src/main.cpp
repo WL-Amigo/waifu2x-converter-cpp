@@ -18,6 +18,10 @@
 
 #include "w2xconv.h"
 
+#ifndef DEFAULT_MODELS_DIRECTORY
+#define DEFAULT_MODELS_DIRECTORY "models_rgb"
+#endif
+
 int main(int argc, char** argv) {
 	int ret = 1;
 
@@ -52,7 +56,7 @@ int main(int argc, char** argv) {
 
 	TCLAP::ValueArg<std::string> cmdModelPath("", "model_dir",
 			"path to custom model directory (don't append last / )", false,
-			"models_rgb", "string", cmd);
+			DEFAULT_MODELS_DIRECTORY, "string", cmd);
 
 	TCLAP::ValueArg<int> cmdNumberOfJobs("j", "jobs",
 			"number of threads launching at the same time", false, 0, "integer",
