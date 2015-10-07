@@ -68,6 +68,8 @@ int main(int argc, char** argv) {
 
 	TCLAP::SwitchArg cmdDisableGPU("", "disable-gpu", "disable GPU", cmd, false);
 
+	TCLAP::SwitchArg cmdListDevice("", "list-device", "dump device list", cmd, false);
+
 	TCLAP::ValueArg<int> cmdBlockSize("", "block_size", "block size",
 					  false, 0, "integer", cmd);
 
@@ -80,6 +82,41 @@ int main(int argc, char** argv) {
 		std::cerr << e.what() << std::endl;
 		std::cerr << "Error : cmd.parse() threw exception" << std::endl;
 		std::exit(-1);
+	}
+
+	if (cmdListDevice.getValue()) {
+		const W2XConvProcessor *procs;
+		int num_proc;
+
+		procs = w2xconv_get_processor_list(&num_proc);
+
+		for (int i=0; i<num_proc; i++) {
+			const W2XConvProcessor *p = &procs[i];
+			const char *type;
+			switch (p->type) {
+			case W2XCONV_PROC_HOST:
+				type = "host CPU";
+				break;
+
+			case W2XCONV_PROC_CUDA:
+				type = "CUDA";
+				break;
+
+			case W2XCONV_PROC_OPENCL:
+				type = "OpenCL";
+				break;
+
+			default:
+				type = "??";
+				break;
+			}
+
+			printf("%4d: %-45s(%-10s): num_core=%d\n",
+			       i,
+			       p->dev_name,
+			       type,
+			       p->num_core);
+		}
 	}
 
 

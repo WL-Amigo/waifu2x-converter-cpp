@@ -29,6 +29,7 @@ typedef enum CUjit_option_enum {
 } CUjit_option;
 
 typedef enum CUdevice_attribute_enum {
+    CU_DEVICE_ATTRIBUTE_MULTIPROCESSOR_COUNT = 16,
     CU_DEVICE_ATTRIBUTE_COMPUTE_CAPABILITY_MAJOR = 75,
 } CUdevice_attribute;
 

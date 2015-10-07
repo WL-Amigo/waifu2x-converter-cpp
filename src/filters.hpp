@@ -1,12 +1,14 @@
 #ifndef FILTERS_HPP
 #define FILTERS_HPP
 
+#include "w2xconv.h"
 #include "Buffer.hpp"
+#include <vector>
 
 namespace w2xc {
 
-void initOpenCLGlobal(void);
-void initCUDAGlobal(void);
+void initOpenCLGlobal(std::vector<W2XConvProcessor> *proc_list);
+void initCUDAGlobal(std::vector<W2XConvProcessor> *proc_list);
 
 bool initOpenCL(ComputeEnv *env, enum W2XConvGPUMode gpu);
 void finiOpenCL(ComputeEnv *env);

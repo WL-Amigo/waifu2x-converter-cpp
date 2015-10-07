@@ -5,6 +5,7 @@
 //#if (defined __GNUC__) || (defined __clang__)
 #ifndef _WIN32
 #include <cpuid.h>
+#include <unistd.h>
 #endif
 #endif // X86OPT
 #include "w2xconv.h"
@@ -29,8 +30,55 @@ static std::vector<struct W2XConvProcessor> processor_list;
 static void
 global_init2(void)
 {
-	w2xc::initOpenCLGlobal();
-	w2xc::initCUDAGlobal();
+	{
+		W2XConvProcessor host;
+		host.type = W2XCONV_PROC_HOST;
+		host.dev_id = 0;
+		host.num_core = sysconf(_SC_NPROCESSORS_ONLN);
+
+#ifdef _WIN32
+#define x_cpuid(p,eax) __cpuid(p, eax)
+		typedef int cpuid_t;
+#else
+#define x_cpuid(p,eax) __get_cpuid(eax, &(p)[0], &(p)[1], &(p)[2], &(p)[3]);
+		typedef unsigned int cpuid_t;
+#endif
+		cpuid_t v[4];
+		cpuid_t data[4*3+1];
+
+		x_cpuid(v, 0x80000000);
+		if ((unsigned int)v[0] >= 0x80000004) {
+			x_cpuid(data+4*0, 0x80000002);
+			x_cpuid(data+4*1, 0x80000003);
+			x_cpuid(data+4*2, 0x80000004);
+			data[12] = 0;
+
+			host.dev_name = strdup((char*)data);
+		} else {
+			x_cpuid(data, 0x0);
+			data[4] = 0;
+			host.dev_name = strdup((char*)(data + 1));
+		}
+
+		x_cpuid(v, 1);
+
+		if ((v[2] & 0x18000000) == 0x18000000) {
+			if (v[2] & (1<<12)) {
+				host.sub_type = W2XCONV_PROC_HOST_FMA;
+			} else {
+				host.sub_type = W2XCONV_PROC_HOST_AVX;
+			}
+		} else if (v[2] & (1<<0)) {
+			host.sub_type = W2XCONV_PROC_HOST_SSE3;
+		} else {
+			host.sub_type = W2XCONV_PROC_OPENCL;
+		}
+
+		processor_list.push_back(host);
+	}
+
+	w2xc::initOpenCLGlobal(&processor_list);
+	w2xc::initCUDAGlobal(&processor_list);
 }
 
 #ifdef _WIN32
@@ -75,6 +123,9 @@ const struct W2XConvProcessor *
 w2xconv_get_processor_list(int *ret_num)
 {
 	global_init();
+
+	*ret_num = processor_list.size();
+	return &processor_list[0];
 }
 
 W2XConv *
@@ -114,11 +165,11 @@ w2xconv_init(enum W2XConvGPUMode gpu,
 
 	if (impl->env.num_cuda_dev != 0) {
 		c->target_processor.type = W2XCONV_PROC_CUDA;
-		c->target_processor.devid = 0;
+		c->target_processor.dev_id = 0;
 		impl->dev_name = impl->env.cuda_dev_list[0].name.c_str();
 	} else if (impl->env.num_cl_dev != 0) {
 		c->target_processor.type = W2XCONV_PROC_OPENCL;
-		c->target_processor.devid = 0;
+		c->target_processor.dev_id = 0;
 		impl->dev_name = impl->env.cl_dev_list[0].name.c_str();
 	} else {
 #ifdef X86OPT

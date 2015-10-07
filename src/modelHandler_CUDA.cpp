@@ -34,7 +34,7 @@ FOR_EACH_CUDA_FUNC(CUDA_DECL, CUDA_DECL)
 namespace w2xc {
 
 void
-initCUDAGlobal()
+initCUDAGlobal(std::vector<W2XConvProcessor> *proc_list)
 {
 #ifdef _WIN32
 	handle = LoadLibrary("nvcuda.dll");
@@ -70,6 +70,26 @@ initCUDAGlobal()
 	}
 
 	FOR_EACH_CUDA_FUNC(LOAD, LOAD_V2);
+
+	int dev_count;
+	struct W2XConvProcessor proc;
+
+	proc.type = W2XCONV_PROC_CUDA;
+	proc.sub_type = W2XCONV_PROC_CUDA_NVIDIA;
+
+	cuDeviceGetCount(&dev_count);
+	for (int di=0; di<dev_count; di++) {
+		char name[1024];
+		cuDeviceGetName(name, sizeof(name), di);
+		proc.dev_name = strdup(name);
+		proc.dev_id = di;
+
+		int attr;
+		cuDeviceGetAttribute(&attr, CU_DEVICE_ATTRIBUTE_MULTIPROCESSOR_COUNT, di);
+		proc.num_core = attr;
+
+		proc_list->push_back(proc);
+	}
 
 	return;
 }

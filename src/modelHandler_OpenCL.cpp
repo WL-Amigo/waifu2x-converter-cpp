@@ -32,8 +32,15 @@ static HMODULE handle;
 static void *handle;
 #endif
 
+struct OpenCLDevListEntry {
+        cl_platform_id plt_id;
+        cl_device_id dev;
+};
+
+static std::vector<OpenCLDevListEntry> dev_list;
+
 void
-initOpenCLGlobal()
+initOpenCLGlobal(std::vector<W2XConvProcessor> *proc_list)
 {
 #ifdef _WIN32
 	handle = LoadLibrary("OpenCL.dll");
@@ -87,6 +94,84 @@ initOpenCLGlobal()
         LOAD(clReleaseContext);
         LOAD(clWaitForEvents);
         LOAD(clReleaseEvent);
+
+        cl_platform_id plts[16];
+        cl_uint num_plt;
+        clGetPlatformIDs(16, plts, &num_plt);
+
+        struct OpenCLDevListEntry entry;
+        struct W2XConvProcessor proc;
+
+
+        int cur_dev_id = 0;
+        proc.type = W2XCONV_PROC_OPENCL;
+
+        for (unsigned int i=0; i<num_plt; i++) {
+                size_t sz;
+                clGetPlatformInfo(plts[i], CL_PLATFORM_NAME, 0, nullptr, &sz);
+                std::vector<char> name(sz);
+                clGetPlatformInfo(plts[i], CL_PLATFORM_NAME, sz, &name[0], &sz);
+
+                bool is_amd = strstr(&name[0], "AMD") != NULL;
+                bool is_apple = strstr(&name[0], "Apple") != NULL;
+                bool is_intel = strstr(&name[0], "Intel") != NULL;
+                bool is_nvidia = strstr(&name[0], "NVIDIA") != NULL;
+
+                cl_uint num_dev;
+                clGetDeviceIDs(plts[i], CL_DEVICE_TYPE_ALL, 0, nullptr, &num_dev);
+                if (num_dev == 0) {
+                        continue;
+                }
+
+                std::vector<cl_device_id> devs(num_dev);
+                clGetDeviceIDs(plts[i], CL_DEVICE_TYPE_ALL, num_dev, &devs[0], &num_dev);
+
+                for (unsigned int di=0; di<num_dev; di++) {
+                        cl_device_id dev = devs[0];
+                        cl_device_type dtype;
+
+                        clGetDeviceInfo(dev, CL_DEVICE_TYPE, sizeof(dtype), &dtype, NULL);
+                        int sub_type = 0;
+
+                        if (is_amd) {
+                                sub_type = W2XCONV_PROC_OPENCL_PLATFORM_AMD;
+                        } else if (is_nvidia) {
+                                sub_type = W2XCONV_PROC_OPENCL_PLATFORM_NVIDIA;
+                        } else if (is_intel) {
+                                sub_type = W2XCONV_PROC_OPENCL_PLATFORM_INTEL;
+                        } else {
+                                sub_type = W2XCONV_PROC_OPENCL_PLATFORM_UNKNOWN;
+                        }
+
+                        if (dtype == CL_DEVICE_TYPE_GPU) {
+                                sub_type |= W2XCONV_PROC_OPENCL_DEVICE_GPU;
+                        } else if (dtype == CL_DEVICE_TYPE_CPU) {
+                                sub_type |= W2XCONV_PROC_OPENCL_DEVICE_CPU;
+                        } else {
+                                sub_type |= W2XCONV_PROC_OPENCL_DEVICE_UNKNOWN;
+                        }
+
+                        proc.sub_type = sub_type;
+
+                        size_t dev_name_len;
+                        clGetDeviceInfo(dev, CL_DEVICE_NAME, 0, nullptr, &dev_name_len);
+                        std::vector<char> dev_name(dev_name_len+1);
+                        clGetDeviceInfo(dev, CL_DEVICE_NAME, dev_name_len, &dev_name[0], &dev_name_len);
+
+                        proc.dev_name = strdup(&dev_name[0]);
+                        proc.dev_id = cur_dev_id++;
+
+                        cl_uint num_cu;
+                        clGetDeviceInfo(dev, CL_DEVICE_MAX_COMPUTE_UNITS, sizeof(num_cu), &num_cu, nullptr);
+
+                        proc.num_core = num_cu;
+
+                        proc_list->push_back(proc);
+                        entry.plt_id = plts[i];
+                        entry.dev = dev;
+                        dev_list.push_back(entry);
+                }
+        }
 
         return;
 }

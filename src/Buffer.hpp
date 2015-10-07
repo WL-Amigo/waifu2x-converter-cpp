@@ -339,7 +339,7 @@ struct Buffer {
             break;
 
         case W2XCONV_PROC_OPENCL:
-            devid = env->target_processor.devid;
+            devid = env->target_processor.dev_id;
             if (cl_ptr_list[devid] == nullptr) {
                 cl_int err;
                 OpenCLDev *dev = &env->cl_dev_list[devid];
@@ -364,7 +364,7 @@ struct Buffer {
             break;
 
         case W2XCONV_PROC_CUDA:
-            devid = env->target_processor.devid;
+            devid = env->target_processor.dev_id;
 
             if (cuda_ptr_list[devid] == 0) {
                 CUresult err;
