@@ -95,7 +95,20 @@ int main(int argc, char** argv) {
 			const char *type;
 			switch (p->type) {
 			case W2XCONV_PROC_HOST:
-				type = "host CPU";
+				switch (p->sub_type) {
+				case W2XCONV_PROC_HOST_AVX:
+					type = "AVX";
+					break;
+				case W2XCONV_PROC_HOST_FMA:
+					type = "FMA";
+					break;
+				case W2XCONV_PROC_HOST_SSE3:
+					type = "SSE3";
+					break;
+				default:
+					type = "OpenCV";
+					break;
+				}
 				break;
 
 			case W2XCONV_PROC_CUDA:

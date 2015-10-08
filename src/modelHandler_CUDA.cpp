@@ -77,7 +77,16 @@ initCUDAGlobal(std::vector<W2XConvProcessor> *proc_list)
 	proc.type = W2XCONV_PROC_CUDA;
 	proc.sub_type = W2XCONV_PROC_CUDA_NVIDIA;
 
-	cuDeviceGetCount(&dev_count);
+	CUresult r = cuInit(0);
+	if (r != CUDA_SUCCESS) {
+		return;
+	}
+
+	r = cuDeviceGetCount(&dev_count);
+	if (r != CUDA_SUCCESS) {
+		return;
+	}
+
 	for (int di=0; di<dev_count; di++) {
 		char name[1024];
 		cuDeviceGetName(name, sizeof(name), di);
@@ -102,11 +111,7 @@ initCUDA(ComputeEnv *env)
 		return false;
 	}
 
-	CUresult r = cuInit(0);
-	if (r != CUDA_SUCCESS) {
-		return false;
-	}
-
+	CUresult r;
 	int dev_count;
 	cuDeviceGetCount(&dev_count);
 
