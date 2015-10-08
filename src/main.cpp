@@ -62,9 +62,9 @@ int main(int argc, char** argv) {
 			"number of threads launching at the same time", false, 0, "integer",
 			cmd);
 
-	TCLAP::ValueArg<int> cmdTargetDevice("", "device",
-					     "set target device", false, -1, "integer",
-					     cmd);
+	TCLAP::ValueArg<int> cmdTargetProcessor("", "processor",
+						"set target processor", false, -1, "integer",
+						cmd);
 
 	TCLAP::SwitchArg cmdForceOpenCL("", "force-OpenCL",
 					"force to use OpenCL on Intel Platform",
@@ -72,7 +72,7 @@ int main(int argc, char** argv) {
 
 	TCLAP::SwitchArg cmdDisableGPU("", "disable-gpu", "disable GPU", cmd, false);
 
-	TCLAP::SwitchArg cmdListDevice("", "list-device", "dump device list", cmd, false);
+	TCLAP::SwitchArg cmdListProcessor("", "list-processor", "dump processor list", cmd, false);
 
 	TCLAP::ValueArg<int> cmdBlockSize("", "block_size", "block size",
 					  false, 0, "integer", cmd);
@@ -92,7 +92,7 @@ int main(int argc, char** argv) {
 	int num_proc;
 	procs = w2xconv_get_processor_list(&num_proc);
 
-	if (cmdListDevice.getValue()) {
+	if (cmdListProcessor.getValue()) {
 		for (int i=0; i<num_proc; i++) {
 			const W2XConvProcessor *p = &procs[i];
 			const char *type;
@@ -163,10 +163,10 @@ int main(int argc, char** argv) {
 	}
 
 	W2XConv *converter;
-	int dev = cmdTargetDevice.getValue();
+	int proc = cmdTargetProcessor.getValue();
 
-	if (dev != -1 && dev < num_proc) {
-		converter = w2xconv_init_with_processor(dev,
+	if (proc != -1 && proc < num_proc) {
+		converter = w2xconv_init_with_processor(proc,
 							cmdNumberOfJobs.getValue(),
 							1);
 	} else {
