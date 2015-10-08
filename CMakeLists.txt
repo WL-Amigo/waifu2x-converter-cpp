@@ -78,7 +78,7 @@ add_library(w2xc SHARED
   src/modelHandler.cpp ${X86OPT_SOURCES}
   src/modelHandler_OpenCL.cpp src/convertRoutine.cpp src/threadPool.cpp
   src/modelHandler_CUDA.cpp src/w2xconv.cpp src/common.cpp
-  src/Env.cpp
+  src/Env.cpp src/Buffer.cpp
 )
 
 add_dependencies(w2xc gensrcs)

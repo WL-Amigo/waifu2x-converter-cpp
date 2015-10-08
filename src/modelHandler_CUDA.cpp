@@ -104,7 +104,7 @@ initCUDAGlobal(std::vector<W2XConvProcessor> *proc_list)
 }
 
 bool
-initCUDA(ComputeEnv *env)
+initCUDA(ComputeEnv *env, int dev_id)
 {
 #ifdef HAVE_CUDA
 	if (handle == NULL) {
@@ -284,9 +284,6 @@ finiCUDA(ComputeEnv *env)
 		cuCtxDestroy(d->context);
 	}
 }
-
-
-
 
 void
 filter_CUDA_impl(ComputeEnv *env,

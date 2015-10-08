@@ -10,9 +10,9 @@ namespace w2xc {
 void initOpenCLGlobal(std::vector<W2XConvProcessor> *proc_list);
 void initCUDAGlobal(std::vector<W2XConvProcessor> *proc_list);
 
-bool initOpenCL(ComputeEnv *env, enum W2XConvGPUMode gpu);
+bool initOpenCL(W2XConv *c, ComputeEnv *env, W2XConvProcessor *proc);
 void finiOpenCL(ComputeEnv *env);
-bool initCUDA(ComputeEnv *env);
+bool initCUDA(ComputeEnv *env, int dev_id);
 void finiCUDA(ComputeEnv *env);
 
 extern void filter_SSE_impl(ComputeEnv *env,

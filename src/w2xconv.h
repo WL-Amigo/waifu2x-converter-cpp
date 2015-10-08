@@ -46,6 +46,8 @@ enum W2XConvErrorCode {
 
 	W2XCONV_ERROR_RGB_MODEL_MISMATCH_TO_Y,
 	W2XCONV_ERROR_Y_MODEL_MISMATCH_TO_RGB_F32,
+
+	W2XCONV_ERROR_OPENCL,	/* u.cl_error */
 };
 
 struct W2XConvError {
@@ -64,6 +66,11 @@ struct W2XConvError {
 			int errno_;
 			char *path;
 		} libc_path;
+
+		struct {
+			int error_code;
+			int dev_id;
+		} cl_error;
 	}u;
 };
 
@@ -128,8 +135,7 @@ struct W2XConv {
 	/* public */
 	struct W2XConvError last_error;
 	struct W2XConvFlopsCounter flops;
-	struct W2XConvProcessor target_processor;
-
+	const struct W2XConvProcessor *target_processor;
 	int enable_log;
 
 	/* internal */
@@ -143,7 +149,8 @@ W2XCONV_EXPORT struct W2XConv *w2xconv_init(enum W2XConvGPUMode gpu,
 					    int enable_log);
 
 W2XCONV_EXPORT struct W2XConv *w2xconv_init_with_processor(int processor_idx,
-							   int njob);
+							   int njob,
+							   int enable_log);
 
 /* return negative if failed */
 W2XCONV_EXPORT int w2xconv_load_models(struct W2XConv *conv,

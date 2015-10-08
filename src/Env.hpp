@@ -33,4 +33,6 @@ struct ComputeEnv {
     ComputeEnv();
 };
 
+extern void clearError(W2XConv *conv);
+
 #endif

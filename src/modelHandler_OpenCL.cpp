@@ -176,83 +176,44 @@ initOpenCLGlobal(std::vector<W2XConvProcessor> *proc_list)
         return;
 }
 
-bool
-initOpenCL(ComputeEnv *env, enum W2XConvGPUMode gpu)
+static void
+setCLError(W2XConv *c,
+           int dev_id,
+           int error_code)
 {
-        if (handle == NULL) {
+        clearError(c);
+        c->last_error.code = W2XCONV_ERROR_OPENCL;
+        c->last_error.u.cl_error.dev_id = dev_id;
+        c->last_error.u.cl_error.error_code = error_code;
+}
+
+bool
+initOpenCL(W2XConv *c, ComputeEnv *env, W2XConvProcessor *proc)
+{
+        int dev_id = proc->dev_id;
+        env->num_cl_dev = 1;
+        env->cl_dev_list = new OpenCLDev[1];
+        const OpenCLDevListEntry *de = &dev_list[dev_id];
+        cl_int err;
+        cl_device_id dev = de->dev;
+        cl_context_properties props[] =
+                {CL_CONTEXT_PLATFORM, (cl_context_properties)(de->plt_id), 0};
+        cl_context context = clCreateContext(props, 1, &dev, NULL, NULL, &err);
+        if (err != CL_SUCCESS) {
+                setCLError(c, dev_id, err);
                 return false;
         }
 
-        cl_uint num_plt;
-        cl_platform_id plts[16];
-        clGetPlatformIDs(16, plts, &num_plt);
-        bool found = false;
-        cl_int err;
+        if (proc->sub_type == W2XCONV_PROC_OPENCL_INTEL_GPU) {
+                env->pref_block_size = 256;
+        }
 
-        cl_platform_id platform;
-        cl_context context;
-        cl_device_id dev;
         cl_command_queue queue;
         cl_kernel ker_filter, ker_filter_in1_out32, ker_filter_in128_out1;
         cl_kernel ker_filter_in3_out32, ker_filter_in128_out3;
         cl_program program = 0;
 
-        for (unsigned int i=0; i<num_plt; i++) {
-                size_t sz;
-                cl_uint num_dev;
-
-                clGetPlatformInfo(plts[i], CL_PLATFORM_NAME, 0, nullptr, &sz);
-                std::vector<char> name(sz);
-                clGetPlatformInfo(plts[i], CL_PLATFORM_NAME, sz, &name[0], &sz);
-
-                bool is_amd = strstr(&name[0], "AMD") != NULL;
-                bool is_apple = strstr(&name[0], "Apple") != NULL;
-                bool is_intel = strstr(&name[0], "Intel") != NULL;
-                //bool is_nvidia = strstr(&name[0], "NVIDIA") != NULL;
-
-                if ((gpu == W2XCONV_GPU_FORCE_OPENCL) || (! (env->flags & ComputeEnv::HAVE_CPU_AVX))) {
-                        /* use opencl */
-                } else if (!is_amd && !is_apple) {
-                        continue;
-                }
-
-                clGetDeviceIDs(plts[i], CL_DEVICE_TYPE_GPU, 0, nullptr, &num_dev);
-                if (num_dev == 0) {
-                        continue;
-                }
-
-                std::vector<cl_device_id> devs(num_dev);
-                clGetDeviceIDs(plts[i], CL_DEVICE_TYPE_GPU, num_dev, &devs[0], &num_dev);
-
-                platform = plts[i];
-                dev = devs[0];
-
-                cl_context_properties props[] =
-                        {CL_CONTEXT_PLATFORM, (cl_context_properties)(plts[i]), 0};
-                cl_context ctxt = clCreateContext(props, 1, &devs[0], NULL, NULL, &err);
-                if (err != CL_SUCCESS) {
-                        continue;
-                }
-
-                context = ctxt;
-
-                found = true;
-                if (is_intel) {
-                        env->pref_block_size = 256;
-                }
-
-                break;
-        }
-
-        if (!found) {
-                return false;
-        }
-
-        size_t dev_name_len;
-        clGetDeviceInfo(dev, CL_DEVICE_NAME, 0, nullptr, &dev_name_len);
-        std::vector<char> dev_name(dev_name_len+1);
-        clGetDeviceInfo(dev, CL_DEVICE_NAME, dev_name_len, &dev_name[0], &dev_name_len);
-
+        const char *dev_name = proc->dev_name;
         bool bin_avaiable = false;
 
 #if defined __linux || _WIN32
@@ -375,6 +336,7 @@ initOpenCL(ComputeEnv *env, enum W2XConvGPUMode gpu)
                 program = clCreateProgramWithSource(context, 1, source, src_len, &err);
                 if (err != CL_SUCCESS) {
                         clReleaseContext(context);
+                        setCLError(c, dev_id, err);
                         return false;
                 }
 
@@ -397,6 +359,7 @@ initOpenCL(ComputeEnv *env, enum W2XConvGPUMode gpu)
 
                 clReleaseProgram(program);
                 clReleaseContext(context);
+                setCLError(c, dev_id, err);
                 return false;
         }
 
@@ -445,6 +408,7 @@ initOpenCL(ComputeEnv *env, enum W2XConvGPUMode gpu)
         if (err != CL_SUCCESS) {
                 clReleaseProgram(program);
                 clReleaseContext(context);
+                setCLError(c, dev_id, err);
                 return false;
         }
 
@@ -453,6 +417,7 @@ initOpenCL(ComputeEnv *env, enum W2XConvGPUMode gpu)
                 clReleaseProgram(program);
                 clReleaseContext(context);
                 clReleaseKernel(ker_filter);
+                setCLError(c, dev_id, err);
                 return false;
         }
 
@@ -462,6 +427,7 @@ initOpenCL(ComputeEnv *env, enum W2XConvGPUMode gpu)
                 clReleaseContext(context);
                 clReleaseKernel(ker_filter);
                 clReleaseKernel(ker_filter_in1_out32);
+                setCLError(c, dev_id, err);
                 return false;
         }
 
@@ -471,6 +437,7 @@ initOpenCL(ComputeEnv *env, enum W2XConvGPUMode gpu)
                 clReleaseContext(context);
                 clReleaseKernel(ker_filter);
                 clReleaseKernel(ker_filter_in1_out32);
+                setCLError(c, dev_id, err);
                 return false;
         }
 
@@ -480,6 +447,7 @@ initOpenCL(ComputeEnv *env, enum W2XConvGPUMode gpu)
                 clReleaseContext(context);
                 clReleaseKernel(ker_filter);
                 clReleaseKernel(ker_filter_in1_out32);
+                setCLError(c, dev_id, err);
                 return false;
         }
 
@@ -489,13 +457,14 @@ initOpenCL(ComputeEnv *env, enum W2XConvGPUMode gpu)
                 clReleaseContext(context);
                 clReleaseKernel(ker_filter);
                 clReleaseKernel(ker_filter_in1_out32);
+                setCLError(c, dev_id, err);
                 return false;
         }
 
         env->num_cl_dev = 1;
         env->cl_dev_list = new OpenCLDev[1];
 
-        env->cl_dev_list[0].platform = platform;
+        env->cl_dev_list[0].platform = de->plt_id;
         env->cl_dev_list[0].context = context;
         env->cl_dev_list[0].devid = dev;
         env->cl_dev_list[0].queue = queue;

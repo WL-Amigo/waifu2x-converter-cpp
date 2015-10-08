@@ -62,6 +62,10 @@ int main(int argc, char** argv) {
 			"number of threads launching at the same time", false, 0, "integer",
 			cmd);
 
+	TCLAP::ValueArg<int> cmdTargetDevice("", "device",
+					     "set target device", false, -1, "integer",
+					     cmd);
+
 	TCLAP::SwitchArg cmdForceOpenCL("", "force-OpenCL",
 					"force to use OpenCL on Intel Platform",
 					cmd, false);
@@ -84,12 +88,11 @@ int main(int argc, char** argv) {
 		std::exit(-1);
 	}
 
+	const W2XConvProcessor *procs;
+	int num_proc;
+	procs = w2xconv_get_processor_list(&num_proc);
+
 	if (cmdListDevice.getValue()) {
-		const W2XConvProcessor *procs;
-		int num_proc;
-
-		procs = w2xconv_get_processor_list(&num_proc);
-
 		for (int i=0; i<num_proc; i++) {
 			const W2XConvProcessor *p = &procs[i];
 			const char *type;
@@ -159,25 +162,34 @@ int main(int argc, char** argv) {
 		gpu = W2XCONV_GPU_FORCE_OPENCL;
 	}
 
-	W2XConv *converter = w2xconv_init(gpu,
-					  cmdNumberOfJobs.getValue(), 1);
+	W2XConv *converter;
+	int dev = cmdTargetDevice.getValue();
+
+	if (dev != -1 && dev < num_proc) {
+		converter = w2xconv_init_with_processor(dev,
+							cmdNumberOfJobs.getValue(),
+							1);
+	} else {
+		converter = w2xconv_init(gpu,
+					 cmdNumberOfJobs.getValue(), 1);
+	}
 
 	double time_start = getsec();
 
-	switch (converter->target_processor.type) {
+	switch (converter->target_processor->type) {
 	case W2XCONV_PROC_HOST:
 		printf("CPU: %s\n",
-		       converter->target_processor.dev_name);
+		       converter->target_processor->dev_name);
 		break;
 
 	case W2XCONV_PROC_CUDA:
 		printf("CUDA: %s\n",
-		       converter->target_processor.dev_name);
+		       converter->target_processor->dev_name);
 		break;
 
 	case W2XCONV_PROC_OPENCL:
 		printf("OpenCL: %s\n",
-		       converter->target_processor.dev_name);
+		       converter->target_processor->dev_name);
 		break;
 	}
 
