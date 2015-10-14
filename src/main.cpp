@@ -22,8 +22,64 @@
 #define DEFAULT_MODELS_DIRECTORY "models_rgb"
 #endif
 
+static void
+dump_procs()
+{
+	const W2XConvProcessor *procs;
+	int num_proc;
+	procs = w2xconv_get_processor_list(&num_proc);
+
+	for (int i=0; i<num_proc; i++) {
+		const W2XConvProcessor *p = &procs[i];
+		const char *type;
+		switch (p->type) {
+		case W2XCONV_PROC_HOST:
+			switch (p->sub_type) {
+			case W2XCONV_PROC_HOST_AVX:
+				type = "AVX";
+				break;
+			case W2XCONV_PROC_HOST_FMA:
+				type = "FMA";
+				break;
+			case W2XCONV_PROC_HOST_SSE3:
+				type = "SSE3";
+				break;
+			default:
+				type = "OpenCV";
+				break;
+			}
+			break;
+
+		case W2XCONV_PROC_CUDA:
+			type = "CUDA";
+			break;
+
+		case W2XCONV_PROC_OPENCL:
+			type = "OpenCL";
+			break;
+
+		default:
+			type = "??";
+			break;
+		}
+
+		printf("%4d: %-45s(%-10s): num_core=%d\n",
+		       i,
+		       p->dev_name,
+		       type,
+		       p->num_core);
+	}
+}
+
 int main(int argc, char** argv) {
 	int ret = 1;
+	for (int ai=1; ai<argc; ai++) {
+		if (strcmp(argv[ai], "--list-processor") == 0) {
+			dump_procs();
+		}
+
+		return 0;
+	}
 
 	// definition of command line arguments
 	TCLAP::CmdLine cmd("waifu2x reimplementation using OpenCV", ' ', "1.0.0");
@@ -72,10 +128,9 @@ int main(int argc, char** argv) {
 
 	TCLAP::SwitchArg cmdDisableGPU("", "disable-gpu", "disable GPU", cmd, false);
 
-	TCLAP::SwitchArg cmdListProcessor("", "list-processor", "dump processor list", cmd, false);
-
 	TCLAP::ValueArg<int> cmdBlockSize("", "block_size", "block size",
 					  false, 0, "integer", cmd);
+	TCLAP::SwitchArg cmdListProcessor("", "list-processor", "dump processor list", cmd, false);
 
 	// definition of command line argument : end
 
@@ -88,53 +143,9 @@ int main(int argc, char** argv) {
 		std::exit(-1);
 	}
 
-	const W2XConvProcessor *procs;
-	int num_proc;
-	procs = w2xconv_get_processor_list(&num_proc);
-
 	if (cmdListProcessor.getValue()) {
-		for (int i=0; i<num_proc; i++) {
-			const W2XConvProcessor *p = &procs[i];
-			const char *type;
-			switch (p->type) {
-			case W2XCONV_PROC_HOST:
-				switch (p->sub_type) {
-				case W2XCONV_PROC_HOST_AVX:
-					type = "AVX";
-					break;
-				case W2XCONV_PROC_HOST_FMA:
-					type = "FMA";
-					break;
-				case W2XCONV_PROC_HOST_SSE3:
-					type = "SSE3";
-					break;
-				default:
-					type = "OpenCV";
-					break;
-				}
-				break;
-
-			case W2XCONV_PROC_CUDA:
-				type = "CUDA";
-				break;
-
-			case W2XCONV_PROC_OPENCL:
-				type = "OpenCL";
-				break;
-
-			default:
-				type = "??";
-				break;
-			}
-
-			printf("%4d: %-45s(%-10s): num_core=%d\n",
-			       i,
-			       p->dev_name,
-			       type,
-			       p->num_core);
-		}
+		dump_procs();
 	}
-
 
 	std::string outputFileName = cmdOutputFile.getValue();
 	if (outputFileName == "(auto)") {
@@ -163,6 +174,8 @@ int main(int argc, char** argv) {
 	}
 
 	W2XConv *converter;
+	int num_proc;
+	w2xconv_get_processor_list(&num_proc);
 	int proc = cmdTargetProcessor.getValue();
 
 	if (proc != -1 && proc < num_proc) {

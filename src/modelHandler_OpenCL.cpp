@@ -127,7 +127,7 @@ initOpenCLGlobal(std::vector<W2XConvProcessor> *proc_list)
                 clGetDeviceIDs(plts[i], CL_DEVICE_TYPE_ALL, num_dev, &devs[0], &num_dev);
 
                 for (unsigned int di=0; di<num_dev; di++) {
-                        cl_device_id dev = devs[0];
+                        cl_device_id dev = devs[di];
                         cl_device_type dtype;
 
                         clGetDeviceInfo(dev, CL_DEVICE_TYPE, sizeof(dtype), &dtype, NULL);

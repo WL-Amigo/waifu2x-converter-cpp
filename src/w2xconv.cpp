@@ -1,4 +1,5 @@
 #define W2XCONV_IMPL
+#define _WIN32_WINNT 0x0600
 
 #include <thread>
 #ifdef X86OPT
