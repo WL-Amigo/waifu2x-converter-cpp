@@ -146,12 +146,30 @@ run1(struct app *app, struct W2XConv *c, const char *src_path)
                fname,
                ext);
 
-    if ((strcmp(ext,".png") != 0) &&
-        (strcmp(ext,".jpg") != 0) &&
-        (strcmp(ext,".jpeg") != 0) &&
-        (strcmp(ext,".bmp") != 0))
     {
-        return 0;
+        char header[8];
+        FILE *fp = fopen(src_path, "rb");
+        if (fp == NULL) {
+            return 0;
+        }
+        size_t sz = fread(header, 1, 8, fp);
+        fclose(fp);
+        if (sz != 8) {
+            return 0;
+        }
+
+        const static char jpg[] = {0xFF, 0xD8, 0xFF, 0xE0};
+        const static char png[] = {0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A};
+        const static char bmp[] = {0x42, 0x4D};
+
+        if (memcmp(header,jpg,4) == 0 ||
+            memcmp(header,png,8) == 0 ||
+            memcmp(header,bmp,2) == 0)
+        {
+            /* ok */
+        } else {
+            return 0;
+        }
     }
 
     if (strncmp(fname, "mai_", 4) == 0) {
@@ -300,7 +318,7 @@ proc_thread(void *ap)
     {
         struct packet pkt;
         pkt.tp = PKT_START;
-        pkt.u.start.dev_name = strdup(c->target_processor.dev_name);
+        pkt.u.start.dev_name = strdup(c->target_processor->dev_name);
         send_packet(&app->from_worker, &pkt);
     }
 
@@ -371,7 +389,7 @@ on_create(HWND wnd, LPCREATESTRUCT cp)
     unsigned threadID;
     SetWindowLongPtr(wnd, GWLP_USERDATA, (LONG_PTR)app);
 
-    app->worker_thread = (HANDLE)_beginthreadex(NULL, 0, proc_thread, app, 0, &threadID);
+    app->worker_thread = (HANDLE)(uintptr_t)_beginthreadex(NULL, 0, proc_thread, app, 0, &threadID);
 
     return TRUE;
 }
