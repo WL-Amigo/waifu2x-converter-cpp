@@ -72,6 +72,8 @@ global_init2(void)
 			}
 		} else if (v[2] & (1<<0)) {
 			host.sub_type = W2XCONV_PROC_HOST_SSE3;
+		} else {
+			host.sub_type = W2XCONV_PROC_HOST_OPENCV;
 		}
 #endif // X86OPT
 
