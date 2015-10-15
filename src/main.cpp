@@ -76,9 +76,8 @@ int main(int argc, char** argv) {
 	for (int ai=1; ai<argc; ai++) {
 		if (strcmp(argv[ai], "--list-processor") == 0) {
 			dump_procs();
+			return 0;
 		}
-
-		return 0;
 	}
 
 	// definition of command line arguments
