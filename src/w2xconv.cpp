@@ -35,8 +35,10 @@ global_init2(void)
 		W2XConvProcessor host;
 		host.type = W2XCONV_PROC_HOST;
 		host.dev_id = 0;
+		host.dev_name = "Generic";
 		host.num_core = std::thread::hardware_concurrency();
 
+#ifdef X86OPT
 #ifdef _WIN32
 #define x_cpuid(p,eax) __cpuid(p, eax)
 		typedef int cpuid_t;
@@ -72,6 +74,7 @@ global_init2(void)
 		} else if (v[2] & (1<<0)) {
 			host.sub_type = W2XCONV_PROC_HOST_SSE3;
 		}
+#endif // X86OPT
 
 		processor_list.push_back(host);
 	}
