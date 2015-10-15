@@ -4,7 +4,7 @@ To install just put ExtendedSendTo folder to folder with waifu2x-converter progr
 ExtendedSendTo добавляет новые пункты в меню "Отправить", но даёт намного больше возможностей: один из пунктов позволяет полностью вручную настроить все параметры, а 5 других пунктов являются быстрыми ссылками для самых популярных настроек. Обрабатывать можно сразу много файлов.
 Для использования поместите папку ExtendedSendTo в папку с программой waifu2x-converter и запустите install.js.
 
-インストールのためにExtendedSendToフォルダーをwaifu2x-converterプログラムフォルダーに置きまして、install.jsを実行してください。
+インストールするにはExtendedSendToフォルダーをwaifu2x-converterプログラムフォルダーに置いて、install.jsを実行してください。
 
 Version: 1.0.1
 Autor:   Vitaliy Lagunov
