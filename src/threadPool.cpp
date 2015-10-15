@@ -12,12 +12,17 @@ namespace w2xc {
 #define rmb() __asm__ __volatile__ ("":::"memory")
 #define wmb() __asm__ __volatile__ ("":::"memory")
 
-#endif
-
-#ifdef _MSC_VER
+#elif defined _MSC_VER
 #define rmb() _ReadBarrier()
 #define wmb() _WriteBarrier()
+
+#elif defined __GNUC__
+
+#define rmb() __sync_synchronize()
+#define wmb() __sync_synchronize()
+
 #endif
+
 
 #ifdef _WIN32
 
