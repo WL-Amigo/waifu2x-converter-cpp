@@ -12,6 +12,7 @@
 #include <sstream>
 #include <fstream>
 #include <cstring>
+#include <string>
 #include <cmath>
 #include "tclap/CmdLine.h"
 #include "sec.hpp"
