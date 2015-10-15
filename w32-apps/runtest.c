@@ -11,4 +11,6 @@ main(int argc, char **argv)
     w2xconv_load_models(c, models);
     w2xconv_test(c, 0);
     w2xconv_fini(c);
+
+    return 0;
 }
