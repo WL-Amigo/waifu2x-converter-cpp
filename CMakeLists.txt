@@ -86,6 +86,7 @@ add_dependencies(w2xc gensrcs)
 
 if(CMAKE_COMPILER_IS_GNUCXX OR ${CMAKE_CXX_COMPILER_ID} STREQUAL "Clang")
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=gnu++11")
+  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall")
 
   if (${CMAKE_SYSTEM_NAME} STREQUAL "Darwin")
     set(REMOVE_SYMBOL "")
@@ -139,7 +140,7 @@ if(${CMAKE_SYSTEM_NAME} STREQUAL "Windows")
       opencv_hal300 IlmImf zlib libwebp user32 opencv_core300 opencv_imgproc300)
   endif()
 
-  add_executable(w2xcr WIN32 w32-apps/w2xcr.c)
+  add_executable(w2xcr w32-apps/w2xcr.c)
   target_link_libraries(w2xcr w2xc user32 shlwapi gdi32)
 else()
   target_link_libraries(w2xc opencv_core opencv_imgproc ${IMGCODECS_LIBRARY} opencv_features2d)
