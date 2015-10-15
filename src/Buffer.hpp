@@ -3,8 +3,12 @@
 
 #if defined(_MSC_VER)
 #include <malloc.h>
-#elif defined(__GNUC__)
+#elif defined(X86OPT)
 #include <mm_malloc.h>
+#else
+#include <malloc.h>
+#define _mm_malloc(size,align) memalign(align,size)
+#define _mm_free(ptr) free(ptr)
 #endif
 
 #include <stdlib.h>
