@@ -5,6 +5,7 @@
 #include <windows.h>
 #include <Shlwapi.h>
 #include <windowsx.h>
+#include <process.h>
 #include "w2xconv.h"
 
 static int block_size = 0;
@@ -14,11 +15,8 @@ static int block_size = 0;
 
 enum packet_type {
     PKT_START,
-    PKT_END_SUCCESS,
-    PKT_END_FAILED,
     PKT_FINI_REQUEST,
     PKT_FINI_ALL,
-    PKT_FINI_ERROR,
     PKT_PROGRESS,
 };
 
@@ -97,6 +95,13 @@ enum app_state {
     STATE_FINI
 };
 
+struct path_pair {
+    int denoise;
+
+    char *src_path;
+    char *dst_path;
+};
+
 struct app {
     enum app_state state;
     HWND win;
@@ -111,11 +116,14 @@ struct app {
 
     char *cur_path;
     double cur_flops;
+
+    int path_list_capacity;
+    int path_list_nelem;
+    struct path_pair *path_list;
 };
 
-
 static int
-run1(struct app *app, struct W2XConv *c, const char *src_path)
+add_file(struct app *app, const char *src_path)
 {
     int r;
     char *dst_path;
@@ -129,16 +137,7 @@ run1(struct app *app, struct W2XConv *c, const char *src_path)
     WIN32_FIND_DATA orig_st, mai_st;
     HANDLE finder;
     struct packet pkt;
-
-    {
-        DWORD r = WaitForSingleObject(app->to_worker.ev, 0);
-        if (r == WAIT_OBJECT_0) {
-            recv_packet(&app->to_worker, &pkt, 1);
-            if (pkt.tp == PKT_FINI_REQUEST) {
-                return -2;
-            }
-        }
-    }
+    int denoise = 0;
 
     _splitpath(src_path,
                drive,
@@ -146,7 +145,7 @@ run1(struct app *app, struct W2XConv *c, const char *src_path)
                fname,
                ext);
 
-    {
+     {
         char header[8];
         FILE *fp = fopen(src_path, "rb");
         if (fp == NULL) {
@@ -162,27 +161,29 @@ run1(struct app *app, struct W2XConv *c, const char *src_path)
         const static char png[] = {0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A};
         const static char bmp[] = {0x42, 0x4D};
 
-        if (memcmp(header,jpg,4) == 0 ||
-            memcmp(header,png,8) == 0 ||
-            memcmp(header,bmp,2) == 0)
+        if (memcmp(header,jpg,4) == 0) {
+            denoise = 1;
+        } else if (memcmp(header,png,8) == 0 ||
+                   memcmp(header,bmp,2) == 0)
         {
-            /* ok */
+            denoise = 0;
         } else {
             return 0;
         }
-    }
+     }
 
     if (strncmp(fname, "mai_", 4) == 0) {
         return 0;
     }
 
     path_len = strlen(src_path);
-    dst_path = malloc(path_len + 5);
+    size_t dst_path_len = path_len + 5 + 4;
+    dst_path = malloc(dst_path_len);
 
-    r = _snprintf(dst_path, path_len+5,
+    r = _snprintf(dst_path, dst_path_len,
                   "%s%smai_%s.png",
                   drive, dir, fname);
-    if (r > path_len+5) {
+    if (r > dst_path_len) {
         free(dst_path);
         return 0;
     }
@@ -210,20 +211,22 @@ run1(struct app *app, struct W2XConv *c, const char *src_path)
         }
     }
 
-    r = w2xconv_convert_file(c, dst_path, src_path, 1, 2.0, block_size);
-    free(dst_path);
+    if (app->path_list_nelem == app->path_list_capacity) {
+        app->path_list_capacity *= 2;
+        app->path_list = realloc(app->path_list, app->path_list_capacity * sizeof(struct path_pair));
+    }
 
-    pkt.tp = PKT_PROGRESS;
-    pkt.u.progress.path = strdup(src_path);
-    pkt.u.progress.flops = c->flops.flop / c->flops.process_sec;
+    app->path_list[app->path_list_nelem].denoise = denoise;
+    app->path_list[app->path_list_nelem].src_path = strdup(src_path);
+    app->path_list[app->path_list_nelem].dst_path = dst_path;
 
-    send_packet(&app->from_worker, &pkt);
+    app->path_list_nelem++;
 
     return r;
 }
 
 static int
-run_dir(struct app *app, struct W2XConv *c, const char *src_path)
+traverse_dir(struct app *app, const char *src_path)
 {
     WIN32_FIND_DATA fd;
     HANDLE finder;
@@ -245,9 +248,9 @@ run_dir(struct app *app, struct W2XConv *c, const char *src_path)
                 PathCombine(sub, src_path, fd.cFileName);
 
                 if (fd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) {
-                    r = run_dir(app, c, sub);
+                    r = traverse_dir(app, sub);
                 } else {
-                    r = run1(app, c, sub);
+                    r = add_file(app, sub);
                 }
 
                 if (r < 0) {
@@ -262,25 +265,18 @@ run_dir(struct app *app, struct W2XConv *c, const char *src_path)
     return r;
 }
 
+
 static unsigned int __stdcall
 proc_thread(void *ap)
 {
     struct app *app = (struct app*)ap;
-    char *path = app->src_path;
 
     struct W2XConv *c;
-    int r;
-    char *src_path, *fullpath, *filepart;
-    DWORD attr, pathlen;
+    int r, i;
     int ret = 1;
     size_t path_len = 4;
     char *self_path = (char*)malloc(path_len+1);
     DWORD len;
-
-    char drive[_MAX_DRIVE];
-    char dir[_MAX_DIR];
-    char fname[_MAX_FNAME];
-    char ext[_MAX_EXT];
 
     c = w2xconv_init(W2XCONV_GPU_AUTO, 0, 0);
     while (1) {
@@ -322,28 +318,34 @@ proc_thread(void *ap)
         send_packet(&app->from_worker, &pkt);
     }
 
-    pathlen = GetFullPathName(path, 0, NULL, NULL);
-    if (pathlen == 0) {
-        goto fini;
-    }
+    for (i=0; i<app->path_list_nelem; i++) {
+        struct packet pkt;
+        struct path_pair *p = &app->path_list[i];
 
-    fullpath = malloc(pathlen);
-    GetFullPathName(path, pathlen, fullpath, &filepart);
+        r = w2xconv_convert_file(c,
+                                 p->dst_path,
+                                 p->src_path,
+                                 p->denoise,
+                                 2.0, block_size);
 
-    attr = GetFileAttributes(fullpath);
-    if (attr < 0) {
-        MessageBox(NULL, "open failed", path, MB_OK);
-        goto fini;
-    }
+        if (r != 0) {
+            goto error;
+        }
 
-    if (attr & FILE_ATTRIBUTE_DIRECTORY) {
-        r = run_dir(app, c, fullpath);
-    } else {
-        r = run1(app, c, fullpath);
-    }
+        pkt.tp = PKT_PROGRESS;
+        pkt.u.progress.path = strdup(p->src_path);
+        pkt.u.progress.flops = c->flops.flop / c->flops.process_sec;
+        send_packet(&app->from_worker, &pkt);
 
-    if (r < 0) {
-        goto error;
+        {
+            DWORD r = WaitForSingleObject(app->to_worker.ev, 0);
+            if (r == WAIT_OBJECT_0) {
+                recv_packet(&app->to_worker, &pkt, 1);
+                if (pkt.tp == PKT_FINI_REQUEST) {
+                    return -2;
+                }
+            }
+        }
     }
 
     ret = 0;
@@ -419,7 +421,6 @@ update_display(struct app *app)
         static const char msg[] = "nop";
         TextOut(dc, 10, 10, msg, sizeof(msg)-1);
     } else {
-
         char line[4096];
         char path[128];
         size_t len = strlen(app->cur_path), line_len;
@@ -480,6 +481,8 @@ int main(int argc, char **argv)
     HWND win;
     int run = 1;
     int argi;
+    DWORD pathlen, attr;
+    char *fullpath, *filepart;
 
     for (argi=1; argi < argc; argi++) {
         if (strcmp(argv[argi],"--block_size") == 0) {
@@ -497,6 +500,31 @@ int main(int argc, char **argv)
     }
 
     app.src_path = argv[argi];
+
+    pathlen = GetFullPathName(app.src_path, 0, NULL, NULL);
+    if (pathlen == 0) {
+        MessageBox(NULL, "open failed", app.src_path, MB_OK);
+        return 1;
+    }
+
+    fullpath = malloc(pathlen);
+    GetFullPathName(app.src_path, pathlen, fullpath, &filepart);
+
+    attr = GetFileAttributes(fullpath);
+    if (attr < 0) {
+        MessageBox(NULL, "open failed", fullpath, MB_OK);
+        return 1;
+    }
+
+    app.path_list_capacity = 4;
+    app.path_list_nelem = 0;
+    app.path_list = malloc(sizeof(struct path_pair) * app.path_list_capacity);
+
+    if (attr & FILE_ATTRIBUTE_DIRECTORY) {
+        traverse_dir(&app, fullpath);
+    } else {
+        add_file(&app, fullpath);
+    }
 
     cls.cbSize = sizeof(cls);
     cls.style = CS_CLASSDC;
@@ -566,6 +594,10 @@ int main(int argc, char **argv)
                 case PKT_FINI_ALL:
                     app.state = STATE_FINI;
                     update_display(&app);
+                    break;
+
+                case PKT_FINI_REQUEST:
+                    /* ?? */
                     break;
                 }
             }
