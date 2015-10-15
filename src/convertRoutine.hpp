@@ -33,7 +33,8 @@ enum image_format {
 /**
  * convert inputPlane to outputPlane by convoluting with models.
  */
-bool convertWithModels(ComputeEnv *env,
+bool convertWithModels(W2XConv *conv,
+                       ComputeEnv *env,
                        cv::Mat &inputPlanes,
                        cv::Mat &outputPlanes,
                        std::vector<std::unique_ptr<Model> > &models,

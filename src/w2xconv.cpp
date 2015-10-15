@@ -441,11 +441,11 @@ apply_denoise(struct W2XConv *conv,
 	}
 
 	if (denoise_level == 1) {
-		w2xc::convertWithModels(env, *input, *output,
+		w2xc::convertWithModels(conv, env, *input, *output,
 					impl->noise1_models,
 					&conv->flops, blockSize, fmt, conv->enable_log);
 	} else {
-		w2xc::convertWithModels(env, *input, *output,
+		w2xc::convertWithModels(conv, env, *input, *output,
 					impl->noise2_models,
 					&conv->flops, blockSize, fmt, conv->enable_log);
 	}
@@ -504,7 +504,8 @@ apply_scale(struct W2XConv *conv,
 			output = &imageSplit[0];
 		}
 
-		if(!w2xc::convertWithModels(env,
+		if(!w2xc::convertWithModels(conv,
+					    env,
 					    *input,
 					    *output,
 					    impl->scale2_models,
@@ -774,7 +775,7 @@ w2xconv_apply_filter_y(struct W2XConv *conv,
 	}
 
 	cv::Mat result;
-	w2xc::convertWithModels(env, srci, result,
+	w2xc::convertWithModels(conv, env, srci, result,
 				*mp,
 				&conv->flops, blockSize, w2xc::IMAGE_Y, conv->enable_log);
 

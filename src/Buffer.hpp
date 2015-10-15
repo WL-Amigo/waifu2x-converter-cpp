@@ -95,7 +95,7 @@ struct Buffer {
     CUdeviceptr get_write_ptr_cuda(ComputeEnv *env,int devid);
     void *get_write_ptr_host(ComputeEnv *env);
     void *get_read_ptr_host(ComputeEnv *env, size_t read_byte_size);
-    bool prealloc(ComputeEnv *env);
+    bool prealloc(W2XConv *conv, ComputeEnv *env);
 };
 
 #endif

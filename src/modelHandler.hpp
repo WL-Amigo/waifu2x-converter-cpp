@@ -12,13 +12,14 @@
 #define MODEL_HANDLER_HPP_
 
 #include <opencv2/opencv.hpp>
-#include "picojson.h"
-#include "Buffer.hpp"
-#include "filters.hpp"
 #include <iostream>
 #include <memory>
 #include <cstdint>
 #include <cstdlib>
+#include "picojson.h"
+#include "Buffer.hpp"
+#include "filters.hpp"
+#include "w2xconv.h"
 
 namespace w2xc {
 
@@ -48,17 +49,12 @@ private:
 		       Buffer *packed_input,
 		       Buffer *packed_output,
 		       cv::Size size);
-	enum runtype {
-		RUN_CUDA,
-		RUN_OPENCL,
-		RUN_CPU
-	};
 
-	bool filter_AVX_OpenCL(ComputeEnv *env,
+	bool filter_AVX_OpenCL(W2XConv *conv,
+			       ComputeEnv *env,
 			       Buffer *packed_input,
                                Buffer *packed_output,
-                               cv::Size size,
-			       enum runtype rt);
+                               cv::Size size);
 
 public:
 	// ctor and dtor
@@ -109,7 +105,8 @@ public:
 	// setter function
 
 	// public operation function
-	bool filter(ComputeEnv *env,
+	bool filter(W2XConv *conv,
+		    ComputeEnv *env,
 		    Buffer *packed_input,
 		    Buffer *packed_output,
 		    cv::Size size);

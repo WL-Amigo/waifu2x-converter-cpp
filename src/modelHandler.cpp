@@ -88,21 +88,18 @@ Model::filter_CV(ComputeEnv *env,
 
 //#define COMPARE_RESULT
 
-bool Model::filter_AVX_OpenCL(ComputeEnv *env,
+bool Model::filter_AVX_OpenCL(W2XConv *conv,
+			      ComputeEnv *env,
 			      Buffer *packed_input_buf,
 			      Buffer *packed_output_buf,
-			      cv::Size size,
-			      enum runtype rt)
+			      cv::Size size)
 {
 	int vec_width;
 	int weight_step;
 	int nJob = modelUtility::getInstance().getNumberOfJobs();
+	const struct W2XConvProcessor *proc = conv->target_processor;
 
-	bool have_fma = env->flags & ComputeEnv::HAVE_CPU_FMA;
-	bool have_avx = env->flags & ComputeEnv::HAVE_CPU_AVX;
-	bool have_sse3 = env->flags & ComputeEnv::HAVE_CPU_SSE3;
-
-	bool gpu = (rt == RUN_OPENCL) || (rt == RUN_CUDA);
+	bool gpu = (proc->type == W2XCONV_PROC_OPENCL) || (proc->type == W2XCONV_PROC_CUDA);
 
 	if (gpu) {
 		weight_step = GPU_VEC_WIDTH;
@@ -298,37 +295,42 @@ bool Model::filter_AVX_OpenCL(ComputeEnv *env,
 		double ops = size.width * size.height * 9.0 * 2.0 * nOutputPlanes * nInputPlanes;
 		std::vector<cv::Mat> output2;
 
-		if (rt == RUN_OPENCL) {
+		if (proc->type == W2XCONV_PROC_OPENCL) {
 			filter_OpenCL_impl(env, packed_input_buf, packed_output_buf,
 					   nInputPlanes, nOutputPlanes, fbiases_flat, weight_flat,
 					   size.width, size.height, nJob);
-		} else if (rt == RUN_CUDA) {
+		} else if (proc->type == W2XCONV_PROC_CUDA) {
 			filter_CUDA_impl(env, packed_input_buf, packed_output_buf,
 					 nInputPlanes, nOutputPlanes, fbiases_flat, weight_flat,
 					 size.width, size.height, nJob);
 		} else {
-#ifdef X86OPT
 			const float *packed_input = (float*)packed_input_buf->get_read_ptr_host(env, in_size);
 			float *packed_output = (float*)packed_output_buf->get_write_ptr_host(env);
 
-			if (have_fma) {
+			switch (proc->sub_type) {
+#ifdef X86OPT
+			case W2XCONV_PROC_HOST_FMA:
 				filter_FMA_impl(env, packed_input, packed_output,
 						nInputPlanes, nOutputPlanes, fbiases_flat, weight_flat,
 						size.width, size.height, nJob);
-			} else if (have_avx) {
+				break;
+
+			case W2XCONV_PROC_HOST_AVX:
 				filter_AVX_impl(env, packed_input, packed_output,
 						nInputPlanes, nOutputPlanes, fbiases_flat, weight_flat,
 						size.width, size.height, nJob);
-			} else if (have_sse3) {
+				break;
+
+			case W2XCONV_PROC_HOST_SSE3:
 				filter_SSE_impl(env, packed_input, packed_output,
 						nInputPlanes, nOutputPlanes, fbiases_flat, weight_flat,
 						size.width, size.height, nJob);
-			} else {
-				filter_CV(env, packed_input_buf, packed_output_buf, size);
-			}
-#else
-			filter_CV(env, packed_input_buf, packed_output_buf, size);
+				break;
 #endif
+			default:
+				filter_CV(env, packed_input_buf, packed_output_buf, size);
+				break;
+			}
 		}
 
 		double t2 = getsec();
@@ -372,41 +374,42 @@ bool Model::filter_AVX_OpenCL(ComputeEnv *env,
 
 		delete packed_output_cv_buf;
 	} else {
-		if (rt == RUN_OPENCL) {
-			filter_OpenCL_impl(env,
-					   packed_input_buf, packed_output_buf,
+		if (proc->type == W2XCONV_PROC_OPENCL) {
+			filter_OpenCL_impl(env, packed_input_buf, packed_output_buf,
 					   nInputPlanes, nOutputPlanes, fbiases_flat, weight_flat,
 					   size.width, size.height, nJob);
-		} else if (rt == RUN_CUDA) {
-			filter_CUDA_impl(env,
-					 packed_input_buf, packed_output_buf,
+		} else if (proc->type == W2XCONV_PROC_CUDA) {
+			filter_CUDA_impl(env, packed_input_buf, packed_output_buf,
 					 nInputPlanes, nOutputPlanes, fbiases_flat, weight_flat,
 					 size.width, size.height, nJob);
 		} else {
-#ifdef X86OPT
 			const float *packed_input = (float*)packed_input_buf->get_read_ptr_host(env, in_size);
 			float *packed_output = (float*)packed_output_buf->get_write_ptr_host(env);
 
-			if (!have_sse3) {
-				filter_CV(env, packed_input_buf, packed_output_buf, size);
-			} else if (!have_avx) {
+			switch (proc->sub_type) {
+#ifdef X86OPT
+			case W2XCONV_PROC_HOST_FMA:
+				filter_FMA_impl(env, packed_input, packed_output,
+						nInputPlanes, nOutputPlanes, fbiases_flat, weight_flat,
+						size.width, size.height, nJob);
+				break;
+
+			case W2XCONV_PROC_HOST_AVX:
+				filter_AVX_impl(env, packed_input, packed_output,
+						nInputPlanes, nOutputPlanes, fbiases_flat, weight_flat,
+						size.width, size.height, nJob);
+				break;
+
+			case W2XCONV_PROC_HOST_SSE3:
 				filter_SSE_impl(env, packed_input, packed_output,
 						nInputPlanes, nOutputPlanes, fbiases_flat, weight_flat,
 						size.width, size.height, nJob);
-			} else {
-				if (have_fma) {
-					filter_FMA_impl(env, packed_input, packed_output,
-							nInputPlanes, nOutputPlanes, fbiases_flat, weight_flat,
-							size.width, size.height, nJob);
-				} else if (have_avx) {
-					filter_AVX_impl(env, packed_input, packed_output,
-							nInputPlanes, nOutputPlanes, fbiases_flat, weight_flat,
-							size.width, size.height, nJob);
-				}
-			}
-#else
-			filter_CV(env, packed_input_buf, packed_output_buf, size);
+				break;
 #endif
+			default:
+				filter_CV(env, packed_input_buf, packed_output_buf, size);
+				break;
+			}
 		}
 	}
 
@@ -417,7 +420,8 @@ bool Model::filter_AVX_OpenCL(ComputeEnv *env,
 
 }
 
-bool Model::filter(ComputeEnv *env,
+bool Model::filter(W2XConv *conv,
+		   ComputeEnv *env,
 		   Buffer *packed_input_buf,
 		   Buffer *packed_output_buf,
 		   cv::Size size)
@@ -425,8 +429,8 @@ bool Model::filter(ComputeEnv *env,
 	bool ret;
 
 	bool avx_available = true;
-	bool cl_available = env->num_cl_dev > 0;
-	bool cuda_available = env->num_cuda_dev > 0;
+	bool cl_available = true;
+	bool cuda_available = true;
 
 	if (nOutputPlanes > GPU_VEC_WIDTH) {
 		cl_available = false;
@@ -481,12 +485,12 @@ bool Model::filter(ComputeEnv *env,
 	//       (int)cl_available,
 	//       (int)avx_available);
 
-	if (cuda_available) {
-		ret = filter_AVX_OpenCL(env, packed_input_buf, packed_output_buf, size, RUN_CUDA);
-	} else if ((env->num_cuda_dev==0) && cl_available) {
-		ret = filter_AVX_OpenCL(env, packed_input_buf, packed_output_buf, size, RUN_OPENCL);
-	} else if (avx_available) {
-		ret = filter_AVX_OpenCL(env, packed_input_buf, packed_output_buf, size, RUN_CPU);
+	const struct W2XConvProcessor *proc = conv->target_processor;
+	if ((cl_available && proc->type == W2XCONV_PROC_OPENCL) ||
+	    (cuda_available && proc->type == W2XCONV_PROC_CUDA) ||
+	    (avx_available && proc->type == W2XCONV_PROC_HOST))
+	{
+		ret = filter_AVX_OpenCL(conv, env, packed_input_buf, packed_output_buf, size);
 	} else {
 		ret = filter_CV(env, packed_input_buf, packed_output_buf, size);
 	}

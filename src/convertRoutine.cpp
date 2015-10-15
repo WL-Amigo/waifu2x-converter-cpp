@@ -16,14 +16,16 @@
 namespace w2xc {
 
 // converting process inside program
-static bool convertWithModelsBasic(ComputeEnv *env,
+static bool convertWithModelsBasic(W2XConv *conv,
+				   ComputeEnv *env,
 				   cv::Mat &inputPlane, cv::Mat &outputPlane,
 				   Buffer *input_buf, Buffer *output_buf,
 				   std::vector<std::unique_ptr<Model> > &models,
 				   W2XConvFlopsCounter *flops,
 				   enum image_format fmt,
 				   bool enableLog);
-static bool convertWithModelsBlockSplit(ComputeEnv *env,
+static bool convertWithModelsBlockSplit(W2XConv *conv,
+					ComputeEnv *env,
 					cv::Mat &inputPlane,
 					cv::Mat &outputPlane, std::vector<std::unique_ptr<Model> > &models,
 					W2XConvFlopsCounter *flops,
@@ -31,7 +33,8 @@ static bool convertWithModelsBlockSplit(ComputeEnv *env,
 					enum image_format fmt,
 					bool enableLog);
 
-bool convertWithModels(ComputeEnv *env,
+bool convertWithModels(W2XConv *conv,
+		       ComputeEnv *env,
 		       cv::Mat &inputPlane, cv::Mat &outputPlane,
 		       std::vector<std::unique_ptr<Model> > &models,
 		       W2XConvFlopsCounter *flops,
@@ -39,10 +42,11 @@ bool convertWithModels(ComputeEnv *env,
 		       enum image_format fmt,
 		       bool enableLog)
 {
-	return convertWithModelsBlockSplit(env, inputPlane, outputPlane, models, flops, blockSize, fmt, enableLog);
+	return convertWithModelsBlockSplit(conv, env, inputPlane, outputPlane, models, flops, blockSize, fmt, enableLog);
 }
 
-static bool convertWithModelsBasic(ComputeEnv *env,
+static bool convertWithModelsBasic(W2XConv *conv,
+				   ComputeEnv *env,
 				   cv::Mat &inputPlane, cv::Mat &outputPlane,
 				   Buffer *packed_input_buf,
 				   Buffer *packed_output_buf,
@@ -92,7 +96,7 @@ static bool convertWithModelsBasic(ComputeEnv *env,
 			std::cout << "Iteration #" << (index + 1) << "(" << nInputPlanes << "->" << nOutputPlanes << ")..." ;
 		}
 		double t0 = getsec();
-		if (!models[index]->filter(env, packed_input_buf, packed_output_buf, filterSize)) {
+		if (!models[index]->filter(conv, env, packed_input_buf, packed_output_buf, filterSize)) {
 			std::exit(-1);
 		}
 		double t1 = getsec();
@@ -147,7 +151,8 @@ static bool convertWithModelsBasic(ComputeEnv *env,
 
 }
 
-static bool convertWithModelsBlockSplit(ComputeEnv *env,
+static bool convertWithModelsBlockSplit(W2XConv *conv,
+					ComputeEnv *env,
 					cv::Mat &inputPlane,
 					cv::Mat &outputPlane,
 					std::vector<std::unique_ptr<Model> > &models,
@@ -204,8 +209,8 @@ static bool convertWithModelsBlockSplit(ComputeEnv *env,
 			input_buf = new Buffer(env, max_size);
 			output_buf = new Buffer(env, max_size);
 
-			if (input_buf->prealloc(env) &&
-			    output_buf->prealloc(env))
+			if (input_buf->prealloc(conv, env) &&
+			    output_buf->prealloc(conv, env))
 			{
 				break;
 			}
@@ -271,7 +276,7 @@ static bool convertWithModelsBlockSplit(ComputeEnv *env,
 				std::cout << "start process block (" << c << "," << r << ") ..."
 					  << std::endl;
 			}
-			if (!convertWithModelsBasic(env,
+			if (!convertWithModelsBasic(conv, env,
 						    processBlock, processBlockOutput,
 						    input_buf, output_buf,
 						    models, flops, fmt, enableLog)) {

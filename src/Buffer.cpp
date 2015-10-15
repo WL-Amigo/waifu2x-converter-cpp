@@ -241,7 +241,7 @@ Buffer::get_read_ptr_host(ComputeEnv *env, size_t read_byte_size) {
 
 
 bool
-Buffer::prealloc(ComputeEnv *env) {
+Buffer::prealloc(W2XConv *conv, ComputeEnv *env) {
     int devid;
     if (host_ptr == nullptr) {
         host_ptr = _mm_malloc(byte_size, 64);
@@ -250,12 +250,14 @@ Buffer::prealloc(ComputeEnv *env) {
         }
     }
 
-    switch (env->target_processor.type) {
+    switch (conv->target_processor->type) {
     case W2XCONV_PROC_HOST:
         break;
 
     case W2XCONV_PROC_OPENCL:
-        devid = env->target_processor.dev_id;
+        // xx
+        //devid = conv->target_processor->dev_id;
+        devid = 0;
         if (cl_ptr_list[devid] == nullptr) {
             cl_int err;
             OpenCLDev *dev = &env->cl_dev_list[devid];
@@ -280,7 +282,9 @@ Buffer::prealloc(ComputeEnv *env) {
         break;
 
     case W2XCONV_PROC_CUDA:
-        devid = env->target_processor.dev_id;
+        // xx
+        // devid = conv->target_processor->dev_id;
+        devid = 0;
 
         if (cuda_ptr_list[devid] == 0) {
             CUresult err;
