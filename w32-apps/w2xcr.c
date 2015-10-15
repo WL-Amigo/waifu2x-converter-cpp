@@ -109,10 +109,11 @@ struct app {
     char *src_path;
     char *dev_name;
 
-    HANDLE worker_thread;
-
     struct Queue to_worker;
     struct Queue from_worker;
+
+    int num_thread;
+    struct thread_arg *threads;
 
     char *cur_path;
     double cur_flops;
@@ -136,7 +137,6 @@ add_file(struct app *app, const char *src_path)
 
     WIN32_FIND_DATA orig_st, mai_st;
     HANDLE finder;
-    struct packet pkt;
     int denoise = 0;
 
     _splitpath(src_path,
@@ -265,11 +265,17 @@ traverse_dir(struct app *app, const char *src_path)
     return r;
 }
 
+struct thread_arg {
+    int dev_id;
+    struct app *app;
+    HANDLE thread_handle;
+};
 
 static unsigned int __stdcall
 proc_thread(void *ap)
 {
-    struct app *app = (struct app*)ap;
+    struct thread_arg *ta = (struct thread_arg*)ap;
+    struct app *app = ta->app;
 
     struct W2XConv *c;
     int r, i;
@@ -278,7 +284,7 @@ proc_thread(void *ap)
     char *self_path = (char*)malloc(path_len+1);
     DWORD len;
 
-    c = w2xconv_init(W2XCONV_GPU_AUTO, 0, 0);
+    c = w2xconv_init_with_processor(ta->dev_id, 0, 0);
     while (1) {
         len = GetModuleFileName(NULL, self_path, path_len);
         if (len > 0 && len != path_len) {
@@ -389,9 +395,48 @@ on_create(HWND wnd, LPCREATESTRUCT cp)
 {
     struct app *app = cp->lpCreateParams;
     unsigned threadID;
-    SetWindowLongPtr(wnd, GWLP_USERDATA, (LONG_PTR)app);
 
-    app->worker_thread = (HANDLE)(uintptr_t)_beginthreadex(NULL, 0, proc_thread, app, 0, &threadID);
+    int dev_list_size = 0, i;
+    int dev_list_cap = 2;
+    int *dev_list = malloc(sizeof(int) * dev_list_cap);
+
+    const struct W2XConvProcessor *proc_list;
+    int num_all_dev;
+
+    SetWindowLongPtr(wnd, GWLP_USERDATA, (LONG_PTR)app);
+    proc_list = w2xconv_get_processor_list(&num_all_dev);
+
+    for (i=0; i<num_all_dev; i++) {
+        struct W2XConvProcessor *p = &proc_list[i];
+
+        if ((p->type == W2XCONV_PROC_HOST) ||
+            (p->type == W2XCONV_PROC_CUDA) ||
+            (p->type == W2XCONV_PROC_OPENCL && ((p->sub_type == W2XCONV_PROC_OPENCL_AMD_GPU) ||
+                                                (p->sub_type == W2XCONV_PROC_OPENCL_INTEL_GPU)))
+            )
+        {
+            if (dev_list_cap == dev_list_size) {
+                dev_list_cap *= 2;
+                dev_list = realloc(dev_list, sizeof(int) * dev_list_cap);
+            }
+
+            dev_list[dev_list_size++] = i;
+        }
+    }
+
+    struct thread_arg *threads = malloc(sizeof(struct thread_arg) * dev_list_size);
+
+    dev_list_size = 1;
+    for (i=0; i<dev_list_size; i++) {
+        threads[i].dev_id = dev_list[i];
+        threads[i].app = app;
+        threads[i].thread_handle = (HANDLE)(uintptr_t)_beginthreadex(NULL, 0, proc_thread, &threads[i], 0, &threadID);
+    }
+
+    app->num_thread = dev_list_size;
+    app->threads = threads;
+
+    free(dev_list);
 
     return TRUE;
 }
@@ -480,7 +525,7 @@ int main(int argc, char **argv)
     struct app app;
     HWND win;
     int run = 1;
-    int argi;
+    int argi, i;
     DWORD pathlen, attr;
     char *fullpath, *filepart;
 
@@ -615,8 +660,11 @@ int main(int argc, char **argv)
         }
     }
 
-    WaitForSingleObject(app.worker_thread, INFINITE);
-    CloseHandle(app.worker_thread);
+    for (i=0; i<app.num_thread; i++) {
+        struct thread_arg *t = &app.threads[i];
+        WaitForSingleObject(t->thread_handle, INFINITE);
+        CloseHandle(t->thread_handle);
+    }
 
     free(app.dev_name);
 
