@@ -634,13 +634,13 @@ filter_AVX_impl0(ComputeEnv *env,
 	std::atomic<unsigned int> block_counter(0U);
 
 	auto func = [&]() {
-		float *intermediate = (float*)_mm_malloc(sizeof(float)*nOutputPlanes*2, 64);
+		float *intermediate = (float*)w2xc_aligned_malloc(sizeof(float)*nOutputPlanes*2, 64);
 
 		while (1) {
 			unsigned int bi = block_counter++;
 
 			if (bi >= total_block) {
-				_mm_free(intermediate);
+				w2xc_aligned_free(intermediate);
 				return;
 			}
 

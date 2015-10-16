@@ -1,14 +1,28 @@
 #ifndef BUFFER_HPP
 #define BUFFER_HPP
 
-#if defined(_MSC_VER)
+#ifdef _WIN32
 #include <malloc.h>
-#elif defined(X86OPT)
-#include <mm_malloc.h>
+
+#define w2xc_aligned_malloc _aligned_malloc
+#define w2xc_aligned_free _aligned_free
+
 #else
-#include <malloc.h>
-#define _mm_malloc(size,align) memalign(align,size)
-#define _mm_free(ptr) free(ptr)
+#include <stdlib.h>
+static inline void *
+w2xc_aligned_malloc(size_t size, 
+                    size_t alignment)
+{
+    void *ret;
+    int r = posix_memalign(&ret, alignment, size);
+    if (r != 0) {
+        return NULL;
+    }
+    return ret;
+}
+
+#define w2xc_aligned_free free
+
 #endif
 
 #include <stdlib.h>

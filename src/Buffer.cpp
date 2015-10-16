@@ -72,7 +72,7 @@ Buffer::release(ComputeEnv *env) {
     }
 
     if (host_ptr) {
-        _mm_free(host_ptr);
+        w2xc_aligned_free(host_ptr);
     }
     host_ptr = nullptr;
     host_valid = false;
@@ -214,7 +214,7 @@ Buffer::get_read_ptr_host(ComputeEnv *env, size_t read_byte_size) {
     }
 
     if (host_ptr == nullptr) {
-        host_ptr = _mm_malloc(byte_size, 64);
+        host_ptr = w2xc_aligned_malloc(byte_size, 64);
     }
 
     if (last_write.type == Processor::OpenCL) {
@@ -244,7 +244,7 @@ bool
 Buffer::prealloc(W2XConv *conv, ComputeEnv *env) {
     int devid;
     if (host_ptr == nullptr) {
-        host_ptr = _mm_malloc(byte_size, 64);
+        host_ptr = w2xc_aligned_malloc(byte_size, 64);
         if (host_ptr == nullptr) {
             return false;
         }
@@ -313,7 +313,7 @@ Buffer::get_write_ptr_host(ComputeEnv *env) {
     last_write.devid = 0;
 
     if (host_ptr == nullptr) {
-        host_ptr = _mm_malloc(byte_size, 64);
+        host_ptr = w2xc_aligned_malloc(byte_size, 64);
     }
 
     host_valid = true;

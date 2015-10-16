@@ -109,8 +109,8 @@ bool Model::filter_AVX_OpenCL(W2XConv *conv,
 		vec_width = VEC_WIDTH;
 	}
 
-	float *weight_flat = (float*)_mm_malloc(sizeof(float)*nInputPlanes*weight_step*3*3, 64);
-	float *fbiases_flat = (float*)_mm_malloc(sizeof(float) * biases.size(), 64);
+	float *weight_flat = (float*)w2xc_aligned_malloc(sizeof(float)*nInputPlanes*weight_step*3*3, 64);
+	float *fbiases_flat = (float*)w2xc_aligned_malloc(sizeof(float) * biases.size(), 64);
 
 	for (int i=0; i<(int)biases.size(); i++) {
 		fbiases_flat[i] = biases[i];
@@ -413,8 +413,8 @@ bool Model::filter_AVX_OpenCL(W2XConv *conv,
 		}
 	}
 
-	_mm_free(fbiases_flat);
-	_mm_free(weight_flat);
+	w2xc_aligned_free(fbiases_flat);
+	w2xc_aligned_free(weight_flat);
 
 	return true;
 
