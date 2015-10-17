@@ -11,7 +11,7 @@
 static int block_size = 0;
 
 #define WIN_WIDTH 600
-#define WIN_HEIGHT 60
+#define DISP_HEIGHT 60
 
 enum packet_type {
     PKT_START,
@@ -437,6 +437,10 @@ on_create(HWND wnd, LPCREATESTRUCT cp)
         dev_list_size = app->path_list_nelem;
     }
 
+    if (dev_list_size == 0) {
+        dev_list_size = 1;
+    }
+
     struct thread_arg *threads = malloc(sizeof(struct thread_arg) * dev_list_size);
 
     for (i=0; i<dev_list_size; i++) {
@@ -458,7 +462,7 @@ on_create(HWND wnd, LPCREATESTRUCT cp)
         rect.left = 0;
         rect.top = 0;
         rect.right = WIN_WIDTH;
-        rect.bottom = WIN_HEIGHT * dev_list_size;
+        rect.bottom = DISP_HEIGHT * (dev_list_size+1);
 
         AdjustWindowRectEx( &rect, WS_OVERLAPPEDWINDOW, FALSE, 0 );
         SetWindowPos(wnd, NULL, 0, 0,
@@ -491,6 +495,11 @@ static void
 update_display(struct app *app)
 {
     HDC dc = GetDC(app->win);
+    RECT r;
+
+    GetClientRect(app->win, &r);
+    FillRect(dc, &r, GetStockBrush(WHITE_BRUSH));
+
     if ((app->processed == 0) && app->state == STATE_FINI) {
         static const char msg[] = "nop";
         TextOut(dc, 10, 10, msg, sizeof(msg)-1);
@@ -498,14 +507,20 @@ update_display(struct app *app)
         char line[4096];
         char path[128];
         int i;
-        RECT r;
 
-        GetClientRect(app->win, &r);
-        FillRect(dc, &r, GetStockBrush(WHITE_BRUSH));
+        if (app->processed != 0) {
+            _snprintf(line, sizeof(line),
+                      "progress : %d/%d",
+                      app->processed,
+                      app->path_list_nelem);
+        }
+
+        TextOut(dc, 10, 10, line, strlen(line));
 
         for (i=0; i<app->num_thread; i++) {
             char *cur_path = app->threads[i].cur_path;
             double cur_flops = app->threads[i].cur_flops;
+
 
             if (cur_path) {
                 size_t len = strlen(cur_path), line_len;
@@ -535,8 +550,8 @@ update_display(struct app *app)
 
                 proc = &app->proc_list[app->dev_list[i]];
 
-                TextOut(dc, 10, WIN_HEIGHT*i + 10, proc->dev_name, strlen(proc->dev_name));
-                TextOut(dc, 10, WIN_HEIGHT*i + 28, line, line_len);
+                TextOut(dc, 10, DISP_HEIGHT*(i+1) + 10, proc->dev_name, strlen(proc->dev_name));
+                TextOut(dc, 10, DISP_HEIGHT*(i+1) + 28, line, line_len);
             }
         }
     }
@@ -635,7 +650,7 @@ int main(int argc, char **argv)
                          CW_USEDEFAULT,
                          CW_USEDEFAULT,
                          WIN_WIDTH,
-                         WIN_HEIGHT,
+                         DISP_HEIGHT,
                          NULL,
                          NULL,
                          hInst,
@@ -673,7 +688,7 @@ int main(int argc, char **argv)
                     break;
 
                 case PKT_PROGRESS:
-                    app.processed = 1;
+                    app.processed++;
                     update_display(&app);
 
                     break;
