@@ -601,31 +601,36 @@ int main(int argc, char **argv)
         return 1;
     }
 
-    src_path = argv[argi];
-
-    pathlen = GetFullPathName(src_path, 0, NULL, NULL);
-    if (pathlen == 0) {
-        MessageBox(NULL, "open failed", src_path, MB_OK);
-        return 1;
-    }
-
-    fullpath = malloc(pathlen);
-    GetFullPathName(src_path, pathlen, fullpath, &filepart);
-
-    attr = GetFileAttributes(fullpath);
-    if (attr < 0) {
-        MessageBox(NULL, "open failed", fullpath, MB_OK);
-        return 1;
-    }
-
     app.path_list_capacity = 4;
     app.path_list_nelem = 0;
     app.path_list = malloc(sizeof(struct path_pair) * app.path_list_capacity);
 
-    if (attr & FILE_ATTRIBUTE_DIRECTORY) {
-        traverse_dir(&app, fullpath);
-    } else {
-        add_file(&app, fullpath);
+
+    for (; argi<argc; argi++) {
+        src_path = argv[argi];
+
+        pathlen = GetFullPathName(src_path, 0, NULL, NULL);
+        if (pathlen == 0) {
+            MessageBox(NULL, "open failed", src_path, MB_OK);
+            return 1;
+        }
+
+        fullpath = malloc(pathlen);
+        GetFullPathName(src_path, pathlen, fullpath, &filepart);
+
+        attr = GetFileAttributes(fullpath);
+        if (attr < 0) {
+            MessageBox(NULL, "open failed", fullpath, MB_OK);
+            return 1;
+        }
+
+        if (attr & FILE_ATTRIBUTE_DIRECTORY) {
+            traverse_dir(&app, fullpath);
+        } else {
+            add_file(&app, fullpath);
+        }
+
+        free(fullpath);
     }
 
     cls.cbSize = sizeof(cls);

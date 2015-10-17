@@ -10,7 +10,7 @@ You can use this as command-line tool of image noise reduction or/and scaling.
 - http://int.main.jp/files/waifu2x-converter_x64_1018.zip
 - http://int.main.jp/files/waifu2x-converter_x86_1018.zip
 
-### works using waifu2x-converter
+## works using waifu2x-converter
 
  * [waifu2x_win_koroshell](http://inatsuka.com/extra/koroshell/)
    - waifu2x-converter GUI frontend that is easy to use, and so cute. You need only drag&drop to convert your image. (and also you can set converting mode, noise reduction level, scale ratio, etc..., on GUI)
