@@ -11,7 +11,7 @@
 static int block_size = 0;
 
 #define WIN_WIDTH 600
-#define WIN_HEIGHT 100
+#define WIN_HEIGHT 50
 
 enum packet_type {
     PKT_START,
@@ -27,10 +27,11 @@ struct packet {
         struct {
             char *path;
             double flops;
+            int dev;
         } progress;
 
         struct {
-            char *dev_name;
+            int dev;
         } start;
     }u;
 };
@@ -101,13 +102,10 @@ struct path_pair {
 };
 
 struct app {
-    CRITICAL_SECTION app_cs;
-
     enum app_state state;
     HWND win;
 
     char *src_path;
-    char *dev_name;
 
     struct Queue from_worker;
 
@@ -120,6 +118,9 @@ struct app {
     int path_list_capacity;
     int path_list_nelem;
     struct path_pair *path_list;
+
+    int *dev_list;
+    const struct W2XConvProcessor *proc_list;
 
     int cursor;
 };
@@ -321,7 +322,7 @@ proc_thread(void *ap)
     {
         struct packet pkt;
         pkt.tp = PKT_START;
-        pkt.u.start.dev_name = strdup(c->target_processor->dev_name);
+        pkt.u.start.dev = ta->dev_id;
         send_packet(&app->from_worker, &pkt);
     }
 
@@ -342,6 +343,7 @@ proc_thread(void *ap)
         pkt.tp = PKT_PROGRESS;
         pkt.u.progress.path = strdup(p->src_path);
         pkt.u.progress.flops = c->flops.flop / c->flops.process_sec;
+        pkt.u.progress.dev = ta->dev_id;
         send_packet(&app->from_worker, &pkt);
 
         _ReadBarrier();
@@ -434,8 +436,23 @@ on_create(HWND wnd, LPCREATESTRUCT cp)
 
     app->num_thread = dev_list_size;
     app->threads = threads;
+    app->dev_list = dev_list;
+    app->proc_list = proc_list;
 
-    free(dev_list);
+
+    {
+        RECT rect;
+        rect.left = 0;
+        rect.top = 0;
+        rect.right = WIN_WIDTH;
+        rect.bottom = WIN_HEIGHT * dev_list_size;
+
+        AdjustWindowRectEx( &rect, WS_OVERLAPPEDWINDOW, FALSE, 0 );
+        SetWindowPos(wnd, NULL, 0, 0,
+                     rect.right-rect.left,
+                     rect.bottom-rect.top,
+                     SWP_NOMOVE|SWP_NOZORDER);
+    }
 
     return TRUE;
 }
@@ -495,7 +512,9 @@ update_display(struct app *app)
         GetClientRect(app->win, &r);
         FillRect(dc, &r, GetStockBrush(WHITE_BRUSH));
 
-        TextOut(dc, 10, 10, app->dev_name, strlen(app->dev_name));
+        const struct W2XConvProcessor *proc = &app->proc_list[app->dev_list[0]];
+
+        TextOut(dc, 10, 10, proc->dev_name, strlen(proc->dev_name));
         TextOut(dc, 10, 28, line, line_len);
     }
     ReleaseDC(app->win, dc);
@@ -606,7 +625,6 @@ int main(int argc, char **argv)
     app.state = STATE_RUN;
     app.cur_path = NULL;
 
-    InitializeCriticalSectionEx(&app.app_cs);
     app.cursor = 0;
 
     while (run) {
@@ -625,7 +643,6 @@ int main(int argc, char **argv)
 
                 switch (pkt.tp) {
                 case PKT_START:
-                    app.dev_name = pkt.u.start.dev_name;
                     break;
 
                 case PKT_PROGRESS:
@@ -667,7 +684,7 @@ int main(int argc, char **argv)
         CloseHandle(t->thread_handle);
     }
 
-    free(app.dev_name);
+    free(app.dev_list);
 
     return 0;
 }
