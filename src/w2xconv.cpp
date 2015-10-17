@@ -34,6 +34,7 @@ global_init2(void)
 	{
 		W2XConvProcessor host;
 		host.type = W2XCONV_PROC_HOST;
+		host.sub_type = W2XCONV_PROC_HOST_OPENCV;
 		host.dev_id = 0;
 		host.dev_name = "Generic";
 		host.num_core = std::thread::hardware_concurrency();
@@ -73,8 +74,6 @@ global_init2(void)
 			}
 		} else if (v[2] & (1<<0)) {
 			host.sub_type = W2XCONV_PROC_HOST_SSE3;
-		} else {
-			host.sub_type = W2XCONV_PROC_HOST_OPENCV;
 		}
 #endif // X86OPT
 

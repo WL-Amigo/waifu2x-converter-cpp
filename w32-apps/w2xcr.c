@@ -44,40 +44,36 @@ struct Queue {
     int wr;
 
     HANDLE ev;
+    CRITICAL_SECTION cs;
 };
 
 static int
-recv_packet(struct Queue *q, struct packet *p, int wait)
+recv_packet(struct Queue *q, struct packet *p)
 {
-    while (1) {
-        if (q->rd == q->wr) {
-            if(wait) {
-                WaitForSingleObject(q->ev, INFINITE);
-            } else {
-                DWORD r = WaitForSingleObject(q->ev, 0);
-                if (r == WAIT_TIMEOUT) {
-                    return -1;
-                }
-            }
-            ResetEvent(q->ev);
-        } else {
-            *p = q->packets[q->rd];
-            break;
-        }
+    int ret = -1;
+
+    EnterCriticalSection(&q->cs);
+    if (q->rd == q->wr) {
+        ret = -1;
+        ResetEvent(q->ev);
+    } else {
+        ret = 0;
+        *p = q->packets[q->rd];
+        q->rd = (q->rd + 1)%QUEUE_SIZE;
     }
+    LeaveCriticalSection(&q->cs);
 
-    q->rd = (q->rd + 1)%QUEUE_SIZE;
-
-    return 0;
+    return ret;
 }
 
 static int
 send_packet(struct Queue *q, struct packet *p)
 {
+    EnterCriticalSection(&q->cs);
     q->packets[q->wr] = *p;
     q->wr = (q->wr+1)%QUEUE_SIZE;
-
     SetEvent(q->ev);
+    LeaveCriticalSection(&q->cs);
 
     return 0;
 }
@@ -88,10 +84,12 @@ queue_init(struct Queue *q)
     q->rd = 0;
     q->wr = 0;
     q->ev = CreateEvent(NULL, TRUE, FALSE, NULL);
+    InitializeCriticalSection(&q->cs);
 }
 
 enum app_state {
     STATE_RUN,
+    STATE_FINI_REQUEST,
     STATE_FINI
 };
 
@@ -103,13 +101,14 @@ struct path_pair {
 };
 
 struct app {
+    CRITICAL_SECTION app_cs;
+
     enum app_state state;
     HWND win;
 
     char *src_path;
     char *dev_name;
 
-    struct Queue to_worker;
     struct Queue from_worker;
 
     int num_thread;
@@ -121,6 +120,8 @@ struct app {
     int path_list_capacity;
     int path_list_nelem;
     struct path_pair *path_list;
+
+    int cursor;
 };
 
 static int
@@ -343,14 +344,9 @@ proc_thread(void *ap)
         pkt.u.progress.flops = c->flops.flop / c->flops.process_sec;
         send_packet(&app->from_worker, &pkt);
 
-        {
-            DWORD r = WaitForSingleObject(app->to_worker.ev, 0);
-            if (r == WAIT_OBJECT_0) {
-                recv_packet(&app->to_worker, &pkt, 1);
-                if (pkt.tp == PKT_FINI_REQUEST) {
-                    return -2;
-                }
-            }
+        _ReadBarrier();
+        if (app->state == STATE_FINI_REQUEST) {
+            goto fini;
         }
     }
 
@@ -382,10 +378,8 @@ on_close(HWND wnd)
     PostQuitMessage(0);
 
     {
-        struct packet pkt;
-        pkt.tp = PKT_FINI_REQUEST;
-
-        send_packet(&app->to_worker, &pkt);
+        app->state = STATE_FINI_REQUEST;
+        _WriteBarrier();
     }
 
 }
@@ -407,7 +401,7 @@ on_create(HWND wnd, LPCREATESTRUCT cp)
     proc_list = w2xconv_get_processor_list(&num_all_dev);
 
     for (i=0; i<num_all_dev; i++) {
-        struct W2XConvProcessor *p = &proc_list[i];
+        const struct W2XConvProcessor *p = &proc_list[i];
 
         if ((p->type == W2XCONV_PROC_HOST) ||
             (p->type == W2XCONV_PROC_CUDA) ||
@@ -424,9 +418,14 @@ on_create(HWND wnd, LPCREATESTRUCT cp)
         }
     }
 
-    struct thread_arg *threads = malloc(sizeof(struct thread_arg) * dev_list_size);
+    if (app->path_list_nelem < dev_list_size) {
+        dev_list_size = app->path_list_nelem;
+    }
 
     dev_list_size = 1;
+
+    struct thread_arg *threads = malloc(sizeof(struct thread_arg) * dev_list_size);
+
     for (i=0; i<dev_list_size; i++) {
         threads[i].dev_id = dev_list[i];
         threads[i].app = app;
@@ -584,7 +583,6 @@ int main(int argc, char **argv)
 
     RegisterClassEx(&cls);
 
-    queue_init(&app.to_worker);
     queue_init(&app.from_worker);
 
     win = CreateWindowEx(0,
@@ -608,6 +606,9 @@ int main(int argc, char **argv)
     app.state = STATE_RUN;
     app.cur_path = NULL;
 
+    InitializeCriticalSectionEx(&app.app_cs);
+    app.cursor = 0;
+
     while (run) {
         HANDLE list[1] = {app.from_worker.ev};
 
@@ -617,7 +618,7 @@ int main(int argc, char **argv)
             struct packet pkt;
 
             while (1) {
-                int r = recv_packet(&app.from_worker, &pkt, 0);
+                int r = recv_packet(&app.from_worker, &pkt);
                 if (r < 0) {
                     break;
                 }
