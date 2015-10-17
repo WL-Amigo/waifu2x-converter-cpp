@@ -359,7 +359,7 @@ proc_thread(void *ap)
         ta->cur_path = p->src_path;
         ta->cur_flops = c->flops.flop / c->flops.process_sec;
 
-        _ReadBarrier();
+        _ReadWriteBarrier();
         if (app->state == STATE_FINI_REQUEST) {
             goto fini;
         }
@@ -437,8 +437,6 @@ on_create(HWND wnd, LPCREATESTRUCT cp)
         dev_list_size = app->path_list_nelem;
     }
 
-    dev_list_size = 1;
-
     struct thread_arg *threads = malloc(sizeof(struct thread_arg) * dev_list_size);
 
     for (i=0; i<dev_list_size; i++) {
@@ -499,42 +497,47 @@ update_display(struct app *app)
     } else {
         char line[4096];
         char path[128];
-        char *cur_path = app->threads[0].cur_path;
-        double cur_flops = app->threads[0].cur_flops;
+        int i;
+        RECT r;
 
-        if (cur_path) {
-            size_t len = strlen(cur_path), line_len;
-            //HGDIOBJ old_brush;
-            RECT r;
+        GetClientRect(app->win, &r);
+        FillRect(dc, &r, GetStockBrush(WHITE_BRUSH));
 
-            if (len > 30) {
-                size_t rem = len - 30;
-                _snprintf(path, 128, "...%s", cur_path + rem);
-            } else {
-                strcpy(path, cur_path);
+        for (i=0; i<app->num_thread; i++) {
+            char *cur_path = app->threads[i].cur_path;
+            double cur_flops = app->threads[i].cur_flops;
+
+            if (cur_path) {
+                size_t len = strlen(cur_path), line_len;
+                //HGDIOBJ old_brush;
+                const struct W2XConvProcessor *proc;
+
+                if (len > 30) {
+                    size_t rem = len - 30;
+                    _snprintf(path, 128, "...%s", cur_path + rem);
+                } else {
+                    strcpy(path, cur_path);
+                }
+
+                if (app->state == STATE_FINI) {
+                    _snprintf(line, sizeof(line),
+                              "%.2f[GFLOPS] %s [Complete!!]",
+                              cur_flops/(1000.0*1000.0*1000.0),
+                              path);
+                } else {
+                    _snprintf(line, sizeof(line),
+                              "%.2f[GFLOPS] %s",
+                              cur_flops/(1000*1000*1000.0),
+                              path);
+                }
+
+                line_len = strlen(line);
+
+                proc = &app->proc_list[app->dev_list[i]];
+
+                TextOut(dc, 10, WIN_HEIGHT*i + 10, proc->dev_name, strlen(proc->dev_name));
+                TextOut(dc, 10, WIN_HEIGHT*i + 28, line, line_len);
             }
-
-            if (app->state == STATE_FINI) {
-                _snprintf(line, sizeof(line),
-                          "%.2f[GFLOPS] %s [Complete!!]",
-                          cur_flops/(1000.0*1000.0*1000.0),
-                          path);
-            } else {
-                _snprintf(line, sizeof(line),
-                          "%.2f[GFLOPS] %s",
-                          cur_flops/(1000*1000*1000.0),
-                          path);
-            }
-
-            line_len = strlen(line);
-
-            GetClientRect(app->win, &r);
-            FillRect(dc, &r, GetStockBrush(WHITE_BRUSH));
-
-            const struct W2XConvProcessor *proc = &app->proc_list[app->dev_list[0]];
-
-            TextOut(dc, 10, 10, proc->dev_name, strlen(proc->dev_name));
-            TextOut(dc, 10, 28, line, line_len);
         }
     }
     ReleaseDC(app->win, dc);
@@ -562,7 +565,7 @@ int main(int argc, char **argv)
     WNDCLASSEX cls={0};
     struct app app;
     HWND win;
-    int run = 1;
+    int run = 1, fini_count;
     int argi, i;
     DWORD pathlen, attr;
     char *fullpath, *filepart;
@@ -649,6 +652,8 @@ int main(int argc, char **argv)
     InitializeCriticalSection(&app.app_cs);
     app.cursor = 0;
 
+    fini_count = 0;
+
     while (run) {
         HANDLE list[1] = {app.from_worker.ev};
 
@@ -673,9 +678,13 @@ int main(int argc, char **argv)
 
                     break;
 
-                case PKT_FINI_ALL:
-                    app.state = STATE_FINI;
+                case PKT_FINI_ALL: {
+                    fini_count++;
+                    if (fini_count == app.num_thread) {
+                        app.state = STATE_FINI;
+                    }
                     update_display(&app);
+                }
                     break;
 
                 case PKT_FINI_REQUEST:
