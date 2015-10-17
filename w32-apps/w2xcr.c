@@ -11,7 +11,7 @@
 static int block_size = 0;
 
 #define WIN_WIDTH 600
-#define WIN_HEIGHT 50
+#define WIN_HEIGHT 60
 
 enum packet_type {
     PKT_START,
@@ -25,8 +25,6 @@ struct packet {
 
     union {
         struct {
-            char *path;
-            double flops;
             int dev;
         } progress;
 
@@ -102,18 +100,16 @@ struct path_pair {
 };
 
 struct app {
+    CRITICAL_SECTION app_cs;
     enum app_state state;
     HWND win;
 
-    char *src_path;
+    int processed;
 
     struct Queue from_worker;
 
     int num_thread;
     struct thread_arg *threads;
-
-    char *cur_path;
-    double cur_flops;
 
     int path_list_capacity;
     int path_list_nelem;
@@ -271,6 +267,9 @@ struct thread_arg {
     int dev_id;
     struct app *app;
     HANDLE thread_handle;
+
+    char *cur_path;
+    double cur_flops;
 };
 
 static unsigned int __stdcall
@@ -326,10 +325,23 @@ proc_thread(void *ap)
         send_packet(&app->from_worker, &pkt);
     }
 
-    for (i=0; i<app->path_list_nelem; i++) {
+    while (1) {
         struct packet pkt;
-        struct path_pair *p = &app->path_list[i];
+        struct path_pair *p;
+        int li;
+        EnterCriticalSection(&app->app_cs);
+        li = app->cursor;
+        if (li < app->path_list_nelem) {
+            app->cursor++;
+        }
+        LeaveCriticalSection(&app->app_cs);
 
+        if (li >= app->path_list_nelem) {
+            /* finished */
+            break;
+        }
+
+        p = &app->path_list[li];
         r = w2xconv_convert_file(c,
                                  p->dst_path,
                                  p->src_path,
@@ -341,10 +353,11 @@ proc_thread(void *ap)
         }
 
         pkt.tp = PKT_PROGRESS;
-        pkt.u.progress.path = strdup(p->src_path);
-        pkt.u.progress.flops = c->flops.flop / c->flops.process_sec;
         pkt.u.progress.dev = ta->dev_id;
         send_packet(&app->from_worker, &pkt);
+
+        ta->cur_path = p->src_path;
+        ta->cur_flops = c->flops.flop / c->flops.process_sec;
 
         _ReadBarrier();
         if (app->state == STATE_FINI_REQUEST) {
@@ -431,6 +444,8 @@ on_create(HWND wnd, LPCREATESTRUCT cp)
     for (i=0; i<dev_list_size; i++) {
         threads[i].dev_id = dev_list[i];
         threads[i].app = app;
+        threads[i].cur_flops = 0;
+        threads[i].cur_path = NULL;
         threads[i].thread_handle = (HANDLE)(uintptr_t)_beginthreadex(NULL, 0, proc_thread, &threads[i], 0, &threadID);
     }
 
@@ -478,44 +493,49 @@ static void
 update_display(struct app *app)
 {
     HDC dc = GetDC(app->win);
-    if (app->cur_path == NULL && app->state == STATE_FINI) {
+    if ((app->processed == 0) && app->state == STATE_FINI) {
         static const char msg[] = "nop";
         TextOut(dc, 10, 10, msg, sizeof(msg)-1);
     } else {
         char line[4096];
         char path[128];
-        size_t len = strlen(app->cur_path), line_len;
-        //HGDIOBJ old_brush;
-        RECT r;
+        char *cur_path = app->threads[0].cur_path;
+        double cur_flops = app->threads[0].cur_flops;
 
-        if (len > 30) {
-            size_t rem = len - 30;
-            _snprintf(path, 128, "...%s", app->cur_path + rem);
-        } else {
-            strcpy(path, app->cur_path);
+        if (cur_path) {
+            size_t len = strlen(cur_path), line_len;
+            //HGDIOBJ old_brush;
+            RECT r;
+
+            if (len > 30) {
+                size_t rem = len - 30;
+                _snprintf(path, 128, "...%s", cur_path + rem);
+            } else {
+                strcpy(path, cur_path);
+            }
+
+            if (app->state == STATE_FINI) {
+                _snprintf(line, sizeof(line),
+                          "%.2f[GFLOPS] %s [Complete!!]",
+                          cur_flops/(1000.0*1000.0*1000.0),
+                          path);
+            } else {
+                _snprintf(line, sizeof(line),
+                          "%.2f[GFLOPS] %s",
+                          cur_flops/(1000*1000*1000.0),
+                          path);
+            }
+
+            line_len = strlen(line);
+
+            GetClientRect(app->win, &r);
+            FillRect(dc, &r, GetStockBrush(WHITE_BRUSH));
+
+            const struct W2XConvProcessor *proc = &app->proc_list[app->dev_list[0]];
+
+            TextOut(dc, 10, 10, proc->dev_name, strlen(proc->dev_name));
+            TextOut(dc, 10, 28, line, line_len);
         }
-
-        if (app->state == STATE_FINI) {
-            _snprintf(line, sizeof(line),
-                      "%.2f[GFLOPS] %s [Complete!!]",
-                      app->cur_flops/(1000.0*1000.0*1000.0),
-                      path);
-        } else {
-            _snprintf(line, sizeof(line),
-                      "%.2f[GFLOPS] %s",
-                      app->cur_flops/(1000*1000*1000.0),
-                      path);
-        }
-
-        line_len = strlen(line);
-
-        GetClientRect(app->win, &r);
-        FillRect(dc, &r, GetStockBrush(WHITE_BRUSH));
-
-        const struct W2XConvProcessor *proc = &app->proc_list[app->dev_list[0]];
-
-        TextOut(dc, 10, 10, proc->dev_name, strlen(proc->dev_name));
-        TextOut(dc, 10, 28, line, line_len);
     }
     ReleaseDC(app->win, dc);
 }
@@ -546,6 +566,7 @@ int main(int argc, char **argv)
     int argi, i;
     DWORD pathlen, attr;
     char *fullpath, *filepart;
+    char *src_path;
 
     for (argi=1; argi < argc; argi++) {
         if (strcmp(argv[argi],"--block_size") == 0) {
@@ -562,16 +583,16 @@ int main(int argc, char **argv)
         return 1;
     }
 
-    app.src_path = argv[argi];
+    src_path = argv[argi];
 
-    pathlen = GetFullPathName(app.src_path, 0, NULL, NULL);
+    pathlen = GetFullPathName(src_path, 0, NULL, NULL);
     if (pathlen == 0) {
-        MessageBox(NULL, "open failed", app.src_path, MB_OK);
+        MessageBox(NULL, "open failed", src_path, MB_OK);
         return 1;
     }
 
     fullpath = malloc(pathlen);
-    GetFullPathName(app.src_path, pathlen, fullpath, &filepart);
+    GetFullPathName(src_path, pathlen, fullpath, &filepart);
 
     attr = GetFileAttributes(fullpath);
     if (attr < 0) {
@@ -623,8 +644,9 @@ int main(int argc, char **argv)
     UpdateWindow(win);
 
     app.state = STATE_RUN;
-    app.cur_path = NULL;
+    app.processed = 0;
 
+    InitializeCriticalSection(&app.app_cs);
     app.cursor = 0;
 
     while (run) {
@@ -646,10 +668,7 @@ int main(int argc, char **argv)
                     break;
 
                 case PKT_PROGRESS:
-                    app.cur_flops = pkt.u.progress.flops;
-                    free(app.cur_path);
-                    app.cur_path = pkt.u.progress.path;
-
+                    app.processed = 1;
                     update_display(&app);
 
                     break;
