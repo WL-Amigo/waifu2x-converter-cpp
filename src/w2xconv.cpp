@@ -27,6 +27,7 @@ struct W2XConvImpl {
 
 static std::vector<struct W2XConvProcessor> processor_list;
 
+
 static void
 global_init2(void)
 {
@@ -82,6 +83,76 @@ global_init2(void)
 
 	w2xc::initOpenCLGlobal(&processor_list);
 	w2xc::initCUDAGlobal(&processor_list);
+
+
+	/*
+	 * 1: NV CUDA
+	 * 2: OCL GPU
+	 * 3: host
+	 * 4: other
+	 *
+	 * && orderd by num_core
+	 */
+	std::sort(processor_list.begin(),
+		  processor_list.end(),
+		  [&](W2XConvProcessor const &p0,
+		      W2XConvProcessor const &p1)
+		  {
+			  bool p0_is_opencl_gpu =
+				  (p0.type == W2XCONV_PROC_OPENCL) &&
+				  ((p0.sub_type&W2XCONV_PROC_OPENCL_DEVICE_MASK) == W2XCONV_PROC_OPENCL_DEVICE_GPU)
+				  ;
+
+			  bool p1_is_opencl_gpu =
+				  (p1.type == W2XCONV_PROC_OPENCL) &&
+				  ((p1.sub_type&W2XCONV_PROC_OPENCL_DEVICE_MASK) == W2XCONV_PROC_OPENCL_DEVICE_GPU)
+				  ;
+
+			  if (p0.type == p1.type) {
+				  if (p0.type == W2XCONV_PROC_OPENCL) {
+					  if (p0.sub_type != p1.sub_type) {
+						  if (p0_is_opencl_gpu) {
+							  return true;
+						  }
+
+						  if (p1_is_opencl_gpu) {
+							  return false;
+						  }
+					  }
+				  }
+
+				  if (p0.num_core != p1.num_core) {
+					  return p0.num_core > p1.num_core;
+				  }
+			  } else {
+				  if (p0.type == W2XCONV_PROC_CUDA) {
+					  return true;
+				  }
+
+				  if (p1.type == W2XCONV_PROC_CUDA) {
+					  return false;
+				  }
+
+				  if (p0_is_opencl_gpu) {
+					  return true;
+				  }
+
+				  if (p1_is_opencl_gpu) {
+					  return false;
+				  }
+			  }
+
+			  if (p0.type == W2XCONV_PROC_HOST) {
+				  return true;
+			  }
+
+			  if (p1.type == W2XCONV_PROC_HOST) {
+				  return false;
+			  }
+
+			  /* ?? */
+			  return p0.dev_id < p1.dev_id;
+		  });
 }
 
 #ifdef _WIN32
