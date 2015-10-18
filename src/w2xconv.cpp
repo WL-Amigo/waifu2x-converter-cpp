@@ -107,6 +107,27 @@ global_init2(void)
 				  ((p1.sub_type&W2XCONV_PROC_OPENCL_DEVICE_MASK) == W2XCONV_PROC_OPENCL_DEVICE_GPU)
 				  ;
 
+
+			  bool p0_is_opencl_intel_gpu =
+				  (p0.type == W2XCONV_PROC_OPENCL) &&
+				  (p0.sub_type == W2XCONV_PROC_OPENCL_INTEL_GPU)
+				  ;
+
+			  bool p1_is_opencl_intel_gpu =
+				  (p1.type == W2XCONV_PROC_OPENCL) &&
+				  (p1.sub_type == W2XCONV_PROC_OPENCL_INTEL_GPU)
+				  ;
+
+			  bool p0_host_avx =
+				  (p0.type == W2XCONV_PROC_HOST) &&
+				  (p0.sub_type >= W2XCONV_PROC_HOST_AVX)
+				  ;
+
+			  bool p1_host_avx =
+				  (p1.type == W2XCONV_PROC_HOST) &&
+				  (p1.sub_type >= W2XCONV_PROC_HOST_AVX)
+				  ;
+
 			  if (p0.type == p1.type) {
 				  if (p0.type == W2XCONV_PROC_OPENCL) {
 					  if (p0.sub_type != p1.sub_type) {
@@ -130,6 +151,18 @@ global_init2(void)
 
 				  if (p1.type == W2XCONV_PROC_CUDA) {
 					  return false;
+				  }
+
+				  if (p0_is_opencl_intel_gpu) {
+					  if (p1_host_avx) {
+						  return false;
+					  }
+				  }
+
+				  if (p1_is_opencl_intel_gpu) {
+					  if (p0_host_avx) {
+						  return false;
+					  }
 				  }
 
 				  if (p0_is_opencl_gpu) {
