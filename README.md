@@ -7,8 +7,8 @@ You can use this as command-line tool of image noise reduction or/and scaling.
 
 ## Prebuilt binary-form release
 
-- http://int.main.jp/files/waifu2x-converter_x64_1018.zip
-- http://int.main.jp/files/waifu2x-converter_x86_1018.zip
+- http://int.main.jp/files/waifu2x-converter_x64_1019.zip
+- http://int.main.jp/files/waifu2x-converter_x86_1019.zip
 
 ## works using waifu2x-converter
 
