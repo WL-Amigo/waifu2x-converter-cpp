@@ -155,11 +155,11 @@ add_file(struct app *app, const char *src_path)
             return 0;
         }
 
-        const static char jpg[] = {0xFF, 0xD8, 0xFF, 0xE0};
+        const static char jpg[] = {0xFF, 0xD8, 0xff};
         const static char png[] = {0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A};
         const static char bmp[] = {0x42, 0x4D};
 
-        if (memcmp(header,jpg,4) == 0) {
+        if (memcmp(header,jpg,3) == 0) {
             denoise = 1;
         } else if (memcmp(header,png,8) == 0 ||
                    memcmp(header,bmp,2) == 0)
