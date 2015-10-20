@@ -2,12 +2,18 @@
 #define _WIN32_WINNT 0x0600
 
 #include <thread>
+
 #ifdef X86OPT
 //#if (defined __GNUC__) || (defined __clang__)
 #ifndef _WIN32
 #include <cpuid.h>
 #endif
 #endif // X86OPT
+
+#ifdef ARMOPT
+#include <sys/auxv.h>
+#endif
+
 #include "w2xconv.h"
 #include "sec.hpp"
 #include "Buffer.hpp"
@@ -76,6 +82,14 @@ global_init2(void)
 			host.sub_type = W2XCONV_PROC_HOST_SSE3;
 		}
 #endif // X86OPT
+
+#ifdef ARMOPT
+		int hwcap = getauxval(AT_HWCAP);
+		if (hwcap & HWCAP_ARM_NEON) {
+			host.dev_name = "ARM NEON";
+			host.sub_type = W2XCONV_PROC_HOST_NEON;
+		}
+#endif
 
 		processor_list.push_back(host);
 	}

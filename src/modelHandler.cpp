@@ -327,6 +327,14 @@ bool Model::filter_AVX_OpenCL(W2XConv *conv,
 						size.width, size.height, nJob);
 				break;
 #endif
+#ifdef ARMOPT
+			case W2XCONV_PROC_HOST_NEON:
+				filter_NEON_impl(env, packed_input, packed_output,
+						nInputPlanes, nOutputPlanes, fbiases_flat, weight_flat,
+						size.width, size.height, nJob);
+				break;
+#endif
+
 			default:
 				filter_CV(env, packed_input_buf, packed_output_buf, size);
 				break;
@@ -404,6 +412,13 @@ bool Model::filter_AVX_OpenCL(W2XConv *conv,
 				filter_SSE_impl(env, packed_input, packed_output,
 						nInputPlanes, nOutputPlanes, fbiases_flat, weight_flat,
 						size.width, size.height, nJob);
+				break;
+#endif
+#ifdef ARMOPT
+			case W2XCONV_PROC_HOST_NEON:
+				filter_NEON_impl(env, packed_input, packed_output,
+						 nInputPlanes, nOutputPlanes, fbiases_flat, weight_flat,
+						 size.width, size.height, nJob);
 				break;
 #endif
 			default:
