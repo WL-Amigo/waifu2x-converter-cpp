@@ -11,7 +11,19 @@
 #endif // X86OPT
 
 #ifdef ARMOPT
+#if (defined(__linux) && !defined(__ANDROID__)) || \
+    (defined(__ANDROID_API__) && __ANDROID_API__ >= 21)
 #include <sys/auxv.h>
+#elif defined(__ARM_NEON)
+// armv8 or armv7-a
+#define getauxval(x) HWCAP_ARM_NEON
+#else
+#define getauxval(x) 0
+#endif
+#ifndef HWCAP_ARM_NEON
+// android-21 or non-Linux
+#define HWCAP_ARM_NEON (1 << 12)
+#endif
 #endif
 
 #include "w2xconv.h"
