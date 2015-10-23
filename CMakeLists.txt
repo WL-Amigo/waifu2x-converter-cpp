@@ -73,13 +73,13 @@ endif()
 option(X86OPT "Enable X86 SIMD optimizations" ${X86_TRUE})
 if(X86OPT)
   add_definitions(-DX86OPT)
-  set(X86OPT_SOURCES src/modelHandler_avx.cpp src/modelHandler_fma.cpp src/modelHandler_sse.cpp)
+  set(OPT_SOURCES src/modelHandler_avx.cpp src/modelHandler_fma.cpp src/modelHandler_sse.cpp)
 endif()
 
 option(ARMOPT "Enable ARM SIMD optimizations" ${ARM_TRUE})
 if(ARMOPT)
   add_definitions(-DARMOPT)
-  set(X86OPT_SOURCES src/modelHandler_neon.cpp)
+  set(OPT_SOURCES src/modelHandler_neon.cpp)
 
   include(CheckCXXCompilerFlag)
   # -mfloat-abi=hard and -mfloat-abi=softfp cannot be mixed
@@ -97,7 +97,7 @@ endif()
 add_executable(waifu2x-converter-cpp
   src/main.cpp)
 add_library(w2xc SHARED
-  src/modelHandler.cpp ${X86OPT_SOURCES}
+  src/modelHandler.cpp ${OPT_SOURCES}
   src/modelHandler_OpenCL.cpp src/convertRoutine.cpp src/threadPool.cpp
   src/modelHandler_CUDA.cpp src/w2xconv.cpp src/common.cpp
   src/Env.cpp src/Buffer.cpp
