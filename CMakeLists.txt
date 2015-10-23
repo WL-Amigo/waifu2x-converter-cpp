@@ -64,9 +64,8 @@ if(CMAKE_SYSTEM_PROCESSOR STREQUAL "amd64" OR
     CMAKE_SYSTEM_PROCESSOR STREQUAL "x86" OR
     CMAKE_SYSTEM_PROCESSOR MATCHES "^i.86$")
   set(X86_TRUE true)
-elseif(CMAKE_SYSTEM_PROCESSOR MATCHES "^arm.*")
+elseif(CMAKE_SYSTEM_PROCESSOR MATCHES "^aarch|^arm")
   set(ARM_TRUE true)
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mfloat-abi=hard -mfpu=neon")
 else()
   set(X86_TRUE false)
 endif()
@@ -74,20 +73,31 @@ endif()
 option(X86OPT "Enable X86 SIMD optimizations" ${X86_TRUE})
 if(X86OPT)
   add_definitions(-DX86OPT)
-  set(X86OPT_SOURCES src/modelHandler_avx.cpp src/modelHandler_fma.cpp src/modelHandler_sse.cpp)
+  set(OPT_SOURCES src/modelHandler_avx.cpp src/modelHandler_fma.cpp src/modelHandler_sse.cpp)
 endif()
 
 option(ARMOPT "Enable ARM SIMD optimizations" ${ARM_TRUE})
 if(ARMOPT)
   add_definitions(-DARMOPT)
-  set(X86OPT_SOURCES src/modelHandler_neon.cpp)
+  set(OPT_SOURCES src/modelHandler_neon.cpp)
+
+  include(CheckCXXCompilerFlag)
+  # -mfloat-abi=hard and -mfloat-abi=softfp cannot be mixed
+  # -mfpu=neon and -march=armv7-a are not supported on armv8
+  foreach(flag -mfloat-abi=hard -mfloat-abi=softfp -mfpu=neon -march=armv7-a)
+    string(REGEX REPLACE "[-=]" "_" flagp ${flag})
+    check_cxx_compiler_flag(${flag} ${flagp})
+    if(${flagp} AND NOT ${flag} MATCHES "-march")
+      set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${flag}")
+    endif()
+  endforeach()
 endif()
 
 
 add_executable(waifu2x-converter-cpp
   src/main.cpp)
 add_library(w2xc SHARED
-  src/modelHandler.cpp ${X86OPT_SOURCES}
+  src/modelHandler.cpp ${OPT_SOURCES}
   src/modelHandler_OpenCL.cpp src/convertRoutine.cpp src/threadPool.cpp
   src/modelHandler_CUDA.cpp src/w2xconv.cpp src/common.cpp
   src/Env.cpp src/Buffer.cpp
@@ -111,7 +121,9 @@ if(CMAKE_COMPILER_IS_GNUCXX OR ${CMAKE_CXX_COMPILER_ID} STREQUAL "Clang")
   set_source_files_properties(src/modelHandler_avx.cpp PROPERTIES COMPILE_FLAGS "${CMAKE_CXX_FLAGS} -O2 -mavx ${REMOVE_SYMBOL}")
   set_source_files_properties(src/modelHandler_fma.cpp PROPERTIES COMPILE_FLAGS "${CMAKE_CXX_FLAGS} -O2 -mfma ${REMOVE_SYMBOL}")
   set_source_files_properties(src/modelHandler_sse.cpp PROPERTIES COMPILE_FLAGS "${CMAKE_CXX_FLAGS} -O2 -msse3 ${REMOVE_SYMBOL}")
-  set_source_files_properties(src/modelHandler_neon.cpp PROPERTIES COMPILE_FLAGS "${CMAKE_CXX_FLAGS} -O2 -march=armv7-a ${REMOVE_SYMBOL}")
+  if(_march_armv7_a)
+    set_source_files_properties(src/modelHandler_neon.cpp PROPERTIES COMPILE_FLAGS "${CMAKE_CXX_FLAGS} -O2 -march=armv7-a ${REMOVE_SYMBOL}")
+  endif()
 elseif(MSVC)
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /wd 4819 /wd 4996 /wd 4800")
   set_source_files_properties(src/modelHandler_avx.cpp PROPERTIES COMPILE_FLAGS "${CMAKE_CXX_FLAGS} /O2 /arch:AVX")
