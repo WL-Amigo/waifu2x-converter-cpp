@@ -9,6 +9,6 @@ ExtendedSendTo добавляет новые пункты в меню "Отпр�
 インストールするにはExtendedSendToフォルダーをwaifu2x-converterプログラムフォルダーに置いて、install.wsfを実行してください。
 アンインストールするにはuninstall.wsfを実行してください。
 
-Version: 1.0.2
+Version: 1.0.3
 Autor:   Vitaliy Lagunov
 Contact: vitaliydev@yandex.ru
