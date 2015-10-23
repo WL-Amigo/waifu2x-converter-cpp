@@ -22,7 +22,7 @@ W2Mat::W2Mat(int width, int height)
 
 
 W2Mat
-conv_from_cvmat(cv::Mat &m)
+copy_from_cvmat(cv::Mat &m)
 {
     int w = m.size().width;
     int h = m.size().height;
@@ -40,7 +40,7 @@ conv_from_cvmat(cv::Mat &m)
 }
 
 cv::Mat
-conv_to_cvmat(W2Mat &m)
+copy_to_cvmat(W2Mat &m)
 {
     int w = m.view_width;
     int h = m.view_height;

@@ -55,8 +55,8 @@ struct W2Mat {
 typedef cv::Mat Mat_t;
 typedef cv::Point Point_t;
 
-W2Mat conv_from_cvmat(cv::Mat &m);
-cv::Mat conv_to_cvmat(W2Mat &m);
+W2Mat copy_from_cvmat(cv::Mat &m);
+cv::Mat copy_to_cvmat(W2Mat &m);
 
 #endif
 
