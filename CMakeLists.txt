@@ -2,8 +2,26 @@ cmake_minimum_required(VERSION 2.8)
 
 add_executable(conv conv.c)
 
-set(OPENCV_PREFIX "/usr"
-  CACHE FILEPATH "OpenCV 2.x path")
+find_package(PkgConfig)
+include(CheckIncludeFileCXX)
+
+pkg_check_modules(OPENCV_PKG opencv)
+
+if (${OPENCV_PKG_FOUND})
+  include_directories(${OPENCV_PKG_PREFIX}/include)
+else()
+  set(OPENCV_PREFIX "/usr"
+    CACHE FILEPATH "OpenCV 2.x path")
+  include_directories(${OPENCV_PREFIX}/include)
+endif()
+
+check_include_file_cxx("opencv2/opencv.hpp" HAVE_OPENCV)
+
+if(HAVE_OPENCV)
+  add_definitions(-DHAVE_OPENCV)
+else()
+  
+endif()
 
 if(${CMAKE_SYSTEM_NAME} STREQUAL "Linux")
   # include_directories("/usr")
@@ -23,7 +41,6 @@ endif()
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/src)
 include_directories(${CMAKE_CURRENT_BINARY_DIR})
-include_directories(${OPENCV_PREFIX}/include)
 
 if(${CMAKE_SYSTEM_NAME} STREQUAL "Windows")
   if(CMAKE_COMPILER_IS_GNUCXX)
@@ -100,6 +117,7 @@ add_library(w2xc SHARED
   src/modelHandler.cpp ${OPT_SOURCES}
   src/modelHandler_OpenCL.cpp src/convertRoutine.cpp src/threadPool.cpp
   src/modelHandler_CUDA.cpp src/w2xconv.cpp src/common.cpp
+  src/cvwrap.cpp
   src/Env.cpp src/Buffer.cpp
 )
 
