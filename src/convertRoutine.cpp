@@ -166,10 +166,106 @@ static bool convertWithModelsBlockSplit(W2XConv *conv,
 	unsigned int nModel = models.size();
 
 	//insert padding to inputPlane
-	cv::Mat tempMat;
+	int tempWidth = inputPlane_2.view_width + nModel*2;
+	int tempHeight = inputPlane_2.view_height + nModel*2;
+	int inputWidth = inputPlane_2.view_width;
+	int inputHeight = inputPlane_2.view_height;
+
+	W2Mat tempMat_2(tempWidth, tempHeight, inputPlane_2.type);
+	int elem_size = CV_ELEM_SIZE(inputPlane_2.type);
+
+	/* y border */
+	for (int bi=0; bi<nModel; bi++) {
+		char *dst;
+		char *src;
+
+		/* top */
+		dst = tempMat_2.ptr<char>(bi) + elem_size * nModel;
+		src = inputPlane_2.ptr<char>(0);
+		memcpy(dst, src, inputWidth * elem_size);
+
+		/* bottom */
+		dst = tempMat_2.ptr<char>(inputHeight + nModel + bi) + elem_size * nModel;
+		src = inputPlane_2.ptr<char>(inputHeight - 1);
+		memcpy(dst, src, inputWidth * elem_size);
+	}
+
+	/* body */
+	for (int bi=0; bi<inputHeight; bi++) {
+		char *dst;
+		char *src;
+		dst = tempMat_2.ptr<char>(bi + nModel) + elem_size * nModel;
+		src = inputPlane_2.ptr<char>(bi);
+		memcpy(dst, src, inputWidth * elem_size);
+	}
+
+	/* x border */
+	for (int bi=0; bi<tempHeight; bi++) {
+		char *left = tempMat_2.ptr<char>(bi);
+		char *right = left + elem_size * (nModel + inputWidth);
+		uint32_t v32;
+		uint32_t v_0, v_1, v_2;
+
+		switch (elem_size) {
+		case 1:
+			memset(left, left[nModel], nModel);
+			memset(right, right[-1], nModel);
+			break;
+
+		case 3:
+			v_0 = ((unsigned char*)left)[nModel*3+0];
+			v_1 = ((unsigned char*)left)[nModel*3+1];
+			v_2 = ((unsigned char*)left)[nModel*3+2];
+			for (int xi=0; xi<nModel; xi++) {
+				left[xi*3+0] = v_0;
+				left[xi*3+1] = v_1;
+				left[xi*3+2] = v_2;
+			}
+
+			v_0 = ((unsigned char*)right)[-3+0];
+			v_1 = ((unsigned char*)right)[-3+1];
+			v_2 = ((unsigned char*)right)[-3+2];
+			for (int xi=0; xi<nModel; xi++) {
+				right[xi*3+0] = v_0;
+				right[xi*3+1] = v_1;
+				right[xi*3+2] = v_2;
+			}
+			break;
+
+		case 4:
+			v32 = ((uint32_t*)left)[nModel];
+			for (int xi=0; xi<nModel; xi++) {
+				((uint32_t*)left)[xi] = v32;
+			}
+			v32 = ((uint32_t*)right)[-1];
+			for (int xi=0; xi<nModel; xi++) {
+				((uint32_t*)right)[xi] = v32;
+			}
+			break;
+
+		case 12:
+			v_0 = ((uint32_t*)left)[nModel*3+0];
+			v_1 = ((uint32_t*)left)[nModel*3+1];
+			v_2 = ((uint32_t*)left)[nModel*3+2];
+			for (int xi=0; xi<nModel; xi++) {
+				((uint32_t*)left)[xi*3+0] = v_0;
+				((uint32_t*)left)[xi*3+1] = v_1;
+				((uint32_t*)left)[xi*3+2] = v_2;
+			}
+
+			v_0 = ((uint32_t*)right)[-3+0];
+			v_1 = ((uint32_t*)right)[-3+1];
+			v_2 = ((uint32_t*)right)[-3+2];
+			for (int xi=0; xi<nModel; xi++) {
+				((uint32_t*)right)[xi*3+0] = v_0;
+				((uint32_t*)right)[xi*3+1] = v_1;
+				((uint32_t*)right)[xi*3+2] = v_2;
+			}
+			break;
+		}
+	}
+
 	cv::Size outputSize = inputPlane.size();
-	cv::copyMakeBorder(inputPlane, tempMat, nModel, nModel, nModel, nModel,
-			cv::BORDER_REPLICATE);
 
 	// start to convert
 	W2Mat processBlockOutput;
@@ -186,8 +282,8 @@ static bool convertWithModelsBlockSplit(W2XConv *conv,
 	while (1) {
 		long long max_size = 0;
 
-		int width = (std::min)(tempMat.size().width, blockSize);
-		int height = (std::min)(tempMat.size().height, blockSize);
+		int width = (std::min)(tempMat_2.view_width, blockSize);
+		int height = (std::min)(tempMat_2.view_height, blockSize);
 
 		for (int index = 0; index < (int)models.size(); index++) {
 			long long bufsize =
@@ -222,8 +318,8 @@ static bool convertWithModelsBlockSplit(W2XConv *conv,
 		}
 	}
 
-	int blockWidth = (std::min)(blockSize, tempMat.size().width);
-	int blockHeight = (std::min)(blockSize, tempMat.size().height);
+	int blockWidth = (std::min)(blockSize, tempMat_2.view_width);
+	int blockHeight = (std::min)(blockSize, tempMat_2.view_height);
 
 	//printf("blockSize = %d\n", blockSize);
 
@@ -261,7 +357,7 @@ static bool convertWithModelsBlockSplit(W2XConv *conv,
 		int clipEndY = 0;
 
 		if (r == splitRows - 1) {
-			clipEndY = tempMat.size().height;
+			clipEndY = tempMat_2.view_height;
 		} else {
 			clipEndY = r * clipHeight + blockHeight;
 		}
@@ -271,7 +367,7 @@ static bool convertWithModelsBlockSplit(W2XConv *conv,
 			int clipEndX = 0;
 
 			if (c == splitColumns - 1) {
-				clipEndX = tempMat.size().width;
+				clipEndX = tempMat_2.view_width;
 			} else {
 				clipEndX = c * (blockWidth - 2 * nModel) + blockWidth;
 			}
@@ -279,9 +375,9 @@ static bool convertWithModelsBlockSplit(W2XConv *conv,
 			int curBlockWidth = clipEndX - clipStartX;
 			int curBlockHeight = clipEndY - clipStartY;
 
-			W2Mat processBlock = extract_view_from_cvmat_offset(tempMat,
-									    clipStartX, clipStartY, 
-									    curBlockWidth, curBlockHeight);
+			W2Mat processBlock(W2Mat::clip_view(tempMat_2,
+							    clipStartX, clipStartY,
+							    curBlockWidth, curBlockHeight));
 
 			if (enableLog) {
 				std::cout << "start process block (" << c << "," << r << ") ..."

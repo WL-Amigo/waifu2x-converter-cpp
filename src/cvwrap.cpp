@@ -80,15 +80,15 @@ W2Mat
 extract_view_from_cvmat_offset(cv::Mat &m,
                                int view_left_offset,
                                int view_top_offset,
-                               int view_width_offset,
-                               int view_height_offset)
+                               int view_width,
+                               int view_height)
 {
     W2Mat ret = extract_view_from_cvmat(m);
 
     ret.view_top = view_top_offset;
     ret.view_left = view_left_offset;
-    ret.view_width = view_width_offset;
-    ret.view_height = view_height_offset;
+    ret.view_width = view_width;
+    ret.view_height = view_height;
 
     return ret;
 }
@@ -118,7 +118,7 @@ W2Mat::operator=(W2Mat &&rhs)
 W2Mat
 W2Mat::clip_view(const W2Mat & rhs,
                  int view_left_offset, int view_top_offset,
-                 int view_width_offset, int view_height_offset)
+                 int view_width, int view_height)
 {
     W2Mat view;
 
@@ -129,8 +129,8 @@ W2Mat::clip_view(const W2Mat & rhs,
 
     view.view_left = rhs.view_left + view_left_offset;
     view.view_top = rhs.view_top + view_top_offset;
-    view.view_width = rhs.view_width + view_width_offset;
-    view.view_height = rhs.view_height + view_height_offset;
+    view.view_width = view_width;
+    view.view_height = view_height;
 
     view.type = rhs.type;
 

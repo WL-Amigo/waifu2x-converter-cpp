@@ -34,7 +34,7 @@ struct W2Mat {
     static W2Mat copy_full(W2Mat &rhs);
     static W2Mat clip_view(const W2Mat &rhs,
                            int view_left_offset, int view_top_offset, 
-                           int view_width_offset, int view_height_offset);
+                           int view_width, int view_height);
 
     template<typename T> T *ptr(int yi);
 };
@@ -61,8 +61,8 @@ cv::Mat extract_view_to_cvmat(W2Mat &m);
 W2Mat extract_view_from_cvmat_offset(cv::Mat &m,
                                      int view_left_offset,
                                      int view_top_offset,
-                                     int view_width_offset,
-                                     int view_height_offset);
+                                     int view_width,
+                                     int view_height);
 
 std::vector<W2Mat> extract_viewlist_from_cvmat(std::vector<cv::Mat> &list);
 std::vector<cv::Mat> extract_viewlist_to_cvmat(std::vector<W2Mat> &list);
