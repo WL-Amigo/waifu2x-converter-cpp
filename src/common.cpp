@@ -1,4 +1,5 @@
 #include "common.hpp"
+#include <math.h>
 
 void
 pack_mat(float *out,

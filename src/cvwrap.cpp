@@ -1,4 +1,5 @@
 #include <stdlib.h>
+#include <string.h>
 #include "cvwrap.hpp"
 
 W2Mat::~W2Mat()
@@ -45,67 +46,6 @@ W2Mat::W2Mat(int width, int height, int type, void *data, int data_step)
      view_height(height),
      type(type)
 {}
-
-
-W2Mat
-copy_from_cvmat(cv::Mat &m)
-{
-    int w = m.size().width;
-    int h = m.size().height;
-
-    W2Mat wm(w, h, m.type());
-    int elem_size = CV_ELEM_SIZE(m.type());
-
-    for (int yi=0; yi<h; yi++) {
-        void *in = m.ptr(yi);
-        char *out = wm.ptr<char>(yi);
-
-        memcpy(out, in, w * elem_size);
-    }
-
-    return std::move(wm);
-}
-
-W2Mat
-extract_view_from_cvmat(cv::Mat &m)
-{
-    W2Mat wm;
-
-    int w = m.size().width;
-    int h = m.size().height;
-
-    wm.data_owner = false;
-    wm.data = (char*)m.data;
-    wm.data_byte_width = m.step;
-    wm.data_height = m.size().height;
-
-    wm.view_top = 0;
-    wm.view_left = 0;
-    wm.view_width = m.size().width;
-    wm.view_height = m.size().height;
-    wm.type = m.type();
-
-    return std::move(wm);
-}
-
-W2Mat
-extract_view_from_cvmat_offset(cv::Mat &m,
-                               int view_left_offset,
-                               int view_top_offset,
-                               int view_width,
-                               int view_height)
-{
-    W2Mat ret = extract_view_from_cvmat(m);
-
-    ret.view_top = view_top_offset;
-    ret.view_left = view_left_offset;
-    ret.view_width = view_width;
-    ret.view_height = view_height;
-
-    return ret;
-}
-
-
 
 
 W2Mat &
@@ -166,6 +106,65 @@ W2Mat::copy_full(W2Mat & rhs)
 
         memcpy(out, in, w * elem_size);
     }
+    return ret;
+}
+
+#ifdef HAVE_OPENCV
+W2Mat
+copy_from_cvmat(cv::Mat &m)
+{
+    int w = m.size().width;
+    int h = m.size().height;
+
+    W2Mat wm(w, h, m.type());
+    int elem_size = CV_ELEM_SIZE(m.type());
+
+    for (int yi=0; yi<h; yi++) {
+        void *in = m.ptr(yi);
+        char *out = wm.ptr<char>(yi);
+
+        memcpy(out, in, w * elem_size);
+    }
+
+    return std::move(wm);
+}
+
+W2Mat
+extract_view_from_cvmat(cv::Mat &m)
+{
+    W2Mat wm;
+
+    int w = m.size().width;
+    int h = m.size().height;
+
+    wm.data_owner = false;
+    wm.data = (char*)m.data;
+    wm.data_byte_width = m.step;
+    wm.data_height = m.size().height;
+
+    wm.view_top = 0;
+    wm.view_left = 0;
+    wm.view_width = m.size().width;
+    wm.view_height = m.size().height;
+    wm.type = m.type();
+
+    return std::move(wm);
+}
+
+W2Mat
+extract_view_from_cvmat_offset(cv::Mat &m,
+                               int view_left_offset,
+                               int view_top_offset,
+                               int view_width,
+                               int view_height)
+{
+    W2Mat ret = extract_view_from_cvmat(m);
+
+    ret.view_top = view_top_offset;
+    ret.view_left = view_left_offset;
+    ret.view_width = view_width;
+    ret.view_height = view_height;
+
     return ret;
 }
 
@@ -237,3 +236,4 @@ extract_viewlist_to_cvmat(std::vector<W2Mat> &list)
 
     return std::move(ret);
 }
+#endif

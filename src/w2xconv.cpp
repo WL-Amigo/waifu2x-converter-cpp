@@ -26,12 +26,14 @@
 #endif
 #endif
 
+#include <sstream>
 #include "w2xconv.h"
 #include "sec.hpp"
 #include "Buffer.hpp"
 #include "modelHandler.hpp"
 #include "convertRoutine.hpp"
 #include "filters.hpp"
+#include "cvwrap.hpp"
 
 struct W2XConvImpl {
 	std::string dev_name;
@@ -548,6 +550,7 @@ w2xconv_fini(struct W2XConv *conv)
 	delete conv;
 }
 
+#ifdef HAVE_OPENCV
 static void
 apply_denoise(struct W2XConv *conv,
 	      cv::Mat &image,
@@ -876,7 +879,7 @@ w2xconv_convert_yuv(struct W2XConv *conv,
 
 	return 0;
 }
-
+#endif // HAVE_OPENCV
 
 int
 w2xconv_apply_filter_y(struct W2XConv *conv,
@@ -932,7 +935,7 @@ w2xconv_apply_filter_y(struct W2XConv *conv,
 	return 0;
 }
 
-
+#ifdef HAVE_OPENCV
 int
 w2xconv_test(struct W2XConv *conv, int block_size)
 {
@@ -1043,3 +1046,4 @@ w2xconv_test(struct W2XConv *conv, int block_size)
 
 	return 0;
 }
+#endif

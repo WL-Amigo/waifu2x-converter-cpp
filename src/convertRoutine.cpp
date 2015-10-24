@@ -8,6 +8,7 @@
  *   (ここにファイルの説明を記入)
  */
 
+#include <limits.h>
 #include "convertRoutine.hpp"
 #include "common.hpp"
 #include "Buffer.hpp"

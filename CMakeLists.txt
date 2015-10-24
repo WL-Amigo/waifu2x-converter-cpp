@@ -111,8 +111,6 @@ if(ARMOPT)
 endif()
 
 
-add_executable(waifu2x-converter-cpp
-  src/main.cpp)
 add_library(w2xc SHARED
   src/modelHandler.cpp ${OPT_SOURCES}
   src/modelHandler_OpenCL.cpp src/convertRoutine.cpp src/threadPool.cpp
@@ -169,8 +167,6 @@ else()
     set(NVCC "${CUDA_TOOLKIT_ROOT_DIR}/bin/nvcc")
   endif()
 endif()
-
-target_link_libraries(waifu2x-converter-cpp PUBLIC w2xc)
 
 if(${CMAKE_SYSTEM_NAME} STREQUAL "Windows")
   if(CMAKE_COMPILER_IS_GNUCXX)
@@ -230,15 +226,22 @@ add_custom_target(gensrcs ALL
   DEPENDS ${GPU_CODE})
 
 enable_testing()
-add_executable(runtest w32-apps/runtest.c)
-target_link_libraries(runtest w2xc)
-add_test(runtest runtest)
 
-install(TARGETS w2xc waifu2x-converter-cpp
-  RUNTIME DESTINATION bin
-  LIBRARY DESTINATION "lib${LIB_SUFFIX}"
-  ARCHIVE DESTINATION "lib${LIB_SUFFIX}"
-)
+if (${HAVE_OPENCV})
+  add_executable(waifu2x-converter-cpp
+    src/main.cpp)
+  target_link_libraries(waifu2x-converter-cpp PUBLIC w2xc)
+  add_executable(runtest w32-apps/runtest.c)
+  target_link_libraries(runtest w2xc)
+  add_test(runtest runtest)
+
+  install(TARGETS w2xc waifu2x-converter-cpp
+    RUNTIME DESTINATION bin
+    LIBRARY DESTINATION "lib${LIB_SUFFIX}"
+    ARCHIVE DESTINATION "lib${LIB_SUFFIX}"
+    )
+endif()
+
 install(FILES src/w2xconv.h DESTINATION include)
 
 # Better add support for multiple directories where to find models
