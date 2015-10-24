@@ -1,7 +1,6 @@
 #ifndef COMMON_HPP
 #define COMMON_HPP
 
-#include <opencv2/opencv.hpp>
 #include <vector>
 #include "compiler.h"
 #include "cvwrap.hpp"

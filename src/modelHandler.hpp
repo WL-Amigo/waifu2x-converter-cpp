@@ -11,7 +11,6 @@
 #ifndef MODEL_HANDLER_HPP_
 #define MODEL_HANDLER_HPP_
 
-#include <opencv2/opencv.hpp>
 #include <iostream>
 #include <memory>
 #include <cstdint>

@@ -16,8 +16,6 @@
 #include "w2xconv.h"
 #include "cvwrap.hpp"
 #include <memory>
-//#include "opencv2/opencv.hpp"
-//#include "opencv2/core/ocl.hpp" in modelHandler.hpp
 #include <vector>
 
 namespace w2xc {
