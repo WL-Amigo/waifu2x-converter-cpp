@@ -37,6 +37,9 @@ struct W2Mat {
                            int view_width, int view_height);
 
     template<typename T> T *ptr(int yi);
+    template<typename T> T &at(int y, int x) {
+        return this->ptr<T>(y)[x];
+    }
 };
 
 struct W2Size {

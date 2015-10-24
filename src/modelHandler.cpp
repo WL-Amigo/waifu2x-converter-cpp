@@ -62,13 +62,12 @@ Model::filter_CV(ComputeEnv *env,
 
 	std::vector<W2Mat> inputPlanes_w2 = extract_viewlist_from_cvmat(inputPlanes);
 	std::vector<W2Mat> outputPlanes_w2 = extract_viewlist_from_cvmat(outputPlanes);
-	std::vector<W2Mat> weights_w2 = extract_viewlist_from_cvmat(weights);
 
 	for (int idx = 0; idx < nJob; idx++) {
 		if (!(idx == (nJob - 1) && worksPerThread * nJob != nOutputPlanes)) {
 			workerThreads.push_back(
 					std::thread(&Model::filterWorker, this,
-						    std::ref(inputPlanes_w2), std::ref(weights_w2),
+						    std::ref(inputPlanes_w2), std::ref(weights),
 						    std::ref(outputPlanes_w2),
 						    static_cast<unsigned int>(worksPerThread * idx),
 						    static_cast<unsigned int>(worksPerThread)));
@@ -76,7 +75,7 @@ Model::filter_CV(ComputeEnv *env,
 			// worksPerThread * nJob != nOutputPlanes
 			workerThreads.push_back(
 					std::thread(&Model::filterWorker, this,
-						    std::ref(inputPlanes_w2), std::ref(weights_w2),
+						    std::ref(inputPlanes_w2), std::ref(weights),
 						    std::ref(outputPlanes_w2),
 						    static_cast<unsigned int>(worksPerThread * idx),
 						    static_cast<unsigned int>(nOutputPlanes
@@ -127,10 +126,10 @@ bool Model::filter_AVX_OpenCL(W2XConv *conv,
 	if (nOutputPlanes == 1) {
 		if (gpu) {
 			for (int ii=0; ii<nInputPlanes; ii++) {
-				cv::Mat &wm = weights[ii];
-				const float *src0 = (float*)wm.ptr(0);
-				const float *src1 = (float*)wm.ptr(1);
-				const float *src2 = (float*)wm.ptr(2);
+				W2Mat &wm = weights[ii];
+				const float *src0 = wm.ptr<float>(0);
+				const float *src1 = wm.ptr<float>(1);
+				const float *src2 = wm.ptr<float>(2);
 
 				float *dst = weight_flat + ii * 9;
 				dst[0] = src0[0];
@@ -148,10 +147,10 @@ bool Model::filter_AVX_OpenCL(W2XConv *conv,
 			}
 		} else {
 			for (int ii=0; ii<nInputPlanes; ii++) {
-				cv::Mat &wm = weights[ii];
-				const float *src0 = (float*)wm.ptr(0);
-				const float *src1 = (float*)wm.ptr(1);
-				const float *src2 = (float*)wm.ptr(2);
+				W2Mat &wm = weights[ii];
+				const float *src0 = wm.ptr<float>(0);
+				const float *src1 = wm.ptr<float>(1);
+				const float *src2 = wm.ptr<float>(2);
 
 				int ii_0 = ii % vec_width;
 				int ii_1 = (ii / vec_width) * vec_width;
@@ -172,10 +171,10 @@ bool Model::filter_AVX_OpenCL(W2XConv *conv,
 		}
 	} else if (gpu && nInputPlanes == 1) {
 		for (int oi=0; oi<nOutputPlanes; oi++) {
-			cv::Mat &wm = weights[oi];
-			const float *src0 = (float*)wm.ptr(0);
-			const float *src1 = (float*)wm.ptr(1);
-			const float *src2 = (float*)wm.ptr(2);
+			W2Mat &wm = weights[oi];
+			const float *src0 = wm.ptr<float>(0);
+			const float *src1 = wm.ptr<float>(1);
+			const float *src2 = wm.ptr<float>(2);
 
 			float *dst = weight_flat + oi * 9;
 			dst[0] = src0[0];
@@ -197,10 +196,10 @@ bool Model::filter_AVX_OpenCL(W2XConv *conv,
 		for (int oi=0; oi<nOutputPlanes; oi++) {
 			for (int ii=0; ii<nInputPlanes; ii++) {
 				int mi = oi*nInputPlanes+ii;
-				cv::Mat &wm = weights[mi];
-				const float *src0 = (float*)wm.ptr(0);
-				const float *src1 = (float*)wm.ptr(1);
-				const float *src2 = (float*)wm.ptr(2);
+				W2Mat &wm = weights[mi];
+				const float *src0 = wm.ptr<float>(0);
+				const float *src1 = wm.ptr<float>(1);
+				const float *src2 = wm.ptr<float>(2);
 
 				float *dst = weight_flat + (oi * nInputPlanes * 9) + ii;
 				dst[0*nInputPlanes] = src0[0];
@@ -227,10 +226,10 @@ bool Model::filter_AVX_OpenCL(W2XConv *conv,
 		for (int oi=0; oi<nOutputPlanes; oi++) {
 			for (int ii=0; ii<nInputPlanes; ii++) {
 				int mi = oi*nInputPlanes+ii;
-				cv::Mat &wm = weights[mi];
-				const float *src0 = (float*)wm.ptr(0);
-				const float *src1 = (float*)wm.ptr(1);
-				const float *src2 = (float*)wm.ptr(2);
+				W2Mat &wm = weights[mi];
+				const float *src0 = wm.ptr<float>(0);
+				const float *src1 = wm.ptr<float>(1);
+				const float *src2 = wm.ptr<float>(2);
 
 				float *dst = weight_flat + (ii * nOutputPlanes * 9) + oi;
 				dst[0*nOutputPlanes] = src0[0];
@@ -257,10 +256,10 @@ bool Model::filter_AVX_OpenCL(W2XConv *conv,
 		for (int oi=0; oi<nOutputPlanes; oi++) {
 			for (int ii=0; ii<nInputPlanes; ii++) {
 				int mi = oi*nInputPlanes+ii;
-				cv::Mat &wm = weights[mi];
-				const float *src0 = (float*)wm.ptr(0);
-				const float *src1 = (float*)wm.ptr(1);
-				const float *src2 = (float*)wm.ptr(2);
+				W2Mat &wm = weights[mi];
+				const float *src0 = wm.ptr<float>(0);
+				const float *src1 = wm.ptr<float>(1);
+				const float *src2 = wm.ptr<float>(2);
 
 				int oi_0 = oi % vec_width;
 				int oi_1 = (oi / vec_width) * vec_width;
@@ -533,8 +532,7 @@ bool Model::loadModelFromJSONObject(picojson::object &jsonObj) {
 
 		for (auto&& weightMatV : wInputPlane) {
 			picojson::array &weightMat = weightMatV.get<picojson::array>();
-			cv::Mat writeMatrix = cv::Mat::zeros(kernelSize, kernelSize,
-			CV_32FC1);
+			W2Mat writeMatrix(kernelSize, kernelSize, CV_32FC1);
 
 			for (int writingRow = 0; writingRow < kernelSize; writingRow++) {
 				auto& weightMatRowV = weightMat.at(writingRow);
@@ -542,13 +540,12 @@ bool Model::loadModelFromJSONObject(picojson::object &jsonObj) {
 						picojson::array>();
 
 				for (int index = 0; index < kernelSize; index++) {
-					writeMatrix.at<float>(writingRow, index) =
-							weightMatRow[index].get<double>();
+					writeMatrix.ptr<float>(writingRow)[index] = weightMatRow[index].get<double>();
 				} // for(weightMatRow) (writing 1 row finished)
 
 			} // for(weightMat) (writing 1 matrix finished)
 
-			weights.at(matProgress) = std::move(writeMatrix);
+			weights.push_back(std::move(writeMatrix));
 			matProgress++;
 		} // for(wInputPlane) (writing matrices in set of wInputPlane finished)
 
@@ -633,7 +630,7 @@ Model::Model(FILE *binfp)
 	// setting weight matrices
 	for (uint32_t oi=0; oi<nOutputPlanes; oi++) {
 		for (uint32_t ii=0; ii<nInputPlanes; ii++) {
-			cv::Mat writeMatrix(kernelSize, kernelSize, CV_32FC1);
+			W2Mat writeMatrix(kernelSize, kernelSize, CV_32FC1);
 			for (int yi=0; yi<3; yi++) {
 				for (int xi=0; xi<3; xi++) {
 					double v;
@@ -641,7 +638,7 @@ Model::Model(FILE *binfp)
 					writeMatrix.at<float>(yi, xi) = v;
 				}
 			}
-			this->weights.push_back(std::move(writeMatrix));
+			this->weights.emplace_back(std::move(writeMatrix));
 		}
 	}
 
@@ -708,11 +705,11 @@ bool modelUtility::generateModelFromJSON(const std::string &fileName,
 				fwrite(&nInputPlanes, 4, 1, binfp);
 				fwrite(&nOutputPlanes, 4, 1, binfp);
 
-				std::vector<cv::Mat> &weights = m->getWeigts();
+				std::vector<W2Mat> &weights = m->getWeigts();
 
 				int nw = weights.size();
 				for (int wi=0; wi<nw; wi++) {
-					cv::Mat &wm = weights[wi];
+					W2Mat &wm = weights[wi];
 					double v;
 					v = wm.at<float>(0,0);
 					fwrite(&v, 1, 8, binfp);
@@ -763,7 +760,7 @@ int modelUtility::getNumberOfJobs(){
 void Model::printWeightMatrix() {
 
 	for (auto&& weightMatrix : weights) {
-		std::cout << weightMatrix << std::endl;
+		//std::cout << weightMatrix << std::endl;
 	}
 
 }

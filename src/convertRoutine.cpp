@@ -265,8 +265,6 @@ static bool convertWithModelsBlockSplit(W2XConv *conv,
 
 	// start to convert
 	W2Mat processBlockOutput;
-	cv::Mat writeMatTo;
-	cv::Mat writeMatFrom;
 
 	if (blockSize == 0) {
 		blockSize = env->pref_block_size;

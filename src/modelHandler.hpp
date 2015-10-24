@@ -29,7 +29,7 @@ class Model {
 private:
 	int nInputPlanes;
 	int nOutputPlanes;
-	std::vector<cv::Mat> weights;
+	std::vector<W2Mat> weights;
 	std::vector<double> biases;
 	int kernelSize;
 
@@ -71,8 +71,6 @@ public:
 			std::exit(-1);
 		} // kH == kW
 
-		weights = std::vector<cv::Mat>(nInputPlanes * nOutputPlanes,
-				cv::Mat(kernelSize, kernelSize, CV_32FC1));
 		biases = std::vector<double>(nOutputPlanes, 0.0);
 
 		if (!loadModelFromJSONObject(jsonObj)) {
@@ -97,7 +95,7 @@ public:
 	int getNInputPlanes();
 	int getNOutputPlanes();
 
-	std::vector<cv::Mat> &getWeigts() {
+	std::vector<W2Mat> &getWeigts() {
 		return weights;
 	}
 	std::vector<double> &getBiases() {
