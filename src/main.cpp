@@ -46,7 +46,7 @@ dump_procs()
 				type = "SSE3";
 				break;
 			case W2XCONV_PROC_HOST_NEON:
-				type = "NEON VFPv4";
+				type = "NEON";
 				break;
 			default:
 				type = "OpenCV";
