@@ -4,37 +4,38 @@
 #include <opencv2/opencv.hpp>
 #include <vector>
 #include "compiler.h"
+#include "cvwrap.hpp"
 
 #define ALIGN_UP(v,a) (((v+(a-1))/(a))*(a))
 
 void pack_mat(float *out,
-              std::vector<cv::Mat> &inputPlanes,
+              std::vector<W2Mat> &inputPlanes,
               int w, int h, int nplane);
 
-void unpack_mat(std::vector<cv::Mat> &outputPlanes,
+void unpack_mat(std::vector<W2Mat> &outputPlanes,
                 const float *in,
                 int w, int h, int nplane);
 
-void unpack_mat1(cv::Mat &outputMat,
+void unpack_mat1(W2Mat &outputMat,
                  const float *in,
                  int w, int h);
 
 void pack_mat_rgb(float *out,
-                  cv::Mat &inputPlane,
+                  W2Mat &inputPlane,
                   int w, int h);
 void pack_mat_rgb_f32(float *out,
-                      cv::Mat &inputPlane,
+                      W2Mat &inputPlane,
                       int w, int h);
 void pack_mat_bgr(float *out,
-                  cv::Mat &inputPlane,
+                  W2Mat &inputPlane,
                   int w, int h);
-void unpack_mat_rgb(cv::Mat &outputMat,
+void unpack_mat_rgb(W2Mat &outputMat,
                     const float *in,
                     int w, int h);
-void unpack_mat_rgb_f32(cv::Mat &outputMat,
+void unpack_mat_rgb_f32(W2Mat &outputMat,
                         const float *in,
                         int w, int h);
-void unpack_mat_bgr(cv::Mat &outputMat,
+void unpack_mat_bgr(W2Mat &outputMat,
                     const float *in,
                     int w, int h);
 

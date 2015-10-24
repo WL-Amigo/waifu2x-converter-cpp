@@ -33,7 +33,7 @@ bool
 Model::filter_CV(ComputeEnv *env,
 		 Buffer *packed_input_buf,
 		 Buffer *packed_output_buf,
-		 cv::Size size)
+		 const W2Size &size)
 {
 	size_t in_size = sizeof(float) * size.width * size.height * nInputPlanes;
 
@@ -44,13 +44,14 @@ Model::filter_CV(ComputeEnv *env,
 	std::vector<cv::Mat> inputPlanes;
 
 	for (int i = 0; i < nInputPlanes; i++) {
-		inputPlanes.push_back(cv::Mat::zeros(size, CV_32FC1));
+		inputPlanes.push_back(cv::Mat::zeros(cvSize_from_w2(size), CV_32FC1));
 	}
-	unpack_mat(inputPlanes, packed_input, size.width, size.height, nInputPlanes);
+	std::vector<W2Mat> inputPlanes_2(extract_viewlist_from_cvmat(inputPlanes));
+	unpack_mat(inputPlanes_2, packed_input, size.width, size.height, nInputPlanes);
 
 	outputPlanes.clear();
 	for (int i = 0; i < nOutputPlanes; i++) {
-		outputPlanes.push_back(cv::Mat::zeros(size, CV_32FC1));
+		outputPlanes.push_back(cv::Mat::zeros(cvSize_from_w2(size), CV_32FC1));
 	}
 
 	int nJob = modelUtility::getInstance().getNumberOfJobs();
@@ -87,7 +88,8 @@ Model::filter_CV(ComputeEnv *env,
 		th.join();
 	}
 
-	pack_mat(packed_output, outputPlanes, size.width, size.height, nOutputPlanes);
+	std::vector<W2Mat> outputPlanes_2(extract_viewlist_from_cvmat(outputPlanes));
+	pack_mat(packed_output, outputPlanes_2, size.width, size.height, nOutputPlanes);
 
 	return true;
 }
@@ -98,7 +100,7 @@ bool Model::filter_AVX_OpenCL(W2XConv *conv,
 			      ComputeEnv *env,
 			      Buffer *packed_input_buf,
 			      Buffer *packed_output_buf,
-			      cv::Size size)
+			      const W2Size &size)
 {
 	int vec_width;
 	int weight_step;
@@ -445,7 +447,7 @@ bool Model::filter(W2XConv *conv,
 		   ComputeEnv *env,
 		   Buffer *packed_input_buf,
 		   Buffer *packed_output_buf,
-		   cv::Size size)
+		   W2Size const &size)
 {
 	bool ret;
 
@@ -585,7 +587,7 @@ bool Model::filterWorker(std::vector<W2Mat> &inputPlanes_w2,
 		for (int ipIndex = 0; ipIndex < nInputPlanes; ipIndex++) {
 			cv::Mat &uInputPlane = inputPlanes[ipIndex];
 			cv::Mat &weightMatrix = weightMatrices[wMatIndex + ipIndex];
-			cv::Mat filterOutput = cv::Mat(ipSize, CV_32FC1);
+			cv::Mat filterOutput = cv::Mat::zeros(ipSize, CV_32FC1);
 
 			cv::filter2D(uInputPlane, filterOutput, -1, weightMatrix,
 				     cv::Point(-1, -1), 0.0, cv::BORDER_REPLICATE);

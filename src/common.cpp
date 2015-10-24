@@ -2,12 +2,12 @@
 
 void
 pack_mat(float *out,
-	 std::vector<cv::Mat> &inputPlanes,
+	 std::vector<W2Mat> &inputPlanes,
 	 int w, int h, int nplane)
 {
 	for (int i=0; i<nplane; i++) {
 		for (int yi=0; yi<h; yi++) {
-			const float *mat_line = (float*)inputPlanes[i].ptr(yi);
+			const float *mat_line = inputPlanes[i].ptr<float>(yi);
 			float *packed_line = out + i + (yi * nplane * w);
 
 			for (int xi=0; xi<w; xi++) {
@@ -19,12 +19,12 @@ pack_mat(float *out,
 
 void
 pack_mat_bgr(float *out,
-	     cv::Mat &inputPlane,
+	     W2Mat &inputPlane,
 	     int w, int h)
 {
 #pragma omp parallel for
 	for (int yi=0; yi<h; yi++) {
-		const unsigned char *mat_line = (unsigned char*)inputPlane.ptr(yi);
+		const unsigned char *mat_line = inputPlane.ptr<unsigned char>(yi);
 		float *packed_line = out + (yi * 3 * w);
 
 		for (int xi=0; xi<w; xi++) {
@@ -36,12 +36,12 @@ pack_mat_bgr(float *out,
 }
 void
 pack_mat_rgb(float *out,
-	     cv::Mat &inputPlane,
+	     W2Mat &inputPlane,
 	     int w, int h)
 {
 #pragma omp parallel for
 	for (int yi=0; yi<h; yi++) {
-		const unsigned char *mat_line = (unsigned char*)inputPlane.ptr(yi);
+		const unsigned char *mat_line = inputPlane.ptr<unsigned char>(yi);
 		float *packed_line = out + (yi * 3 * w);
 
 		for (int xi=0; xi<w; xi++) {
@@ -54,12 +54,12 @@ pack_mat_rgb(float *out,
 
 void
 pack_mat_rgb_f32(float *out,
-		 cv::Mat &inputPlane,
+		 W2Mat &inputPlane,
 		 int w, int h)
 {
 #pragma omp parallel for
 	for (int yi=0; yi<h; yi++) {
-		const float *mat_line = (float*)inputPlane.ptr(yi);
+		const float *mat_line = inputPlane.ptr<float>(yi);
 		float *packed_line = out + (yi * 3 * w);
 
 		for (int xi=0; xi<w; xi++) {
@@ -71,13 +71,13 @@ pack_mat_rgb_f32(float *out,
 }
 
 
-void unpack_mat(std::vector<cv::Mat> &outputPlanes,
+void unpack_mat(std::vector<W2Mat> &outputPlanes,
 		const float *in,
 		int w, int h, int nplane)
 {
 	for (int i=0; i<nplane; i++) {
 		for (int yi=0; yi<h; yi++) {
-			float *mat_line = (float*)outputPlanes[i].ptr(yi);
+			float *mat_line = outputPlanes[i].ptr<float>(yi);
 			const float *packed_line = in + i + (yi * nplane * w);
 
 			for (int xi=0; xi<w; xi++) {
@@ -87,29 +87,29 @@ void unpack_mat(std::vector<cv::Mat> &outputPlanes,
 	}
 }
 
-void unpack_mat1(cv::Mat &outputMat,
+void unpack_mat1(W2Mat &outputMat,
 		 const float *in,
 		 int w, int h)
 {
 #pragma omp parallel for
-    for (int yi=0; yi<h; yi++) {
-	float *mat_line = (float*)outputMat.ptr(yi);
-	const float *packed_line = in + (yi * w);
+	for (int yi=0; yi<h; yi++) {
+		float *mat_line = outputMat.ptr<float>(yi);
+		const float *packed_line = in + (yi * w);
 
-	for (int xi=0; xi<w; xi++) {
-	    mat_line[xi] = packed_line[xi];
+		for (int xi=0; xi<w; xi++) {
+			mat_line[xi] = packed_line[xi];
+		}
 	}
-    }
 }
 
 
-void unpack_mat_bgr(cv::Mat &outputMat,
+void unpack_mat_bgr(W2Mat &outputMat,
 		    const float *in,
 		    int w, int h)
 {
 #pragma omp parallel for
 	for (int yi=0; yi<h; yi++) {
-		unsigned char *mat_line = (unsigned char*)outputMat.ptr(yi);
+		unsigned char *mat_line = outputMat.ptr<unsigned char>(yi);
 		const float *packed_line = in + (yi * w * 3);
 
 		for (int xi=0; xi<w; xi++) {
@@ -120,13 +120,13 @@ void unpack_mat_bgr(cv::Mat &outputMat,
 	}
 }
 
-void unpack_mat_rgb(cv::Mat &outputMat,
+void unpack_mat_rgb(W2Mat &outputMat,
 		    const float *in,
 		    int w, int h)
 {
 #pragma omp parallel for
 	for (int yi=0; yi<h; yi++) {
-		unsigned char *mat_line = (unsigned char*)outputMat.ptr(yi);
+		unsigned char *mat_line = outputMat.ptr<unsigned char>(yi);
 		const float *packed_line = in + (yi * w * 3);
 
 		for (int xi=0; xi<w; xi++) {
@@ -137,13 +137,13 @@ void unpack_mat_rgb(cv::Mat &outputMat,
 	}
 }
 
-void unpack_mat_rgb_f32(cv::Mat &outputMat,
+void unpack_mat_rgb_f32(W2Mat &outputMat,
 			const float *in,
 			int w, int h)
 {
 #pragma omp parallel for
 	for (int yi=0; yi<h; yi++) {
-		float *mat_line = (float*)outputMat.ptr(yi);
+		float *mat_line = outputMat.ptr<float>(yi);
 		const float *packed_line = in + (yi * w * 3);
 
 		for (int xi=0; xi<w; xi++) {

@@ -49,13 +49,13 @@ private:
 	bool filter_CV(ComputeEnv *env,
 		       Buffer *packed_input,
 		       Buffer *packed_output,
-		       cv::Size size);
+		       const W2Size &size);
 
 	bool filter_AVX_OpenCL(W2XConv *conv,
 			       ComputeEnv *env,
 			       Buffer *packed_input,
                                Buffer *packed_output,
-                               cv::Size size);
+                               const W2Size &size);
 
 public:
 	// ctor and dtor
@@ -110,7 +110,7 @@ public:
 		    ComputeEnv *env,
 		    Buffer *packed_input,
 		    Buffer *packed_output,
-		    cv::Size size);
+		    const W2Size &size);
 
 
 };

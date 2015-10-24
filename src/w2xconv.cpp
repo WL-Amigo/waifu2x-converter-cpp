@@ -573,15 +573,20 @@ apply_denoise(struct W2XConv *conv,
 		output = &imageSplit[0];
 	}
 
+	W2Mat output_2;
+	W2Mat input_2(extract_view_from_cvmat(*input));
+
 	if (denoise_level == 1) {
-		w2xc::convertWithModels(conv, env, *input, *output,
+		w2xc::convertWithModels(conv, env, input_2, output_2,
 					impl->noise1_models,
 					&conv->flops, blockSize, fmt, conv->enable_log);
 	} else {
-		w2xc::convertWithModels(conv, env, *input, *output,
+		w2xc::convertWithModels(conv, env, input_2, output_2,
 					impl->noise2_models,
 					&conv->flops, blockSize, fmt, conv->enable_log);
 	}
+
+	*output = copy_to_cvmat(output_2);
 
 	if (! IS_3CHANNEL(fmt)) {
 		cv::merge(imageSplit, image);
@@ -637,10 +642,13 @@ apply_scale(struct W2XConv *conv,
 			output = &imageSplit[0];
 		}
 
+		W2Mat output_2;
+		W2Mat input_2(extract_view_from_cvmat(*input));
+
 		if(!w2xc::convertWithModels(conv,
 					    env,
-					    *input,
-					    *output,
+					    input_2,
+					    output_2,
 					    impl->scale2_models,
 					    &conv->flops, blockSize, fmt,
 					    conv->enable_log))
@@ -649,6 +657,8 @@ apply_scale(struct W2XConv *conv,
 				"stop." << std::endl;
 			std::exit(1);
 		}
+
+		*output = copy_to_cvmat(output_2);
 
 		if (!IS_3CHANNEL(fmt)) {
 			cv::merge(imageSplit, image);
@@ -907,12 +917,13 @@ w2xconv_apply_filter_y(struct W2XConv *conv,
 		return -1;
 	}
 
-	cv::Mat result;
-	w2xc::convertWithModels(conv, env, srci, result,
+	W2Mat srci_2(extract_view_from_cvmat(srci));
+	W2Mat result;
+	w2xc::convertWithModels(conv, env, srci_2, result,
 				*mp,
 				&conv->flops, blockSize, w2xc::IMAGE_Y, conv->enable_log);
 
-	result.copyTo(dsti);
+	dsti = copy_to_cvmat(result);
 
 	return 0;
 }

@@ -36,8 +36,8 @@ enum image_format {
  */
 bool convertWithModels(W2XConv *conv,
                        ComputeEnv *env,
-                       cv::Mat &inputPlanes,
-                       cv::Mat &outputPlanes,
+                       W2Mat &inputPlanes,
+                       W2Mat &outputPlanes,
                        std::vector<std::unique_ptr<Model> > &models,
                        W2XConvFlopsCounter *flops,
                        int blockSize,
