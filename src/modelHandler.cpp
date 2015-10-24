@@ -29,6 +29,7 @@ int Model::getNOutputPlanes() {
 	return nOutputPlanes;
 }
 
+#ifdef HAVE_OPENCV
 bool
 Model::filter_CV(ComputeEnv *env,
 		 Buffer *packed_input_buf,
@@ -92,6 +93,7 @@ Model::filter_CV(ComputeEnv *env,
 
 	return true;
 }
+#endif
 
 //#define COMPARE_RESULT
 
@@ -300,7 +302,6 @@ bool Model::filter_AVX_OpenCL(W2XConv *conv,
 
 		/* 3x3 = 9 fma */
 		double ops = size.width * size.height * 9.0 * 2.0 * nOutputPlanes * nInputPlanes;
-		std::vector<cv::Mat> output2;
 
 		if (proc->type == W2XCONV_PROC_OPENCL) {
 			filter_OpenCL_impl(env, packed_input_buf, packed_output_buf,
@@ -560,6 +561,7 @@ bool Model::loadModelFromJSONObject(picojson::object &jsonObj) {
 	return true;
 }
 
+#ifdef HAVE_OPENCV
 bool Model::filterWorker(std::vector<W2Mat> &inputPlanes_w2,
 			 std::vector<W2Mat> &weightMatrices_w2,
 			 std::vector<W2Mat> &outputPlanes_w2, unsigned int beginningIndex,
@@ -604,6 +606,7 @@ bool Model::filterWorker(std::vector<W2Mat> &inputPlanes_w2,
 
 	return true;
 }
+#endif
 
 modelUtility * modelUtility::instance = nullptr;
 
