@@ -242,6 +242,9 @@ if (${HAVE_OPENCV})
     )
 endif()
 
+add_executable(runbench w32-apps/runbench.c)
+target_link_libraries(runbench PUBLIC w2xc)
+
 install(FILES src/w2xconv.h DESTINATION include)
 
 # Better add support for multiple directories where to find models

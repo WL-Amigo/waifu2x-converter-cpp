@@ -29,13 +29,13 @@ int Model::getNOutputPlanes() {
 	return nOutputPlanes;
 }
 
-#ifdef HAVE_OPENCV
 bool
 Model::filter_CV(ComputeEnv *env,
 		 Buffer *packed_input_buf,
 		 Buffer *packed_output_buf,
 		 const W2Size &size)
 {
+#ifdef HAVE_OPENCV
 	size_t in_size = sizeof(float) * size.width * size.height * nInputPlanes;
 
 	const float *packed_input = (float*)packed_input_buf->get_read_ptr_host(env, in_size);
@@ -92,8 +92,11 @@ Model::filter_CV(ComputeEnv *env,
 	pack_mat(packed_output, outputPlanes_2, size.width, size.height, nOutputPlanes);
 
 	return true;
-}
+#else
+	abort();
+
 #endif
+}
 
 //#define COMPARE_RESULT
 
