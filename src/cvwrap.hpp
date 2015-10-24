@@ -7,7 +7,7 @@ struct W2Mat {
     bool data_owner;
 
     float *data;
-    int data_width;
+    int data_byte_width;
     int data_height;
 
     int view_top;
@@ -16,37 +16,24 @@ struct W2Mat {
     int view_height;
 
     W2Mat(int data_witdth, int data_height);
+    W2Mat();
 
     W2Mat(const W2Mat &) = delete;
     W2Mat& operator=(const W2Mat&) = delete;
+
+    W2Mat & operator= (W2Mat &&);
+    W2Mat(W2Mat &&rhs) {
+        *this = std::move(rhs);
+    }
 
     ~W2Mat();
 
     static W2Mat copy_view(const W2Mat &rhs);
     static W2Mat copy_full(const W2Mat &rhs);
     static W2Mat clip_view(const W2Mat &rhs,
-                           int top, int left, int view_width, int view_height);
+                           int view_top_offset, int view_left_offset,
+                           int view_width_offset, int view_height_offset);
 
-    W2Mat & operator = (W2Mat && rhs) {
-        this->data_owner = rhs.data_owner;
-
-        this->data_width = rhs.data_width;
-        this->data_height = rhs.data_height;
-
-        this->view_top = rhs.view_top;
-        this->view_left = rhs.view_left;
-        this->view_width = rhs.view_width;
-        this->view_height = rhs.view_height;
-
-        rhs.data_owner = false;
-        rhs.data = nullptr;
-
-        return *this;
-    }
-
-    W2Mat (W2Mat && rhs) {
-        *this = std::move(rhs);
-    }
 };
 
 #ifdef HAVE_OPENCV
@@ -57,6 +44,8 @@ typedef cv::Point Point_t;
 
 W2Mat copy_from_cvmat(cv::Mat &m);
 cv::Mat copy_to_cvmat(W2Mat &m);
+W2Mat extract_view_from_cvmat(cv::Mat &m);
+cv::Mat extract_view_to_cvmat(W2Mat &m);
 
 #endif
 

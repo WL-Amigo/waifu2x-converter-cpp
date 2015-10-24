@@ -10,6 +10,7 @@
 
 #include "modelHandler.hpp"
 // #include <iostream> in modelHandler.hpp
+#include "cvwrap.hpp"
 #include <fstream>
 #include <thread>
 #include "sec.hpp"
@@ -578,7 +579,7 @@ bool Model::filterWorker(std::vector<cv::Mat> &inputPlanes,
 			cv::Mat filterOutput = cv::Mat(ipSize, CV_32FC1);
 
 			cv::filter2D(uInputPlane, filterOutput, -1, weightMatrix,
-					cv::Point(-1, -1), 0.0, cv::BORDER_REPLICATE);
+				     cv::Point(-1, -1), 0.0, cv::BORDER_REPLICATE);
 
 			cv::add(uIntermediatePlane, filterOutput, uIntermediatePlane);
 		}

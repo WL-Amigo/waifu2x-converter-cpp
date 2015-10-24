@@ -11,11 +11,10 @@ main(int argc, char **argv)
         fputc('{', out);
         fputc('\n', out);
         char line[4096];
-        char buf[8192];
 
         while (fgets(line, 4096, in)) {
             int len = strlen(line);
-            int cur=0, i;
+            int i;
 
             for (i=0; i<len; i++) {
                 fprintf(out, "0x%02x,", line[i]);
