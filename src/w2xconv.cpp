@@ -895,8 +895,8 @@ w2xconv_apply_filter_y(struct W2XConv *conv,
 	struct W2XConvImpl *impl = conv->impl;
 	ComputeEnv *env = &impl->env;
 
-	cv::Mat dsti(src_h, src_w, CV_32F, dst, dst_step_byte);
-	cv::Mat srci(src_h, src_w, CV_32F, src, src_step_byte);
+	W2Mat dsti(src_h, src_w, CV_32FC1, dst, dst_step_byte);
+	W2Mat srci(src_h, src_w, CV_32FC1, src, src_step_byte);
 
 	std::vector<std::unique_ptr<w2xc::Model> > *mp = NULL;
 
@@ -917,13 +917,17 @@ w2xconv_apply_filter_y(struct W2XConv *conv,
 		return -1;
 	}
 
-	W2Mat srci_2(extract_view_from_cvmat(srci));
 	W2Mat result;
-	w2xc::convertWithModels(conv, env, srci_2, result,
+	w2xc::convertWithModels(conv, env, srci, result,
 				*mp,
 				&conv->flops, blockSize, w2xc::IMAGE_Y, conv->enable_log);
 
-	dsti = copy_to_cvmat(result);
+	for (int yi=0; yi<src_h; yi++) {
+		char *d0 = dsti.ptr<char>(yi);
+		char *s0 = srci.ptr<char>(yi);
+
+		memcpy(d0, s0, src_w * sizeof(float));
+	}
 
 	return 0;
 }

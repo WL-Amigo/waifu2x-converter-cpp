@@ -34,6 +34,18 @@ W2Mat::W2Mat(int width, int height, int type)
     this->data = (char*)malloc(width * height * CV_ELEM_SIZE(type));
 }
 
+W2Mat::W2Mat(int width, int height, int type, void *data, int data_step)
+    :data_owner(false),
+     data((char*)data),
+     data_byte_width(data_step),
+     data_height(height),
+     view_top(0),
+     view_left(0),
+     view_width(width),
+     view_height(height),
+     type(type)
+{}
+
 
 W2Mat
 copy_from_cvmat(cv::Mat &m)

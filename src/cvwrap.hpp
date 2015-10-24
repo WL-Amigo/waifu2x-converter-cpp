@@ -18,7 +18,8 @@ struct W2Mat {
 
     int type;
 
-    W2Mat(int data_witdth, int data_height, int type);
+    W2Mat(int data_width, int data_height, int type);
+    W2Mat(int data_width, int data_height, int type, void *data, int data_step);
     W2Mat();
 
     W2Mat(const W2Mat &) = delete;
