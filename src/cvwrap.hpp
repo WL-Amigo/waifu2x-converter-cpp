@@ -2,6 +2,7 @@
 #define W2MAT_HPP
 
 #include <utility>
+#include <vector>
 
 struct W2Mat {
     bool data_owner;
@@ -46,6 +47,9 @@ W2Mat copy_from_cvmat(cv::Mat &m);
 cv::Mat copy_to_cvmat(W2Mat &m);
 W2Mat extract_view_from_cvmat(cv::Mat &m);
 cv::Mat extract_view_to_cvmat(W2Mat &m);
+
+std::vector<W2Mat> extract_viewlist_from_cvmat(std::vector<cv::Mat> &list);
+std::vector<cv::Mat> extract_viewlist_to_cvmat(std::vector<W2Mat> &list);
 
 #endif
 

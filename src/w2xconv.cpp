@@ -378,6 +378,8 @@ w2xconv_init_with_processor(int processor_idx,
 	impl->env.tpool = w2xc::initThreadPool(nJob);
 #endif
 
+	w2xc::modelUtility::getInstance().setNumberOfJobs(nJob);
+
 	c->impl = impl;
 	c->enable_log = enable_log;
 	c->target_processor = proc;

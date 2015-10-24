@@ -58,23 +58,28 @@ Model::filter_CV(ComputeEnv *env,
 	// filter job issuing
 	std::vector<std::thread> workerThreads;
 	int worksPerThread = nOutputPlanes / nJob;
+
+	std::vector<W2Mat> inputPlanes_w2 = extract_viewlist_from_cvmat(inputPlanes);
+	std::vector<W2Mat> outputPlanes_w2 = extract_viewlist_from_cvmat(outputPlanes);
+	std::vector<W2Mat> weights_w2 = extract_viewlist_from_cvmat(weights);
+
 	for (int idx = 0; idx < nJob; idx++) {
 		if (!(idx == (nJob - 1) && worksPerThread * nJob != nOutputPlanes)) {
 			workerThreads.push_back(
 					std::thread(&Model::filterWorker, this,
-							std::ref(inputPlanes), std::ref(weights),
-							std::ref(outputPlanes),
-							static_cast<unsigned int>(worksPerThread * idx),
-							static_cast<unsigned int>(worksPerThread)));
+						    std::ref(inputPlanes_w2), std::ref(weights_w2),
+						    std::ref(outputPlanes_w2),
+						    static_cast<unsigned int>(worksPerThread * idx),
+						    static_cast<unsigned int>(worksPerThread)));
 		} else {
 			// worksPerThread * nJob != nOutputPlanes
 			workerThreads.push_back(
 					std::thread(&Model::filterWorker, this,
-							std::ref(inputPlanes), std::ref(weights),
-							std::ref(outputPlanes),
-							static_cast<unsigned int>(worksPerThread * idx),
-							static_cast<unsigned int>(nOutputPlanes
-									- worksPerThread * idx)));
+						    std::ref(inputPlanes_w2), std::ref(weights_w2),
+						    std::ref(outputPlanes_w2),
+						    static_cast<unsigned int>(worksPerThread * idx),
+						    static_cast<unsigned int>(nOutputPlanes
+									      - worksPerThread * idx)));
 		}
 	}
 	// wait for finishing jobs
@@ -556,11 +561,15 @@ bool Model::loadModelFromJSONObject(picojson::object &jsonObj) {
 	return true;
 }
 
-bool Model::filterWorker(std::vector<cv::Mat> &inputPlanes,
-		std::vector<cv::Mat> &weightMatrices,
-		std::vector<cv::Mat> &outputPlanes, unsigned int beginningIndex,
-		unsigned int nWorks) {
+bool Model::filterWorker(std::vector<W2Mat> &inputPlanes_w2,
+			 std::vector<W2Mat> &weightMatrices_w2,
+			 std::vector<W2Mat> &outputPlanes_w2, unsigned int beginningIndex,
+			 unsigned int nWorks) {
 
+	std::vector<cv::Mat> inputPlanes = extract_viewlist_to_cvmat(inputPlanes_w2);
+	std::vector<cv::Mat> weightMatrices = extract_viewlist_to_cvmat(weightMatrices_w2);
+	std::vector<cv::Mat> outputPlanes = extract_viewlist_to_cvmat(outputPlanes_w2);
+			 
 	cv::Size ipSize = inputPlanes[0].size();
 	// filter processing
 	// input : inputPlanes

@@ -20,6 +20,7 @@
 #include "Buffer.hpp"
 #include "filters.hpp"
 #include "w2xconv.h"
+#include "cvwrap.hpp"
 
 namespace w2xc {
 
@@ -40,10 +41,10 @@ private:
 	bool loadModelFromJSONObject(picojson::object& jsonObj);
 
 	// thread worker function
-	bool filterWorker(std::vector<cv::Mat> &inputPlanes,
-			std::vector<cv::Mat> &weightMatrices,
-			std::vector<cv::Mat> &outputPlanes, unsigned int beginningIndex,
-			unsigned int nWorks);
+	bool filterWorker(std::vector<W2Mat> &inputPlanes,
+			  std::vector<W2Mat> &weightMatrices,
+			  std::vector<W2Mat> &outputPlanes, unsigned int beginningIndex,
+			  unsigned int nWorks);
 
 	bool filter_CV(ComputeEnv *env,
 		       Buffer *packed_input,

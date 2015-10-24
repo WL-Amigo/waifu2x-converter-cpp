@@ -151,3 +151,32 @@ extract_view_to_cvmat(W2Mat &m)
     return std::move(ret);
 
 }
+
+
+std::vector<W2Mat>
+extract_viewlist_from_cvmat(std::vector<cv::Mat> &list)
+{
+    std::vector<W2Mat> ret;
+
+    std::for_each(list.begin(), list.end(),
+                  [&ret](cv::Mat &cv) {
+                      W2Mat w2 = extract_view_from_cvmat(cv);
+                      ret.push_back(std::move(w2));
+                  });
+
+    return std::move(ret);
+}
+
+std::vector<cv::Mat>
+extract_viewlist_to_cvmat(std::vector<W2Mat> &list)
+{
+    std::vector<cv::Mat> ret;
+
+    std::for_each(list.begin(), list.end(),
+                  [&ret](W2Mat &w2) {
+                      cv::Mat cv = extract_view_to_cvmat(w2);
+                      ret.push_back(std::move(cv));
+                  });
+
+    return std::move(ret);
+}
