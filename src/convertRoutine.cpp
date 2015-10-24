@@ -172,8 +172,6 @@ static bool convertWithModelsBlockSplit(W2XConv *conv,
 			cv::BORDER_REPLICATE);
 
 	// start to convert
-	cv::Mat processRow;
-	cv::Mat processBlock;
 	W2Mat processBlockOutput;
 	cv::Mat writeMatTo;
 	cv::Mat writeMatFrom;
@@ -255,27 +253,35 @@ static bool convertWithModelsBlockSplit(W2XConv *conv,
 		abort();
 	}
 
+	int clipWidth = blockWidth - 2*nModel;
+	int clipHeight = blockHeight - 2*nModel;
+
 	for (unsigned int r = 0; r < splitRows; r++) {
+		int clipStartY = r * clipHeight;
+		int clipEndY = 0;
+
 		if (r == splitRows - 1) {
-			processRow = tempMat.rowRange(r * (blockHeight - 2 * nModel),
-					tempMat.size().height);
+			clipEndY = tempMat.size().height;
 		} else {
-			processRow = tempMat.rowRange(r * (blockHeight - 2 * nModel),
-					r * (blockHeight - 2 * nModel) + blockHeight);
+			clipEndY = r * clipHeight + blockHeight;
 		}
+
 		for (unsigned int c = 0; c < splitColumns; c++) {
+			int clipStartX = c * clipWidth;
+			int clipEndX = 0;
+
 			if (c == splitColumns - 1) {
-				processBlock = processRow.colRange(
-						c * (blockWidth- 2 * nModel),
-						tempMat.size().width);
+				clipEndX = tempMat.size().width;
 			} else {
-				processBlock = processRow.colRange(
-						c * (blockWidth - 2 * nModel),
-						c * (blockWidth - 2 * nModel) + blockWidth);
+				clipEndX = c * (blockWidth - 2 * nModel) + blockWidth;
 			}
 
-			int curBlockWidth = processBlock.size().width;
-			int curBlockHeight = processBlock.size().height;
+			int curBlockWidth = clipEndX - clipStartX;
+			int curBlockHeight = clipEndY - clipStartY;
+
+			W2Mat processBlock = extract_view_from_cvmat_offset(tempMat,
+									    clipStartX, clipStartY, 
+									    curBlockWidth, curBlockHeight);
 
 			if (enableLog) {
 				std::cout << "start process block (" << c << "," << r << ") ..."
@@ -302,10 +308,8 @@ static bool convertWithModelsBlockSplit(W2XConv *conv,
 				break;
 			}
 
-			W2Mat processBlock2 = extract_view_from_cvmat(processBlock);
-
 			if (!convertWithModelsBasic(conv, env,
-						    processBlock2, processBlockOutput,
+						    processBlock, processBlockOutput,
 						    input_buf, output_buf,
 						    models, flops, fmt, enableLog)) {
 				std::cerr << "w2xc::convertWithModelsBasic()\n"

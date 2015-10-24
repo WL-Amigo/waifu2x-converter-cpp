@@ -31,20 +31,12 @@ struct W2Mat {
 
     ~W2Mat();
 
-    static W2Mat copy_full(const W2Mat &rhs);
+    static W2Mat copy_full(W2Mat &rhs);
     static W2Mat clip_view(const W2Mat &rhs,
-                           int view_top_offset, int view_left_offset,
+                           int view_left_offset, int view_top_offset, 
                            int view_width_offset, int view_height_offset);
 
-    template<typename T>
-    T *ptr(int yi) {
-        int off = 0;
-        off += (yi+view_top) * data_byte_width;
-        off += view_left * sizeof(T);
-
-        return (T*)(data + off);
-    }
-
+    template<typename T> T *ptr(int yi);
 };
 
 struct W2Size {
@@ -65,7 +57,12 @@ W2Mat copy_from_cvmat(cv::Mat &m);
 cv::Mat copy_to_cvmat(W2Mat &m);
 W2Mat extract_view_from_cvmat(cv::Mat &m);
 cv::Mat extract_view_to_cvmat(W2Mat &m);
-cv::Mat extract_view_to_cvmat_type(W2Mat &m,int width, int height, int type);
+
+W2Mat extract_view_from_cvmat_offset(cv::Mat &m,
+                                     int view_left_offset,
+                                     int view_top_offset,
+                                     int view_width_offset,
+                                     int view_height_offset);
 
 std::vector<W2Mat> extract_viewlist_from_cvmat(std::vector<cv::Mat> &list);
 std::vector<cv::Mat> extract_viewlist_to_cvmat(std::vector<W2Mat> &list);
@@ -88,5 +85,16 @@ static inline W2Size W2Size_from_cv(cv::Size const &sz) {
 #define CV_ELEM_SIZE(type) (type)
 
 #endif
+
+template<typename T> T *
+W2Mat::ptr(int yi){
+    int off = 0;
+    int elem_size = CV_ELEM_SIZE(this->type);
+
+    off += (yi+view_top) * data_byte_width;
+    off += view_left * elem_size;
+
+    return (T*)(data + off);
+}
 
 #endif
