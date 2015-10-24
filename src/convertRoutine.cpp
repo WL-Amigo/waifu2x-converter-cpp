@@ -158,8 +158,6 @@ static bool convertWithModelsBlockSplit(W2XConv *conv,
 					enum image_format fmt,
 					bool enableLog)
 {
-	cv::Mat inputPlane(extract_view_to_cvmat(inputPlane_2));
-
 	// padding is not required before calling this function
 
 	// initialize local variables
@@ -265,8 +263,6 @@ static bool convertWithModelsBlockSplit(W2XConv *conv,
 		}
 	}
 
-	cv::Size outputSize = inputPlane.size();
-
 	// start to convert
 	W2Mat processBlockOutput;
 	cv::Mat writeMatTo;
@@ -320,37 +316,32 @@ static bool convertWithModelsBlockSplit(W2XConv *conv,
 
 	int blockWidth = (std::min)(blockSize, tempMat_2.view_width);
 	int blockHeight = (std::min)(blockSize, tempMat_2.view_height);
+	int clipWidth = blockWidth - 2*nModel;
+	int clipHeight = blockHeight - 2*nModel;
 
 	//printf("blockSize = %d\n", blockSize);
 
 	// calcurate split rows/cols
-	unsigned int splitColumns = static_cast<unsigned int>(std::ceil(
-			static_cast<float>(outputSize.width)
-					/ static_cast<float>(blockWidth - 2 * nModel)));
-	unsigned int splitRows = static_cast<unsigned int>(std::ceil(
-			static_cast<float>(outputSize.height)
-					/ static_cast<float>(blockHeight - 2 * nModel)));
+	unsigned int splitColumns = (inputWidth + (clipWidth-1)) / clipWidth;
+	unsigned int splitRows = (inputHeight + (clipHeight-1)) / clipHeight;
 
 	switch (fmt) {
 	case IMAGE_BGR:
 	case IMAGE_RGB:
-		outputPlane_2 = W2Mat(outputSize.width, outputSize.height, CV_8UC3);
+		outputPlane_2 = W2Mat(inputWidth, inputHeight, CV_8UC3);
 		break;
 
 	case IMAGE_RGB_F32:
-		outputPlane_2 = W2Mat(outputSize.width, outputSize.height, CV_32FC3);
+		outputPlane_2 = W2Mat(inputWidth, inputHeight, CV_32FC3);
 		break;
 
 	case IMAGE_Y:
-		outputPlane_2 = W2Mat(outputSize.width, outputSize.height, CV_32FC1);
+		outputPlane_2 = W2Mat(inputWidth, inputHeight, CV_32FC1);
 		break;
 
 	default:
 		abort();
 	}
-
-	int clipWidth = blockWidth - 2*nModel;
-	int clipHeight = blockHeight - 2*nModel;
 
 	for (unsigned int r = 0; r < splitRows; r++) {
 		int clipStartY = r * clipHeight;
