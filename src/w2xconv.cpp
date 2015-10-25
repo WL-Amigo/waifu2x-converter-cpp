@@ -15,15 +15,6 @@
 #include <cpu-features.h>
 #elif (defined(__linux))
 #include <sys/auxv.h>
-#elif defined(__ARM_NEON)
-// armv8 or armv7-a
-#define getauxval(x) HWCAP_ARM_NEON
-#else
-#define getauxval(x) 0
-#endif
-#ifndef HWCAP_ARM_NEON
-// android-21 or non-Linux
-#define HWCAP_ARM_NEON (1 << 12)
 #endif
 #endif
 
@@ -47,7 +38,6 @@ struct W2XConvImpl {
 };
 
 static std::vector<struct W2XConvProcessor> processor_list;
-
 
 static void
 global_init2(void)
@@ -99,21 +89,25 @@ global_init2(void)
 #endif // X86OPT
 
 #ifdef ARMOPT
-
-#ifdef __ANDROID__
+		bool have_neon = false;
+#if defined(__ARM_NEON)
+// armv8 or -march=armv7-a for all files
+		have_neon = true;
+#elif defined(__ANDROID__)
 		int hwcap = android_getCpuFeatures();
 		if (hwcap & ANDROID_CPU_ARM_FEATURE_NEON) {
-			host.dev_name = "ARM NEON";
-			host.sub_type = W2XCONV_PROC_HOST_NEON;
+			have_neon = true;
 		}
-#elif defined (__linux)
+#elif defined(__linux)
 		int hwcap = getauxval(AT_HWCAP);
 		if (hwcap & HWCAP_ARM_NEON) {
+			have_neon = true;
+		}
+#endif
+		if (have_neon) {
 			host.dev_name = "ARM NEON";
 			host.sub_type = W2XCONV_PROC_HOST_NEON;
 		}
-#endif
-
 #endif
 
 		processor_list.push_back(host);
