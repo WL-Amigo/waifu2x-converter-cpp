@@ -230,7 +230,7 @@ enable_testing()
 if (${HAVE_OPENCV})
   add_executable(waifu2x-converter-cpp
     src/main.cpp)
-  target_link_libraries(waifu2x-converter-cpp PUBLIC w2xc)
+  target_link_libraries(waifu2x-converter-cpp LINK_PUBLIC w2xc)
   add_executable(runtest w32-apps/runtest.c)
   target_link_libraries(runtest w2xc)
   add_test(runtest runtest)
@@ -243,7 +243,7 @@ if (${HAVE_OPENCV})
 endif()
 
 add_executable(runbench w32-apps/runbench.c)
-target_link_libraries(runbench PUBLIC w2xc)
+target_link_libraries(runbench LINK_PUBLIC w2xc)
 
 install(FILES src/w2xconv.h DESTINATION include)
 
