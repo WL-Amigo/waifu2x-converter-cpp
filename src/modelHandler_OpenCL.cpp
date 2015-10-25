@@ -51,6 +51,14 @@ initOpenCLGlobal(std::vector<W2XConvProcessor> *proc_list)
 
 #else
         handle = dlopen("libOpenCL.so.1", RTLD_LAZY);
+        if (handle == nullptr) {
+                handle = dlopen("/system/vendor/lib/libOpenCL.so", RTLD_LAZY);
+        }
+
+        if (handle == nullptr) {
+                handle = dlopen("/system/vendor/lib/libPVROCL.so", RTLD_LAZY);
+        }
+
 #define GetProcAddress dlsym
 #define FreeLibrary dlclose
 

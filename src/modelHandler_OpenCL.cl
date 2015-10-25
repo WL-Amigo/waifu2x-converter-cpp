@@ -340,6 +340,21 @@ filter_in128_out1(__global const float * __restrict__ packed_input,
 		  __global float * __restrict__ weight)
 {
 	unsigned int yi_base = get_group_id(0)*1;
+	__local float in00_buf[128];
+	__local float in01_buf[128];
+	__local float in02_buf[128];
+
+	__local float in10_buf[128];
+	__local float in11_buf[128];
+	__local float in12_buf[128];
+
+	__local float in20_buf[128];
+	__local float in21_buf[128];
+	__local float in22_buf[128];
+
+	__local float sum_buffer[128];
+
+
 	for (int yi0=0; yi0<1; yi0++) {
 		int yi = yi_base + yi0;
 		unsigned int lid = get_local_id(0);
@@ -372,18 +387,6 @@ filter_in128_out1(__global const float * __restrict__ packed_input,
 		/* y      : (2height/group) */
 		/* iplane : 1plane / 1item * 128plane */
 
-		__local float in00_buf[128];
-		__local float in01_buf[128];
-		__local float in02_buf[128];
-
-		__local float in10_buf[128];
-		__local float in11_buf[128];
-		__local float in12_buf[128];
-
-		__local float in20_buf[128];
-		__local float in21_buf[128];
-		__local float in22_buf[128];
-
 		__local float *lin00 = in00_buf;
 		__local float *lin01 = in01_buf;
 		__local float *lin02 = in02_buf;
@@ -395,8 +398,6 @@ filter_in128_out1(__global const float * __restrict__ packed_input,
 		__local float *lin20 = in20_buf;
 		__local float *lin21 = in21_buf;
 		__local float *lin22 = in22_buf;
-
-		__local float sum_buffer[128];
 
 #define OUT1_LOAD_WEIGHT(I,Y,X) float w##I##Y##X = weight[(I*16 + lid)*9 + Y*3 + X];
 		float w00 = weight[lid*9 + 0];

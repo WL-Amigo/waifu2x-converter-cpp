@@ -6,8 +6,8 @@ $(ARCH):
 	mkdir -p $(ARCH)
 	echo $(BASE_OBJS) $(BASE_SRCS)
 
-COMMON_CXXFLAGS=-std=gnu++11 -I$(TOPDIR)/include -I$(TOPDIR)/src -O2 -I$(ARCH) -MD
-COMMON_CFLAGS=-std=gnu99 -I$(TOPDIR)/include -I$(TOPDIR)/src -I$(ARCH) -MD
+COMMON_CXXFLAGS=-std=gnu++11 -I$(TOPDIR)/include -I$(TOPDIR)/src -O2 -I$(ARCH) -MD -fPIC -fPIE -fpic
+COMMON_CFLAGS=-std=gnu99 -I$(TOPDIR)/include -I$(TOPDIR)/src -I$(ARCH) -MD -fPIC -fPIE -fpic
 
 BENCH_SRCS_BASENAME=runbench.c
 

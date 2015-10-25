@@ -1,5 +1,5 @@
 NDK_PREFIX=/mnt/shared/android/android-ndk-r10e
-ANDROID_TOOLCHAIN=$(NDK_PREFIX)/toolchains/arm-linux-androideabi-4.9/prebuilt/linux-x86_64/bin
+ANDROID_TOOLCHAIN=$(NDK_PREFIX)/toolchains/arm-linux-androideabi-4.8/prebuilt/linux-x86_64/bin
 ANDROID_PLATFORM=$(NDK_PREFIX)/platforms/android-21/arch-arm
 
 TOOLCHAIN_PREFIX=$(ANDROID_TOOLCHAIN)/
