@@ -38,9 +38,9 @@ else()
   message(WARNING "cuda not found. disabled.")
 endif()
 
-include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
-include_directories(${CMAKE_CURRENT_SOURCE_DIR}/src)
-include_directories(${CMAKE_CURRENT_BINARY_DIR})
+include_directories(BEFORE ${CMAKE_CURRENT_SOURCE_DIR}/include)
+include_directories(BEFORE ${CMAKE_CURRENT_SOURCE_DIR}/src)
+include_directories(BEFORE ${CMAKE_CURRENT_BINARY_DIR})
 
 if(${CMAKE_SYSTEM_NAME} STREQUAL "Windows")
   if(CMAKE_COMPILER_IS_GNUCXX)
