@@ -6,8 +6,8 @@ $(ARCH):
 	mkdir -p $(ARCH)
 	echo $(BASE_OBJS) $(BASE_SRCS)
 
-COMMON_CXXFLAGS=-std=c++11 -I$(TOPDIR)/include -I$(TOPDIR)/src -O2 -I$(ARCH)
-COMMON_CFLAGS=-std=c99 -I$(TOPDIR)/include -I$(TOPDIR)/src -I$(ARCH)
+COMMON_CXXFLAGS=-std=c++11 -I$(TOPDIR)/include -I$(TOPDIR)/src -O2 -I$(ARCH) -MD
+COMMON_CFLAGS=-std=c99 -I$(TOPDIR)/include -I$(TOPDIR)/src -I$(ARCH) -MD
 
 BENCH_SRCS_BASENAME=runbench.c
 
@@ -29,6 +29,7 @@ BASE_SRCS_BASENAME=modelHandler.cpp \
 conv:$(TOPDIR)/conv.c
 	gcc -o $@ $<
 
+$(ARCH)/modelHandler_OpenCL.o: $(ARCH)/modelHandler_OpenCL.cl.h
 $(ARCH)/modelHandler_OpenCL.cl.h: $(TOPDIR)/src/modelHandler_OpenCL.cl conv
 	./conv $< $@ str
 
