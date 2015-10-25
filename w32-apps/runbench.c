@@ -1,4 +1,5 @@
 #include <stdlib.h>
+#include <stdio.h>
 #include "w2xconv.h"
 
 int
