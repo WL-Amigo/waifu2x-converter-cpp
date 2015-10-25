@@ -35,7 +35,9 @@ main(int argc, char **argv)
     };
 
     int total = 0;
-    for (int i=0; i<7; i++) {
+    int i;
+
+    for (i=0; i<7; i++) {
         total += num_maps[i];
     }
 
