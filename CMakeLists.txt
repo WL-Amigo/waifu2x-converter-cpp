@@ -8,19 +8,24 @@ include(CheckIncludeFileCXX)
 pkg_check_modules(OPENCV_PKG opencv)
 
 if (${OPENCV_PKG_FOUND})
-  include_directories(${OPENCV_PKG_PREFIX}/include)
+  set(CMAKE_REQUIRED_INCLUDES ${OPENCV_PKG_INCLUDE_DIRS})
+  include_directories(${OPENCV_PKG_INCLUDE_DIRS})
+  link_directories(${OPENCV_PKG_LIBRARY_DIRS})
 else()
   set(OPENCV_PREFIX "/usr"
     CACHE FILEPATH "OpenCV 2.x path")
+  set(CMAKE_REQUIRED_INCLUDES ${OPENCV_PREFIX}/include)
   include_directories(${OPENCV_PREFIX}/include)
+  link_directories(${OPENCV_PREFIX}/lib)
 endif()
 
 check_include_file_cxx("opencv2/opencv.hpp" HAVE_OPENCV)
+find_library(IMGCODECS_LIBRARY NAMES opencv_imgcodecs opencv_highgui
+  HINTS ${OPENCV_PKG_INCLUDE_DIRS} ${OPENCV_PREFIX}/lib)
 
 if(HAVE_OPENCV)
   add_definitions(-DHAVE_OPENCV)
-else()
-  
+  set(OPENCV_LIBRARIES opencv_core opencv_imgproc ${IMGCODECS_LIBRARY} opencv_features2d)
 endif()
 
 if(${CMAKE_SYSTEM_NAME} STREQUAL "Linux")
@@ -68,12 +73,7 @@ if(${CMAKE_SYSTEM_NAME} STREQUAL "Windows")
   endif()
 
   link_directories(${OPENCV_PREFIX}/${OCV_SYSTEM_DIRNAME}/${OCV_COMPILER_DIRNAME}/staticlib)
-else()
-  link_directories(${OPENCV_PREFIX}/lib)
 endif()
-
-find_library(IMGCODECS_LIBRARY NAMES opencv_imgcodecs opencv_highgui
-  HINTS ${OPENCV_PREFIX}/lib)
 
 if(CMAKE_SYSTEM_PROCESSOR STREQUAL "amd64" OR
     CMAKE_SYSTEM_PROCESSOR STREQUAL "AMD64" OR
@@ -182,7 +182,7 @@ if(${CMAKE_SYSTEM_NAME} STREQUAL "Windows")
   add_executable(w2xcr WIN32 w32-apps/w2xcr.c)
   target_link_libraries(w2xcr w2xc user32 shlwapi gdi32)
 else()
-  target_link_libraries(w2xc opencv_core opencv_imgproc ${IMGCODECS_LIBRARY} opencv_features2d pthread dl)
+  target_link_libraries(w2xc ${OPENCV_LIBRARIES} ${CMAKE_DL_LIBS} pthread)
 endif()
 
 set(CONV_EXE "$<TARGET_FILE_DIR:conv>/conv")
