@@ -89,6 +89,11 @@ enum W2XConvProcessorType {
 	W2XCONV_PROC_OPENCL
 };
 
+enum W2XConvFilterType {
+	W2XCONV_FILTER_DENOISE1,
+	W2XCONV_FILTER_DENOISE2,
+	W2XCONV_FILTER_SCALE2x
+};
 
 /* W2XConvProcessor::sub_type */
 #define W2XCONV_PROC_HOST_OPENCV 0x0000
@@ -158,6 +163,16 @@ W2XCONV_EXPORT struct W2XConv *w2xconv_init_with_processor(int processor_idx,
 W2XCONV_EXPORT int w2xconv_load_models(struct W2XConv *conv,
 				       const char *model_dir);
 
+W2XCONV_EXPORT void w2xconv_set_model_3x3(struct W2XConv *conv,
+					  enum W2XConvFilterType m,
+					  int layer_depth,
+					  int num_input_plane,
+					  const int *num_map, // num_map[layer_depth]
+					  const float *coef_list, // coef_list[layer_depth][num_map][3x3]
+					  const float *bias // bias[layer_depth][num_map]
+	);
+
+
 W2XCONV_EXPORT void w2xconv_fini(struct W2XConv *conv);
 
 
@@ -190,13 +205,6 @@ W2XCONV_EXPORT int w2xconv_convert_yuv(struct W2XConv *conv,
 				       int denoise_level, /* 0:none, 1:L1 denoise, other:L2 denoise  */
 				       double scale,
 				       int block_size);
-
-
-enum W2XConvFilterType {
-	W2XCONV_FILTER_DENOISE1,
-	W2XCONV_FILTER_DENOISE2,
-	W2XCONV_FILTER_SCALE2x
-};
 
 W2XCONV_EXPORT int w2xconv_apply_filter_y(struct W2XConv *conv,
 					  enum W2XConvFilterType type,

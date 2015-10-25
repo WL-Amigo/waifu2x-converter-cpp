@@ -533,6 +533,40 @@ w2xconv_load_models(W2XConv *conv, const char *model_dir)
 	return 0;
 }
 
+void
+w2xconv_set_model_3x3(struct W2XConv *conv,
+		      enum W2XConvFilterType m,
+		      int layer_depth,
+		      int num_input_plane,
+		      const int *num_map, // num_map[layer_depth]
+		      const float *coef_list, // coef_list[layer_depth][num_map][3x3]
+		      const float *bias // bias[layer_depth][num_map]
+	)
+{
+	struct W2XConvImpl *impl = conv->impl;
+	std::vector<std::unique_ptr<w2xc::Model> > *models = nullptr;
+
+	switch (m) {
+	case W2XCONV_FILTER_DENOISE1:
+		models = &impl->noise1_models;
+		break;
+	case W2XCONV_FILTER_DENOISE2:
+		models = &impl->noise2_models;
+		break;
+	case W2XCONV_FILTER_SCALE2x:
+		models = &impl->scale2_models;
+		break;
+	}
+
+
+	models->clear();
+	w2xc::modelUtility::generateModelFromMEM(layer_depth,
+						 num_input_plane,
+						 num_map,
+						 coef_list,
+						 bias,
+						 *models);
+}
 
 void
 w2xconv_fini(struct W2XConv *conv)

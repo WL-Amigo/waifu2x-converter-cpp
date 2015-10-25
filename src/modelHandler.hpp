@@ -81,8 +81,11 @@ public:
 		}
 	}
 	Model(FILE *binfp);
+	Model(int nInputPlane,
+	      int nOutputPlane,
+	      const float *coef_list,
+	      const float *bias);
 
-	;
 	~Model() {
 	}
 
@@ -124,7 +127,15 @@ private:
 
 public:
 	static bool generateModelFromJSON(const std::string &fileName,
-			std::vector<std::unique_ptr<Model> > &models);
+					  std::vector<std::unique_ptr<Model> > &models);
+	static void generateModelFromMEM(int layer_depth,
+					 int num_input_plane,
+					 const int *num_map, // num_map[layer_depth]
+					 const float *coef_list, // coef_list[layer_depth][num_map][3x3]
+					 const float *bias, // bias[layer_depth][num_map]
+					 std::vector<std::unique_ptr<Model> > &models
+		);
+
 	static modelUtility& getInstance();
 	bool setNumberOfJobs(int setNJob);
 	int getNumberOfJobs();

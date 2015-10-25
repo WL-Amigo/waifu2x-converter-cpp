@@ -655,6 +655,39 @@ Model::Model(FILE *binfp)
 	}
 }
 
+Model::Model(int nInputPlane,
+	     int nOutputPlane,
+	     const float *coef_list,
+	     const float *bias)
+{
+	this->nInputPlanes = nInputPlane;
+	this->nOutputPlanes = nOutputPlane;
+	this->kernelSize = 3;
+	this->weights.clear();
+	this->biases.clear();
+
+	int cur = 0;
+	// setting weight matrices
+	for (uint32_t oi=0; oi<nOutputPlanes; oi++) {
+		for (uint32_t ii=0; ii<nInputPlanes; ii++) {
+			W2Mat writeMatrix(kernelSize, kernelSize, CV_32FC1);
+			for (int yi=0; yi<3; yi++) {
+				for (int xi=0; xi<3; xi++) {
+					double v = coef_list[cur++];
+					writeMatrix.at<float>(yi, xi) = v;
+				}
+			}
+			this->weights.emplace_back(std::move(writeMatrix));
+		}
+	}
+
+	for (uint32_t oi=0; oi<nOutputPlanes; oi++) {
+		double v = bias[oi];
+		biases.push_back(v);
+	}
+}
+
+
 
 bool modelUtility::generateModelFromJSON(const std::string &fileName,
 		std::vector<std::unique_ptr<Model> > &models) {
@@ -749,6 +782,37 @@ bool modelUtility::generateModelFromJSON(const std::string &fileName,
 
 	return true;
 }
+
+void
+modelUtility::generateModelFromMEM(int layer_depth,
+				   int num_input_plane,
+				   const int *num_map, // num_map[layer_depth]
+				   const float *coef_list, // coef_list[layer_depth][num_map][3x3]
+				   const float *bias, // bias[layer_depth][num_map]
+				   std::vector<std::unique_ptr<Model> > &models
+	)
+{
+	int cur = 0;
+	models.resize(layer_depth);
+
+	models[0] = std::unique_ptr<Model>(new Model(num_input_plane,
+						     num_map[0],
+						     &coef_list[0],
+						     &bias[0]));
+
+	cur += num_map[0];
+
+	for (int li=1; li<layer_depth; li++) {
+		models[li] = std::unique_ptr<Model>(new Model(num_map[li-1],
+							      num_map[li],
+							      &coef_list[cur * 3 * 3],
+							      &bias[cur]));
+
+		cur += num_map[li];
+	}
+}
+
+
 
 bool modelUtility::setNumberOfJobs(int setNJob){
 	if(setNJob < 1)return false;
