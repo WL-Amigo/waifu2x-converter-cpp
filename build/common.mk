@@ -36,6 +36,7 @@ $(ARCH)/modelHandler_OpenCL.cl.h: $(TOPDIR)/src/modelHandler_OpenCL.cl conv
 BASE_OBJS_BASENAME=$(BASE_SRCS_BASENAME:.cpp=.o)
 BASE_SRCS:=$(foreach bn,$(BASE_SRCS_BASENAME),$(TOPDIR)/src/$(bn))
 BASE_OBJS:=$(foreach bn,$(BASE_OBJS_BASENAME),$(ARCH)/$(bn))
+BASE_DEPS:=$(BASE_OBJS:.o=.d)
 
 X86_SRCS_BASENAME=modelHandler_sse.cpp \
         modelHandler_avx.cpp \
@@ -44,16 +45,17 @@ X86_SRCS_BASENAME=modelHandler_sse.cpp \
 X86_OBJS_BASENAME=$(X86_SRCS_BASENAME:.cpp=.o)
 X86_SRCS:=$(foreach bn,$(X86_SRCS_BASENAME),$(TOPDIR)/src/$(bn))
 X86_OBJS:=$(foreach bn,$(X86_OBJS_BASENAME),$(ARCH)/$(bn))
-
+X86_DEPS:=$(X86_OBJS:.o=.d)
 
 ARM_SRCS_BASENAME=modelHandler_neon.cpp 
 
 ARM_OBJS_BASENAME=$(ARM_SRCS_BASENAME:.cpp=.o)
 ARM_SRCS:=$(foreach bn,$(ARM_SRCS_BASENAME),$(TOPDIR)/src/$(bn))
 ARM_OBJS:=$(foreach bn,$(ARM_OBJS_BASENAME),$(ARCH)/$(bn))
+ARM_DEPS:=$(ARM_OBJS:.o=.d)
 
-CROSS_CC=$(ARCH)-gcc
-CROSS_CXX=$(ARCH)-g++
+CROSS_CC=$(TOOLCHAIN_PREFIX)$(ARCH)-gcc
+CROSS_CXX=$(TOOLCHAIN_PREFIX)$(ARCH)-g++
 
 $(ARCH)/%.o: $(TOPDIR)/src/%.cpp
 	$(CROSS_CXX) -o $@ $< $(CXXFLAGS) -c

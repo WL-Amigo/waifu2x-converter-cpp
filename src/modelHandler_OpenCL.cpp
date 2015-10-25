@@ -216,8 +216,12 @@ initOpenCL(W2XConv *c, ComputeEnv *env, W2XConvProcessor *proc)
         const char *dev_name = proc->dev_name;
         bool bin_avaiable = false;
 
-#if defined __linux || _WIN32
+#if ((defined __linux) && !(defined __ANDROID__)) || _WIN32
+#define GENERATE_BINARY
+#endif
 
+
+#ifdef GENERATE_BINARY
 #ifdef __linux
         ssize_t path_len = 4;
         char *self_path = (char*)malloc(path_len+1);
@@ -264,7 +268,7 @@ initOpenCL(W2XConv *c, ComputeEnv *env, W2XConvProcessor *proc)
 
         FILE *binfp = fopen(bin_path.c_str(), "rb");
         if (binfp) {
-#ifdef __linux
+#if (defined __linux)
                 struct stat bin_st;
                 stat(bin_path.c_str(), &bin_st);
 
@@ -342,7 +346,7 @@ initOpenCL(W2XConv *c, ComputeEnv *env, W2XConvProcessor *proc)
 
         }
 
-#if defined __linux || defined _WIN32
+#ifdef GENERATE_BINARY
         free(self_path);
 #endif
 
@@ -365,7 +369,7 @@ initOpenCL(W2XConv *c, ComputeEnv *env, W2XConvProcessor *proc)
 
 
 
-#if defined __linux || _WIN32
+#ifdef GENERATE_BINARY
         if (!bin_avaiable) {
                 size_t binsz;
                 size_t ret_len;

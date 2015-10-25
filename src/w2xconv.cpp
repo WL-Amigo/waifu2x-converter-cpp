@@ -11,8 +11,9 @@
 #endif // X86OPT
 
 #ifdef ARMOPT
-#if (defined(__linux) && !defined(__ANDROID__)) || \
-    (defined(__ANDROID_API__) && __ANDROID_API__ >= 21)
+#if defined __ANDROID__
+#include <cpu-features.h>
+#elif (defined(__linux))
 #include <sys/auxv.h>
 #elif defined(__ARM_NEON)
 // armv8 or armv7-a
@@ -98,11 +99,21 @@ global_init2(void)
 #endif // X86OPT
 
 #ifdef ARMOPT
+
+#ifdef __ANDROID__
+		int hwcap = android_getCpuFeatures();
+		if (hwcap & ANDROID_CPU_ARM_FEATURE_NEON) {
+			host.dev_name = "ARM NEON";
+			host.sub_type = W2XCONV_PROC_HOST_NEON;
+		}
+#elif defined (__linux)
 		int hwcap = getauxval(AT_HWCAP);
 		if (hwcap & HWCAP_ARM_NEON) {
 			host.dev_name = "ARM NEON";
 			host.sub_type = W2XCONV_PROC_HOST_NEON;
 		}
+#endif
+
 #endif
 
 		processor_list.push_back(host);

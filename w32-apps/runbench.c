@@ -1,5 +1,6 @@
 #include <stdlib.h>
 #include <stdio.h>
+#include <string.h>
 #include "w2xconv.h"
 
 int
@@ -12,6 +13,16 @@ main(int argc, char **argv)
     
     proc_list = w2xconv_get_processor_list(&num_proc);
 
+    if (argc>=2 && strcmp(argv[1],"-l") == 0) {
+        int i;
+        for (i=0; i<num_proc; i++) {
+            printf("type=%2d, subtype=%2d, name=%s\n",
+                   proc_list[i].type,
+                   proc_list[i].sub_type,
+                   proc_list[i].dev_name);
+        }
+        exit(0);
+    }
     if (argc >= 2) {
         block_size = atoi(argv[1]);
     }
@@ -22,7 +33,6 @@ main(int argc, char **argv)
 
     struct W2XConv *c = w2xconv_init_with_processor(proc, 0, 1);
     puts(proc_list[proc].dev_name);
-
 
     int num_maps[7] = {
         32,

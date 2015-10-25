@@ -7,6 +7,17 @@
 #define w2xc_aligned_malloc _aligned_malloc
 #define w2xc_aligned_free _aligned_free
 
+#elif defined __ANDROID__
+#include <stdlib.h>
+static inline void *
+w2xc_aligned_malloc(size_t size, 
+                    size_t alignment)
+{
+    return memalign(alignment, size);
+}
+#define w2xc_aligned_free free
+
+
 #else
 #include <stdlib.h>
 static inline void *
