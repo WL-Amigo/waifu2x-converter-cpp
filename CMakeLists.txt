@@ -147,24 +147,19 @@ elseif(MSVC)
 endif()
 
 if(CMAKE_SIZEOF_VOID_P EQUAL 4)
-  set(NVCC_FLAGS "-m32")
+  list(APPEND CUDA_NVCC_FLAGS "-m32")
 endif()
 
-
-if(${CMAKE_SYSTEM_NAME} STREQUAL "Linux")
-  if(CUDA_FOUND)
-    set(NVCC "${CUDA_TOOLKIT_ROOT_DIR}/bin/nvcc" "-ccbin" "/usr/bin/g++-4.7" "${NVCC_FLAGS}")
-  endif()
-elseif(${CMAKE_SYSTEM_NAME} STREQUAL "Windows")
-  if(CUDA_FOUND)
-    set(NVCC "${CUDA_TOOLKIT_ROOT_DIR}/bin/nvcc" "-Xcompiler" "/wd 4819" "${NVCC_FLAGS}")
-  endif()
+if(${CMAKE_SYSTEM_NAME} STREQUAL "Windows")
+  list(APPEND CUDA_NVCC_FLAGS "-Xcompiler" "/wd 4819")
   set_target_properties(w2xc PROPERTIES PREFIX "")
   set_target_properties(w2xc PROPERTIES IMPORT_PREFIX "")
   set_target_properties(w2xc PROPERTIES IMPORT_SUFFIX ".lib")
 else()
-  if(CUDA_FOUND)
-    set(NVCC "${CUDA_TOOLKIT_ROOT_DIR}/bin/nvcc")
+  # Lower GCC version to avoid #error in host_config.h
+  find_program(GCC NAMES g++-4.7 g++47 g++-4.8 g++48)
+  if(GCC)
+    list(APPEND CUDA_NVCC_FLAGS "-ccbin" "${GCC}")
   endif()
 endif()
 
@@ -210,12 +205,12 @@ if(CUDA_FOUND)
 
   add_custom_command(
     OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/modelHandler_CUDA.ptx20
-    COMMAND ${NVCC} -arch=sm_20 -ptx -o ${CMAKE_CURRENT_BINARY_DIR}/modelHandler_CUDA.ptx20 ${CMAKE_CURRENT_SOURCE_DIR}/src/modelHandler_CUDA.cu
+    COMMAND ${CUDA_NVCC_EXECUTABLE} ${CUDA_NVCC_FLAGS} -arch=sm_20 -ptx -o ${CMAKE_CURRENT_BINARY_DIR}/modelHandler_CUDA.ptx20 ${CMAKE_CURRENT_SOURCE_DIR}/src/modelHandler_CUDA.cu
     DEPENDS src/modelHandler_CUDA.cu
     )
   add_custom_command(
     OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/modelHandler_CUDA.ptx30
-    COMMAND ${NVCC} -arch=sm_30 -ptx -o ${CMAKE_CURRENT_BINARY_DIR}/modelHandler_CUDA.ptx30 ${CMAKE_CURRENT_SOURCE_DIR}/src/modelHandler_CUDA.cu
+    COMMAND ${CUDA_NVCC_EXECUTABLE} ${CUDA_NVCC_FLAGS} -arch=sm_30 -ptx -o ${CMAKE_CURRENT_BINARY_DIR}/modelHandler_CUDA.ptx30 ${CMAKE_CURRENT_SOURCE_DIR}/src/modelHandler_CUDA.cu
     DEPENDS src/modelHandler_CUDA.cu
     )
 
@@ -230,7 +225,7 @@ enable_testing()
 if (${HAVE_OPENCV})
   add_executable(waifu2x-converter-cpp
     src/main.cpp)
-  target_link_libraries(waifu2x-converter-cpp PUBLIC w2xc)
+  target_link_libraries(waifu2x-converter-cpp LINK_PUBLIC w2xc)
   add_executable(runtest w32-apps/runtest.c)
   target_link_libraries(runtest w2xc)
   add_test(runtest runtest)
@@ -243,7 +238,7 @@ if (${HAVE_OPENCV})
 endif()
 
 add_executable(runbench w32-apps/runbench.c)
-target_link_libraries(runbench PUBLIC w2xc)
+target_link_libraries(runbench LINK_PUBLIC w2xc)
 
 install(FILES src/w2xconv.h DESTINATION include)
 
