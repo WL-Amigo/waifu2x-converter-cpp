@@ -25,3 +25,14 @@ conv
 *.bin
 *.cubin
 *.sass
+CMakeCache.txt
+CMakeFiles/
+CTestTestfile.cmake
+Makefile
+cmake_install.cmake
+install_manifest.txt
+libw2xc.so
+modelHandler_OpenCL.cl.h
+runbench
+runtest
+
