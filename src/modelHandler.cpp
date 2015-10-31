@@ -98,7 +98,7 @@ Model::filter_CV(ComputeEnv *env,
 #endif
 }
 
-#define COMPARE_RESULT
+//#define COMPARE_RESULT
 
 bool Model::filter_AVX_OpenCL(W2XConv *conv,
 			      ComputeEnv *env,

@@ -85,13 +85,16 @@ apply_filter_line(unsigned long width,
 #                       include "body-unroll2.hpp"
                     }
                 }
-
-                for ( ;x0<xb_end; x0++) {
-#include "body-unroll1.hpp"
-                }
-
 #endif
 
+
+                for ( ;x0<xb_end; x0++) {
+#include "modelHandler_simd_unroll1.hpp"
+                }
+
+
+#if 0
+                // simple test routine
                 for (; x0<xb_end; x0++) {
                     const unsigned char *w_cur = w_chunk_base;
                     unsigned char *output_base0 = output + ((x0+0)*nOutputPlanes + oi0*OP_BLOCK_SIZE)*sizeof(float);
@@ -144,6 +147,9 @@ apply_filter_line(unsigned long width,
                         }
                     }
                 }
+#endif
+
+
             }
         }
     }
