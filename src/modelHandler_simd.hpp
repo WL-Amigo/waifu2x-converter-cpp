@@ -60,6 +60,14 @@ apply_filter_line(unsigned long width,
 
                 int x0 = xb_start;
 
+                if (UNROLL == 5) {
+                    for (; x0<xb_end-4; x0+=5) {
+#                       include "modelHandler_simd_unroll5.hpp"
+                    }
+                }
+
+
+
 #if 0
                 if (UNROLL == 6) {
                     for (; x0<xb_end-5; x0+=6) {
@@ -67,12 +75,6 @@ apply_filter_line(unsigned long width,
                     }
                 }
 
-
-                if (UNROLL == 5) {
-                    for (; x0<xb_end-4; x0+=5) {
-#                       include "body-unroll5.hpp"
-                    }
-                }
 
                 if (UNROLL == 4) {
                     for (; x0<xb_end-3; x0+=4) {
@@ -89,7 +91,7 @@ apply_filter_line(unsigned long width,
 
 
                 for ( ;x0<xb_end; x0++) {
-#include "modelHandler_simd_unroll1.hpp"
+#                   include "modelHandler_simd_unroll1.hpp"
                 }
 
 
