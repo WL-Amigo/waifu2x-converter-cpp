@@ -98,7 +98,7 @@ Model::filter_CV(ComputeEnv *env,
 #endif
 }
 
-//#define COMPARE_RESULT
+#define COMPARE_RESULT
 
 bool Model::filter_AVX_OpenCL(W2XConv *conv,
 			      ComputeEnv *env,
@@ -251,36 +251,110 @@ bool Model::filter_AVX_OpenCL(W2XConv *conv,
 			}
 		}
 	} else {
-		/* | i0        | i1        | i2 .. iN-1|   i0      | i1        | ..
-		 * |o0 o1 o2 o3|o0 o1 o2 o3| ....      |o4 o5 o6 o7|o4 o5 o6 o7| ..
-		 * |<-       ->|
-		 * | VEC_WIDTH |
-		 * |   x  9    |
-		 */
+		bool simd_available = false;
+		int simd_vec_width = 0;
+		if (proc->type == W2XCONV_PROC_HOST) {
+			switch (proc->sub_type) {
+			case W2XCONV_PROC_HOST_SSE3:
+			case W2XCONV_PROC_HOST_NEON:
+				simd_vec_width = 4;
+				simd_available = true;
+				break;
 
-		for (int oi=0; oi<nOutputPlanes; oi++) {
-			for (int ii=0; ii<nInputPlanes; ii++) {
-				int mi = oi*nInputPlanes+ii;
-				W2Mat &wm = weights[mi];
-				const float *src0 = wm.ptr<float>(0);
-				const float *src1 = wm.ptr<float>(1);
-				const float *src2 = wm.ptr<float>(2);
 
-				int oi_0 = oi % vec_width;
-				int oi_1 = (oi / vec_width) * vec_width;
+			case W2XCONV_PROC_HOST_AVX:
+			case W2XCONV_PROC_HOST_FMA:
+				simd_vec_width = 8;
+				simd_available = true;
+				break;
+			}
+		}
 
-				float *dst = weight_flat + ((ii*weight_step + oi_1) * 9) + oi_0;
-				dst[0*vec_width] = src0[0];
-				dst[1*vec_width] = src0[1];
-				dst[2*vec_width] = src0[2];
+		simd_available = simd_available && (nInputPlanes%(simd_vec_width*4) == 0) && (nOutputPlanes%(simd_vec_width*2) == 0);
 
-				dst[3*vec_width] = src1[0];
-				dst[4*vec_width] = src1[1];
-				dst[5*vec_width] = src1[2];
+		if (simd_available) {
+			/* 
+			 * weight_chunk (16x32x3x4 = 6144[Byte])
+			 * (where op_block_size=16, ip_block_size=32)
+			 *
+			 * 111                                            oplane x16
+			 * 16 16 .. (x16)  ..16                           iplane x32
+			 *            \               |               /   horiz  x3
+			 *                                                oplane xnOutputPlane_block
+			 *                                                iplane xnInputPlane_block
+			 *                                                vert   x3
+			 */
+			int ip_block_size = (simd_vec_width*4);
+			int op_block_size = (simd_vec_width*2);
+			int nInputPlane_block = nInputPlanes/ip_block_size;
+			int nOutputPlane_block = nOutputPlanes/op_block_size;
 
-				dst[6*vec_width] = src2[0];
-				dst[7*vec_width] = src2[1];
-				dst[8*vec_width] = src2[2];
+			float *dst = weight_flat;
+
+			for (int dposy=0; dposy<3; dposy++) {
+				for (int ii0=0; ii0<nInputPlane_block; ii0++) {
+					for (int oi0=0; oi0<nOutputPlane_block; oi0++) {
+						for (int dposx=0; dposx<3; dposx++) {
+							for (int ii1=0; ii1<ip_block_size; ii1++) {
+								for (int oi1=0; oi1<op_block_size; oi1++) {
+									int ii = ii0*ip_block_size + ii1;
+									int oi = oi0*op_block_size + oi1;
+									int mi = oi*nInputPlanes + ii;
+
+									W2Mat &wm = weights[mi];
+									float &src = wm.at<float>(dposy, dposx);
+									*dst = src;
+
+									dst++;
+								}
+							}
+						}
+					}
+				}
+			}
+
+			//for (int i=0; i<nInputPlanes*nOutputPlanes; i++) {
+			//	W2Mat &wm = weights[i];
+			//
+			//	for (int yi=0; yi<3; yi++) {
+			//		for (int xi=0; xi<3; xi++) {
+			//			float v = wm.at<float>(yi,xi);
+			//			printf("%f\n", v);
+			//		}
+			//	}
+			//}
+		} else {
+			/* | i0        | i1        | i2 .. iN-1|   i0      | i1        | ..
+			 * |o0 o1 o2 o3|o0 o1 o2 o3| ....      |o4 o5 o6 o7|o4 o5 o6 o7| ..
+			 * |<-       ->|
+			 * | VEC_WIDTH |
+			 * |   x  9    |
+			 */
+
+			for (int oi=0; oi<nOutputPlanes; oi++) {
+				for (int ii=0; ii<nInputPlanes; ii++) {
+					int mi = oi*nInputPlanes+ii;
+					W2Mat &wm = weights[mi];
+					const float *src0 = wm.ptr<float>(0);
+					const float *src1 = wm.ptr<float>(1);
+					const float *src2 = wm.ptr<float>(2);
+
+					int oi_0 = oi % vec_width;
+					int oi_1 = (oi / vec_width) * vec_width;
+
+					float *dst = weight_flat + ((ii*weight_step + oi_1) * 9) + oi_0;
+					dst[0*vec_width] = src0[0];
+					dst[1*vec_width] = src0[1];
+					dst[2*vec_width] = src0[2];
+
+					dst[3*vec_width] = src1[0];
+					dst[4*vec_width] = src1[1];
+					dst[5*vec_width] = src1[2];
+
+					dst[6*vec_width] = src2[0];
+					dst[7*vec_width] = src2[1];
+					dst[8*vec_width] = src2[2];
+				}
 			}
 		}
 	}

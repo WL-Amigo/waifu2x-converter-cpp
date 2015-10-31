@@ -35,4 +35,6 @@ libw2xc.so
 modelHandler_OpenCL.cl.h
 runbench
 runtest
-
+*.isa
+*.il
+.gdbinit

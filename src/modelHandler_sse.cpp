@@ -4,6 +4,88 @@
 #include "filters.hpp"
 #include "sec.hpp"
 
+struct v256_t {
+	__m128 v0, v1;
+};
+
+
+static inline ALWAYS_INLINE v256_t
+madd256(v256_t const &v0, v256_t const &v1, v256_t const &v2)
+{
+	v256_t ret;
+	ret.v0 = _mm_add_ps(_mm_mul_ps(v0.v0,v1.v0), v2.v0);
+	ret.v1 = _mm_add_ps(_mm_mul_ps(v0.v1,v1.v1), v2.v1);
+	return ret;
+}
+
+static inline v256_t
+load_broadcast(const float *p)
+{
+	v256_t ret;
+	ret.v0 = _mm_set1_ps(p[0]);
+	ret.v1 = _mm_set1_ps(p[0]);
+	return ret;
+}
+
+static inline v256_t
+load256(const float *p)
+{
+	v256_t ret;
+	ret.v0 = _mm_load_ps(p);
+	ret.v1 = _mm_load_ps(p+4);
+	return ret;
+}
+
+
+static inline void
+store256(float *p, v256_t const &v)
+{
+	_mm_storeu_ps(p, v.v0);
+	_mm_storeu_ps(p+4, v.v1);
+}
+
+static inline v256_t
+zero()
+{
+	v256_t ret;
+	ret.v0 = _mm_setzero_ps();
+	ret.v1 = _mm_setzero_ps();
+	return ret;
+}
+
+static inline v256_t
+set1(float a)
+{
+	v256_t ret;
+	ret.v0 = _mm_set1_ps(a);
+	ret.v1 = _mm_set1_ps(a);
+	return ret;
+}
+
+static inline float
+hadd8(v256_t const &v)
+{
+	__m128 sum4 = _mm_add_ps(v.v0, v.v1);
+	sum4 = _mm_hadd_ps(sum4, sum4);
+	sum4 = _mm_hadd_ps(sum4, sum4);
+	return _mm_cvtss_f32(sum4);
+}
+
+#define SSE_GEN_BINARY(func_name, intrin_name)	\
+static inline v256_t				\
+func_name(v256_t const &a, v256_t const &b)			\
+{						\
+	v256_t ret;				\
+	ret.v0 = intrin_name(a.v0, b.v0);	\
+	ret.v1 = intrin_name(a.v1, b.v1);	\
+	return ret;				\
+}
+
+SSE_GEN_BINARY(add256, _mm_add_ps)
+SSE_GEN_BINARY(mul256, _mm_mul_ps)
+SSE_GEN_BINARY(max256, _mm_max_ps)
+SSE_GEN_BINARY(min256, _mm_min_ps)
+
 #include "modelHandler_avx_func.hpp"
 
 namespace w2xc {

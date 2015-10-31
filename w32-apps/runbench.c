@@ -45,7 +45,7 @@ main(int argc, char **argv)
     };
 
     int total = 0;
-    int i;
+    int yi, xi, i;
 
     for (i=0; i<7; i++) {
         total += num_maps[i];
@@ -53,8 +53,14 @@ main(int argc, char **argv)
 
     float *bias = calloc(total, sizeof(float));
     float *coef = calloc(total * 3 * 3, sizeof(float));
-    float *dst = malloc(block_size * block_size * sizeof(float));
-    float *src = malloc(block_size * block_size * sizeof(float));
+    float *dst = calloc(block_size * block_size, sizeof(float));
+    float *src = calloc(block_size * block_size, sizeof(float));
+
+    for (yi=0; yi<block_size; yi++) {
+        for (xi=0; xi<block_size; xi++) {
+            src[yi*block_size + xi] = xi;
+        }
+    }
 
     w2xconv_set_model_3x3(c,
                           W2XCONV_FILTER_SCALE2x,
