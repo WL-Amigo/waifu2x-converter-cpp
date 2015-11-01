@@ -563,7 +563,6 @@ w2xconv_set_model_3x3(struct W2XConv *conv,
 		break;
 	}
 
-
 	models->clear();
 	w2xc::modelUtility::generateModelFromMEM(layer_depth,
 						 num_input_plane,

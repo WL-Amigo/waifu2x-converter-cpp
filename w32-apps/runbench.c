@@ -52,8 +52,9 @@ main(int argc, char **argv)
     int total = 0;
     int yi, xi, i;
 
-    for (i=0; i<7; i++) {
-        total += num_maps[i];
+    total += num_maps[0];
+    for (i=1; i<7; i++) {
+        total += num_maps[i-1] * num_maps[i];
     }
 
     float *bias = calloc(total, sizeof(float));
