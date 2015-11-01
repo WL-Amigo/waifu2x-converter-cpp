@@ -549,11 +549,13 @@ bool Model::filter(W2XConv *conv,
 		if (nInputPlanes & 1) {
 			cl_available = false;
 			cuda_available = false;
+			avx_available = false;
 		}
 
 		if (nOutputPlanes & 31) {
 			cl_available = false;
 			cuda_available = false;
+			avx_available = false;
 		}
 
 		if (nInputPlanes == 32 || nInputPlanes == 64 || nInputPlanes == 128) {
@@ -561,23 +563,6 @@ bool Model::filter(W2XConv *conv,
 		} else {
 			cuda_available = false;
 		}
-	}
-
-
-	if (nOutputPlanes % (VEC_WIDTH*UNROLL)) {
-		if (nOutputPlanes == 1) {
-			if (nInputPlanes % VEC_WIDTH) {
-				avx_available = false;
-			}
-		} else if (nOutputPlanes == 3) {
-			/* out3 filter */
-		} else {
-			avx_available = false;
-		}
-	}
-
-	if (size.width&1) {
-		avx_available = false;
 	}
 
 	//printf("%d %d %d\n",
