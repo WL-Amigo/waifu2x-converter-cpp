@@ -29,10 +29,14 @@ for (int dposx=0; dposx<3; dposx++) {
         dposx2_re = 0;
     }
 
-    const unsigned char *input_cur_x0 = in + ((dposy2*width + x0 + 0 + dposx2_le)*nInputPlanes+ii0*IP_BLOCK_SIZE)*sizeof(float);
-    const unsigned char *input_cur_x1 = in + ((dposy2*width + x0 + 1 + dposx2)*nInputPlanes+ii0*IP_BLOCK_SIZE)*sizeof(float);
-    const unsigned char *input_cur_x2 = in + ((dposy2*width + x0 + 2 + dposx2)*nInputPlanes+ii0*IP_BLOCK_SIZE)*sizeof(float);
-    const unsigned char *input_cur_x3 = in + ((dposy2*width + x0 + 3 + dposx2_re)*nInputPlanes+ii0*IP_BLOCK_SIZE)*sizeof(float);
+    int off0 = ((dposy2*width + x0 + 0 + dposx2_le)*nInputPlanes+ii0*IP_BLOCK_SIZE)*sizeof(float);
+    int off1 = ((dposy2*width + x0 + 1 + dposx2)*nInputPlanes+ii0*IP_BLOCK_SIZE)*sizeof(float);
+    int off2 = ((dposy2*width + x0 + 2 + dposx2)*nInputPlanes+ii0*IP_BLOCK_SIZE)*sizeof(float);
+    int off3 = ((dposy2*width + x0 + 3 + dposx2_re)*nInputPlanes+ii0*IP_BLOCK_SIZE)*sizeof(float);
+    const unsigned char *input_cur_x0 = in + off0;
+    const unsigned char *input_cur_x1 = in + off1;
+    const unsigned char *input_cur_x2 = in + off2;
+    const unsigned char *input_cur_x3 = in + off3;
 
 #if (defined USE_SSE3)
     for (int ii1=0; ii1<IP_BLOCK_SIZE; ii1+=4) {

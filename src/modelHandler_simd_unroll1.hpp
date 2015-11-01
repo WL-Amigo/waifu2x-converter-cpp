@@ -14,7 +14,8 @@ for (int dposx=0; dposx<3; dposx++) {
         dposx2 = 0;
     }
 
-    const unsigned char *input_cur_x0 = in + ((dposy2*width + x0 + dposx2)*nInputPlanes+ii0*IP_BLOCK_SIZE)*sizeof(float);
+    signed int offset = ((dposy2*width + x0 + dposx2)*nInputPlanes+ii0*IP_BLOCK_SIZE)*(int)sizeof(float);
+    const unsigned char *input_cur_x0 = in + offset;
 
     /* load4, madd4 */
 #define MUL_W_IN(I)                                                     \

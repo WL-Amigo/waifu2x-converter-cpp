@@ -204,11 +204,11 @@ filter_simd_impl0(ComputeEnv *env,
 			unsigned int block_x = bi % num_block_hor;
 			unsigned int block_y = bi / num_block_hor;
 
-			unsigned int y_start = block_y * BLOCK_SIZE_VER;
-			unsigned int y_end = (std::min)(y_start + BLOCK_SIZE_VER, hsz);
+			unsigned int y_start = block_y * block_size_ver;
+			unsigned int y_end = (std::min)(y_start + block_size_ver, hsz);
 
-			unsigned int x_start = block_x * BLOCK_SIZE_HOR;
-			unsigned int x_end = (std::min)(x_start + BLOCK_SIZE_HOR, wsz);
+			unsigned int x_start = block_x * block_size_hor;
+			unsigned int x_end = (std::min)(x_start + block_size_hor, wsz);
                         for (unsigned int yi=y_start; yi<y_end; yi++) {
                             const float *input_block = packed_input + (nInputPlanes*yi*wsz);
                             float *output_block = packed_output + (nOutputPlanes*yi*wsz);
