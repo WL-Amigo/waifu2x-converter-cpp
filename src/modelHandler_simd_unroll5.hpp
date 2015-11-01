@@ -49,7 +49,6 @@ for (int dposx=0; dposx<3; dposx++) {
     {                                                                   \
         int I2 = I;                                                     \
         vreg_t wreg0, wreg1;                                            \
-        vreg_t ireg0;                                                   \
                                                                         \
         wreg0 = load_vreg(w_cur);                                       \
         wreg1 = load_vreg(w_cur + VEC_NELEM*sizeof(float));             \
@@ -97,7 +96,6 @@ if (dposy == 0 && ii0 == 0) {
     vreg_t tmp20, tmp21;
     vreg_t tmp30, tmp31;
     vreg_t tmp40, tmp41;
-    vreg_t tmp50, tmp51;
 
     vreg_t mtz, ltz, bv0, bv1;
 

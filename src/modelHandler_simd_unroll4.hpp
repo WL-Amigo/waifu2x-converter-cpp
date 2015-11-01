@@ -171,7 +171,6 @@ for (int dposx=0; dposx<3; dposx++) {
     {                                                                   \
         int I2 = I;                                                     \
         vreg_t wreg0, wreg1;                                            \
-        vreg_t ireg0;                                                   \
                                                                         \
         wreg0 = load_vreg(w_cur);                                       \
         wreg1 = load_vreg(w_cur + VEC_NELEM*sizeof(float));             \
