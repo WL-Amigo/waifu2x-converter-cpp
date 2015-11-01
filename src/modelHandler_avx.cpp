@@ -37,6 +37,27 @@ hadd8(__m256 v)
 
 #include "modelHandler_avx_func.hpp"
 
+
+#undef UNROLL
+typedef __m256 vreg_t;
+#define VEC_NELEM 8
+#define UNROLL 5
+#define store_vreg(ptr,val) _mm256_store_ps((float*)(ptr), val)
+#define load_vreg(ptr) _mm256_load_ps((float*)(ptr))
+#define load_vreg_broadcast(ptr) _mm256_broadcast_ss((float*)(ptr))
+static inline __m256
+madd_vreg(__m256 a, __m256 b, __m256 c)
+{
+    return _mm256_add_ps(_mm256_mul_ps(a,b), c);
+}
+#define add_vreg _mm256_add_ps
+#define zero_vreg _mm256_setzero_ps
+#define min_vreg _mm256_min_ps
+#define max_vreg _mm256_max_ps
+#define set1_vreg _mm256_set1_ps
+
+#include "modelHandler_simd.hpp"
+
 namespace w2xc {
 void
 filter_AVX_impl(ComputeEnv *env,
@@ -50,16 +71,29 @@ filter_AVX_impl(ComputeEnv *env,
 		int ip_height,
 		int nJob)
 {
-	filter_AVX_impl0(env,
-			 packed_input,
-			 packed_output,
-			 nInputPlanes,
-			 nOutputPlanes,
-			 fbiases,
-			 weight,
-			 ip_width,
-			 ip_height,
-			 nJob);
+	if (simd_available(nInputPlanes, nOutputPlanes)) {
+		filter_simd_impl0(env,
+				  packed_input,
+				  packed_output,
+				  nInputPlanes,
+				  nOutputPlanes,
+				  fbiases,
+				  weight,
+				  ip_width,
+				  ip_height,
+				  nJob);
+	} else {
+		filter_AVX_impl0(env,
+				 packed_input,
+				 packed_output,
+				 nInputPlanes,
+				 nOutputPlanes,
+				 fbiases,
+				 weight,
+				 ip_width,
+				 ip_height,
+				 nJob);
+	}
 }
 
 
