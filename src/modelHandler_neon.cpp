@@ -120,16 +120,29 @@ filter_NEON_impl(ComputeEnv *env,
 		int ip_height,
 		int nJob)
 {
-	filter_AVX_impl0(env,
-			 packed_input,
-			 packed_output,
-			 nInputPlanes,
-			 nOutputPlanes,
-			 fbiases,
-			 weight,
-			 ip_width,
-			 ip_height,
-			 nJob);
+	if (simd_available(nInputPlanes, nOutputPlanes)) {
+		filter_simd_impl0(env,
+				  packed_input,
+				  packed_output,
+				  nInputPlanes,
+				  nOutputPlanes,
+				  fbiases,
+				  weight,
+				  ip_width,
+				  ip_height,
+				  nJob);
+	} else {
+		filter_AVX_impl0(env,
+				 packed_input,
+				 packed_output,
+				 nInputPlanes,
+				 nOutputPlanes,
+				 fbiases,
+				 weight,
+				 ip_width,
+				 ip_height,
+				 nJob);
+	}
 }
 
 

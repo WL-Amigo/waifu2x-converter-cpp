@@ -83,10 +83,11 @@ for (int dposx=0; dposx<3; dposx++) {
         /* q0-q3: ireg
          * q4,q5 : wreg
          */
+#if 0
         __asm__ __volatile__("vld1.32 {q0}, [%[PTR0]:64]!\n\t"
                              "vld1.32 {q4}, [%[W_CUR]:64]!\n\t"
                              "vld1.32 {q5}, [%[W_CUR]:64]!\n\t"
-
+                             
                              "vmla.f32 %q[OREG00], q4, d0[0]\n\t"
                              "vmla.f32 %q[OREG01], q5, d0[0]\n\t"
                              "vld1.32 {q1}, [%[PTR1]:64]!\n\t"
@@ -95,11 +96,11 @@ for (int dposx=0; dposx<3; dposx++) {
                              "vmla.f32 %q[OREG11], q5, d2[0]\n\t"
                              "vld1.32 {q3}, [%[PTR3]:64]!\n\t"
                              "vmla.f32 %q[OREG20], q4, d4[0]\n\t"
-                             "vld1.32 {q4}, [%[W_CUR]:64]!\n\t"
+                             "vld1.32 {q6}, [%[W_CUR]:64]!\n\t"
                              "vmla.f32 %q[OREG21], q5, d4[0]\n\t"
-                             "vld1.32 {q5}, [%[W_CUR]:64]!\n\t"
-                             "vmla.f32 %q[OREG30], q6, d6[0]\n\t"
-                             "vmla.f32 %q[OREG31], q7, d6[0]\n\t"
+                             "vld1.32 {q7}, [%[W_CUR]:64]!\n\t"
+                             "vmla.f32 %q[OREG30], q4, d6[0]\n\t"
+                             "vmla.f32 %q[OREG31], q5, d6[0]\n\t"
 
                              "vmla.f32 %q[OREG00], q6, d0[1]\n\t"
                              "vld1.32 {q4}, [%[W_CUR]:64]!\n\t"
@@ -109,8 +110,8 @@ for (int dposx=0; dposx<3; dposx++) {
                              "vmla.f32 %q[OREG11], q7, d2[1]\n\t"
                              "vmla.f32 %q[OREG20], q6, d4[1]\n\t"
                              "vmla.f32 %q[OREG21], q7, d4[1]\n\t"
-                             "vmla.f32 %q[OREG30], q6, d8[1]\n\t"
-                             "vmla.f32 %q[OREG31], q7, d8[1]\n\t"
+                             "vmla.f32 %q[OREG30], q6, d6[1]\n\t"
+                             "vmla.f32 %q[OREG31], q7, d6[1]\n\t"
 
                              "vmla.f32 %q[OREG00], q4, d1[0]\n\t"
                              "vld1.32 {q6}, [%[W_CUR]:64]!\n\t"
@@ -149,6 +150,76 @@ for (int dposx=0; dposx<3; dposx++) {
                              :
                              :"q0","q1","q2","q3",
                               "q4","q5","q6","q7","memory");
+#else
+        __asm__ __volatile__("vld1.32 {q0}, [%[PTR0]:64]!\n\t"
+                             "vld1.32 {q1}, [%[PTR1]:64]!\n\t"
+                             "vld1.32 {q2}, [%[PTR2]:64]!\n\t"
+                             "vld1.32 {q3}, [%[PTR3]:64]!\n\t"
+                             "vld1.32 {q4}, [%[W_CUR]:64]!\n\t"
+                             "vld1.32 {q5}, [%[W_CUR]:64]!\n\t"
+
+                             "vmla.f32 %q[OREG00], q4, d0[0]\n\t"
+                             "vld1.32 {q6}, [%[W_CUR]:64]!\n\t"
+                             "vmla.f32 %q[OREG01], q5, d0[0]\n\t"
+                             "vld1.32 {q7}, [%[W_CUR]:64]!\n\t"
+                             "vmla.f32 %q[OREG10], q4, d2[0]\n\t"
+                             "vmla.f32 %q[OREG11], q5, d2[0]\n\t"
+                             "vmla.f32 %q[OREG20], q4, d4[0]\n\t"
+                             "vmla.f32 %q[OREG21], q5, d4[0]\n\t"
+                             "vmla.f32 %q[OREG30], q4, d6[0]\n\t"
+                             "vmla.f32 %q[OREG31], q5, d6[0]\n\t"
+
+
+                             "vmla.f32 %q[OREG00], q6, d0[1]\n\t"
+                             "vmla.f32 %q[OREG01], q7, d0[1]\n\t"
+                             "vmla.f32 %q[OREG10], q6, d2[1]\n\t"
+                             "vmla.f32 %q[OREG11], q7, d2[1]\n\t"
+                             "vmla.f32 %q[OREG20], q6, d4[1]\n\t"
+                             "vmla.f32 %q[OREG21], q7, d4[1]\n\t"
+                             "vmla.f32 %q[OREG30], q6, d6[1]\n\t"
+                             "vmla.f32 %q[OREG31], q7, d6[1]\n\t"
+
+                             "vld1.32 {q4}, [%[W_CUR]:64]!\n\t"
+                             "vld1.32 {q5}, [%[W_CUR]:64]!\n\t"
+                             "vmla.f32 %q[OREG00], q4, d1[0]\n\t"
+                             "vmla.f32 %q[OREG01], q5, d1[0]\n\t"
+                             "vmla.f32 %q[OREG10], q4, d3[0]\n\t"
+                             "vmla.f32 %q[OREG11], q5, d3[0]\n\t"
+                             "vmla.f32 %q[OREG20], q4, d5[0]\n\t"
+                             "vmla.f32 %q[OREG21], q5, d5[0]\n\t"
+                             "pld [%[PTR0], #128]\n\t"
+                             "vmla.f32 %q[OREG30], q4, d7[0]\n\t"
+                             "vmla.f32 %q[OREG31], q5, d7[0]\n\t"
+
+                             "vld1.32 {q6}, [%[W_CUR]:64]!\n\t"
+                             "vld1.32 {q7}, [%[W_CUR]:64]!\n\t"
+                             "vmla.f32 %q[OREG00], q6, d1[1]\n\t"
+                             "vmla.f32 %q[OREG01], q7, d1[1]\n\t"
+                             "vmla.f32 %q[OREG10], q6, d3[1]\n\t"
+                             "vmla.f32 %q[OREG11], q7, d3[1]\n\t"
+                             "vmla.f32 %q[OREG20], q6, d5[1]\n\t"
+                             "vmla.f32 %q[OREG21], q7, d5[1]\n\t"
+                             "vmla.f32 %q[OREG30], q6, d7[1]\n\t"
+                             "vmla.f32 %q[OREG31], q7, d7[1]\n\t"
+
+                             :[W_CUR]"+r"(w_cur),
+                              [OREG00]"+w"(oreg00),
+                              [OREG01]"+w"(oreg01),
+                              [OREG10]"+w"(oreg10),
+                              [OREG11]"+w"(oreg11),
+                              [OREG20]"+w"(oreg20),
+                              [OREG21]"+w"(oreg21),
+                              [OREG30]"+w"(oreg30),
+                              [OREG31]"+w"(oreg31),
+                              [PTR0]"+r"(input_cur_x0),
+                              [PTR1]"+r"(input_cur_x1),
+                              [PTR2]"+r"(input_cur_x2),
+                              [PTR3]"+r"(input_cur_x3)
+                             :
+                             :"q0","q1","q2","q3",
+                              "q4","q5","q6","q7","memory");
+
+#endif
     }
 
 
