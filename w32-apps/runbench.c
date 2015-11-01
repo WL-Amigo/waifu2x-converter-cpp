@@ -9,6 +9,7 @@ main(int argc, char **argv)
     int block_size = 512;
     int proc = 0;
     int num_proc;
+    int num_thread = 0;
     const struct W2XConvProcessor *proc_list;
     
     proc_list = w2xconv_get_processor_list(&num_proc);
@@ -31,7 +32,11 @@ main(int argc, char **argv)
         proc = atoi(argv[2]);
     }
 
-    struct W2XConv *c = w2xconv_init_with_processor(proc, 0, 1);
+    if (argc >= 4) {
+        num_thread = atoi(argv[3]);
+    }
+
+    struct W2XConv *c = w2xconv_init_with_processor(proc, num_thread, 1);
     puts(proc_list[proc].dev_name);
 
     int num_maps[7] = {
