@@ -119,6 +119,7 @@ madd_vreg(__m128 a, __m128 b, __m128 c)
 
 #include "modelHandler_simd.hpp"
 
+
 namespace w2xc {
 void
 filter_SSE_impl(ComputeEnv *env,

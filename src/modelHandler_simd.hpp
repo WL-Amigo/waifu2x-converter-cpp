@@ -74,6 +74,13 @@ apply_filter_line(unsigned long width,
                 }
 
 
+                if (UNROLL == 4) {
+                    for (; x0<xb_end-3; x0+=4) {
+#                       include "modelHandler_simd_unroll4.hpp"
+                    }
+                }
+
+
 
 #if 0
                 if (UNROLL == 6) {
@@ -83,11 +90,6 @@ apply_filter_line(unsigned long width,
                 }
 
 
-                if (UNROLL == 4) {
-                    for (; x0<xb_end-3; x0+=4) {
-#                       include "body-unroll4.hpp"
-                    }
-                }
 
 #endif
 

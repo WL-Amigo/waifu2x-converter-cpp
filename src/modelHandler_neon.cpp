@@ -88,6 +88,25 @@ NEON_GEN_BINARY(max256, vmaxq_f32)
 NEON_GEN_BINARY(min256, vminq_f32)
 #include "modelHandler_avx_func.hpp"
 
+#undef UNROLL
+#define UNROLL 4
+
+/* arm neon */
+typedef float32x4_t vreg_t;
+#define VEC_NELEM 4
+#define store_vreg(ptr,val) (*(float32x4_t*)(ptr))=(val)
+#define load_vreg(ptr) (*(float32x4_t*)(ptr))
+#define load_vreg_broadcast(ptr) vdupq_n_f32(*(float*)ptr)
+#define madd_vreg(a,b,c) vmlaq_f32(c,a,b)
+
+#define add_vreg vaddq_f32
+#define zero_vreg() vdupq_n_f32(0)
+#define min_vreg vminq_f32
+#define max_vreg vmaxq_f32
+#define set1_vreg vdupq_n_f32
+
+#include "modelHandler_simd.hpp"
+
 namespace w2xc {
 void
 filter_NEON_impl(ComputeEnv *env,
