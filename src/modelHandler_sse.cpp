@@ -88,6 +88,37 @@ SSE_GEN_BINARY(min256, _mm_min_ps)
 
 #include "modelHandler_avx_func.hpp"
 
+#undef UNROLL
+
+#define USE_SSE3
+#define UNROLL 4
+
+/* x86 SSE */
+typedef __m128 vreg_t;
+#define VEC_NELEM 4
+#define store_vreg(ptr,val) _mm_store_ps((float*)(ptr), val)
+#define load_vreg(ptr) _mm_load_ps((float*)(ptr))
+    
+static inline __m128
+load_vreg_broadcast(const unsigned char *ptr)
+{
+    return _mm_set1_ps(*(float*)ptr);
+}
+
+static inline __m128
+madd_vreg(__m128 a, __m128 b, __m128 c)
+{
+    return _mm_add_ps(_mm_mul_ps(a,b), c);
+}
+
+#define add_vreg _mm_add_ps
+#define zero_vreg _mm_setzero_ps
+#define min_vreg _mm_min_ps
+#define max_vreg _mm_max_ps
+#define set1_vreg _mm_set1_ps
+
+#include "modelHandler_simd.hpp"
+
 namespace w2xc {
 void
 filter_SSE_impl(ComputeEnv *env,
@@ -101,16 +132,29 @@ filter_SSE_impl(ComputeEnv *env,
 		int ip_height,
 		int nJob)
 {
-	filter_AVX_impl0(env,
-                         packed_input,
-                         packed_output,
-                         nInputPlanes,
-                         nOutputPlanes,
-                         fbiases,
-                         weight,
-                         ip_width,
-                         ip_height,
-                         nJob);
+	if (simd_available(nInputPlanes, nOutputPlanes)) {
+		filter_simd_impl0(env,
+				  packed_input,
+				  packed_output,
+				  nInputPlanes,
+				  nOutputPlanes,
+				  fbiases,
+				  weight,
+				  ip_width,
+				  ip_height,
+				  nJob);
+	} else {
+		filter_AVX_impl0(env,
+				 packed_input,
+				 packed_output,
+				 nInputPlanes,
+				 nOutputPlanes,
+				 fbiases,
+				 weight,
+				 ip_width,
+				 ip_height,
+				 nJob);
+	}
 }
 
 

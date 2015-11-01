@@ -86,8 +86,6 @@ NEON_GEN_BINARY(add256, vaddq_f32)
 NEON_GEN_BINARY(mul256, vmulq_f32)
 NEON_GEN_BINARY(max256, vmaxq_f32)
 NEON_GEN_BINARY(min256, vminq_f32)
-
-
 #include "modelHandler_avx_func.hpp"
 
 namespace w2xc {
@@ -104,15 +102,15 @@ filter_NEON_impl(ComputeEnv *env,
 		int nJob)
 {
 	filter_AVX_impl0(env,
-                         packed_input,
-                         packed_output,
-                         nInputPlanes,
-                         nOutputPlanes,
-                         fbiases,
-                         weight,
-                         ip_width,
-                         ip_height,
-                         nJob);
+			 packed_input,
+			 packed_output,
+			 nInputPlanes,
+			 nOutputPlanes,
+			 fbiases,
+			 weight,
+			 ip_width,
+			 ip_height,
+			 nJob);
 }
 
 
