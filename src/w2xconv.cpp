@@ -78,7 +78,7 @@ global_init2(void)
 		x_cpuid(v, 1);
 
 		if ((v[2] & 0x18000000) == 0x18000000) {
-			if (0 && v[2] & (1<<12)) {
+			if (v[2] & (1<<12)) {
 				host.sub_type = W2XCONV_PROC_HOST_FMA;
 			} else {
 				host.sub_type = W2XCONV_PROC_HOST_AVX;
