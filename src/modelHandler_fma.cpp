@@ -73,7 +73,7 @@ filter_FMA_impl(ComputeEnv *env,
 		int nJob)
 {
 	if (simd_available(nInputPlanes, nOutputPlanes)) {
-		filter_simd_impl0(env->tpool,
+		filter_simd_impl0(env,
 				  packed_input,
 				  packed_output,
 				  nInputPlanes,

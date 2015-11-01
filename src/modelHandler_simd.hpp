@@ -158,7 +158,7 @@ apply_filter_line(unsigned long width,
 }
 
 static inline void
-filter_simd_impl0(w2xc::ThreadPool *tpool,
+filter_simd_impl0(ComputeEnv *env,
                   const float *packed_input,
                   float *packed_output,
                   int nInputPlanes,
@@ -232,7 +232,7 @@ filter_simd_impl0(w2xc::ThreadPool *tpool,
 	}
 
 #else
-        w2xc::startFunc(tpool, func);
+        w2xc::startFunc(env->tpool, func);
 #endif
 
 }
