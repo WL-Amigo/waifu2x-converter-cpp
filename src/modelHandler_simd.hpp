@@ -67,6 +67,13 @@ apply_filter_line(unsigned long width,
                 }
 
 
+                if (UNROLL == 2) {
+                    for (; x0<xb_end-1; x0+=2) {
+#                       include "modelHandler_simd_unroll2.hpp"
+                    }
+                }
+
+
 
 #if 0
                 if (UNROLL == 6) {
@@ -82,11 +89,6 @@ apply_filter_line(unsigned long width,
                     }
                 }
 
-                if (UNROLL == 2) {
-                    for (; x0<xb_end-1; x0+=2) {
-#                       include "body-unroll2.hpp"
-                    }
-                }
 #endif
 
 

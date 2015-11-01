@@ -54,8 +54,8 @@ ARM_SRCS:=$(foreach bn,$(ARM_SRCS_BASENAME),$(TOPDIR)/src/$(bn))
 ARM_OBJS:=$(foreach bn,$(ARM_OBJS_BASENAME),$(ARCH)/$(bn))
 ARM_DEPS:=$(ARM_OBJS:.o=.d)
 
-CROSS_CC=$(TOOLCHAIN_PREFIX)$(ARCH)-gcc
-CROSS_CXX=$(TOOLCHAIN_PREFIX)$(ARCH)-g++
+CROSS_CC?=$(TOOLCHAIN_PREFIX)$(ARCH)-gcc
+CROSS_CXX?=$(TOOLCHAIN_PREFIX)$(ARCH)-g++
 
 $(ARCH)/%.o: $(TOPDIR)/src/%.cpp
 	$(CROSS_CXX) -o $@ $< $(CXXFLAGS) -c

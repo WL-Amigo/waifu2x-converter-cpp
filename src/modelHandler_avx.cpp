@@ -41,7 +41,11 @@ hadd8(__m256 v)
 #undef UNROLL
 typedef __m256 vreg_t;
 #define VEC_NELEM 8
+#ifdef __x86_64
 #define UNROLL 5
+#else
+#define UNROLL 2
+#endif
 #define store_vreg(ptr,val) _mm256_store_ps((float*)(ptr), val)
 #define load_vreg(ptr) _mm256_load_ps((float*)(ptr))
 #define load_vreg_broadcast(ptr) _mm256_broadcast_ss((float*)(ptr))

@@ -1,7 +1,7 @@
-ARCH=x86_64-unknown-linux-gnu
+ARCH=i686-unknown-linux-gnu
 
-CROSS_CC=gcc
-CROSS_CXX=g++
+CROSS_CC=gcc -m32
+CROSS_CXX=g++ -m32
 
 all: first $(ARCH)/runbench
 
