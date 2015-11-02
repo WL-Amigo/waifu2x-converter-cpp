@@ -81,7 +81,7 @@ for (int dposx=0; dposx<3; dposx++) {
         ACCUMULATE(3);
     }
 
-#elif (defined __ARM_NEON)
+#elif (defined __ARM_NEON && !defined __aarch64__)
 
     for (int ii1=0; ii1<IP_BLOCK_SIZE; ii1+=16) {
         /* q0-q3: ireg
