@@ -40,6 +40,193 @@ for (int dposx=0; dposx<3; dposx++) {
 
 #if (defined USE_SSE3)
     for (int ii1=0; ii1<IP_BLOCK_SIZE; ii1+=4) {
+#if 1
+        /* ** silvermont(4cycle) **
+         *
+         *   <decode>
+         *   movss  i0, mem 
+         *   shufps i0, i0
+         *
+         *   mov    i1, i0
+         *   mul    i0, wreg
+         *
+         *   add    o0, i0
+         *   mul    i1, wreg
+         *
+         *   add    o1, i1
+         *
+         *
+         *   <issue>
+         *   FP0    FP1     Mem
+         *   shups  mul0    load
+         *   mov    mul0        
+         *   add    mul1        
+         *          mul1        
+         *
+         *
+         * ** other(2cycle) **
+         *   shuf, load, mul, add
+         *               mul, add
+         *
+         */
+
+        __asm__ __volatile__ ("movaps  16*0(%[W_CUR]), %%xmm2\n\t"
+                              "movaps  16*1(%[W_CUR]), %%xmm3\n\t"
+
+                              "movss   0(%[PTR0]), %%xmm0\n\t"
+                              "shufps  $0, %%xmm0, %%xmm0\n\t"
+                              "movaps  %%xmm0, %%xmm1\n\t"
+                              "mulps   %%xmm2, %%xmm0\n\t"
+                              "addps   %%xmm0, %[OREG00]\n\t"
+                              "mulps   %%xmm3, %%xmm1\n\t"
+                              "addps   %%xmm1, %[OREG01]\n\t"
+                              "movss   0(%[PTR1]), %%xmm0\n\t"
+                              "shufps  $0, %%xmm0, %%xmm0\n\t"
+                              "movaps  %%xmm0, %%xmm1\n\t"
+                              "mulps   %%xmm2, %%xmm0\n\t"
+                              "addps   %%xmm0, %[OREG10]\n\t"
+                              "mulps   %%xmm3, %%xmm1\n\t"
+                              "addps   %%xmm1, %[OREG11]\n\t"
+                              "movss   4(%[PTR1]), %%xmm0\n\t"
+                              "shufps  $0, %%xmm0, %%xmm0\n\t"
+                              "movaps  %%xmm0, %%xmm1\n\t"
+                              "mulps   %%xmm2, %%xmm0\n\t"
+                              "addps   %%xmm0, %[OREG20]\n\t"
+                              "mulps   %%xmm3, %%xmm1\n\t"
+                              "addps   %%xmm1, %[OREG21]\n\t"
+                              "movss   0(%[PTR3]), %%xmm0\n\t"
+                              "shufps  $0, %%xmm0, %%xmm0\n\t"
+                              "movaps  %%xmm0, %%xmm1\n\t"
+                              "mulps   %%xmm2, %%xmm0\n\t"
+                              "addps   %%xmm0, %[OREG30]\n\t"
+                              "mulps   %%xmm3, %%xmm1\n\t"
+                              "addps   %%xmm1, %[OREG31]\n\t"
+
+
+                              "movaps  16*2(%[W_CUR]), %%xmm2\n\t"
+                              "movaps  16*3(%[W_CUR]), %%xmm3\n\t"
+
+                              "movss   4(%[PTR0]), %%xmm0\n\t"
+                              "shufps  $0, %%xmm0, %%xmm0\n\t"
+                              "movaps  %%xmm0, %%xmm1\n\t"
+                              "mulps   %%xmm2, %%xmm0\n\t"
+                              "addps   %%xmm0, %[OREG00]\n\t"
+                              "mulps   %%xmm3, %%xmm1\n\t"
+                              "addps   %%xmm1, %[OREG01]\n\t"
+                              "movss   4(%[PTR1]), %%xmm0\n\t"
+                              "shufps  $0, %%xmm0, %%xmm0\n\t"
+                              "movaps  %%xmm0, %%xmm1\n\t"
+                              "mulps   %%xmm2, %%xmm0\n\t"
+                              "addps   %%xmm0, %[OREG10]\n\t"
+                              "mulps   %%xmm3, %%xmm1\n\t"
+                              "addps   %%xmm1, %[OREG11]\n\t"
+                              "movss   8(%[PTR1]), %%xmm0\n\t"
+                              "shufps  $0, %%xmm0, %%xmm0\n\t"
+                              "movaps  %%xmm0, %%xmm1\n\t"
+                              "mulps   %%xmm2, %%xmm0\n\t"
+                              "addps   %%xmm0, %[OREG20]\n\t"
+                              "mulps   %%xmm3, %%xmm1\n\t"
+                              "addps   %%xmm1, %[OREG21]\n\t"
+                              "movss   4(%[PTR3]), %%xmm0\n\t"
+                              "shufps  $0, %%xmm0, %%xmm0\n\t"
+                              "movaps  %%xmm0, %%xmm1\n\t"
+                              "mulps   %%xmm2, %%xmm0\n\t"
+                              "addps   %%xmm0, %[OREG30]\n\t"
+                              "mulps   %%xmm3, %%xmm1\n\t"
+                              "addps   %%xmm1, %[OREG31]\n\t"
+
+
+                              "movaps  16*4(%[W_CUR]), %%xmm2\n\t"
+                              "movaps  16*5(%[W_CUR]), %%xmm3\n\t"
+
+                              "movss   8(%[PTR0]), %%xmm0\n\t"
+                              "shufps  $0, %%xmm0, %%xmm0\n\t"
+                              "movaps  %%xmm0, %%xmm1\n\t"
+                              "mulps   %%xmm2, %%xmm0\n\t"
+                              "addps   %%xmm0, %[OREG00]\n\t"
+                              "mulps   %%xmm3, %%xmm1\n\t"
+                              "addps   %%xmm1, %[OREG01]\n\t"
+                              "movss   8(%[PTR1]), %%xmm0\n\t"
+                              "shufps  $0, %%xmm0, %%xmm0\n\t"
+                              "movaps  %%xmm0, %%xmm1\n\t"
+                              "mulps   %%xmm2, %%xmm0\n\t"
+                              "addps   %%xmm0, %[OREG10]\n\t"
+                              "mulps   %%xmm3, %%xmm1\n\t"
+                              "addps   %%xmm1, %[OREG11]\n\t"
+                              "movss   12(%[PTR1]), %%xmm0\n\t"
+                              "shufps  $0, %%xmm0, %%xmm0\n\t"
+                              "movaps  %%xmm0, %%xmm1\n\t"
+                              "mulps   %%xmm2, %%xmm0\n\t"
+                              "addps   %%xmm0, %[OREG20]\n\t"
+                              "mulps   %%xmm3, %%xmm1\n\t"
+                              "addps   %%xmm1, %[OREG21]\n\t"
+                              "movss   8(%[PTR3]), %%xmm0\n\t"
+                              "shufps  $0, %%xmm0, %%xmm0\n\t"
+                              "movaps  %%xmm0, %%xmm1\n\t"
+                              "mulps   %%xmm2, %%xmm0\n\t"
+                              "addps   %%xmm0, %[OREG30]\n\t"
+                              "mulps   %%xmm3, %%xmm1\n\t"
+                              "addps   %%xmm1, %[OREG31]\n\t"
+
+
+                              "movaps  16*6(%[W_CUR]), %%xmm2\n\t"
+                              "movaps  16*7(%[W_CUR]), %%xmm3\n\t"
+
+                              "movss   12(%[PTR0]), %%xmm0\n\t"
+                              "shufps  $0, %%xmm0, %%xmm0\n\t"
+                              "movaps  %%xmm0, %%xmm1\n\t"
+                              "mulps   %%xmm2, %%xmm0\n\t"
+                              "addps   %%xmm0, %[OREG00]\n\t"
+                              "mulps   %%xmm3, %%xmm1\n\t"
+                              "addps   %%xmm1, %[OREG01]\n\t"
+                              "movss   12(%[PTR1]), %%xmm0\n\t"
+                              "shufps  $0, %%xmm0, %%xmm0\n\t"
+                              "movaps  %%xmm0, %%xmm1\n\t"
+                              "mulps   %%xmm2, %%xmm0\n\t"
+                              "addps   %%xmm0, %[OREG10]\n\t"
+                              "mulps   %%xmm3, %%xmm1\n\t"
+                              "addps   %%xmm1, %[OREG11]\n\t"
+                              "movss   16(%[PTR1]), %%xmm0\n\t"
+                              "shufps  $0, %%xmm0, %%xmm0\n\t"
+                              "movaps  %%xmm0, %%xmm1\n\t"
+                              "mulps   %%xmm2, %%xmm0\n\t"
+                              "addps   %%xmm0, %[OREG20]\n\t"
+                              "mulps   %%xmm3, %%xmm1\n\t"
+                              "addps   %%xmm1, %[OREG21]\n\t"
+                              "movss   12(%[PTR3]), %%xmm0\n\t"
+                              "shufps  $0, %%xmm0, %%xmm0\n\t"
+                              "movaps  %%xmm0, %%xmm1\n\t"
+                              "mulps   %%xmm2, %%xmm0\n\t"
+                              "addps   %%xmm0, %[OREG30]\n\t"
+                              "mulps   %%xmm3, %%xmm1\n\t"
+                              "addps   %%xmm1, %[OREG31]\n\t"
+
+
+                              :[OREG00]"+x"(oreg00),
+                               [OREG01]"+x"(oreg01),
+                               [OREG10]"+x"(oreg10),
+                               [OREG11]"+x"(oreg11),
+                               [OREG20]"+x"(oreg20),
+                               [OREG21]"+x"(oreg21),
+                               [OREG30]"+x"(oreg30),
+                               [OREG31]"+x"(oreg31)
+
+                              :[PTR0]"r"(input_cur_x0),
+                               [PTR1]"r"(input_cur_x1),
+                               /*[PTR2]"r"(input_cur_x2),*/
+                               [PTR3]"r"(input_cur_x3),
+                               [W_CUR]"r"(w_cur)
+                              :"xmm0","xmm1","xmm2","xmm3"
+            );
+
+        w_cur += 32*4;
+
+        input_cur_x0 += 16;
+        input_cur_x1 += 16;
+        //input_cur_x2 += 16;
+        input_cur_x3 += 16;
+
+#else
         __m128 i0 = _mm_load_ps((float*)input_cur_x0);
         __m128 i1 = _mm_load_ps((float*)input_cur_x1);
         __m128 i2 = _mm_load_ps((float*)input_cur_x2);
@@ -79,6 +266,7 @@ for (int dposx=0; dposx<3; dposx++) {
         ACCUMULATE(1);
         ACCUMULATE(2);
         ACCUMULATE(3);
+#endif
     }
 
 #elif (defined __ARM_NEON && !defined __aarch64__)
