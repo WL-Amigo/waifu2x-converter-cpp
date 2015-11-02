@@ -37,6 +37,7 @@ for (int dposx=0; dposx<3; dposx++) {
     const unsigned char *input_cur_x1 = in + off1;
     const unsigned char *input_cur_x2 = in + off2;
     const unsigned char *input_cur_x3 = in + off3;
+    uintptr_t addr_off = 0;
 
 #if (defined USE_SSE3)
     for (int ii1=0; ii1<IP_BLOCK_SIZE; ii1+=4) {
@@ -73,28 +74,28 @@ for (int dposx=0; dposx<3; dposx++) {
         __asm__ __volatile__ ("movaps  16*0(%[W_CUR]), %%xmm2\n\t"
                               "movaps  16*1(%[W_CUR]), %%xmm3\n\t"
 
-                              "movss   0(%[PTR0]), %%xmm0\n\t"
+                              "movss   0(%[PTR0],%[ADDR_OFF]), %%xmm0\n\t"
                               "shufps  $0, %%xmm0, %%xmm0\n\t"
                               "movaps  %%xmm0, %%xmm1\n\t"
                               "mulps   %%xmm2, %%xmm0\n\t"
                               "addps   %%xmm0, %[OREG00]\n\t"
                               "mulps   %%xmm3, %%xmm1\n\t"
                               "addps   %%xmm1, %[OREG01]\n\t"
-                              "movss   0(%[PTR1]), %%xmm0\n\t"
+                              "movss   0(%[PTR1],%[ADDR_OFF]), %%xmm0\n\t"
                               "shufps  $0, %%xmm0, %%xmm0\n\t"
                               "movaps  %%xmm0, %%xmm1\n\t"
                               "mulps   %%xmm2, %%xmm0\n\t"
                               "addps   %%xmm0, %[OREG10]\n\t"
                               "mulps   %%xmm3, %%xmm1\n\t"
                               "addps   %%xmm1, %[OREG11]\n\t"
-                              "movss   4(%[PTR1]), %%xmm0\n\t"
+                              "movss   0(%[PTR2],%[ADDR_OFF]), %%xmm0\n\t"
                               "shufps  $0, %%xmm0, %%xmm0\n\t"
                               "movaps  %%xmm0, %%xmm1\n\t"
                               "mulps   %%xmm2, %%xmm0\n\t"
                               "addps   %%xmm0, %[OREG20]\n\t"
                               "mulps   %%xmm3, %%xmm1\n\t"
                               "addps   %%xmm1, %[OREG21]\n\t"
-                              "movss   0(%[PTR3]), %%xmm0\n\t"
+                              "movss   0(%[PTR3],%[ADDR_OFF]), %%xmm0\n\t"
                               "shufps  $0, %%xmm0, %%xmm0\n\t"
                               "movaps  %%xmm0, %%xmm1\n\t"
                               "mulps   %%xmm2, %%xmm0\n\t"
@@ -106,28 +107,28 @@ for (int dposx=0; dposx<3; dposx++) {
                               "movaps  16*2(%[W_CUR]), %%xmm2\n\t"
                               "movaps  16*3(%[W_CUR]), %%xmm3\n\t"
 
-                              "movss   4(%[PTR0]), %%xmm0\n\t"
+                              "movss   4(%[PTR0],%[ADDR_OFF]), %%xmm0\n\t"
                               "shufps  $0, %%xmm0, %%xmm0\n\t"
                               "movaps  %%xmm0, %%xmm1\n\t"
                               "mulps   %%xmm2, %%xmm0\n\t"
                               "addps   %%xmm0, %[OREG00]\n\t"
                               "mulps   %%xmm3, %%xmm1\n\t"
                               "addps   %%xmm1, %[OREG01]\n\t"
-                              "movss   4(%[PTR1]), %%xmm0\n\t"
+                              "movss   4(%[PTR1],%[ADDR_OFF]), %%xmm0\n\t"
                               "shufps  $0, %%xmm0, %%xmm0\n\t"
                               "movaps  %%xmm0, %%xmm1\n\t"
                               "mulps   %%xmm2, %%xmm0\n\t"
                               "addps   %%xmm0, %[OREG10]\n\t"
                               "mulps   %%xmm3, %%xmm1\n\t"
                               "addps   %%xmm1, %[OREG11]\n\t"
-                              "movss   8(%[PTR1]), %%xmm0\n\t"
+                              "movss   4(%[PTR2],%[ADDR_OFF]), %%xmm0\n\t"
                               "shufps  $0, %%xmm0, %%xmm0\n\t"
                               "movaps  %%xmm0, %%xmm1\n\t"
                               "mulps   %%xmm2, %%xmm0\n\t"
                               "addps   %%xmm0, %[OREG20]\n\t"
                               "mulps   %%xmm3, %%xmm1\n\t"
                               "addps   %%xmm1, %[OREG21]\n\t"
-                              "movss   4(%[PTR3]), %%xmm0\n\t"
+                              "movss   4(%[PTR3],%[ADDR_OFF]), %%xmm0\n\t"
                               "shufps  $0, %%xmm0, %%xmm0\n\t"
                               "movaps  %%xmm0, %%xmm1\n\t"
                               "mulps   %%xmm2, %%xmm0\n\t"
@@ -139,28 +140,28 @@ for (int dposx=0; dposx<3; dposx++) {
                               "movaps  16*4(%[W_CUR]), %%xmm2\n\t"
                               "movaps  16*5(%[W_CUR]), %%xmm3\n\t"
 
-                              "movss   8(%[PTR0]), %%xmm0\n\t"
+                              "movss   8(%[PTR0],%[ADDR_OFF]), %%xmm0\n\t"
                               "shufps  $0, %%xmm0, %%xmm0\n\t"
                               "movaps  %%xmm0, %%xmm1\n\t"
                               "mulps   %%xmm2, %%xmm0\n\t"
                               "addps   %%xmm0, %[OREG00]\n\t"
                               "mulps   %%xmm3, %%xmm1\n\t"
                               "addps   %%xmm1, %[OREG01]\n\t"
-                              "movss   8(%[PTR1]), %%xmm0\n\t"
+                              "movss   8(%[PTR1],%[ADDR_OFF]), %%xmm0\n\t"
                               "shufps  $0, %%xmm0, %%xmm0\n\t"
                               "movaps  %%xmm0, %%xmm1\n\t"
                               "mulps   %%xmm2, %%xmm0\n\t"
                               "addps   %%xmm0, %[OREG10]\n\t"
                               "mulps   %%xmm3, %%xmm1\n\t"
                               "addps   %%xmm1, %[OREG11]\n\t"
-                              "movss   12(%[PTR1]), %%xmm0\n\t"
+                              "movss   8(%[PTR2],%[ADDR_OFF]), %%xmm0\n\t"
                               "shufps  $0, %%xmm0, %%xmm0\n\t"
                               "movaps  %%xmm0, %%xmm1\n\t"
                               "mulps   %%xmm2, %%xmm0\n\t"
                               "addps   %%xmm0, %[OREG20]\n\t"
                               "mulps   %%xmm3, %%xmm1\n\t"
                               "addps   %%xmm1, %[OREG21]\n\t"
-                              "movss   8(%[PTR3]), %%xmm0\n\t"
+                              "movss   8(%[PTR3],%[ADDR_OFF]), %%xmm0\n\t"
                               "shufps  $0, %%xmm0, %%xmm0\n\t"
                               "movaps  %%xmm0, %%xmm1\n\t"
                               "mulps   %%xmm2, %%xmm0\n\t"
@@ -172,28 +173,28 @@ for (int dposx=0; dposx<3; dposx++) {
                               "movaps  16*6(%[W_CUR]), %%xmm2\n\t"
                               "movaps  16*7(%[W_CUR]), %%xmm3\n\t"
 
-                              "movss   12(%[PTR0]), %%xmm0\n\t"
+                              "movss   12(%[PTR0],%[ADDR_OFF]), %%xmm0\n\t"
                               "shufps  $0, %%xmm0, %%xmm0\n\t"
                               "movaps  %%xmm0, %%xmm1\n\t"
                               "mulps   %%xmm2, %%xmm0\n\t"
                               "addps   %%xmm0, %[OREG00]\n\t"
                               "mulps   %%xmm3, %%xmm1\n\t"
                               "addps   %%xmm1, %[OREG01]\n\t"
-                              "movss   12(%[PTR1]), %%xmm0\n\t"
+                              "movss   12(%[PTR1],%[ADDR_OFF]), %%xmm0\n\t"
                               "shufps  $0, %%xmm0, %%xmm0\n\t"
                               "movaps  %%xmm0, %%xmm1\n\t"
                               "mulps   %%xmm2, %%xmm0\n\t"
                               "addps   %%xmm0, %[OREG10]\n\t"
                               "mulps   %%xmm3, %%xmm1\n\t"
                               "addps   %%xmm1, %[OREG11]\n\t"
-                              "movss   16(%[PTR1]), %%xmm0\n\t"
+                              "movss   12(%[PTR2],%[ADDR_OFF]), %%xmm0\n\t"
                               "shufps  $0, %%xmm0, %%xmm0\n\t"
                               "movaps  %%xmm0, %%xmm1\n\t"
                               "mulps   %%xmm2, %%xmm0\n\t"
                               "addps   %%xmm0, %[OREG20]\n\t"
                               "mulps   %%xmm3, %%xmm1\n\t"
                               "addps   %%xmm1, %[OREG21]\n\t"
-                              "movss   12(%[PTR3]), %%xmm0\n\t"
+                              "movss   12(%[PTR3],%[ADDR_OFF]), %%xmm0\n\t"
                               "shufps  $0, %%xmm0, %%xmm0\n\t"
                               "movaps  %%xmm0, %%xmm1\n\t"
                               "mulps   %%xmm2, %%xmm0\n\t"
@@ -213,18 +214,15 @@ for (int dposx=0; dposx<3; dposx++) {
 
                               :[PTR0]"r"(input_cur_x0),
                                [PTR1]"r"(input_cur_x1),
-                               /*[PTR2]"r"(input_cur_x2),*/
+                               [PTR2]"r"(input_cur_x2),
                                [PTR3]"r"(input_cur_x3),
-                               [W_CUR]"r"(w_cur)
+                               [W_CUR]"r"(w_cur),
+                               [ADDR_OFF]"r"(addr_off)
                               :"xmm0","xmm1","xmm2","xmm3"
             );
 
-        w_cur += 32*4;
-
-        input_cur_x0 += 16;
-        input_cur_x1 += 16;
-        //input_cur_x2 += 16;
-        input_cur_x3 += 16;
+        addr_off += 16;
+        w_cur += 128;
 
 #else
         __m128 i0 = _mm_load_ps((float*)input_cur_x0);
