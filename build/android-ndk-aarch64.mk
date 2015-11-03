@@ -26,4 +26,4 @@ $(ARCH)/cpu-features.o:$(NDK_PREFIX)/sources/android/cpufeatures/cpu-features.c
 OBJS=$(BASE_OBJS) $(BENCH_OBJS) $(ARM_OBJS) $(ARCH)/cpu-features.o
 
 $(ARCH)/runbench: $(OBJS)
-	$(CROSS_CXX) -o $@ $^ $(CXXFLAGS) $(NDK_PREFIX)/sources/cxx-stl/gnu-libstdc++/4.9/libs/arm64-v8a/libgnustl_static.a -g
+	$(CROSS_CXX) -o $@ $^ $(CXXFLAGS) $(NDK_PREFIX)/sources/cxx-stl/gnu-libstdc++/4.9/libs/arm64-v8a/libgnustl_static.a -g -fPIC -fPIE -fpic -pie
