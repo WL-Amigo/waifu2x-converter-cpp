@@ -201,8 +201,7 @@
 	}
 
 /* a += b*c */
-#define CUM(a,b,c)				\
-	a = mad(b,c,a)
+#define CUM(a,b,c) a = mad(b,c,a)
 
 #define BLOCK_SIZE 8
 
@@ -343,20 +342,7 @@ filter_in128_out1(__global const float * __restrict__ packed_input,
 		  __global float * __restrict__ weight)
 {
 	unsigned int yi_base = get_group_id(0)*1;
-	__local float in00_buf[128];
-	__local float in01_buf[128];
-	__local float in02_buf[128];
-
-	__local float in10_buf[128];
-	__local float in11_buf[128];
-	__local float in12_buf[128];
-
-	__local float in20_buf[128];
-	__local float in21_buf[128];
-	__local float in22_buf[128];
-
 	__local float sum_buffer[128];
-
 
 	for (int yi0=0; yi0<1; yi0++) {
 		int yi = yi_base + yi0;
@@ -390,17 +376,17 @@ filter_in128_out1(__global const float * __restrict__ packed_input,
 		/* y      : (2height/group) */
 		/* iplane : 1plane / 1item * 128plane */
 
-		__local float *lin00 = in00_buf;
-		__local float *lin01 = in01_buf;
-		__local float *lin02 = in02_buf;
+		float lin00;
+		float lin01;
+		float lin02;
 
-		__local float *lin10 = in10_buf;
-		__local float *lin11 = in11_buf;
-		__local float *lin12 = in12_buf;
+		float lin10;
+		float lin11;
+		float lin12;
 
-		__local float *lin20 = in20_buf;
-		__local float *lin21 = in21_buf;
-		__local float *lin22 = in22_buf;
+		float lin20;
+		float lin21;
+		float lin22;
 
 #define OUT1_LOAD_WEIGHT(I,Y,X) float w##I##Y##X = weight[(I*16 + lid)*9 + Y*3 + X];
 		float w00 = weight[lid*9 + 0];
@@ -425,23 +411,23 @@ filter_in128_out1(__global const float * __restrict__ packed_input,
 		__global float *pin21 = in21 + lid;
 		__global float *pin22 = in21 + 128 + lid;
 
-		lin01[lid] = pin01[0];
-		lin02[lid] = pin01[0];
+		lin01 = pin01[0];
+		lin02 = pin01[0];
 
-		lin11[lid] = pin11[0];
-		lin12[lid] = pin11[0];
+		lin11 = pin11[0];
+		lin12 = pin11[0];
 
-		lin21[lid] = pin21[0];
-		lin22[lid] = pin21[0];
+		lin21 = pin21[0];
+		lin22 = pin21[0];
 
 #define OUT1_BODY(LEDGE,REDGE)						\
 		{							\
 			float sum = 0;					\
 			{						\
 				int i = lid;				\
-				__local float *tmp0 = lin00;			\
-				__local float *tmp1 = lin10;			\
-				__local float *tmp2 = lin20;			\
+				float tmp0 = lin00;			\
+				float tmp1 = lin10;			\
+				float tmp2 = lin20;			\
 									\
 				lin00 = lin01; lin01 = lin02; lin02 = tmp0; \
 				lin10 = lin11; lin11 = lin12; lin12 = tmp1; \
@@ -452,35 +438,33 @@ filter_in128_out1(__global const float * __restrict__ packed_input,
 					lin12 = lin11;			\
 					lin22 = lin21;			\
 				} else {				\
-					lin02[lid] = pin02[xi*128];	\
-					lin12[lid] = pin12[xi*128];	\
-					lin22[lid] = pin22[xi*128];	\
+					lin02 = pin02[xi*128];		\
+					lin12 = pin12[xi*128];		\
+					lin22 = pin22[xi*128];		\
 				}					\
 									\
-				CUM(sum, w00, lin00[lid]);		\
-				CUM(sum, w10, lin10[lid]);		\
-				CUM(sum, w20, lin20[lid]);		\
+				CUM(sum, w00, lin00);			\
+				CUM(sum, w10, lin10);			\
+				CUM(sum, w20, lin20);			\
 									\
-				CUM(sum, w01, lin01[lid]);		\
-				CUM(sum, w11, lin11[lid]);		\
-				CUM(sum, w21, lin21[lid]);		\
+				CUM(sum, w01, lin01);			\
+				CUM(sum, w11, lin11);			\
+				CUM(sum, w21, lin21);			\
 									\
-				CUM(sum, w02, lin02[lid]);		\
-				CUM(sum, w12, lin12[lid]);		\
-				CUM(sum, w22, lin22[lid]);		\
+				CUM(sum, w02, lin02);			\
+				CUM(sum, w12, lin12);			\
+				CUM(sum, w22, lin22);			\
 									\
 			}						\
 			barrier(CLK_LOCAL_MEM_FENCE);			\
 			sum_buffer[lid] = sum;				\
 			barrier(CLK_LOCAL_MEM_FENCE);			\
 			if (lid < 64) {					\
-				float2 v2 = *(__local float2*)&sum_buffer[lid*2]; \
-				sum_buffer[lid] = v2.x + v2.y;		\
+				sum_buffer[lid] += sum_buffer[lid+64];	\
 			}						\
 			barrier(CLK_LOCAL_MEM_FENCE);			\
 			if (lid < 32) {					\
-				float2 v2 = *(__local float2*)&sum_buffer[lid*2]; \
-				sum_buffer[lid] = v2.x + v2.y;		\
+				sum_buffer[lid] += sum_buffer[lid+32];	\
 			}						\
 			barrier(CLK_LOCAL_MEM_FENCE);			\
 									\
@@ -501,7 +485,6 @@ filter_in128_out1(__global const float * __restrict__ packed_input,
 			}						\
 		}
 
-
 		for (int xi=0; xi<wsz-1; xi++) {
 			OUT1_BODY(0,0);
 		}
@@ -509,6 +492,7 @@ filter_in128_out1(__global const float * __restrict__ packed_input,
 			int xi = wsz-1;
 			OUT1_BODY(0,1);
 		}
+
 	}
 }
 
@@ -817,6 +801,35 @@ filter_in128_out3(__global const float * __restrict__ packed_input,
 		}
 
 	}
+}
+
+
+__kernel void
+filter_intel_gen(__global const float * __restrict__ fin,
+		 unsigned int nInputPlanes,
+		 __global float * __restrict__ foutput,
+		 unsigned int nOutputPlanes,
+		 __global float * __restrict__ fbiases,
+		 unsigned int hsz,
+		 unsigned int wsz,
+		 __global float * __restrict__ fw)
+{
+    __global const unsigned char *in = (__global unsigned char*)fin;
+    __global const unsigned char *w = (__global unsigned char*)fw;
+    __global const unsigned char *biases = (__global unsigned char*)fbiases;
+    __global unsigned char *output = (__global unsigned char*)foutput;
+
+    unsigned int OP_BLOCK_SIZE = 32;
+    unsigned int IP_BLOCK_SIZE = 32;
+
+    int nOutputPlane_block = nOutputPlanes / OP_BLOCK_SIZE;
+    int nInputPlane_block = nInputPlanes / IP_BLOCK_SIZE;
+
+    for (int dposy=0; dposy<3; dposy++) {
+        bool dposy_last = dposy==2;
+        bool dopsy_first = dposy==0;
+    }
+	
 }
 
 

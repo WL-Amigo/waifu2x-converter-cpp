@@ -38,7 +38,7 @@ Model::filter_CV(ComputeEnv *env,
 	size_t in_size = sizeof(float) * size.width * size.height * nInputPlanes;
 	const float *packed_input = (float*)packed_input_buf->get_read_ptr_host(env, in_size);
 	float *packed_output = (float*)packed_output_buf->get_write_ptr_host(env);
-#if 0 // HAVE_OPENCV
+#if HAVE_OPENCV
 
 	std::vector<cv::Mat> outputPlanes;
 	std::vector<cv::Mat> inputPlanes;
