@@ -41,7 +41,7 @@ for (int dposx=0; dposx<3; dposx++) {
 
 #if (defined USE_SSE3)
     for (int ii1=0; ii1<IP_BLOCK_SIZE; ii1+=4) {
-#if 1
+#if defined __x86_64
         /* ** silvermont(4cycle) **
          *
          *   <decode>

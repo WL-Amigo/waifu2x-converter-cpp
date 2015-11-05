@@ -91,7 +91,11 @@ SSE_GEN_BINARY(min256, _mm_min_ps)
 #undef UNROLL
 
 #define USE_SSE3
+#ifdef __x86_64
 #define UNROLL 4
+#else
+#define UNROLL 2
+#endif
 
 /* x86 SSE */
 typedef __m128 vreg_t;
