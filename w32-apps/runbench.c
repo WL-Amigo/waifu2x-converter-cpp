@@ -64,8 +64,11 @@ main(int argc, char **argv)
 
     for (yi=0; yi<block_size; yi++) {
         for (xi=0; xi<block_size; xi++) {
-            src[yi*block_size + xi] = xi;
+            src[yi*block_size + xi] = rand() / (double)RAND_MAX;
         }
+    }
+    for (i=0; i< (total * 3 * 3); i++) {
+        coef[i] = rand() / (double)RAND_MAX;
     }
 
     w2xconv_set_model_3x3(c,

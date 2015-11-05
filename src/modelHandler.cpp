@@ -35,11 +35,10 @@ Model::filter_CV(ComputeEnv *env,
 		 Buffer *packed_output_buf,
 		 const W2Size &size)
 {
-#ifdef HAVE_OPENCV
 	size_t in_size = sizeof(float) * size.width * size.height * nInputPlanes;
-
 	const float *packed_input = (float*)packed_input_buf->get_read_ptr_host(env, in_size);
 	float *packed_output = (float*)packed_output_buf->get_write_ptr_host(env);
+#if 0 // HAVE_OPENCV
 
 	std::vector<cv::Mat> outputPlanes;
 	std::vector<cv::Mat> inputPlanes;
@@ -93,7 +92,99 @@ Model::filter_CV(ComputeEnv *env,
 
 	return true;
 #else
-	abort();
+	std::atomic<int> yi_shared(0);
+
+	auto thread_func = [&](){
+		int w = size.width;
+		int h = size.height;
+
+		while (1) {
+			int yi = yi_shared++;
+
+			if (yi >= h) {
+				break;
+			}
+
+			float *out_line = packed_output + w*nOutputPlanes * yi;
+
+			int yi0 = yi-1;
+			int yi1 = yi;
+			int yi2 = yi+1;
+
+			if (yi == 0) {
+				yi0 = 0;
+			}
+			if (yi == h-1) {
+				yi2 = yi1;
+			}
+
+			const float *in_line0 = packed_input + w * nInputPlanes * yi0;
+			const float *in_line1 = packed_input + w * nInputPlanes * yi1;
+			const float *in_line2 = packed_input + w * nInputPlanes * yi2;
+
+			for (int xi=0; xi<w; xi++) {
+				int x0 = xi-1;
+				int x1 = xi;
+				int x2 = xi+1;
+
+				if (xi == 0) {
+					x0 = 0;
+				}
+
+				if (xi == w-1) {
+					x2 = x1;
+				}
+
+				const float *in00 = in_line0 + x0 * nInputPlanes;
+				const float *in01 = in_line0 + x1 * nInputPlanes;
+				const float *in02 = in_line0 + x2 * nInputPlanes;
+
+				const float *in10 = in_line1 + x0 * nInputPlanes;
+				const float *in11 = in_line1 + x1 * nInputPlanes;
+				const float *in12 = in_line1 + x2 * nInputPlanes;
+
+				const float *in20 = in_line2 + x0 * nInputPlanes;
+				const float *in21 = in_line2 + x1 * nInputPlanes;
+				const float *in22 = in_line2 + x2 * nInputPlanes;
+
+				for (int oi=0; oi<nOutputPlanes; oi++) {
+					float sum = 0;
+
+					for (int ii=0; ii<nInputPlanes; ii++) {
+						int wMatIndex = nInputPlanes * oi + ii;
+						const float *w = weights[wMatIndex].ptr<float>(0);
+
+						sum += in00[ii] * w[0];
+						sum += in01[ii] * w[1];
+						sum += in02[ii] * w[2];
+
+						sum += in10[ii] * w[3];
+						sum += in11[ii] * w[4];
+						sum += in12[ii] * w[5];
+
+						sum += in20[ii] * w[6];
+						sum += in21[ii] * w[7];
+						sum += in22[ii] * w[8];
+					}
+
+					out_line[xi*nOutputPlanes + oi] = sum;
+				}
+			}
+		}
+	};
+
+	int w = size.width;
+	int h = size.height;
+	std::vector<std::thread> workerThreads;
+	int nJob = modelUtility::getInstance().getNumberOfJobs();
+
+	for (int ji=0; ji<nJob; ji++) {
+		workerThreads.emplace_back(std::thread(thread_func));
+	}
+
+	for (auto&th : workerThreads) {
+		th.join();
+	}
 
 #endif
 }
