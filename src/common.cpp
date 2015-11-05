@@ -114,9 +114,9 @@ void unpack_mat_bgr(W2Mat &outputMat,
 		const float *packed_line = in + (yi * w * 3);
 
 		for (int xi=0; xi<w; xi++) {
-			mat_line[xi*3 + 2] = (unsigned char)std::max(0.0f, std::min(255.0f, roundf(packed_line[xi*3 + 0] * 255.0f)));
-			mat_line[xi*3 + 1] = (unsigned char)std::max(0.0f, std::min(255.0f, roundf(packed_line[xi*3 + 1] * 255.0f)));
-			mat_line[xi*3 + 0] = (unsigned char)std::max(0.0f, std::min(255.0f, roundf(packed_line[xi*3 + 2] * 255.0f)));
+			mat_line[xi*3 + 2] = (unsigned char)(std::max)(0.0f, (std::min)(255.0f, roundf(packed_line[xi*3 + 0] * 255.0f)));
+			mat_line[xi*3 + 1] = (unsigned char)(std::max)(0.0f, (std::min)(255.0f, roundf(packed_line[xi*3 + 1] * 255.0f)));
+			mat_line[xi*3 + 0] = (unsigned char)(std::max)(0.0f, (std::min)(255.0f, roundf(packed_line[xi*3 + 2] * 255.0f)));
 		}
 	}
 }
@@ -131,9 +131,9 @@ void unpack_mat_rgb(W2Mat &outputMat,
 		const float *packed_line = in + (yi * w * 3);
 
 		for (int xi=0; xi<w; xi++) {
-			mat_line[xi*3 + 0] = (unsigned char)std::max(0.0f, std::min(255.0f, roundf(packed_line[xi*3 + 0] * 255.0f)));
-			mat_line[xi*3 + 1] = (unsigned char)std::max(0.0f, std::min(255.0f, roundf(packed_line[xi*3 + 1] * 255.0f)));
-			mat_line[xi*3 + 2] = (unsigned char)std::max(0.0f, std::min(255.0f, roundf(packed_line[xi*3 + 2] * 255.0f)));
+			mat_line[xi*3 + 0] = (unsigned char)(std::max)(0.0f, (std::min)(255.0f, roundf(packed_line[xi*3 + 0] * 255.0f)));
+			mat_line[xi*3 + 1] = (unsigned char)(std::max)(0.0f, (std::min)(255.0f, roundf(packed_line[xi*3 + 1] * 255.0f)));
+			mat_line[xi*3 + 2] = (unsigned char)(std::max)(0.0f, (std::min)(255.0f, roundf(packed_line[xi*3 + 2] * 255.0f)));
 		}
 	}
 }
@@ -148,9 +148,9 @@ void unpack_mat_rgb_f32(W2Mat &outputMat,
 		const float *packed_line = in + (yi * w * 3);
 
 		for (int xi=0; xi<w; xi++) {
-			mat_line[xi*3 + 0] = std::max(0.0f, std::min(1.0f, packed_line[xi*3 + 0]));
-			mat_line[xi*3 + 1] = std::max(0.0f, std::min(1.0f, packed_line[xi*3 + 1]));
-			mat_line[xi*3 + 2] = std::max(0.0f, std::min(1.0f, packed_line[xi*3 + 2]));
+			mat_line[xi*3 + 0] = (std::max)(0.0f, std::min(1.0f, packed_line[xi*3 + 0]));
+			mat_line[xi*3 + 1] = (std::max)(0.0f, std::min(1.0f, packed_line[xi*3 + 1]));
+			mat_line[xi*3 + 2] = (std::max)(0.0f, std::min(1.0f, packed_line[xi*3 + 2]));
 		}
 	}
 }

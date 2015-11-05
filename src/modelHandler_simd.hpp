@@ -142,8 +142,8 @@ apply_filter_line(unsigned long width,
                             float bv = ((float*)fbiases)[oi0*OP_BLOCK_SIZE+oi1];
                             float v = ((float*)output_base0)[oi1];
                             v += otmp[oi1] + bv;
-                            float mtz = std::max(v, 0.0f);
-                            float ltz = std::min(v, 0.0f);
+                            float mtz = (std::max)(v, 0.0f);
+                            float ltz = (std::min)(v, 0.0f);
                             v = ltz * 0.1f + mtz;
                             ((float*)output_base0)[oi1] = v;
                         }

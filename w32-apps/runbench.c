@@ -68,7 +68,7 @@ main(int argc, char **argv)
         }
     }
     for (i=0; i< (total * 3 * 3); i++) {
-        coef[i] = rand() / (double)RAND_MAX;
+        coef[i] = (rand() / (double)RAND_MAX);
     }
 
     w2xconv_set_model_3x3(c,

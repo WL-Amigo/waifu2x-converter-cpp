@@ -38,7 +38,7 @@ Model::filter_CV(ComputeEnv *env,
 	size_t in_size = sizeof(float) * size.width * size.height * nInputPlanes;
 	const float *packed_input = (float*)packed_input_buf->get_read_ptr_host(env, in_size);
 	float *packed_output = (float*)packed_output_buf->get_write_ptr_host(env);
-#if HAVE_OPENCV
+#if 0 // HAVE_OPENCV
 
 	std::vector<cv::Mat> outputPlanes;
 	std::vector<cv::Mat> inputPlanes;
@@ -167,7 +167,13 @@ Model::filter_CV(ComputeEnv *env,
 						sum += in22[ii] * w[8];
 					}
 
-					out_line[xi*nOutputPlanes + oi] = sum;
+					float v = sum;
+					v += biases[oi];
+					float mtz = (std::max)(v, 0.0f);
+					float ltz = (std::min)(v, 0.0f);
+					v = ltz*0.1f + mtz;
+
+					out_line[xi*nOutputPlanes + oi] = v;
 				}
 			}
 		}
@@ -177,7 +183,6 @@ Model::filter_CV(ComputeEnv *env,
 	int h = size.height;
 	std::vector<std::thread> workerThreads;
 	int nJob = modelUtility::getInstance().getNumberOfJobs();
-
 	for (int ji=0; ji<nJob; ji++) {
 		workerThreads.emplace_back(std::thread(thread_func));
 	}
