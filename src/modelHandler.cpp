@@ -352,7 +352,7 @@ bool Model::filter_AVX_OpenCL(W2XConv *conv,
 			switch (proc->sub_type) {
 			case W2XCONV_PROC_HOST_SSE3:
 				simd_vec_width = 4;
-				simd_iplane = true;
+				simd_oplane = true;
 				break;
 
 			case W2XCONV_PROC_HOST_NEON:

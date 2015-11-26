@@ -71,137 +71,160 @@ for (int dposx=0; dposx<3; dposx++) {
          *
          */
 
+
+#define OP_0_0(OFF)           "movss   " #OFF "(%[PTR0],%[ADDR_OFF]), %%xmm0\n\t"
+#define OP_0_1(OFF)           "shufps  $0, %%xmm0, %%xmm0\n\t"
+#define OP_0_2(OFF)           "movaps  %%xmm0, %%xmm1\n\t"
+#define OP_0_3(OFF)           "mulps   %%xmm2, %%xmm0\n\t"
+#define OP_0_4(OFF)           "addps   %%xmm0, %[OREG00]\n\t"
+#define OP_0_5(OFF)           "mulps   %%xmm3, %%xmm1\n\t"
+#define OP_0_6(OFF)           "addps   %%xmm1, %[OREG01]\n\t"
+
+#define OP_1_0(OFF)           "movss   " #OFF "(%[PTR1],%[ADDR_OFF]), %%xmm4\n\t"
+#define OP_1_1(OFF)           "shufps  $0, %%xmm4, %%xmm4\n\t"
+#define OP_1_2(OFF)           "movaps  %%xmm4, %%xmm5\n\t"
+#define OP_1_3(OFF)           "mulps   %%xmm2, %%xmm4\n\t"
+#define OP_1_4(OFF)           "addps   %%xmm4, %[OREG10]\n\t"
+#define OP_1_5(OFF)           "mulps   %%xmm3, %%xmm5\n\t"
+#define OP_1_6(OFF)           "addps   %%xmm5, %[OREG11]\n\t"
+
+#define OP_2_0(OFF)           "movss   " #OFF "(%[PTR2],%[ADDR_OFF]), %%xmm0\n\t"
+#define OP_2_1(OFF)           "shufps  $0, %%xmm0, %%xmm0\n\t"
+#define OP_2_2(OFF)           "movaps  %%xmm0, %%xmm1\n\t"
+#define OP_2_3(OFF)           "mulps   %%xmm2, %%xmm0\n\t"
+#define OP_2_4(OFF)           "addps   %%xmm0, %[OREG20]\n\t"
+#define OP_2_5(OFF)           "mulps   %%xmm3, %%xmm1\n\t"
+#define OP_2_6(OFF)           "addps   %%xmm1, %[OREG21]\n\t"
+
+#define OP_3_0(OFF)           "movss   " #OFF "(%[PTR3],%[ADDR_OFF]), %%xmm4\n\t"
+#define OP_3_1(OFF)           "shufps  $0, %%xmm4, %%xmm4\n\t"
+#define OP_3_2(OFF)           "movaps  %%xmm4, %%xmm5\n\t"
+#define OP_3_3(OFF)           "mulps   %%xmm2, %%xmm4\n\t"
+#define OP_3_4(OFF)           "addps   %%xmm4, %[OREG30]\n\t"
+#define OP_3_5(OFF)           "mulps   %%xmm3, %%xmm5\n\t"
+#define OP_3_6(OFF)           "addps   %%xmm5, %[OREG31]\n\t"
+
+                              /* 0: mov    ld-> 0  <1>
+                               * 1: shuf   0 -> 0  <2,3>
+                               * 2: mov    0 -> 1  <5>
+                               * 3: mul  2,0 -> 0  <4>
+                               * 4: add  0,D -> D  D
+                               * 5: mul  3,1 -> 1  <6>
+                               * 6: add  1,D -> D  D
+                               */
+
+
+#define OP_BLOCK_0(OFF,NOFF)                      \
+                              OP_0_0(OFF)         \
+                              OP_1_0(OFF)         \
+                              OP_0_1(OFF)         \
+                              OP_1_1(OFF)         \
+                              OP_0_2(OFF)         \
+                              OP_1_2(OFF)         \
+                              OP_0_3(OFF)         \
+                              OP_1_3(OFF)         \
+                              OP_0_4(OFF)         \
+                              OP_2_0(OFF)         \
+                              OP_1_4(OFF)         \
+                              OP_3_0(OFF)         \
+                              OP_0_5(OFF)         \
+                              OP_2_1(OFF)         \
+                              OP_1_5(OFF)         \
+                              OP_3_1(OFF)         \
+                              OP_0_6(OFF)         \
+                              OP_1_6(OFF)         \
+                                                  \
+                              OP_2_2(OFF)         \
+                              OP_3_2(OFF)         \
+                              OP_2_3(OFF)         \
+                              OP_3_3(OFF)         \
+                              OP_2_4(OFF)         \
+                              OP_0_0(NOFF)        \
+                              OP_3_4(OFF)         \
+                              OP_1_0(NOFF)        \
+                              OP_2_5(OFF)         \
+                              OP_0_1(NOFF)        \
+                              OP_3_5(OFF)         \
+                              OP_1_1(NOFF)        \
+                              OP_2_6(OFF)         \
+                              OP_3_6(OFF)
+
+#define OP_BLOCK(OFF,NOFF)                        \
+                              OP_0_2(OFF)         \
+                              OP_1_2(OFF)         \
+                              OP_0_3(OFF)         \
+                              OP_1_3(OFF)         \
+                              OP_0_4(OFF)         \
+                              OP_2_0(OFF)         \
+                              OP_1_4(OFF)         \
+                              OP_3_0(OFF)         \
+                              OP_0_5(OFF)         \
+                              OP_2_1(OFF)         \
+                              OP_1_5(OFF)         \
+                              OP_3_1(OFF)         \
+                              OP_0_6(OFF)         \
+                              OP_1_6(OFF)         \
+                                                  \
+                              OP_2_2(OFF)         \
+                              OP_3_2(OFF)         \
+                              OP_2_3(OFF)         \
+                              OP_3_3(OFF)         \
+                              OP_2_4(OFF)         \
+                              OP_0_0(NOFF)        \
+                              OP_3_4(OFF)         \
+                              OP_1_0(NOFF)        \
+                              OP_2_5(OFF)         \
+                              OP_0_1(NOFF)        \
+                              OP_3_5(OFF)         \
+                              OP_1_1(NOFF)        \
+                              OP_2_6(OFF)         \
+                              OP_3_6(OFF)
+
+
+#define OP_BLOCK_LAST(OFF)                        \
+                              OP_0_2(OFF)         \
+                              OP_1_2(OFF)         \
+                              OP_0_3(OFF)         \
+                              OP_1_3(OFF)         \
+                              OP_0_4(OFF)         \
+                              OP_2_0(OFF)         \
+                              OP_1_4(OFF)         \
+                              OP_3_0(OFF)         \
+                              OP_0_5(OFF)         \
+                              OP_2_1(OFF)         \
+                              OP_1_5(OFF)         \
+                              OP_3_1(OFF)         \
+                              OP_0_6(OFF)         \
+                              OP_1_6(OFF)         \
+                                                  \
+                              OP_2_2(OFF)         \
+                              OP_3_2(OFF)         \
+                              OP_2_3(OFF)         \
+                              OP_3_3(OFF)         \
+                              OP_2_4(OFF)         \
+                              OP_3_4(OFF)         \
+                              OP_2_5(OFF)         \
+                              OP_3_5(OFF)         \
+                              OP_2_6(OFF)         \
+                              OP_3_6(OFF)
+
+
         __asm__ __volatile__ ("movaps  16*0(%[W_CUR]), %%xmm2\n\t"
                               "movaps  16*1(%[W_CUR]), %%xmm3\n\t"
 
-                              "movss   0(%[PTR0],%[ADDR_OFF]), %%xmm0\n\t"
-                              "shufps  $0, %%xmm0, %%xmm0\n\t"
-                              "movaps  %%xmm0, %%xmm1\n\t"
-                              "mulps   %%xmm2, %%xmm0\n\t"
-                              "addps   %%xmm0, %[OREG00]\n\t"
-                              "mulps   %%xmm3, %%xmm1\n\t"
-                              "addps   %%xmm1, %[OREG01]\n\t"
-                              "movss   0(%[PTR1],%[ADDR_OFF]), %%xmm0\n\t"
-                              "shufps  $0, %%xmm0, %%xmm0\n\t"
-                              "movaps  %%xmm0, %%xmm1\n\t"
-                              "mulps   %%xmm2, %%xmm0\n\t"
-                              "addps   %%xmm0, %[OREG10]\n\t"
-                              "mulps   %%xmm3, %%xmm1\n\t"
-                              "addps   %%xmm1, %[OREG11]\n\t"
-                              "movss   0(%[PTR2],%[ADDR_OFF]), %%xmm0\n\t"
-                              "shufps  $0, %%xmm0, %%xmm0\n\t"
-                              "movaps  %%xmm0, %%xmm1\n\t"
-                              "mulps   %%xmm2, %%xmm0\n\t"
-                              "addps   %%xmm0, %[OREG20]\n\t"
-                              "mulps   %%xmm3, %%xmm1\n\t"
-                              "addps   %%xmm1, %[OREG21]\n\t"
-                              "movss   0(%[PTR3],%[ADDR_OFF]), %%xmm0\n\t"
-                              "shufps  $0, %%xmm0, %%xmm0\n\t"
-                              "movaps  %%xmm0, %%xmm1\n\t"
-                              "mulps   %%xmm2, %%xmm0\n\t"
-                              "addps   %%xmm0, %[OREG30]\n\t"
-                              "mulps   %%xmm3, %%xmm1\n\t"
-                              "addps   %%xmm1, %[OREG31]\n\t"
-
+                              OP_BLOCK_0(0,4)
 
                               "movaps  16*2(%[W_CUR]), %%xmm2\n\t"
                               "movaps  16*3(%[W_CUR]), %%xmm3\n\t"
-
-                              "movss   4(%[PTR0],%[ADDR_OFF]), %%xmm0\n\t"
-                              "shufps  $0, %%xmm0, %%xmm0\n\t"
-                              "movaps  %%xmm0, %%xmm1\n\t"
-                              "mulps   %%xmm2, %%xmm0\n\t"
-                              "addps   %%xmm0, %[OREG00]\n\t"
-                              "mulps   %%xmm3, %%xmm1\n\t"
-                              "addps   %%xmm1, %[OREG01]\n\t"
-                              "movss   4(%[PTR1],%[ADDR_OFF]), %%xmm0\n\t"
-                              "shufps  $0, %%xmm0, %%xmm0\n\t"
-                              "movaps  %%xmm0, %%xmm1\n\t"
-                              "mulps   %%xmm2, %%xmm0\n\t"
-                              "addps   %%xmm0, %[OREG10]\n\t"
-                              "mulps   %%xmm3, %%xmm1\n\t"
-                              "addps   %%xmm1, %[OREG11]\n\t"
-                              "movss   4(%[PTR2],%[ADDR_OFF]), %%xmm0\n\t"
-                              "shufps  $0, %%xmm0, %%xmm0\n\t"
-                              "movaps  %%xmm0, %%xmm1\n\t"
-                              "mulps   %%xmm2, %%xmm0\n\t"
-                              "addps   %%xmm0, %[OREG20]\n\t"
-                              "mulps   %%xmm3, %%xmm1\n\t"
-                              "addps   %%xmm1, %[OREG21]\n\t"
-                              "movss   4(%[PTR3],%[ADDR_OFF]), %%xmm0\n\t"
-                              "shufps  $0, %%xmm0, %%xmm0\n\t"
-                              "movaps  %%xmm0, %%xmm1\n\t"
-                              "mulps   %%xmm2, %%xmm0\n\t"
-                              "addps   %%xmm0, %[OREG30]\n\t"
-                              "mulps   %%xmm3, %%xmm1\n\t"
-                              "addps   %%xmm1, %[OREG31]\n\t"
-
+                              OP_BLOCK(4,8)
 
                               "movaps  16*4(%[W_CUR]), %%xmm2\n\t"
                               "movaps  16*5(%[W_CUR]), %%xmm3\n\t"
-
-                              "movss   8(%[PTR0],%[ADDR_OFF]), %%xmm0\n\t"
-                              "shufps  $0, %%xmm0, %%xmm0\n\t"
-                              "movaps  %%xmm0, %%xmm1\n\t"
-                              "mulps   %%xmm2, %%xmm0\n\t"
-                              "addps   %%xmm0, %[OREG00]\n\t"
-                              "mulps   %%xmm3, %%xmm1\n\t"
-                              "addps   %%xmm1, %[OREG01]\n\t"
-                              "movss   8(%[PTR1],%[ADDR_OFF]), %%xmm0\n\t"
-                              "shufps  $0, %%xmm0, %%xmm0\n\t"
-                              "movaps  %%xmm0, %%xmm1\n\t"
-                              "mulps   %%xmm2, %%xmm0\n\t"
-                              "addps   %%xmm0, %[OREG10]\n\t"
-                              "mulps   %%xmm3, %%xmm1\n\t"
-                              "addps   %%xmm1, %[OREG11]\n\t"
-                              "movss   8(%[PTR2],%[ADDR_OFF]), %%xmm0\n\t"
-                              "shufps  $0, %%xmm0, %%xmm0\n\t"
-                              "movaps  %%xmm0, %%xmm1\n\t"
-                              "mulps   %%xmm2, %%xmm0\n\t"
-                              "addps   %%xmm0, %[OREG20]\n\t"
-                              "mulps   %%xmm3, %%xmm1\n\t"
-                              "addps   %%xmm1, %[OREG21]\n\t"
-                              "movss   8(%[PTR3],%[ADDR_OFF]), %%xmm0\n\t"
-                              "shufps  $0, %%xmm0, %%xmm0\n\t"
-                              "movaps  %%xmm0, %%xmm1\n\t"
-                              "mulps   %%xmm2, %%xmm0\n\t"
-                              "addps   %%xmm0, %[OREG30]\n\t"
-                              "mulps   %%xmm3, %%xmm1\n\t"
-                              "addps   %%xmm1, %[OREG31]\n\t"
-
+                              OP_BLOCK(8,12)
 
                               "movaps  16*6(%[W_CUR]), %%xmm2\n\t"
                               "movaps  16*7(%[W_CUR]), %%xmm3\n\t"
-
-                              "movss   12(%[PTR0],%[ADDR_OFF]), %%xmm0\n\t"
-                              "shufps  $0, %%xmm0, %%xmm0\n\t"
-                              "movaps  %%xmm0, %%xmm1\n\t"
-                              "mulps   %%xmm2, %%xmm0\n\t"
-                              "addps   %%xmm0, %[OREG00]\n\t"
-                              "mulps   %%xmm3, %%xmm1\n\t"
-                              "addps   %%xmm1, %[OREG01]\n\t"
-                              "movss   12(%[PTR1],%[ADDR_OFF]), %%xmm0\n\t"
-                              "shufps  $0, %%xmm0, %%xmm0\n\t"
-                              "movaps  %%xmm0, %%xmm1\n\t"
-                              "mulps   %%xmm2, %%xmm0\n\t"
-                              "addps   %%xmm0, %[OREG10]\n\t"
-                              "mulps   %%xmm3, %%xmm1\n\t"
-                              "addps   %%xmm1, %[OREG11]\n\t"
-                              "movss   12(%[PTR2],%[ADDR_OFF]), %%xmm0\n\t"
-                              "shufps  $0, %%xmm0, %%xmm0\n\t"
-                              "movaps  %%xmm0, %%xmm1\n\t"
-                              "mulps   %%xmm2, %%xmm0\n\t"
-                              "addps   %%xmm0, %[OREG20]\n\t"
-                              "mulps   %%xmm3, %%xmm1\n\t"
-                              "addps   %%xmm1, %[OREG21]\n\t"
-                              "movss   12(%[PTR3],%[ADDR_OFF]), %%xmm0\n\t"
-                              "shufps  $0, %%xmm0, %%xmm0\n\t"
-                              "movaps  %%xmm0, %%xmm1\n\t"
-                              "mulps   %%xmm2, %%xmm0\n\t"
-                              "addps   %%xmm0, %[OREG30]\n\t"
-                              "mulps   %%xmm3, %%xmm1\n\t"
-                              "addps   %%xmm1, %[OREG31]\n\t"
-
+                              OP_BLOCK_LAST(12)
 
                               :[OREG00]"+x"(oreg00),
                                [OREG01]"+x"(oreg01),
@@ -218,7 +241,7 @@ for (int dposx=0; dposx<3; dposx++) {
                                [PTR3]"r"(input_cur_x3),
                                [W_CUR]"r"(w_cur),
                                [ADDR_OFF]"r"(addr_off)
-                              :"xmm0","xmm1","xmm2","xmm3"
+                              :"xmm0","xmm1","xmm2","xmm3","xmm4","xmm5","xmm6","xmm7"
             );
 
         addr_off += 16;
