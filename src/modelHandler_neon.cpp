@@ -105,6 +105,8 @@ typedef float32x4_t vreg_t;
 #define max_vreg vmaxq_f32
 #define set1_vreg vdupq_n_f32
 
+#define SIMD_OPLANE
+
 #include "modelHandler_simd.hpp"
 
 namespace w2xc {

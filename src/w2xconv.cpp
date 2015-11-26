@@ -1,6 +1,8 @@
 #define W2XCONV_IMPL
 #define _WIN32_WINNT 0x0600
 
+#define ENABLE_AVX 0
+
 #include <thread>
 
 #ifdef X86OPT
@@ -77,7 +79,7 @@ global_init2(void)
 
 		x_cpuid(v, 1);
 
-		if ((v[2] & 0x18000000) == 0x18000000) {
+		if (ENABLE_AVX && (v[2] & 0x18000000) == 0x18000000) {
 			if (v[2] & (1<<12)) {
 				host.sub_type = W2XCONV_PROC_HOST_FMA;
 			} else {
@@ -118,10 +120,13 @@ global_init2(void)
 
 
 	/*
+	 * <priority>
 	 * 1: NV CUDA
 	 * 2: OCL GPU
-	 * 3: host
-	 * 4: other
+	 * 3: host AVX
+	 * 4: OCL GPU (intel gen)
+	 * 5: host
+	 * 6: other
 	 *
 	 * && orderd by num_core
 	 */

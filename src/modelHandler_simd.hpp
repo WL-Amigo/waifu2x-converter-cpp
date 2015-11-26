@@ -28,8 +28,13 @@ apply_filter_line(unsigned long width,
     const unsigned char *biases = (unsigned char*)fbiases;
     unsigned char *output = (unsigned char*)foutput;
 
+#ifdef SIMD_OPLANE
     int OP_BLOCK_SIZE = VEC_NELEM * 2;
     int IP_BLOCK_SIZE = VEC_NELEM * 4;
+#elif defined SIMD_IPLANE
+    int OP_BLOCK_SIZE = VEC_NELEM * 4;
+    int IP_BLOCK_SIZE = VEC_NELEM * 2;
+#endif
 
     int nOutputPlane_block = nOutputPlanes / OP_BLOCK_SIZE;
     int nInputPlane_block = nInputPlanes / IP_BLOCK_SIZE;

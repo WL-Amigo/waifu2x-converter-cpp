@@ -60,6 +60,8 @@ madd_vreg(__m256 a, __m256 b, __m256 c)
 #define max_vreg _mm256_max_ps
 #define set1_vreg _mm256_set1_ps
 
+#define SIMD_OPLANE
+
 #include "modelHandler_simd.hpp"
 
 namespace w2xc {

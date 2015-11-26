@@ -62,6 +62,8 @@ typedef __m256 vreg_t;
 #define max_vreg _mm256_max_ps
 #define set1_vreg _mm256_set1_ps
 
+#define SIMD_OPLANE
+
 #include "modelHandler_simd.hpp"
 
 namespace w2xc {

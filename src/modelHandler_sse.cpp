@@ -121,6 +121,8 @@ madd_vreg(__m128 a, __m128 b, __m128 c)
 #define max_vreg _mm_max_ps
 #define set1_vreg _mm_set1_ps
 
+#define SIMD_OPLANE
+
 #include "modelHandler_simd.hpp"
 
 
