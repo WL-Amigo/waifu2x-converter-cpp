@@ -869,6 +869,15 @@ bool modelUtility::generateModelFromJSON(const std::string &fileName,
 	FILE *binfp = fopen(binpath.c_str(), "rb");
 
 	if (binfp) {
+		bool need_update = update_test(binpath.c_str(), fileName.c_str());
+
+		if (need_update) {
+			fclose(binfp);
+			binfp = NULL;
+		}
+	}
+
+	if (binfp) {
 		uint32_t nModel;
 
 		fread(&nModel, 4, 1, binfp);
