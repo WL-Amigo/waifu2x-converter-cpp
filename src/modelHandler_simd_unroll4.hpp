@@ -132,10 +132,10 @@ for (int dposx=0; dposx<3; dposx++) {
                               OP_1_5(OFF)         \
                               OP_3_1(OFF)         \
                               OP_0_6(OFF)         \
-                              OP_1_6(OFF)         \
-                                                  \
                               OP_2_2(OFF)         \
+                              OP_1_6(OFF)         \
                               OP_3_2(OFF)         \
+                                                  \
                               OP_2_3(OFF)         \
                               OP_3_3(OFF)         \
                               OP_2_4(OFF)         \
@@ -163,10 +163,10 @@ for (int dposx=0; dposx<3; dposx++) {
                               OP_1_5(OFF)         \
                               OP_3_1(OFF)         \
                               OP_0_6(OFF)         \
-                              OP_1_6(OFF)         \
-                                                  \
                               OP_2_2(OFF)         \
+                              OP_1_6(OFF)         \
                               OP_3_2(OFF)         \
+                                                  \
                               OP_2_3(OFF)         \
                               OP_3_3(OFF)         \
                               OP_2_4(OFF)         \
@@ -195,10 +195,10 @@ for (int dposx=0; dposx<3; dposx++) {
                               OP_1_5(OFF)         \
                               OP_3_1(OFF)         \
                               OP_0_6(OFF)         \
-                              OP_1_6(OFF)         \
-                                                  \
                               OP_2_2(OFF)         \
+                              OP_1_6(OFF)         \
                               OP_3_2(OFF)         \
+                                                  \
                               OP_2_3(OFF)         \
                               OP_3_3(OFF)         \
                               OP_2_4(OFF)         \
