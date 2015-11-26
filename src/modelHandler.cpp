@@ -13,6 +13,7 @@
 #include "cvwrap.hpp"
 #include <fstream>
 #include <thread>
+#include <atomic>
 #include "sec.hpp"
 //#include "threadPool.hpp"
 #include "common.hpp"
