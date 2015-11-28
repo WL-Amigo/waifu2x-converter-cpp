@@ -1391,7 +1391,7 @@ next:
 		image_dst = cv::Mat(image.size(), CV_MAKETYPE(src_depth,4));
 
 		if (image.size() != alpha.size()) {
-			cv::resize(alpha, alpha, image.size(), 0, 0, cv::INTER_CUBIC);
+			cv::resize(alpha, alpha, image.size(), 0, 0, cv::INTER_LINEAR);
 		}
 
 		if (is_rgb) {
