@@ -713,6 +713,71 @@ apply_scale(struct W2XConv *conv,
 	} // 2x scaling : end
 }
 
+static inline float
+clipf(float min, float v, float max)
+{
+	v = std::max(min,v);
+	v = std::min(max,v);
+
+	return v;
+}
+
+template <typename SRC_TYPE>
+static void
+preproc_bgr2yuv(cv::Mat *dst,
+		cv::Mat *src)
+{
+	int w = src->size().width;
+	int h = src->size().height;
+
+	float div = 1.0f/255.0f;
+
+	for (int yi=0; yi<h; yi++) {
+		const SRC_TYPE *src_line = (SRC_TYPE*)src->ptr(yi);
+		float *dst_line = (float*)dst->ptr(yi);
+
+		for (int xi=0; xi<w; xi++) {
+			float b = src_line[xi*3 + 0] * div;
+			float g = src_line[xi*3 + 1] * div;
+			float r = src_line[xi*3 + 2] * div;
+
+			float Y = clipf(0.0f, b*0.114f + g*0.587f + r*0.299f, 1.0f);
+			float U = clipf(0.0f, (b-Y) * 0.492f + 0.5f,          1.0f);
+			float V = clipf(0.0f, (r-Y) * 0.877f + 0.5f,          1.0f);
+
+			dst_line[xi*3 + 0] = Y;
+			dst_line[xi*3 + 1] = U;
+			dst_line[xi*3 + 2] = V;
+		}
+	}
+}
+
+template <typename SRC_TYPE>
+static void
+preproc_bgr2rgb(cv::Mat *dst,
+		cv::Mat *src)
+{
+	int w = src->size().width;
+	int h = src->size().height;
+
+	float div = 1.0f/255.0f;
+
+	for (int yi=0; yi<h; yi++) {
+		const SRC_TYPE *src_line = (SRC_TYPE*)src->ptr(yi);
+		float *dst_line = (float*)dst->ptr(yi);
+
+		for (int xi=0; xi<w; xi++) {
+			float b = src_line[xi*3 + 0] * div;
+			float g = src_line[xi*3 + 1] * div;
+			float r = src_line[xi*3 + 2] * div;
+
+			dst_line[xi*3 + 0] = r;
+			dst_line[xi*3 + 1] = g;
+			dst_line[xi*3 + 2] = b;
+		}
+	}
+}
+
 int
 w2xconv_convert_file(struct W2XConv *conv,
 		     const char *dst_path,
@@ -724,23 +789,102 @@ w2xconv_convert_file(struct W2XConv *conv,
 	double time_start = getsec();
 	bool is_rgb = (conv->impl->scale2_models[0]->getNInputPlanes() == 3);
 
-	cv::Mat image = cv::imread(src_path, cv::IMREAD_COLOR);
+	bool is_png = false;
+
+	{
+		const static unsigned char png[] = {0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A};
+		char sig[8];
+		FILE *fp = fopen(src_path, "rb");
+		if (fp == NULL) {
+			setPathError(conv,
+				     W2XCONV_ERROR_IMREAD_FAILED,
+				     src_path);
+			return -1;
+		}
+		size_t rdsz = fread(sig, 1, 8, fp);
+		fclose(fp);
+		if (rdsz != 8) {
+			setPathError(conv,
+				     W2XCONV_ERROR_IMREAD_FAILED,
+				     src_path);
+			return -1;
+		}
+
+		if (memcmp(png,sig,8) == 0) {
+			is_png = true;
+		}
+	}
+
+#if 0
+	cv::Mat image_src;
+	cv::Mat image_rgb;
+	cv::Mat image_alpha;
+	bool orig_16bit = false;
+
+	/* 
+	 * IMREAD_COLOR           : BGR
+	 * IMREAD_UNCHANGED + png : RGB or RGBA
+	 */
+	if (is_png) {
+		image_src = cv::imread(src_path, cv::IMREAD_UNCHANGED);
+		if (image.data == nullptr) {
+			setPathError(conv,
+				     W2XCONV_ERROR_IMREAD_FAILED,
+				     src_path);
+			return -1;
+		}
+
+		preproc_png(&image_rgb, &image_alpha, &orig_16bit);
+	} else {
+		image_src = cv::imread(src_path, cv::IMREAD_COLOR);
+		if (image.data == nullptr) {
+			setPathError(conv,
+				     W2XCONV_ERROR_IMREAD_FAILED,
+				     src_path);
+			return -1;
+		}
+
+		orig_16bit = false;
+		preproc_bgr(&image_rgb, &image);
+	}
+
+	if (CV_MAT_CN(image.type()) == 4) {
+		cv::Mat rgba[4];
+		cv::split(image, rgba);
+		std::swap(rgba[0], rgba[2]); // bgr2rgb
+		alpha = std::move(rgba[3]);
+		cv::merge(rgba, 3, image);
+	}
+
+	if (CV_MAT_DEPTH(image.type()) == CV_16U) {
+		orig_16bit = true;
+	}
+#endif
+
+	cv::Mat image_src = cv::imread(src_path, cv::IMREAD_COLOR);
 	enum w2xc::image_format fmt;
 
-	if (image.data == nullptr) {
-		setPathError(conv,
-			     W2XCONV_ERROR_IMREAD_FAILED,
-			     src_path);
-		return -1;
-	}
+	cv::Mat image;
 
 	if (is_rgb) {
-		fmt = w2xc::IMAGE_BGR;
+		//if (!alpha.empty()) {
+		//cv::cvtColor(image, image, cv::COLOR_BGR2RGB);
+		//}
+		image = cv::Mat(image_src.size(), CV_32FC3);
+		preproc_bgr2rgb<unsigned char>(&image, &image_src);
+		fmt = w2xc::IMAGE_RGB_F32;
 	} else {
-		image.convertTo(image, CV_32F, 1.0 / 255.0);
-		cv::cvtColor(image, image, cv::COLOR_RGB2YUV);
+		image = cv::Mat(image_src.size(), CV_32FC3);
+		if (CV_MAT_DEPTH(image_src.type()) == CV_16U) {
+			preproc_bgr2yuv<unsigned char>(&image, &image_src);
+		} else {
+			preproc_bgr2yuv<unsigned short>(&image, &image_src);
+		}
+		//image.convertTo(image, CV_32F, 1.0 / 255.0);
+		//cv::cvtColor(image, image, cv::COLOR_RGB2YUV);
 		fmt = w2xc::IMAGE_Y;
 	}
+	image_src.release();
 
 	if (denoise_level != 0) {
 		apply_denoise(conv, image, denoise_level, blockSize, fmt);
@@ -771,10 +915,25 @@ w2xconv_convert_file(struct W2XConv *conv,
 	}
 
 	if (is_rgb) {
+		cv::cvtColor(image, image, cv::COLOR_RGB2BGR);
+		//image.convertTo(image, CV_8U, 255.0);
 	} else {
 		cv::cvtColor(image, image, cv::COLOR_YUV2RGB);
-		image.convertTo(image, CV_8U, 255.0);
 	}
+
+	image.convertTo(image, CV_8U, 255.0);
+
+
+#if 0
+	if (!alpha.empty()) {
+		puts("alpha");
+		cv::Mat rgba[4];
+		cv::split(image, rgba);
+		cv::resize(alpha,alpha,image.size(),0,0,cv::INTER_CUBIC);
+		rgba[3] = std::move(alpha);
+		cv::merge(rgba, 4, image);
+	}
+#endif
 
 	if (!cv::imwrite(dst_path, image)) {
 		setPathError(conv,
