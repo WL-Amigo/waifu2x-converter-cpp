@@ -723,7 +723,7 @@ clipf(float min, float v, float max)
 	return v;
 }
 
-template <typename SRC_TYPE, int ridx, int bidx>
+template <typename SRC_TYPE, int src_max, int ridx, int bidx>
 static void
 preproc_rgb2yuv(cv::Mat *dst,
 		cv::Mat *src)
@@ -731,7 +731,7 @@ preproc_rgb2yuv(cv::Mat *dst,
 	int w = src->size().width;
 	int h = src->size().height;
 
-	float div = 1.0f/255.0f;
+	float div = 1.0f / src_max;
 
 	for (int yi=0; yi<h; yi++) {
 		const SRC_TYPE *src_line = (SRC_TYPE*)src->ptr(yi);
@@ -754,7 +754,7 @@ preproc_rgb2yuv(cv::Mat *dst,
 }
 template <typename SRC_TYPE, int src_max, int ridx, int bidx>
 static void
-preproc_rgba2yuv(cv::Mat *dst_rgb,
+preproc_rgba2yuv(cv::Mat *dst_yuv,
 		 cv::Mat *dst_alpha,
 		 cv::Mat *src,
 		 float bkgd_r,
@@ -764,46 +764,42 @@ preproc_rgba2yuv(cv::Mat *dst_rgb,
 	int w = src->size().width;
 	int h = src->size().height;
 
-	float div = 1.0f/255.0f;
+	float div = 1.0f / src_max;
 	float alpha_coef = 1.0f / src_max;
 
 	for (int yi=0; yi<h; yi++) {
 		const SRC_TYPE *src_line = (SRC_TYPE*)src->ptr(yi);
-		float *dst_rgb_line = (float*)dst_rgb->ptr(yi);
-		SRC_TYPE *dst_alpha_line = (SRC_TYPE*)dst_rgb->ptr(yi);
+		float *dst_yuv_line = (float*)dst_yuv->ptr(yi);
+		float *dst_alpha_line = (float*)dst_alpha->ptr(yi);
 
 		for (int xi=0; xi<w; xi++) {
 			float r = src_line[xi*4 + ridx] * div;
 			float g = src_line[xi*4 + 1] * div;
 			float b = src_line[xi*4 + bidx] * div;
-			SRC_TYPE a = src_line[xi*4 + 2];
+			SRC_TYPE a = src_line[xi*4 + 3];
 			if (a == 0) {
-				r = 1;
-				g = 1;
-				b = 1;
+				r = bkgd_r;
+				g = bkgd_g;
+				b = bkgd_b;
 			} else {
 				SRC_TYPE ra = src_max - a;
-				r *= (a * alpha_coef) + bkgd_r * (ra * alpha_coef);
-				g *= (a * alpha_coef) + bkgd_g * (ra * alpha_coef);
-				b *= (a * alpha_coef) + bkgd_b * (ra * alpha_coef);
-
-				r = std::min(1.0f, r);
-				g = std::min(1.0f, g);
-				b = std::min(1.0f, b);
+				r = r * (a * alpha_coef) + bkgd_r * (ra * alpha_coef);
+				g = g * (a * alpha_coef) + bkgd_g * (ra * alpha_coef);
+				b = b * (a * alpha_coef) + bkgd_b * (ra * alpha_coef);
 			}
 			float Y = clipf(0.0f, b*0.114f + g*0.587f + r*0.299f, 1.0f);
 			float U = clipf(0.0f, (b-Y) * 0.492f + 0.5f,          1.0f);
 			float V = clipf(0.0f, (r-Y) * 0.877f + 0.5f,          1.0f);
 
-			dst_rgb_line[xi*3 + 0] = Y;
-			dst_rgb_line[xi*3 + 1] = U;
-			dst_rgb_line[xi*3 + 2] = V;
-			dst_alpha_line[xi*3 + 0] = a;
+			dst_yuv_line[xi*3 + 0] = Y;
+			dst_yuv_line[xi*3 + 1] = U;
+			dst_yuv_line[xi*3 + 2] = V;
+			dst_alpha_line[xi] = a * div;
 		}
 	}
 }
 
-template <typename SRC_TYPE, int ridx, int bidx>
+template <typename SRC_TYPE, int src_max, int ridx, int bidx>
 static void
 preproc_rgb2rgb(cv::Mat *dst,
 		cv::Mat *src)
@@ -811,7 +807,7 @@ preproc_rgb2rgb(cv::Mat *dst,
 	int w = src->size().width;
 	int h = src->size().height;
 
-	float div = 1.0f/255.0f;
+	float div = 1.0f / src_max;
 
 	for (int yi=0; yi<h; yi++) {
 		const SRC_TYPE *src_line = (SRC_TYPE*)src->ptr(yi);
@@ -840,13 +836,13 @@ preproc_rgba2rgb(cv::Mat *dst_rgb,
 	int w = src->size().width;
 	int h = src->size().height;
 
-	float div = 1.0f/255.0f;
+	float div = 1.0f / src_max;
 	float alpha_coef = 1.0f / src_max;
 
 	for (int yi=0; yi<h; yi++) {
 		const SRC_TYPE *src_line = (SRC_TYPE*)src->ptr(yi);
 		float *dst_rgb_line = (float*)dst_rgb->ptr(yi);
-		SRC_TYPE *dst_alpha_line = (SRC_TYPE*)dst_alpha->ptr(yi);
+		float *dst_alpha_line = (float*)dst_alpha->ptr(yi);
 
 		for (int xi=0; xi<w; xi++) {
 			float r = src_line[xi*4 + ridx] * div;
@@ -854,9 +850,9 @@ preproc_rgba2rgb(cv::Mat *dst_rgb,
 			float b = src_line[xi*4 + bidx] * div;
 			SRC_TYPE a = src_line[xi*4 + 3];
 			if (a == 0) {
-				r = 1;
-				g = 1;
-				b = 1;
+				r = bkgd_r;
+				g = bkgd_g;
+				b = bkgd_b;
 			} else {
 				SRC_TYPE ra = src_max - a;
 				r = r * (a * alpha_coef) + bkgd_r * (ra * alpha_coef);
@@ -870,10 +866,165 @@ preproc_rgba2rgb(cv::Mat *dst_rgb,
 			dst_rgb_line[xi*3 + 0] = r;
 			dst_rgb_line[xi*3 + 1] = g;
 			dst_rgb_line[xi*3 + 2] = b;
-			dst_alpha_line[xi] = a;
+			dst_alpha_line[xi] = a * div;
 		}
 	}
 }
+
+
+template <typename DST_TYPE, int dst_max, int ridx, int bidx>
+static void
+postproc_rgb2rgba(cv::Mat *dst,
+		  cv::Mat *src_rgb,
+		  cv::Mat *src_alpha,
+		  float bkgd_r,
+		  float bkgd_g,
+		  float bkgd_b)
+{
+	int w = dst->size().width;
+	int h = dst->size().height;
+
+	for (int yi=0; yi<h; yi++) {
+		const float *src_rgb_line = (float*)src_rgb->ptr(yi);
+		const float *src_alpha_line = (float*)src_alpha->ptr(yi);
+		DST_TYPE *dst_line = (DST_TYPE*)dst->ptr(yi);
+
+		for (int xi=0; xi<w; xi++) {
+			float r = src_rgb_line[xi*3 + 0];
+			float g = src_rgb_line[xi*3 + 1];
+			float b = src_rgb_line[xi*3 + 2];
+			float a = src_alpha_line[xi];
+
+			/*       data = src*alpha + bkgd*(1-alpha)    */
+			/* -src*alpha = bkgd*(1-alpha) - data         */
+			/*  src*alpha = data - bkgd*(1-alpha)         */
+			/*  src*alpha = data - bkgd + bkgd * alpha    */
+			/*        src = (data - bkgd)/alpha+bkgd      */
+
+			r = (r - bkgd_r)/a + bkgd_r;
+			g = (g - bkgd_g)/a + bkgd_g;
+			b = (b - bkgd_b)/a + bkgd_b;
+
+			r = clipf(0.0f, r * dst_max, dst_max);
+			g = clipf(0.0f, g * dst_max, dst_max);
+			b = clipf(0.0f, b * dst_max, dst_max);
+			a = clipf(0.0f, a * dst_max, dst_max);
+
+			dst_line[xi*4 + ridx] = (DST_TYPE)r;
+			dst_line[xi*4 + 1] = (DST_TYPE)g;
+			dst_line[xi*4 + bidx] = (DST_TYPE)b;
+			dst_line[xi*4 + 3] = (DST_TYPE)a;
+		}
+	}
+}
+
+template <typename DST_TYPE, int dst_max, int ridx, int bidx>
+static void
+postproc_rgb2rgb(cv::Mat *dst,
+		 cv::Mat *src_rgb)
+{
+	int w = dst->size().width;
+	int h = dst->size().height;
+
+	for (int yi=0; yi<h; yi++) {
+		const float *src_rgb_line = (float*)src_rgb->ptr(yi);
+		DST_TYPE *dst_line = (DST_TYPE*)dst->ptr(yi);
+
+		for (int xi=0; xi<w; xi++) {
+			float r = src_rgb_line[xi*3 + 0];
+			float g = src_rgb_line[xi*3 + 1];
+			float b = src_rgb_line[xi*3 + 2];
+
+			r = clipf(0.0f, r * dst_max, dst_max);
+			g = clipf(0.0f, g * dst_max, dst_max);
+			b = clipf(0.0f, b * dst_max, dst_max);
+
+			dst_line[xi*3 + ridx] = (DST_TYPE)r;
+			dst_line[xi*3 + 1] = (DST_TYPE)g;
+			dst_line[xi*3 + bidx] = (DST_TYPE)b;
+		}
+	}
+}
+
+template <typename DST_TYPE, int dst_max, int ridx, int bidx>
+static void
+postproc_yuv2rgba(cv::Mat *dst,
+		  cv::Mat *src_yuv,
+		  cv::Mat *src_alpha,
+		  float bkgd_r,
+		  float bkgd_g,
+		  float bkgd_b)
+{
+	int w = dst->size().width;
+	int h = dst->size().height;
+
+	for (int yi=0; yi<h; yi++) {
+		const float *src_yuv_line = (float*)src_yuv->ptr(yi);
+		const float *src_alpha_line = (float*)src_alpha->ptr(yi);
+		DST_TYPE *dst_line = (DST_TYPE*)dst->ptr(yi);
+
+		for (int xi=0; xi<w; xi++) {
+			float a = src_alpha_line[xi];
+			float y = src_yuv_line[xi*3 + 0];
+			float u = src_yuv_line[xi*3 + 1];
+			float v = src_yuv_line[xi*3 + 2];
+			float C0 = 2.032f, C1 = -0.395f, C2 = -0.581f, C3 = 1.140f;
+			float r = y + (v-0.5f)*C0;
+			float g = y + (u-0.5f)*C1 + (v-0.5f)*C2;
+			float b = y + (u-0.5f)*C3;
+
+			r = (r - bkgd_r)/a + bkgd_r;
+			g = (g - bkgd_g)/a + bkgd_g;
+			b = (b - bkgd_b)/a + bkgd_b;
+
+			r = clipf(0.0f, r * dst_max, dst_max);
+			g = clipf(0.0f, g * dst_max, dst_max);
+			b = clipf(0.0f, b * dst_max, dst_max);
+			a = clipf(0.0f, a * dst_max, dst_max);
+
+			dst_line[xi*4 + ridx] = (DST_TYPE)r;
+			dst_line[xi*4 + 1] = (DST_TYPE)g;
+			dst_line[xi*4 + bidx] = (DST_TYPE)b;
+			dst_line[xi*4 + 3] = (DST_TYPE)a;
+		}
+	}
+}
+
+template <typename DST_TYPE, int dst_max, int ridx, int bidx>
+static void
+postproc_yuv2rgb(cv::Mat *dst,
+		 cv::Mat *src_yuv)
+{
+	int w = dst->size().width;
+	int h = dst->size().height;
+
+	for (int yi=0; yi<h; yi++) {
+		const float *src_yuv_line = (float*)src_yuv->ptr(yi);
+		DST_TYPE *dst_line = (DST_TYPE*)dst->ptr(yi);
+
+		for (int xi=0; xi<w; xi++) {
+			float y = src_yuv_line[xi*3 + 0];
+			float u = src_yuv_line[xi*3 + 1];
+			float v = src_yuv_line[xi*3 + 2];
+
+			float C0 = 2.032f, C1 = -0.395f, C2 = -0.581f, C3 = 1.140f;
+
+			float b = y + (u-0.5f)*C3;
+			float g = y + (u-0.5f)*C1 + (v-0.5f)*C2;
+			float r = y + (v-0.5f)*C0;
+
+			r = clipf(0.0f, r * dst_max, dst_max);
+			g = clipf(0.0f, g * dst_max, dst_max);
+			b = clipf(0.0f, b * dst_max, dst_max);
+
+			dst_line[xi*3 + ridx] = (DST_TYPE)r;
+			dst_line[xi*3 + 1] = (DST_TYPE)g;
+			dst_line[xi*3 + bidx] = (DST_TYPE)b;
+		}
+	}
+	
+}
+
 
 
 static int
@@ -995,6 +1146,8 @@ w2xconv_convert_file(struct W2XConv *conv,
 						bkgd_g = g / 65535.0f;
 						bkgd_b = b / 65535.0f;
 					}
+
+					break;
 				}
 			}
 		}
@@ -1005,11 +1158,11 @@ next:
 		png_fp = NULL;
 	}
 
-	cv::Mat image_src;
+	cv::Mat image_src, image_dst;
 
 	/* 
 	 * IMREAD_COLOR                 : always BGR
-	 * IMREAD_UNCHANGED + png       : RGB or RGBA
+	 * IMREAD_UNCHANGED + png       : BGR or BGRA
 	 * IMREAD_UNCHANGED + otherwise : ???
 	 */
 	if (png_rgb) {
@@ -1028,7 +1181,7 @@ next:
 		if (png_rgb) {
 			if (src_cn == 4) {
 				// save alpha
-				alpha = cv::Mat(image_src.size(), CV_MAKETYPE(src_depth,1));
+				alpha = cv::Mat(image_src.size(), CV_32FC1);
 				if (src_depth == CV_16U) {
 					preproc_rgba2rgb<unsigned short, 65535, 2, 0>(&image, &alpha, &image_src,
 										      bkgd_r, bkgd_g, bkgd_b);
@@ -1037,17 +1190,17 @@ next:
 										   bkgd_r, bkgd_g, bkgd_b);
 				}
 			} else {
-				preproc_rgb2rgb<unsigned short, 2, 0>(&image, &image_src);
+				preproc_rgb2rgb<unsigned short, 65535, 2, 0>(&image, &image_src);
 			}
 		} else {
-			preproc_rgb2rgb<unsigned char, 2, 0>(&image, &image_src);
+			preproc_rgb2rgb<unsigned char, 255, 2, 0>(&image, &image_src);
 		}
 		fmt = w2xc::IMAGE_RGB_F32;
 	} else {
 		if (png_rgb) {
 			if (src_cn == 4) {
 				// save alpha
-				alpha = cv::Mat(image_src.size(), CV_MAKETYPE(src_depth,1));
+				alpha = cv::Mat(image_src.size(), CV_32FC1);
 				if (src_depth == CV_16U) {
 					preproc_rgba2yuv<unsigned short, 65535, 2, 0>(&image, &alpha, &image_src,
 										      bkgd_r, bkgd_g, bkgd_b);
@@ -1056,13 +1209,12 @@ next:
 										   bkgd_r, bkgd_g, bkgd_b);
 				}
 			} else {
-				preproc_rgb2yuv<unsigned short, 0, 2>(&image, &image_src);
+				preproc_rgb2yuv<unsigned short, 65535, 0, 2>(&image, &image_src);
 			}
 		} else {
-			preproc_rgb2yuv<unsigned char, 2, 0>(&image, &image_src);
+			preproc_rgb2yuv<unsigned char, 255, 2, 0>(&image, &image_src);
 		}
-		//image.convertTo(image, CV_32F, 1.0 / 255.0);
-		//cv::cvtColor(image, image, cv::COLOR_RGB2YUV);
+
 		fmt = w2xc::IMAGE_Y;
 	}
 	image_src.release();
@@ -1095,28 +1247,56 @@ next:
 		}
 	}
 
-	if (is_rgb) {
-		cv::cvtColor(image, image, cv::COLOR_RGB2BGR);
-		//image.convertTo(image, CV_8U, 255.0);
+	bool dst_png = false;
+	{
+		size_t len = strlen(dst_path);
+		if (len >= 4) {
+			if (tolower(dst_path[len-4]) == '.' &&
+			    tolower(dst_path[len-3]) == 'p' &&
+			    tolower(dst_path[len-2]) == 'n' &&
+			    tolower(dst_path[len-1]) == 'g')
+			{
+				dst_png = true;
+			}
+		}
+	}
+
+	if (alpha.empty() || !dst_png) {
+		image_dst = cv::Mat(image.size(), CV_MAKETYPE(src_depth,3));
+
+		if (is_rgb) {
+			if (src_depth == CV_16U) {
+				postproc_rgb2rgb<unsigned short, 65535, 2, 0>(&image_dst, &image);
+			} else {
+				postproc_rgb2rgb<unsigned char, 255, 2, 0>(&image_dst, &image);
+			}
+		} else {
+			if (src_depth == CV_16U) {
+				postproc_yuv2rgb<unsigned short, 65535, 2, 0>(&image_dst, &image);
+			} else {
+				postproc_yuv2rgb<unsigned char, 255, 2, 0>(&image_dst, &image);
+			}
+		}
 	} else {
-		cv::cvtColor(image, image, cv::COLOR_YUV2RGB);
+		image_dst = cv::Mat(image.size(), CV_MAKETYPE(src_depth,4));
+		cv::resize(alpha, alpha, image.size(), 0, 0, cv::INTER_CUBIC);
+
+		if (is_rgb) {
+			if (src_depth == CV_16U) {
+				postproc_rgb2rgba<unsigned short, 65535, 2, 0>(&image_dst, &image, &alpha, bkgd_r, bkgd_g, bkgd_b);
+			} else {
+				postproc_rgb2rgba<unsigned char, 255, 2, 0>(&image_dst, &image, &alpha, bkgd_r, bkgd_g, bkgd_b);
+			}
+		} else {
+			if (src_depth == CV_16U) {
+				postproc_yuv2rgba<unsigned short, 65535, 2, 0>(&image_dst, &image, &alpha, bkgd_r, bkgd_g, bkgd_b);
+			} else {
+				postproc_yuv2rgba<unsigned char, 255, 2, 0>(&image_dst, &image, &alpha, bkgd_r, bkgd_g, bkgd_b);
+			}
+		}
 	}
 
-	image.convertTo(image, CV_8U, 255.0);
-
-
-#if 0
-	if (!alpha.empty()) {
-		puts("alpha");
-		cv::Mat rgba[4];
-		cv::split(image, rgba);
-		cv::resize(alpha,alpha,image.size(),0,0,cv::INTER_CUBIC);
-		rgba[3] = std::move(alpha);
-		cv::merge(rgba, 4, image);
-	}
-#endif
-
-	if (!cv::imwrite(dst_path, image)) {
+	if (!cv::imwrite(dst_path, image_dst)) {
 		setPathError(conv,
 			     W2XCONV_ERROR_IMWRITE_FAILED,
 			     dst_path);
