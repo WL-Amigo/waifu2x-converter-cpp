@@ -1075,12 +1075,13 @@ postproc_yuv2rgba(cv::Mat *dst,
 		for (int xi=0; xi<w; xi++) {
 			float a = src_alpha_line[xi];
 			float y = src_yuv_line[xi*3 + 0];
-			float u = src_yuv_line[xi*3 + 1];
-			float v = src_yuv_line[xi*3 + 2];
+			float cr = src_yuv_line[xi*3 + 1];
+			float cb = src_yuv_line[xi*3 + 2];
 			float C0 = 2.032f, C1 = -0.395f, C2 = -0.581f, C3 = 1.140f;
-			float r = y + (v-0.5f)*C0;
-			float g = y + (u-0.5f)*C1 + (v-0.5f)*C2;
-			float b = y + (u-0.5f)*C3;
+
+			float b = y + (cb-0.5f)*C3;
+			float g = y + (cb-0.5f)*C2 + (cr-0.5f)*C1;
+			float r = y + (cr-0.5f)*C0;
 
 			r = (r - bkgd_r)/a + bkgd_r;
 			g = (g - bkgd_g)/a + bkgd_g;
@@ -1113,14 +1114,14 @@ postproc_yuv2rgb(cv::Mat *dst,
 
 		for (int xi=0; xi<w; xi++) {
 			float y = src_yuv_line[xi*3 + 0];
-			float u = src_yuv_line[xi*3 + 1];
-			float v = src_yuv_line[xi*3 + 2];
+			float cr = src_yuv_line[xi*3 + 1];
+			float cb = src_yuv_line[xi*3 + 2];
 
 			float C0 = 2.032f, C1 = -0.395f, C2 = -0.581f, C3 = 1.140f;
 
-			float b = y + (u-0.5f)*C3;
-			float g = y + (u-0.5f)*C1 + (v-0.5f)*C2;
-			float r = y + (v-0.5f)*C0;
+			float b = y + (cb-0.5f)*C3;
+			float g = y + (cb-0.5f)*C2 + (cr-0.5f)*C1;
+			float r = y + (cr-0.5f)*C0;
 
 			r = clipf(0.0f, r * dst_max, dst_max);
 			g = clipf(0.0f, g * dst_max, dst_max);
@@ -1318,7 +1319,7 @@ next:
 										   bkgd_r, bkgd_g, bkgd_b);
 				}
 			} else {
-				preproc_rgb2yuv<unsigned short, 65535, 0, 2>(&image, &image_src);
+				preproc_rgb2yuv<unsigned short, 65535, 2, 0>(&image, &image_src);
 			}
 		} else {
 			preproc_rgb2yuv<unsigned char, 255, 2, 0>(&image, &image_src);
@@ -1381,9 +1382,9 @@ next:
 			}
 		} else {
 			if (src_depth == CV_16U) {
-				postproc_yuv2rgb<unsigned short, 65535, 2, 0>(&image_dst, &image);
+				postproc_yuv2rgb<unsigned short, 65535, 0, 2>(&image_dst, &image);
 			} else {
-				postproc_yuv2rgb<unsigned char, 255, 2, 0>(&image_dst, &image);
+				postproc_yuv2rgb<unsigned char, 255, 0, 2>(&image_dst, &image);
 			}
 		}
 	} else {
@@ -1401,9 +1402,9 @@ next:
 			}
 		} else {
 			if (src_depth == CV_16U) {
-				postproc_yuv2rgba<unsigned short, 65535, 2, 0>(&image_dst, &image, &alpha, bkgd_r, bkgd_g, bkgd_b);
+				postproc_yuv2rgba<unsigned short, 65535, 0, 2>(&image_dst, &image, &alpha, bkgd_r, bkgd_g, bkgd_b);
 			} else {
-				postproc_yuv2rgba<unsigned char, 255, 2, 0>(&image_dst, &image, &alpha, bkgd_r, bkgd_g, bkgd_b);
+				postproc_yuv2rgba<unsigned char, 255, 0, 2>(&image_dst, &image, &alpha, bkgd_r, bkgd_g, bkgd_b);
 			}
 		}
 	}
