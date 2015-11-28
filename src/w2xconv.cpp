@@ -964,9 +964,9 @@ preproc_rgba2rgb(cv::Mat *dst_rgb,
 #endif
 			} else {
 				SRC_TYPE ra = src_max - a;
-				//r = r * (a * alpha_coef) + bkgd_r * (ra * alpha_coef);
-				//g = g * (a * alpha_coef) + bkgd_g * (ra * alpha_coef);
-				//b = b * (a * alpha_coef) + bkgd_b * (ra * alpha_coef);
+				r = r * (a * alpha_coef) + bkgd_r * (ra * alpha_coef);
+				g = g * (a * alpha_coef) + bkgd_g * (ra * alpha_coef);
+				b = b * (a * alpha_coef) + bkgd_b * (ra * alpha_coef);
 
 				r = std::min(1.0f, r);
 				g = std::min(1.0f, g);
@@ -1010,9 +1010,9 @@ postproc_rgb2rgba(cv::Mat *dst,
 			/*  src*alpha = data - bkgd + bkgd * alpha    */
 			/*        src = (data - bkgd)/alpha+bkgd      */
 
-			//r = (r - bkgd_r)/a + bkgd_r;
-			//g = (g - bkgd_g)/a + bkgd_g;
-			//b = (b - bkgd_b)/a + bkgd_b;
+			r = (r - bkgd_r)/a + bkgd_r;
+			g = (g - bkgd_g)/a + bkgd_g;
+			b = (b - bkgd_b)/a + bkgd_b;
 
 			r = clipf(0.0f, r * dst_max, dst_max);
 			g = clipf(0.0f, g * dst_max, dst_max);
