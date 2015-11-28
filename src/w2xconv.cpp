@@ -722,9 +722,9 @@ clipf(float min, float v, float max)
 	return v;
 }
 
-template <typename SRC_TYPE>
+template <typename SRC_TYPE, int ridx, int bidx>
 static void
-preproc_bgr2yuv(cv::Mat *dst,
+preproc_rgb2yuv(cv::Mat *dst,
 		cv::Mat *src)
 {
 	int w = src->size().width;
@@ -737,9 +737,9 @@ preproc_bgr2yuv(cv::Mat *dst,
 		float *dst_line = (float*)dst->ptr(yi);
 
 		for (int xi=0; xi<w; xi++) {
-			float b = src_line[xi*3 + 0] * div;
+			float b = src_line[xi*3 + bidx] * div;
 			float g = src_line[xi*3 + 1] * div;
-			float r = src_line[xi*3 + 2] * div;
+			float r = src_line[xi*3 + ridx] * div;
 
 			float Y = clipf(0.0f, b*0.114f + g*0.587f + r*0.299f, 1.0f);
 			float U = clipf(0.0f, (b-Y) * 0.492f + 0.5f,          1.0f);
@@ -751,10 +751,47 @@ preproc_bgr2yuv(cv::Mat *dst,
 		}
 	}
 }
-
 template <typename SRC_TYPE>
 static void
-preproc_bgr2rgb(cv::Mat *dst,
+preproc_rgba2yuv(cv::Mat *dst_rgb,
+		 cv::Mat *dst_alpha,
+		 cv::Mat *src)
+{
+	int w = src->size().width;
+	int h = src->size().height;
+
+	float div = 1.0f/255.0f;
+
+	for (int yi=0; yi<h; yi++) {
+		const SRC_TYPE *src_line = (SRC_TYPE*)src->ptr(yi);
+		float *dst_rgb_line = (float*)dst_rgb->ptr(yi);
+		SRC_TYPE *dst_alpha_line = (SRC_TYPE*)dst_rgb->ptr(yi);
+
+		for (int xi=0; xi<w; xi++) {
+			float r = src_line[xi*4 + 0] * div;
+			float g = src_line[xi*4 + 1] * div;
+			float b = src_line[xi*4 + 2] * div;
+			SRC_TYPE a = src_line[xi*4 + 2];
+			if (a == 0) {
+				r = 1;
+				g = 1;
+				b = 1;
+			}
+			float Y = clipf(0.0f, b*0.114f + g*0.587f + r*0.299f, 1.0f);
+			float U = clipf(0.0f, (b-Y) * 0.492f + 0.5f,          1.0f);
+			float V = clipf(0.0f, (r-Y) * 0.877f + 0.5f,          1.0f);
+
+			dst_rgb_line[xi*3 + 0] = Y;
+			dst_rgb_line[xi*3 + 1] = U;
+			dst_rgb_line[xi*3 + 2] = V;
+			dst_alpha_line[xi*3 + 0] = a;
+		}
+	}
+}
+
+template <typename SRC_TYPE, int ridx, int bidx>
+static void
+preproc_rgb2rgb(cv::Mat *dst,
 		cv::Mat *src)
 {
 	int w = src->size().width;
@@ -767,15 +804,59 @@ preproc_bgr2rgb(cv::Mat *dst,
 		float *dst_line = (float*)dst->ptr(yi);
 
 		for (int xi=0; xi<w; xi++) {
-			float b = src_line[xi*3 + 0] * div;
+			float r = src_line[xi*3 + ridx] * div;
 			float g = src_line[xi*3 + 1] * div;
-			float r = src_line[xi*3 + 2] * div;
+			float b = src_line[xi*3 + bidx] * div;
 
 			dst_line[xi*3 + 0] = r;
 			dst_line[xi*3 + 1] = g;
 			dst_line[xi*3 + 2] = b;
 		}
 	}
+}
+template <typename SRC_TYPE>
+static void
+preproc_rgba2rgb(cv::Mat *dst_rgb,
+		 cv::Mat *dst_alpha,
+		 cv::Mat *src)
+{
+	int w = src->size().width;
+	int h = src->size().height;
+
+	float div = 1.0f/255.0f;
+
+	for (int yi=0; yi<h; yi++) {
+		const SRC_TYPE *src_line = (SRC_TYPE*)src->ptr(yi);
+		float *dst_rgb_line = (float*)dst_rgb->ptr(yi);
+		SRC_TYPE *dst_alpha_line = (SRC_TYPE*)dst_alpha->ptr(yi);
+
+		for (int xi=0; xi<w; xi++) {
+			float r = src_line[xi*4 + 0] * div;
+			float g = src_line[xi*4 + 1] * div;
+			float b = src_line[xi*4 + 2] * div;
+			SRC_TYPE a = src_line[xi*4 + 3];
+			if (a == 0) {
+				r = 1;
+				g = 1;
+				b = 1;
+			}
+			dst_rgb_line[xi*3 + 0] = r;
+			dst_rgb_line[xi*3 + 1] = g;
+			dst_rgb_line[xi*3 + 2] = b;
+			dst_alpha_line[xi] = a;
+		}
+	}
+}
+
+
+static int
+read_int4(FILE *fp) {
+    unsigned int c0 = fgetc(fp);
+    unsigned int c1 = fgetc(fp);
+    unsigned int c2 = fgetc(fp);
+    unsigned int c3 = fgetc(fp);
+
+    return (c0<<24) | (c1<<16) | (c2<<8) | (c3);
 }
 
 int
@@ -789,96 +870,118 @@ w2xconv_convert_file(struct W2XConv *conv,
 	double time_start = getsec();
 	bool is_rgb = (conv->impl->scale2_models[0]->getNInputPlanes() == 3);
 
-	bool is_png = false;
+	bool png_rgb = false;
+
+	FILE *png_fp = NULL;
 
 	{
 		const static unsigned char png[] = {0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A};
+		const static unsigned char ihdr[] = {'I','H','D','R'};
 		char sig[8];
-		FILE *fp = fopen(src_path, "rb");
-		if (fp == NULL) {
-			setPathError(conv,
-				     W2XCONV_ERROR_IMREAD_FAILED,
-				     src_path);
-			return -1;
-		}
-		size_t rdsz = fread(sig, 1, 8, fp);
-		fclose(fp);
-		if (rdsz != 8) {
+		png_fp = fopen(src_path, "rb");
+		if (png_fp == NULL) {
 			setPathError(conv,
 				     W2XCONV_ERROR_IMREAD_FAILED,
 				     src_path);
 			return -1;
 		}
 
-		if (memcmp(png,sig,8) == 0) {
-			is_png = true;
+		size_t rdsz = fread(sig, 1, 8, png_fp);
+		if (rdsz != 8) {
+			goto next;
+		}
+		if (memcmp(png,sig,8) != 0) {
+			goto next;
+		}
+
+		int ihdr_size = read_int4(png_fp);
+		if (ihdr_size != 13) {
+			goto next;
+		}
+
+		rdsz = fread(sig, 1, 4, png_fp);
+		if (rdsz != 4) {
+			goto next;
+		}
+		if (memcmp(ihdr,sig,4) != 0) {
+			goto next;
+		}
+
+		int width = read_int4(png_fp);
+		int height = read_int4(png_fp);
+		int depth = fgetc(png_fp);
+		int type = fgetc(png_fp);
+
+		/* use IMREAD_UNCHANGED 
+		 * if png && type == RGBA || depth == 16 
+		 */
+		if (type == 6) {
+			if (depth == 1 || // RGBA 8bit
+			    depth == 2	  // RGBA 16bit
+				)
+			{
+				png_rgb = true;
+			}
+		} else if (depth == 2) { // RGB 16bit
+			png_rgb = true;
 		}
 	}
+next:
+	if (png_fp) {
+		fclose(png_fp);
+		png_fp = NULL;
+	}
 
-#if 0
 	cv::Mat image_src;
-	cv::Mat image_rgb;
-	cv::Mat image_alpha;
-	bool orig_16bit = false;
 
 	/* 
-	 * IMREAD_COLOR           : BGR
-	 * IMREAD_UNCHANGED + png : RGB or RGBA
+	 * IMREAD_COLOR                 : always BGR
+	 * IMREAD_UNCHANGED + png       : RGB or RGBA
+	 * IMREAD_UNCHANGED + otherwise : ???
 	 */
-	if (is_png) {
+	if (png_rgb) {
 		image_src = cv::imread(src_path, cv::IMREAD_UNCHANGED);
-		if (image.data == nullptr) {
-			setPathError(conv,
-				     W2XCONV_ERROR_IMREAD_FAILED,
-				     src_path);
-			return -1;
-		}
-
-		preproc_png(&image_rgb, &image_alpha, &orig_16bit);
 	} else {
 		image_src = cv::imread(src_path, cv::IMREAD_COLOR);
-		if (image.data == nullptr) {
-			setPathError(conv,
-				     W2XCONV_ERROR_IMREAD_FAILED,
-				     src_path);
-			return -1;
-		}
-
-		orig_16bit = false;
-		preproc_bgr(&image_rgb, &image);
 	}
-
-	if (CV_MAT_CN(image.type()) == 4) {
-		cv::Mat rgba[4];
-		cv::split(image, rgba);
-		std::swap(rgba[0], rgba[2]); // bgr2rgb
-		alpha = std::move(rgba[3]);
-		cv::merge(rgba, 3, image);
-	}
-
-	if (CV_MAT_DEPTH(image.type()) == CV_16U) {
-		orig_16bit = true;
-	}
-#endif
-
-	cv::Mat image_src = cv::imread(src_path, cv::IMREAD_COLOR);
 	enum w2xc::image_format fmt;
 
-	cv::Mat image;
+	int src_depth = CV_MAT_DEPTH(image_src.type());
+	int src_cn = CV_MAT_CN(image_src.type());
+	cv::Mat image, alpha;
 
 	if (is_rgb) {
-		//if (!alpha.empty()) {
-		//cv::cvtColor(image, image, cv::COLOR_BGR2RGB);
-		//}
 		image = cv::Mat(image_src.size(), CV_32FC3);
-		preproc_bgr2rgb<unsigned char>(&image, &image_src);
+		if (png_rgb) {
+			if (src_cn == 4) {
+				// save alpha
+				if (src_depth == CV_16U) {
+					preproc_rgba2rgb<unsigned short>(&image, &alpha, &image_src);
+				} else {
+					preproc_rgba2rgb<unsigned char>(&image, &alpha, &image_src);
+				}
+			} else {
+				preproc_rgb2rgb<unsigned short, 0, 2>(&image, &image_src);
+			}
+		} else {
+			preproc_rgb2rgb<unsigned char, 2, 0>(&image, &image_src);
+		}
 		fmt = w2xc::IMAGE_RGB_F32;
 	} else {
 		image = cv::Mat(image_src.size(), CV_32FC3);
-		if (CV_MAT_DEPTH(image_src.type()) == CV_16U) {
-			preproc_bgr2yuv<unsigned char>(&image, &image_src);
+		if (png_rgb) {
+			if (src_cn == 4) {
+				// save alpha
+				if (src_depth == CV_16U) {
+					preproc_rgba2yuv<unsigned short>(&image, &alpha, &image_src);
+				} else {
+					preproc_rgba2yuv<unsigned char>(&image, &alpha, &image_src);
+				}
+			} else {
+				preproc_rgb2yuv<unsigned short, 0, 2>(&image, &image_src);
+			}
 		} else {
-			preproc_bgr2yuv<unsigned short>(&image, &image_src);
+			preproc_rgb2yuv<unsigned char, 2, 0>(&image, &image_src);
 		}
 		//image.convertTo(image, CV_32F, 1.0 / 255.0);
 		//cv::cvtColor(image, image, cv::COLOR_RGB2YUV);
