@@ -752,6 +752,26 @@ preproc_rgb2yuv(cv::Mat *dst,
 		}
 	}
 }
+
+template <typename SRC_TYPE, int ridx, int bidx>
+static bool
+set_nearest_nontransparent(float *r, float *g, float *b,
+			   const SRC_TYPE *s,
+			   int xi)
+{
+	SRC_TYPE a = s[xi*4+3];
+	if (a == 0) {
+		return false;
+	}
+
+	*r = (float)s[xi*4+ridx];
+	*g = (float)s[xi*4+1];
+	*b = (float)s[xi*4+bidx];
+
+	return true;
+}
+	    
+
 template <typename SRC_TYPE, int src_max, int ridx, int bidx>
 static void
 preproc_rgba2yuv(cv::Mat *dst_yuv,
@@ -769,6 +789,16 @@ preproc_rgba2yuv(cv::Mat *dst_yuv,
 
 	for (int yi=0; yi<h; yi++) {
 		const SRC_TYPE *src_line = (SRC_TYPE*)src->ptr(yi);
+		const SRC_TYPE *src_line0 = NULL, *src_line2 = NULL;
+
+		if (yi != 0) {
+			src_line0 = (SRC_TYPE*)src->ptr(yi-1);
+		}
+
+		if (yi != h-1) {
+			src_line2 = (SRC_TYPE*)src->ptr(yi+1);
+		}
+
 		float *dst_yuv_line = (float*)dst_yuv->ptr(yi);
 		float *dst_alpha_line = (float*)dst_alpha->ptr(yi);
 
@@ -781,6 +811,41 @@ preproc_rgba2yuv(cv::Mat *dst_yuv,
 				r = bkgd_r;
 				g = bkgd_g;
 				b = bkgd_b;
+
+#if 0
+				if (yi == 0 || yi == h-1 || xi == 0 || xi == w-1) {
+					/* xx */
+					r = bkgd_r;
+					g = bkgd_g;
+					b = bkgd_b;
+				} else {
+					/* set nearest non-transparental color */
+					SRC_TYPE near_a;
+					bool set = false;
+
+					if (!set) set = set_nearest_nontransparent<SRC_TYPE,ridx,bidx>(&r, &g, &b, src_line0, xi-1);
+					if (!set) set = set_nearest_nontransparent<SRC_TYPE,ridx,bidx>(&r, &g, &b, src_line0, xi);
+					if (!set) set = set_nearest_nontransparent<SRC_TYPE,ridx,bidx>(&r, &g, &b, src_line0, xi+1);
+
+					if (!set) set = set_nearest_nontransparent<SRC_TYPE,ridx,bidx>(&r, &g, &b, src_line,  xi-1);
+					if (!set) set = set_nearest_nontransparent<SRC_TYPE,ridx,bidx>(&r, &g, &b, src_line,  xi+1);
+
+					if (!set) set = set_nearest_nontransparent<SRC_TYPE,ridx,bidx>(&r, &g, &b, src_line2, xi-1);
+					if (!set) set = set_nearest_nontransparent<SRC_TYPE,ridx,bidx>(&r, &g, &b, src_line2, xi);
+					if (!set) set = set_nearest_nontransparent<SRC_TYPE,ridx,bidx>(&r, &g, &b, src_line2, xi+1);
+
+					if (set) {
+						r *= div;
+						g *= div;
+						b *= div;
+					} else {
+						r = bkgd_r;
+						g = bkgd_g;
+						b = bkgd_b;
+					}
+				}
+#endif
+
 			} else {
 				SRC_TYPE ra = src_max - a;
 				r = r * (a * alpha_coef) + bkgd_r * (ra * alpha_coef);
@@ -841,6 +906,16 @@ preproc_rgba2rgb(cv::Mat *dst_rgb,
 
 	for (int yi=0; yi<h; yi++) {
 		const SRC_TYPE *src_line = (SRC_TYPE*)src->ptr(yi);
+		const SRC_TYPE *src_line0 = NULL, *src_line2 = NULL;
+
+		if (yi != 0) {
+			src_line0 = (SRC_TYPE*)src->ptr(yi-1);
+		}
+
+		if (yi != h-1) {
+			src_line2 = (SRC_TYPE*)src->ptr(yi+1);
+		}
+
 		float *dst_rgb_line = (float*)dst_rgb->ptr(yi);
 		float *dst_alpha_line = (float*)dst_alpha->ptr(yi);
 
@@ -853,6 +928,40 @@ preproc_rgba2rgb(cv::Mat *dst_rgb,
 				r = bkgd_r;
 				g = bkgd_g;
 				b = bkgd_b;
+
+#if 0
+				if (yi == 0 || yi == h-1 || xi == 0 || xi == w-1) {
+					/* xx */
+					r = bkgd_r;
+					g = bkgd_g;
+					b = bkgd_b;
+				} else {
+					/* set nearest non-transparental color */
+					SRC_TYPE near_a;
+					bool set = false;
+
+					if (!set) set = set_nearest_nontransparent<SRC_TYPE,ridx,bidx>(&r, &g, &b, src_line0, xi-1);
+					if (!set) set = set_nearest_nontransparent<SRC_TYPE,ridx,bidx>(&r, &g, &b, src_line0, xi);
+					if (!set) set = set_nearest_nontransparent<SRC_TYPE,ridx,bidx>(&r, &g, &b, src_line0, xi+1);
+
+					if (!set) set = set_nearest_nontransparent<SRC_TYPE,ridx,bidx>(&r, &g, &b, src_line,  xi-1);
+					if (!set) set = set_nearest_nontransparent<SRC_TYPE,ridx,bidx>(&r, &g, &b, src_line,  xi+1);
+
+					if (!set) set = set_nearest_nontransparent<SRC_TYPE,ridx,bidx>(&r, &g, &b, src_line2, xi-1);
+					if (!set) set = set_nearest_nontransparent<SRC_TYPE,ridx,bidx>(&r, &g, &b, src_line2, xi);
+					if (!set) set = set_nearest_nontransparent<SRC_TYPE,ridx,bidx>(&r, &g, &b, src_line2, xi+1);
+
+					if (set) {
+						r *= div;
+						g *= div;
+						b *= div;
+					} else {
+						r = bkgd_r;
+						g = bkgd_g;
+						b = bkgd_b;
+					}
+				}
+#endif
 			} else {
 				SRC_TYPE ra = src_max - a;
 				r = r * (a * alpha_coef) + bkgd_r * (ra * alpha_coef);
@@ -1279,7 +1388,10 @@ next:
 		}
 	} else {
 		image_dst = cv::Mat(image.size(), CV_MAKETYPE(src_depth,4));
-		cv::resize(alpha, alpha, image.size(), 0, 0, cv::INTER_CUBIC);
+
+		if (image.size() != alpha.size()) {
+			cv::resize(alpha, alpha, image.size(), 0, 0, cv::INTER_CUBIC);
+		}
 
 		if (is_rgb) {
 			if (src_depth == CV_16U) {
