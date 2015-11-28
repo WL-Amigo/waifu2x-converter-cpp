@@ -20,6 +20,7 @@
 #endif
 #endif
 
+#include <limits.h>
 #include <sstream>
 #include "w2xconv.h"
 #include "sec.hpp"
@@ -751,16 +752,20 @@ preproc_rgb2yuv(cv::Mat *dst,
 		}
 	}
 }
-template <typename SRC_TYPE>
+template <typename SRC_TYPE, int src_max, int ridx, int bidx>
 static void
 preproc_rgba2yuv(cv::Mat *dst_rgb,
 		 cv::Mat *dst_alpha,
-		 cv::Mat *src)
+		 cv::Mat *src,
+		 float bkgd_r,
+		 float bkgd_g,
+		 float bkgd_b)
 {
 	int w = src->size().width;
 	int h = src->size().height;
 
 	float div = 1.0f/255.0f;
+	float alpha_coef = 1.0f / src_max;
 
 	for (int yi=0; yi<h; yi++) {
 		const SRC_TYPE *src_line = (SRC_TYPE*)src->ptr(yi);
@@ -768,14 +773,23 @@ preproc_rgba2yuv(cv::Mat *dst_rgb,
 		SRC_TYPE *dst_alpha_line = (SRC_TYPE*)dst_rgb->ptr(yi);
 
 		for (int xi=0; xi<w; xi++) {
-			float r = src_line[xi*4 + 0] * div;
+			float r = src_line[xi*4 + ridx] * div;
 			float g = src_line[xi*4 + 1] * div;
-			float b = src_line[xi*4 + 2] * div;
+			float b = src_line[xi*4 + bidx] * div;
 			SRC_TYPE a = src_line[xi*4 + 2];
 			if (a == 0) {
 				r = 1;
 				g = 1;
 				b = 1;
+			} else {
+				SRC_TYPE ra = src_max - a;
+				r *= (a * alpha_coef) + bkgd_r * (ra * alpha_coef);
+				g *= (a * alpha_coef) + bkgd_g * (ra * alpha_coef);
+				b *= (a * alpha_coef) + bkgd_b * (ra * alpha_coef);
+
+				r = std::min(1.0f, r);
+				g = std::min(1.0f, g);
+				b = std::min(1.0f, b);
 			}
 			float Y = clipf(0.0f, b*0.114f + g*0.587f + r*0.299f, 1.0f);
 			float U = clipf(0.0f, (b-Y) * 0.492f + 0.5f,          1.0f);
@@ -814,16 +828,20 @@ preproc_rgb2rgb(cv::Mat *dst,
 		}
 	}
 }
-template <typename SRC_TYPE>
+template <typename SRC_TYPE, int src_max, int ridx, int bidx>
 static void
 preproc_rgba2rgb(cv::Mat *dst_rgb,
 		 cv::Mat *dst_alpha,
-		 cv::Mat *src)
+		 cv::Mat *src,
+		 float bkgd_r,
+		 float bkgd_g,
+		 float bkgd_b)
 {
 	int w = src->size().width;
 	int h = src->size().height;
 
 	float div = 1.0f/255.0f;
+	float alpha_coef = 1.0f / src_max;
 
 	for (int yi=0; yi<h; yi++) {
 		const SRC_TYPE *src_line = (SRC_TYPE*)src->ptr(yi);
@@ -831,14 +849,23 @@ preproc_rgba2rgb(cv::Mat *dst_rgb,
 		SRC_TYPE *dst_alpha_line = (SRC_TYPE*)dst_alpha->ptr(yi);
 
 		for (int xi=0; xi<w; xi++) {
-			float r = src_line[xi*4 + 0] * div;
+			float r = src_line[xi*4 + ridx] * div;
 			float g = src_line[xi*4 + 1] * div;
-			float b = src_line[xi*4 + 2] * div;
+			float b = src_line[xi*4 + bidx] * div;
 			SRC_TYPE a = src_line[xi*4 + 3];
 			if (a == 0) {
 				r = 1;
 				g = 1;
 				b = 1;
+			} else {
+				SRC_TYPE ra = src_max - a;
+				r = r * (a * alpha_coef) + bkgd_r * (ra * alpha_coef);
+				g = g * (a * alpha_coef) + bkgd_g * (ra * alpha_coef);
+				b = b * (a * alpha_coef) + bkgd_b * (ra * alpha_coef);
+
+				r = std::min(1.0f, r);
+				g = std::min(1.0f, g);
+				b = std::min(1.0f, b);
 			}
 			dst_rgb_line[xi*3 + 0] = r;
 			dst_rgb_line[xi*3 + 1] = g;
@@ -858,6 +885,13 @@ read_int4(FILE *fp) {
 
     return (c0<<24) | (c1<<16) | (c2<<8) | (c3);
 }
+static int
+read_int2(FILE *fp) {
+    unsigned int c0 = fgetc(fp);
+    unsigned int c1 = fgetc(fp);
+
+    return (c0<<8) | (c1);
+}
 
 int
 w2xconv_convert_file(struct W2XConv *conv,
@@ -874,9 +908,15 @@ w2xconv_convert_file(struct W2XConv *conv,
 
 	FILE *png_fp = NULL;
 
+	float bkgd_r = 1.0f;
+	float bkgd_g = 1.0f;
+	float bkgd_b = 1.0f;
+
 	{
 		const static unsigned char png[] = {0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A};
 		const static unsigned char ihdr[] = {'I','H','D','R'};
+		const static unsigned char iend[] = {'I','E','N','D'};
+		const static unsigned char bkgd[] = {'b','K','G','D'};
 		char sig[8];
 		png_fp = fopen(src_path, "rb");
 		if (png_fp == NULL) {
@@ -911,19 +951,52 @@ w2xconv_convert_file(struct W2XConv *conv,
 		int height = read_int4(png_fp);
 		int depth = fgetc(png_fp);
 		int type = fgetc(png_fp);
+		int compress = fgetc(png_fp);
+		int filter = fgetc(png_fp);
+		int interlace = fgetc(png_fp);
 
 		/* use IMREAD_UNCHANGED 
 		 * if png && type == RGBA || depth == 16 
 		 */
 		if (type == 6) {
-			if (depth == 1 || // RGBA 8bit
-			    depth == 2	  // RGBA 16bit
+			if (depth == 8 || // RGBA 8bit
+			    depth == 16	  // RGBA 16bit
 				)
 			{
 				png_rgb = true;
 			}
-		} else if (depth == 2) { // RGB 16bit
+		} else if (depth == 16) { // RGB 16bit
 			png_rgb = true;
+		}
+
+		if (png_rgb) {
+			while (1) {
+				int chunk_size = read_int4(png_fp);
+				rdsz = fread(sig, 1, 4, png_fp);
+				if (rdsz != 4) {
+					break;
+				}
+
+				if (memcmp(sig,iend,4) == 0) {
+					break;
+				}
+
+				if (memcmp(sig,bkgd,4) == 0) {
+					float r = read_int2(png_fp);
+					float g = read_int2(png_fp);
+					float b = read_int2(png_fp);
+
+					if (depth == 8) {
+						bkgd_r = r / 255.0f;
+						bkgd_g = g / 255.0f;
+						bkgd_b = b / 255.0f;
+					} else {
+						bkgd_r = r / 65535.0f;
+						bkgd_g = g / 65535.0f;
+						bkgd_b = b / 65535.0f;
+					}
+				}
+			}
 		}
 	}
 next:
@@ -948,34 +1021,39 @@ next:
 
 	int src_depth = CV_MAT_DEPTH(image_src.type());
 	int src_cn = CV_MAT_CN(image_src.type());
-	cv::Mat image, alpha;
+	cv::Mat image = cv::Mat(image_src.size(), CV_32FC3);
+	cv::Mat alpha;
 
 	if (is_rgb) {
-		image = cv::Mat(image_src.size(), CV_32FC3);
 		if (png_rgb) {
 			if (src_cn == 4) {
 				// save alpha
+				alpha = cv::Mat(image_src.size(), CV_MAKETYPE(src_depth,1));
 				if (src_depth == CV_16U) {
-					preproc_rgba2rgb<unsigned short>(&image, &alpha, &image_src);
+					preproc_rgba2rgb<unsigned short, 65535, 2, 0>(&image, &alpha, &image_src,
+										      bkgd_r, bkgd_g, bkgd_b);
 				} else {
-					preproc_rgba2rgb<unsigned char>(&image, &alpha, &image_src);
+					preproc_rgba2rgb<unsigned char, 255, 2, 0>(&image, &alpha, &image_src,
+										   bkgd_r, bkgd_g, bkgd_b);
 				}
 			} else {
-				preproc_rgb2rgb<unsigned short, 0, 2>(&image, &image_src);
+				preproc_rgb2rgb<unsigned short, 2, 0>(&image, &image_src);
 			}
 		} else {
 			preproc_rgb2rgb<unsigned char, 2, 0>(&image, &image_src);
 		}
 		fmt = w2xc::IMAGE_RGB_F32;
 	} else {
-		image = cv::Mat(image_src.size(), CV_32FC3);
 		if (png_rgb) {
 			if (src_cn == 4) {
 				// save alpha
+				alpha = cv::Mat(image_src.size(), CV_MAKETYPE(src_depth,1));
 				if (src_depth == CV_16U) {
-					preproc_rgba2yuv<unsigned short>(&image, &alpha, &image_src);
+					preproc_rgba2yuv<unsigned short, 65535, 2, 0>(&image, &alpha, &image_src,
+										      bkgd_r, bkgd_g, bkgd_b);
 				} else {
-					preproc_rgba2yuv<unsigned char>(&image, &alpha, &image_src);
+					preproc_rgba2yuv<unsigned char, 255, 2, 0>(&image, &alpha, &image_src,
+										   bkgd_r, bkgd_g, bkgd_b);
 				}
 			} else {
 				preproc_rgb2yuv<unsigned short, 0, 2>(&image, &image_src);
