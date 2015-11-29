@@ -1,5 +1,6 @@
 #include "common.hpp"
 #include <math.h>
+#include <stdint.h>
 #ifdef _WIN32
 #include <windows.h>
 #else
@@ -154,9 +155,9 @@ void unpack_mat_rgb_f32(W2Mat &outputMat,
 		const float *packed_line = in + (yi * w * 3);
 
 		for (int xi=0; xi<w; xi++) {
-			mat_line[xi*3 + 0] = (std::max)(0.0f, std::min(1.0f, packed_line[xi*3 + 0]));
-			mat_line[xi*3 + 1] = (std::max)(0.0f, std::min(1.0f, packed_line[xi*3 + 1]));
-			mat_line[xi*3 + 2] = (std::max)(0.0f, std::min(1.0f, packed_line[xi*3 + 2]));
+			mat_line[xi*3 + 0] = (std::max)(0.0f, (std::min)(1.0f, packed_line[xi*3 + 0]));
+			mat_line[xi*3 + 1] = (std::max)(0.0f, (std::min)(1.0f, packed_line[xi*3 + 1]));
+			mat_line[xi*3 + 2] = (std::max)(0.0f, (std::min)(1.0f, packed_line[xi*3 + 2]));
 		}
 	}
 }
