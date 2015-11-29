@@ -85,7 +85,7 @@ int main(int argc, char** argv) {
 	}
 
 	// definition of command line arguments
-	TCLAP::CmdLine cmd("waifu2x reimplementation using OpenCV", ' ', "1.0.0");
+	TCLAP::CmdLine cmd("waifu2x reimplementation using OpenCV", ' ', w2xconv_version());
 
 	TCLAP::ValueArg<std::string> cmdInputFile("i", "input_file",
 			"path to input image file (you should input full path)", true, "",

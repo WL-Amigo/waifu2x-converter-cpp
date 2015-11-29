@@ -7,6 +7,9 @@ include(CheckIncludeFileCXX)
 
 pkg_check_modules(OPENCV_PKG opencv)
 
+string(TIMESTAMP TS)
+add_definitions(-DBUILD_TS="${TS}")
+
 if (${OPENCV_PKG_FOUND})
   set(CMAKE_REQUIRED_INCLUDES ${OPENCV_PKG_INCLUDE_DIRS})
   include_directories(${OPENCV_PKG_INCLUDE_DIRS})
