@@ -190,6 +190,7 @@ Model::filter_CV(ComputeEnv *env,
 	}
 
 #endif
+	return true;
 }
 
 //#define COMPARE_RESULT
