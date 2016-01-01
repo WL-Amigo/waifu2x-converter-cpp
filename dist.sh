@@ -33,6 +33,8 @@ gen() {
         cp src/w2xconv.h $dst_dir/libw2xc
         cp w32-apps/w2xc.c $dst_dir/libw2xc/samples
         cp w32-apps/w2xcr.c $dst_dir/libw2xc/samples
+        cp w32-apps/w2xcr.h $dst_dir/libw2xc/samples
+        cp w32-apps/w2xcr.rc $dst_dir/libw2xc/samples
         cp w32-apps/Makefile $dst_dir/libw2xc/samples
 
         mkdir $dst_dir/ExtendedSendTo
