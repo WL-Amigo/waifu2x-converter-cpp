@@ -3,7 +3,10 @@ all: w2xc.exe w2xcr.exe
 CXXFLAGS=-I../src -I.. -I../..
 LDLIBS=..\w2xc.lib
 
-w2xc.exe: w2xc.c
+w2xcr.res: w2xcr.rc
+	
+
+w2xc.exe: w2xc.c w2xcr.res
 	cl $(CXXFLAGS) w2xc.c /Few2xc.exe ..\w2xc.lib /MT /O2
 
 w2xcr.exe: w2xcr.c

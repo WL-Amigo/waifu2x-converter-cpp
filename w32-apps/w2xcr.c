@@ -7,8 +7,20 @@
 #include <windowsx.h>
 #include <process.h>
 #include "w2xconv.h"
+#include "w2xcr.h"
 
 static int block_size = 0;
+
+enum param_denoise_code {
+    DENOISE_NONE,
+    DENOISE_1,
+    DENOISE_2,
+    DENOISE_JPEG_1,
+    DENOISE_JPEG_2,
+};
+
+static int param_denoise = DENOISE_1;
+static double param_scale = 2.0;
 
 #define WIN_WIDTH 600
 #define DISP_HEIGHT 60
@@ -137,6 +149,33 @@ add_file(struct app *app, const char *src_path)
     HANDLE finder;
     int denoise = 0;
 
+    int denoise_jpg = 0;
+    int denoise_default = 0;
+
+    switch ((enum param_denoise_code)param_denoise) {
+    case DENOISE_NONE:
+        denoise_jpg = 0;
+        denoise_default = 0;
+        break;
+    case DENOISE_1:
+        denoise_jpg = 1;
+        denoise_default = 1;
+        break;
+    case DENOISE_2:
+        denoise_jpg = 2;
+        denoise_default = 2;
+        break;
+
+    case DENOISE_JPEG_1:
+        denoise_jpg = 1;
+        denoise_default = 0;
+        break;
+    case DENOISE_JPEG_2:
+        denoise_jpg = 2;
+        denoise_default = 0;
+        break;
+    }
+
     _splitpath(src_path,
                drive,
                dir,
@@ -160,11 +199,11 @@ add_file(struct app *app, const char *src_path)
         const static char bmp[] = {0x42, 0x4D};
 
         if (memcmp(header,jpg,3) == 0) {
-            denoise = 1;
+            denoise = denoise_jpg;
         } else if (memcmp(header,png,8) == 0 ||
                    memcmp(header,bmp,2) == 0)
         {
-            denoise = 0;
+            denoise = denoise_default;
         } else {
             return 0;
         }
@@ -279,7 +318,7 @@ proc_thread(void *ap)
     struct app *app = ta->app;
 
     struct W2XConv *c;
-    int r, i;
+    int r;
     int ret = 1;
     size_t path_len = 4;
     char *self_path = (char*)malloc(path_len+1);
@@ -346,7 +385,7 @@ proc_thread(void *ap)
                                  p->dst_path,
                                  p->src_path,
                                  p->denoise,
-                                 2.0, block_size);
+                                 param_scale, block_size);
 
         if (r != 0) {
             goto error;
@@ -558,7 +597,49 @@ update_display(struct app *app)
     ReleaseDC(app->win, dc);
 }
 
-#define WINMAIN
+static INT_PTR CALLBACK
+initdlg_callback(HWND wnd, UINT message, WPARAM wParam, LPARAM lParam)
+{
+    char buf[256];
+    switch (message) {
+    case WM_CLOSE:
+        EndDialog(wnd, -1);
+        return (INT_PTR)TRUE;
+
+    case WM_COMMAND:
+        switch (LOWORD(wParam)) {
+        case IDC_OK:
+            param_denoise = SendDlgItemMessage(wnd, IDC_DENOISE, CB_GETCURSEL, 0, 0);
+            GetDlgItemText(wnd, IDC_SCALE, buf, 256);
+            param_scale = atof(buf);
+            if (param_scale != 0) {
+                EndDialog(wnd, 0);
+            } else {
+                MessageBox(NULL, "invalid scale value", "w2xcr", MB_OK);
+            }
+            return (INT_PTR)TRUE;
+
+        case IDC_CANCEL:
+            EndDialog(wnd, -1);
+            return (INT_PTR)TRUE;
+        }
+        break;
+
+    case WM_INITDIALOG:
+        SetDlgItemText(wnd, IDC_SCALE, "2.0");
+        SendDlgItemMessage(wnd, IDC_DENOISE, CB_ADDSTRING, 0, (LPARAM)"none");
+        SendDlgItemMessage(wnd, IDC_DENOISE, CB_ADDSTRING, 0, (LPARAM)"1");
+        SendDlgItemMessage(wnd, IDC_DENOISE, CB_ADDSTRING, 0, (LPARAM)"2");
+        SendDlgItemMessage(wnd, IDC_DENOISE, CB_ADDSTRING, 0, (LPARAM)"1(jpeg only)");
+        SendDlgItemMessage(wnd, IDC_DENOISE, CB_ADDSTRING, 0, (LPARAM)"2(jpeg only)");
+        SendDlgItemMessage(wnd, IDC_DENOISE, CB_SETCURSEL, 1, 0);
+        break;
+    }
+
+    return (INT_PTR)FALSE;
+}
+
+//#define WINMAIN
 
 #ifdef WINMAIN
 int WINAPI
@@ -585,13 +666,23 @@ int main(int argc, char **argv)
     DWORD pathlen, attr;
     char *fullpath, *filepart;
     char *src_path;
+    int interactive = 0;
 
     for (argi=1; argi < argc; argi++) {
         if (strcmp(argv[argi],"--block_size") == 0) {
             block_size = atoi(argv[argi+1]);
             argi++;
+        } else if (strcmp(argv[argi],"--interactive") == 0) {
+            interactive = 1;
         } else {
             break;
+        }
+    }
+
+    if (interactive) {
+        int r = DialogBox(hInst, MAKEINTRESOURCE(IDD_INIT), NULL, initdlg_callback);
+        if (r == -1) {
+            return 1;
         }
     }
 
