@@ -639,7 +639,7 @@ initdlg_callback(HWND wnd, UINT message, WPARAM wParam, LPARAM lParam)
     return (INT_PTR)FALSE;
 }
 
-//#define WINMAIN
+#define WINMAIN
 
 #ifdef WINMAIN
 int WINAPI
