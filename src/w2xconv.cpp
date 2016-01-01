@@ -1574,8 +1574,8 @@ w2xconv_apply_filter_y(struct W2XConv *conv,
 	struct W2XConvImpl *impl = conv->impl;
 	ComputeEnv *env = &impl->env;
 
-	W2Mat dsti(src_h, src_w, CV_32FC1, dst, dst_step_byte);
-	W2Mat srci(src_h, src_w, CV_32FC1, src, src_step_byte);
+	W2Mat dsti(src_w, src_h, CV_32FC1, dst, dst_step_byte);
+	W2Mat srci(src_w, src_h, CV_32FC1, src, src_step_byte);
 
 	std::vector<std::unique_ptr<w2xc::Model> > *mp = NULL;
 
@@ -1603,7 +1603,7 @@ w2xconv_apply_filter_y(struct W2XConv *conv,
 
 	for (int yi=0; yi<src_h; yi++) {
 		char *d0 = dsti.ptr<char>(yi);
-		char *s0 = srci.ptr<char>(yi);
+		char *s0 = result.ptr<char>(yi);
 
 		memcpy(d0, s0, src_w * sizeof(float));
 	}
