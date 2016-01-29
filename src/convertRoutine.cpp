@@ -380,17 +380,14 @@ static bool convertWithModelsBlockSplit(W2XConv *conv,
 			case IMAGE_BGR:
 			case IMAGE_RGB:
 				elemSize = 3;
-				processBlockOutput = W2Mat(curBlockWidth, curBlockHeight, CV_8UC3);
 				break;
 
 			case IMAGE_RGB_F32:
 				elemSize = 12;
-				processBlockOutput = W2Mat(curBlockWidth, curBlockHeight, CV_32FC3);
 				break;
 
 			case IMAGE_Y:
 				elemSize = 4;
-				processBlockOutput = W2Mat(curBlockWidth, curBlockHeight, CV_32FC1);
 				break;
 			}
 
