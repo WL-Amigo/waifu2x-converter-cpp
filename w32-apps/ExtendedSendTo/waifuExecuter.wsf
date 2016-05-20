@@ -34,6 +34,26 @@ if (files.length === 0) {
 }
 var lang = {en:1, ru:1, ja:1}[options["--lang"]] ? options["--lang"] : "en";
 
+//Process all files in folder
+if (files.length === 1 && objFSO.FolderExists(files[0])) {
+	var objFolder = objFSO.GetFolder(files.pop());
+	var exts = {png: 1, jpg: 1, bmp: 1};
+	for (var e = new Enumerator(objFolder.files); !e.atEnd(); e.moveNext()) {
+		var path = e.item().Path;
+		var x = path.lastIndexOf('.');
+		if (x !== -1 && exts[path.substr(x + 1)]) files.push(path);
+	}
+	if (files.length === 0) {
+		error({en: '\
+			No images in folder.\
+		', ru: '\
+			В папке нет изображений.\
+		', ja: '\
+			フォルダーに画像がありません。\
+		'}[lang].replace(/\t/g, ""));
+	}
+}
+
 //Constant options
 var tm          = findWaifuFolder();
 var dir         = tm.dir;
@@ -228,7 +248,7 @@ function isNumber(num, min) { return parseFloat(num, 10).toString() == num && nu
 function nameByFile(s) { var x = s.lastIndexOf("\\"); if (x === -1) error({en: "Error while processing filename.", ru: "Произошла ошибка при обработке имени файла.", ja: "ファイル名処理するときにエラーが発生しました。"}[lang], 2); return s.substr(x + 1); }
 function echo(s, opt, wait, theTitle) { return WshShell.Popup(s, wait ? wait : 0, theTitle ? theTitle : title(), opt ? opt : 0); }
 function error(s, crit) { echo(s,  crit == 1 ? 48 : (crit == 2 ? 16 : 0),  0,  crit === 2 ? "Error" : "");  WScript.Quit(0); }
-function title() { return "ExtendedSendTo 1.0.3, Waifu2x"; }
+function title() { return "ExtendedSendTo 1.0.4, Waifu2x"; }
 
 </script>
 </job>

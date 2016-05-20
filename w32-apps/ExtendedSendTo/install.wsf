@@ -52,7 +52,7 @@ oneShortcut("waifuCustomizable", "waifuExecuter.wsf", "");
 
 //Success message
 echo({en: '\
-	Scripts have been successfully added to "Send To" menu. Now you can highlight few files, click right button on them, choose "Send To" item and then choose on the one of this option:\n\n\
+	Scripts have been successfully added to "Send To" menu. Now you can highlight few files (or one folder), click right button on them, choose "Send To" item and then choose on the one of this option:\n\n\
 	\
 	waifu_n1 — denoise\n\
 	waifu_n2 — aggressive denoise\n\
@@ -61,7 +61,7 @@ echo({en: '\
 	waifu2x_n2 — 4x expansion and aggressive denoise\n\
 	waifuCustomizable — specify all the options by yourself\
 ', ru: '\
-	Скрипты успешно добавлены в меню "Отправить". Теперь Вы можете нажать правой кнопкой на любое изображение или сразу несколько изображений, выбрать пункт "Отправить" и кликнуть на один из вариантов:\n\
+	Скрипты успешно добавлены в меню "Отправить". Теперь Вы можете выделить нужные изображения (или одну папку), нажать правой кнопкой по ним, выбрать пункт "Отправить" и кликнуть на один из вариантов:\n\
 	\n\
 	waifu_n1 — устранить шум\n\
 	waifu_n2 — агрессивно устранить шум\n\
@@ -78,6 +78,8 @@ echo({en: '\
 	「waifu2x_n1」 は4倍拡大とノイズ除去\n\
 	「waifu2x_n2」 は4倍拡大とアグレッシブノイズ除去\n\
 	「waifuCustomizable」 はオプションを自分で指定できます\
+	\
+	一つのフォルダーを処理できます。\
 '}[lang].replace(/\t/g, ""), 64, 0, "ExtendedSendTo 1.0.4 - " + {en: "Install success!", ru: "Установка успешно завершена", ja: "インストールは成功しました"}[lang]);
 
 if (echo({en: '\
