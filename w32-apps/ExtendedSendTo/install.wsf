@@ -52,7 +52,7 @@ oneShortcut("waifuCustomizable", "waifuExecuter.wsf", "");
 
 //Success message
 echo({en: '\
-	Scripts have been successfully added to "Send To" menu. Now you can highlight few files, click right button on them, choose "Send To" item and then choose on the one of this option:\n\n\
+	Scripts have been successfully added to "Send To" menu. Now you can highlight few files (or one folder), click right button on them, choose "Send To" item and then choose on the one of this option:\n\n\
 	\
 	waifu_n1 — denoise\n\
 	waifu_n2 — aggressive denoise\n\
@@ -61,7 +61,7 @@ echo({en: '\
 	waifu2x_n2 — 4x expansion and aggressive denoise\n\
 	waifuCustomizable — specify all the options by yourself\
 ', ru: '\
-	Скрипты успешно добавлены в меню "Отправить". Теперь Вы можете нажать правой кнопкой на любое изображение или сразу несколько изображений, выбрать пункт "Отправить" и кликнуть на один из вариантов:\n\
+	Скрипты успешно добавлены в меню "Отправить". Теперь Вы можете выделить нужные изображения (или одну папку), нажать правой кнопкой по ним, выбрать пункт "Отправить" и кликнуть на один из вариантов:\n\
 	\n\
 	waifu_n1 — устранить шум\n\
 	waifu_n2 — агрессивно устранить шум\n\
@@ -78,7 +78,22 @@ echo({en: '\
 	「waifu2x_n1」 は4倍拡大とノイズ除去\n\
 	「waifu2x_n2」 は4倍拡大とアグレッシブノイズ除去\n\
 	「waifuCustomizable」 はオプションを自分で指定できます\
-'}[lang].replace(/\t/g, ""), 64, 0, "ExtendedSendTo 1.0.3 - " + {en: "Install success!", ru: "Установка успешно завершена", ja: "インストールは成功しました"}[lang]);
+	\
+	一つのフォルダーを処理できます。\
+'}[lang].replace(/\t/g, ""), 64, 0, "ExtendedSendTo 1.0.4 - " + {en: "Install success!", ru: "Установка успешно завершена", ja: "インストールは成功しました"}[lang]);
+
+if (echo({en: '\
+	Do you want add extra items to "Send To" menu? (4x, 4x_n1, 8x, 8x_n1)\
+', ru: '\
+	Вы хотите добавить дополнительные пункты в меню "Отправить"? (4x, 4x_n1, 8x, 8x_n1)\
+', ja: '\
+	送るメニューに余分なアイテムを追加しますか？ (4x, 4x_n1, 8x, 8x_n1)\
+'}[lang].replace(/\t/g, ""), 36) === 6) {
+	oneShortcut("waifu4x_n0", "waifuExecuter.wsf", "--without_typing --scale_ratio 4 --noise_level 0");
+	oneShortcut("waifu4x_n1", "waifuExecuter.wsf", "--without_typing --scale_ratio 4 --noise_level 1");
+	oneShortcut("waifu8x_n0", "waifuExecuter.wsf", "--without_typing --scale_ratio 8 --noise_level 0");
+	oneShortcut("waifu8x_n1", "waifuExecuter.wsf", "--without_typing --scale_ratio 8 --noise_level 1");
+}
 
 //Create one shortcut
 function oneShortcut(name, file, args) {
@@ -106,7 +121,7 @@ function findWaifuFolder() {
 //Standart functions
 function echo(s, opt, wait, theTitle) { return WshShell.Popup(s, wait ? wait : 0, theTitle ? theTitle : title(), opt ? opt : 0); }
 function error(s, crit) { echo(s,  crit == 1 ? 48 : (crit == 2 ? 16 : 0),  0,  crit === 2 ? "Error" : "");  WScript.Quit(0); }
-function title() { return "ExtendedSendTo 1.0.3, Waifu2x"; }
+function title() { return "ExtendedSendTo 1.0.4, Waifu2x"; }
 
 </script>
 </job>
