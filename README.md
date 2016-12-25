@@ -54,7 +54,7 @@ These are hints for building :
 ### for Windows (Windows x64 with AMD GPU)
 
 1. Download and install VS2013, OpenCV 3.0, CMake x64 and AMD APP SDK v2.9
-2. Copy master branch to somewhere then copy CMakeLists.txt from NoCUDA-Windows branch to master branch
+2. (For non-NVIDIA users) Copy master branch to somewhere then copy CMakeLists.txt from NoCUDA-Windows branch to master branch
 3. Run CMake GUI, Press Browse source and choose waifu2x-converter-cpp folder
 4. Add OPENCV_PREFIX entry, folder location point to %OpenCV%\build\ (%OpenCV% is the installed OpenCV location)
 5. Press Configure, choose Visual Studio 12 2013 x64
