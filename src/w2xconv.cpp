@@ -37,6 +37,7 @@ struct W2XConvImpl {
 
 	std::vector<std::unique_ptr<w2xc::Model> > noise1_models;
 	std::vector<std::unique_ptr<w2xc::Model> > noise2_models;
+	std::vector<std::unique_ptr<w2xc::Model> > noise3_models;
 	std::vector<std::unique_ptr<w2xc::Model> > scale2_models;
 };
 
@@ -519,6 +520,7 @@ w2xconv_load_models(W2XConv *conv, const char *model_dir)
 
 	impl->noise1_models.clear();
 	impl->noise2_models.clear();
+	impl->noise3_models.clear();
 	impl->scale2_models.clear();
 
 	if (!w2xc::modelUtility::generateModelFromJSON(modelFileName + "/noise1_model.json", impl->noise1_models)) {
@@ -531,6 +533,12 @@ w2xconv_load_models(W2XConv *conv, const char *model_dir)
 		setPathError(conv,
 			     W2XCONV_ERROR_MODEL_LOAD_FAILED,
 			     modelFileName + "/noise2_model.json");
+		return -1;
+	}
+	if (!w2xc::modelUtility::generateModelFromJSON(modelFileName + "/noise3_model.json", impl->noise3_models)) {
+		setPathError(conv,
+			     W2XCONV_ERROR_MODEL_LOAD_FAILED,
+			     modelFileName + "/noise3_model.json");
 		return -1;
 	}
 	if (!w2xc::modelUtility::generateModelFromJSON(modelFileName + "/scale2.0x_model.json", impl->scale2_models)) {
@@ -563,6 +571,9 @@ w2xconv_set_model_3x3(struct W2XConv *conv,
 		break;
 	case W2XCONV_FILTER_DENOISE2:
 		models = &impl->noise2_models;
+		break;
+	case W2XCONV_FILTER_DENOISE3:
+		models = &impl->noise3_models;
 		break;
 	case W2XCONV_FILTER_SCALE2x:
 		models = &impl->scale2_models;
@@ -627,9 +638,13 @@ apply_denoise(struct W2XConv *conv,
 		w2xc::convertWithModels(conv, env, input_2, output_2,
 					impl->noise1_models,
 					&conv->flops, blockSize, fmt, conv->enable_log);
-	} else {
+	} else if (denoise_level == 2) {
 		w2xc::convertWithModels(conv, env, input_2, output_2,
 					impl->noise2_models,
+					&conv->flops, blockSize, fmt, conv->enable_log);
+	} else if (denoise_level == 3) {
+		w2xc::convertWithModels(conv, env, input_2, output_2,
+					impl->noise3_models,
 					&conv->flops, blockSize, fmt, conv->enable_log);
 	}
 
@@ -1586,6 +1601,10 @@ w2xconv_apply_filter_y(struct W2XConv *conv,
 
 	case W2XCONV_FILTER_DENOISE2:
 		mp = &impl->noise2_models;
+		break;
+
+	case W2XCONV_FILTER_DENOISE3:
+		mp = &impl->noise3_models;
 		break;
 
 	case W2XCONV_FILTER_SCALE2x:

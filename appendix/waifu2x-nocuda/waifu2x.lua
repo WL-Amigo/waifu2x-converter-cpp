@@ -21,7 +21,7 @@ local function waifu2x()
    cmd:option("-o", "(auto)", 'path of output')
    cmd:option("-model_dir", "./models", 'model directory')
    cmd:option("-m", "noise_scale", 'method (noise|scale|noise_scale)')
-   cmd:option("-noise_level", 1, '(1|2)')
+   cmd:option("-noise_level", 1, '(1|2|3)')
    cmd:option("-crop_size", 128, 'crop size')
    local opt = cmd:parse(arg)   
    if opt.o == "(auto)" then
