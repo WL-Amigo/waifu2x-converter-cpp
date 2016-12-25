@@ -638,11 +638,13 @@ apply_denoise(struct W2XConv *conv,
 		w2xc::convertWithModels(conv, env, input_2, output_2,
 					impl->noise1_models,
 					&conv->flops, blockSize, fmt, conv->enable_log);
-	} else if (denoise_level == 2) {
+	}
+	if (denoise_level == 2) {
 		w2xc::convertWithModels(conv, env, input_2, output_2,
 					impl->noise2_models,
 					&conv->flops, blockSize, fmt, conv->enable_log);
-	} else if (denoise_level == 3) {
+	}
+	if (denoise_level == 3) {
 		w2xc::convertWithModels(conv, env, input_2, output_2,
 					impl->noise3_models,
 					&conv->flops, blockSize, fmt, conv->enable_log);
