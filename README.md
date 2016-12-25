@@ -4,13 +4,11 @@ This is a reimplementation of waifu2x ([original](https://github.com/nagadomi/wa
 This is also a reimplementation of [waifu2x python version](https://marcan.st/transf/waifu2x.py) by [Hector Martin](https://marcan.st/blog/).
 You can use this as command-line tool of image noise reduction or/and scaling.
 
-
 ## Prebuilt binary-form release
 
-- http://int.main.jp/files/waifu2x-converter_x64_1130.zip
-- http://int.main.jp/files/waifu2x-converter_x86_1130.zip
+https://github.com/max20091/waifu2x-converter-cpp/releases
 
-## works using waifu2x-converter
+## waifu2x converter GUI
 
  * [waifu2x_win_koroshell](http://inatsuka.com/extra/koroshell/)
    - waifu2x-converter GUI frontend that is easy to use, and so cute. You need only drag&drop to convert your image. (and also you can set converting mode, noise reduction level, scale ratio, etc..., on GUI)
@@ -22,15 +20,15 @@ You can use this as command-line tool of image noise reduction or/and scaling.
 
 ### Platform
 
- * Ubuntu
- * Mac OS X?
- * Windows
+ * Ubuntu  
+ * Windows  
+ * Mac OS X?  
  
 (This program probably can be built under MacOSX, because OpenCV and other libraries support OS X)
 
 ### Libraries
 
- * [OpenCV](http://opencv.org/)(C++, version 3.0.0 rc1)
+ * [OpenCV](http://opencv.org/)(version 3.0)
 
 This programs also depends on libraries shown below, but these are already included in this repository.
 *CUDA Support in OpenCV is optional, since not required. (in version 1.0.0, CUDA Support is not used.)*
@@ -53,13 +51,18 @@ These are hints for building :
  * libraries to link : `opencv_core` `opencv_imgproc` `opencv_imgcodecs` `opencv_features2d`
  * standard of C++ : `c++11`
 
+### for Windows (Windows x64 with AMD GPU)
 
+1. Download and install VS2013, OpenCV 3.0, CMake x64 and AMD APP SDK v2.9
+2. Copy master branch to somewhere then copy CMakeLists.txt from NoCUDA-Windows branch to master branch
+3. Run CMake GUI, Press Browse source and choose waifu2x-converter-cpp folder
+4. Add OPENCV_PREFIX entry, folder location point to %OpenCV%\build\ (%OpenCV% is the installed OpenCV location)
+5. Press Configure, choose Visual Studio 12 2013 x64
+6. Compile it with VS2013 and done!
 
 ## Usage
 
-Usage of this program can be seen by executing this with `--help` option.
-
-
+Usage of this program can be seen by executing this with `-h` option.
 
 (My native language is not English, then I'm sorry for my broken English.)
 
@@ -70,3 +73,9 @@ Usage of this program can be seen by executing this with `--help` option.
   * You can build it by cmake ($ cmake -D OPENCV_PREFIX=&lt;OpenCV include/lib dir&gt;)
  * [DLL interface](src/w2xconv.h)
   * You can use waifu2x as library. include w2xconv.h & link w2xc.lib.
+
+## modifided by max20091
+ * Updated tclap, PicoJSON, Waifu2x model
+ * Added Noise Reduction Level 3
+ * Using nagadomi original model
+ * Added Windows build guide
