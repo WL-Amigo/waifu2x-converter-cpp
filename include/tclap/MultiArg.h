@@ -185,7 +185,7 @@ public:
 	 * Returns a vector of type T containing the values parsed from
 	 * the command line.
 	 */
-	const std::vector<T>& getValue();
+	const std::vector<T>& getValue() const { return _values; }
 
 	/**
 	 * Returns an iterator over the values parsed from the command
@@ -276,7 +276,7 @@ MultiArg<T>::MultiArg(const std::string& flag,
                       Visitor* v)
 : Arg( flag, name, desc, req, true, v ),
   _values(std::vector<T>()),
-  _typeDesc( constraint->shortID() ),
+  _typeDesc( Constraint<T>::shortID(constraint) ),
   _constraint( constraint ),
   _allowMore(false)
 { 
@@ -293,16 +293,13 @@ MultiArg<T>::MultiArg(const std::string& flag,
                       Visitor* v)
 : Arg( flag, name, desc, req, true, v ),
   _values(std::vector<T>()),
-  _typeDesc( constraint->shortID() ),
+  _typeDesc( Constraint<T>::shortID(constraint) ),
   _constraint( constraint ),
   _allowMore(false)
 { 
 	parser.add( this );
 	_acceptsMultipleValues = true;
 }
-
-template<class T>
-const std::vector<T>& MultiArg<T>::getValue() { return _values; }
 
 template<class T>
 bool MultiArg<T>::processArg(int *i, std::vector<std::string>& args) 

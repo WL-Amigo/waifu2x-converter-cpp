@@ -143,7 +143,8 @@ inline void StdOutput::failure( CmdLineInterface& _cmd,
 			_shortUsage( _cmd, std::cerr );	
 
 			std::cerr << std::endl << "For complete USAGE and HELP type: " 
-					  << std::endl << "   " << progName << " --help" 
+					  << std::endl << "   " << progName << " "
+					  << Arg::nameStartString() << "help"
 					  << std::endl << std::endl;
 		}
 	else

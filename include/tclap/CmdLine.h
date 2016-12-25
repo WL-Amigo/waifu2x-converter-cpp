@@ -183,6 +183,11 @@ private:
 		 */
 		bool _helpAndVersion;
 
+		/**
+		 * Whether or not to ignore unmatched args.
+		 */
+		bool _ignoreUnmatched;
+
 	public:
 
 		/**
@@ -313,6 +318,13 @@ private:
 		 */
 		void reset();
 
+		/**
+		 * Allows unmatched args to be ignored. By default false.
+		 * 
+		 * @param ignore If true the cmdline will ignore any unmatched args
+		 * and if false it will behave as normal.
+		 */
+		void ignoreUnmatched(const bool ignore);
 };
 
 
@@ -337,7 +349,8 @@ inline CmdLine::CmdLine(const std::string& m,
   _output(0),
   _handleExceptions(true),
   _userSetOutput(false),
-  _helpAndVersion(help)
+  _helpAndVersion(help),
+  _ignoreUnmatched(false)
 {
 	_constructor();
 }
@@ -470,7 +483,7 @@ inline void CmdLine::parse(std::vector<std::string>& args)
 			if ( !matched && _emptyCombined( args[i] ) )
 				matched = true;
 
-			if ( !matched && !Arg::ignoreRest() )
+			if ( !matched && !Arg::ignoreRest() && !_ignoreUnmatched)
 				throw(CmdLineParseException("Couldn't find match "
 				                            "for argument",
 				                            args[i]));
@@ -621,6 +634,11 @@ inline void CmdLine::reset()
 		(*it)->reset();
 	
 	_progName.clear();
+}
+
+inline void CmdLine::ignoreUnmatched(const bool ignore)
+{
+	_ignoreUnmatched = ignore;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
