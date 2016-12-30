@@ -52,13 +52,17 @@ These are hints for building :
  * standard of C++ : `c++11`
 
 ### for Windows (Windows x64 with AMD GPU)
-VS2013:
+
+#### VS2013:
+
 1. Download and install VS2013, OpenCV 3.0, CMake x64 and AMD APP SDK v2.9
 2. Run CMake GUI, Press Browse source and choose waifu2x-converter-cpp folder
 3. Add OPENCV_PREFIX entry, folder location point to %OpenCV%\build\ (%OpenCV% is the installed OpenCV location)
 4. Press Configure, choose Visual Studio 12 2013 x64
 5. Compile it with VS2013 and done!
-VS2015:
+
+#### VS2015:
+
 1. Download & install VS2015 Community, OpenCV3.2, Cmake x64 and AMD APP SDK 3.0 (newest)
 2. Run Cmake GUI, press browse source, select waifu2x-converter-cpp folder
 3. Add OPENCV_PREFIX entry, set type to path and point it to %OpenCV%\build\ (%OpenCV% is the installed OpenCV location)
