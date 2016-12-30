@@ -79,3 +79,13 @@ Usage of this program can be seen by executing this with `-h` option.
  * Added Noise Reduction Level 3
  * Using nagadomi original model
  * Added Windows build guide
+
+## modifided by DeadSix27
+* Added support for Visual Studio 2015 (VC14)
+* VC14: Now requires OpenCV3.2 (VC12 and Linux etc still work with OpenCV3/2)
+* VC14: Will not statically link OpenCV, you will need opencv_world320.dll in the w2x folder.
+* Added Cuda checks to prevent the cuda code mess, and get rid of the extra NoCuda branch of max20091 may or may not work properly, I have no nVidia GPU to test
+* TODO: Add proper UTF8/Unicode support
+* TODO: fix binary file handling.
+* ^Keep an eye out on my fork for: https://github.com/DeadSix27/waifu2x-converter-cpp
+
