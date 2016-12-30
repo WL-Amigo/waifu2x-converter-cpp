@@ -52,13 +52,21 @@ These are hints for building :
  * standard of C++ : `c++11`
 
 ### for Windows (Windows x64 with AMD GPU)
-
+VS2013:
 1. Download and install VS2013, OpenCV 3.0, CMake x64 and AMD APP SDK v2.9
-2. (For non-NVIDIA users) Copy master branch to somewhere then copy CMakeLists.txt from NoCUDA-Windows branch to master branch
-3. Run CMake GUI, Press Browse source and choose waifu2x-converter-cpp folder
-4. Add OPENCV_PREFIX entry, folder location point to %OpenCV%\build\ (%OpenCV% is the installed OpenCV location)
-5. Press Configure, choose Visual Studio 12 2013 x64
-6. Compile it with VS2013 and done!
+2. Run CMake GUI, Press Browse source and choose waifu2x-converter-cpp folder
+3. Add OPENCV_PREFIX entry, folder location point to %OpenCV%\build\ (%OpenCV% is the installed OpenCV location)
+4. Press Configure, choose Visual Studio 12 2013 x64
+5. Compile it with VS2013 and done!
+VS2015:
+1. Download & install VS2015 Community, OpenCV3.2, Cmake x64 and AMD APP SDK 3.0 (newest)
+2. Run Cmake GUI, press browse source, select waifu2x-converter-cpp folder
+3. Add OPENCV_PREFIX entry, set type to path and point it to %OpenCV%\build\ (%OpenCV% is the installed OpenCV location)
+4. Press Configure, choose Visual Studio 14 2015 Win64
+5. Press Generate
+6. Press Open Project
+7. Right click Solution 'Project' and hit Build Solution.
+8. Don't forget to copy models_rgb from waifu2x-converter-cpp and %OpenCV%\build\x64\vc14\bin\opencv_world320.dll into the output folder.
 
 ## Usage
 
