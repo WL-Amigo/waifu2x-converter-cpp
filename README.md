@@ -51,7 +51,7 @@ These are hints for building :
  * libraries to link : `opencv_core` `opencv_imgproc` `opencv_imgcodecs` `opencv_features2d`
  * standard of C++ : `c++11`
 
-### for Windows (Windows x64 with AMD GPU)
+### for Windows (Windows x64 (nVidia is untested))
 
 #### VS2013:
 
@@ -63,7 +63,7 @@ These are hints for building :
 
 #### VS2015:
 
-1. Download & install VS2015 Community, OpenCV3.2, Cmake x64 and AMD APP SDK 3.0 (newest)
+1. Download & install [VS2015 Community](https://www.visualstudio.com/downloads/), [OpenCV 3.2 for Windows](http://opencv.org/downloads.html), [cmake-3.7.1-win64-x64.msi](https://cmake.org/download/) and [AMD APP SDK 3.0](http://developer.amd.com/tools-and-sdks/opencl-zone/amd-accelerated-parallel-processing-app-sdk/)
 2. Run Cmake GUI, press browse source, select waifu2x-converter-cpp folder
 3. Add OPENCV_PREFIX entry, set type to path and point it to %OpenCV%\build\ (%OpenCV% is the installed OpenCV location)
    NOTE: Make very sure to set OPENCV_PREFIX before clicking configure and clear cmake cache everytime you configure again.
