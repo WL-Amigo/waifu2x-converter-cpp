@@ -18,7 +18,7 @@ Download and install/extract:
 * [cmake-3.7.1-win64-x64](https://cmake.org/download/)
 * [AMD APP SDK 3.0](http://developer.amd.com/tools-and-sdks/opencl-zone/amd-accelerated-parallel-processing-app-sdk/)
 
-#### Command line (console):
+#### Command line (console) (OR use the Cmake GUI guide below, I prefer console):
 
 Open a Command promt and run:
 
@@ -56,7 +56,7 @@ After that you will find your Binaries in `waifu2x-converter-cpp\output\Release`
 9. Don't forget to copy models_rgb from waifu2x-converter-cpp and %OpenCV%\build\x64\vc14\bin\opencv_world320.dll into the output folder.
 10. And also copy OpenCV%\build\x64\vc14\bin\opencv_world320.dll to the output folder
 
-## Ubuntu
+## Ubuntu 16.10 amd64
 
 ### We have to build and install some requirements
 
