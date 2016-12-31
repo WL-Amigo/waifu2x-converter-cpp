@@ -163,3 +163,32 @@ $ ./waifu2x-converter-cpp --list-processor
 
 See [README.md](README.md)
 
+
+____
+
+# Archived buildguides:
+
+### for Ubuntu
+
+Sorry, under construction...
+
+These are hints for building :
+
+ * I recommend to install OpenCV from sources. (build instruction is found [here](http://opencv.org/quickstart.html))
+ * include path : `include/` `(/path/to/opencv/installed/directory)/include`
+ * library path : `(/path/to/opencv/installed/directory)/lib` 
+     - if you have built and installed OpenCV from source, and have changed install directory(by using `CMAKE_INSTALL_PREFIX`), you may need to set environment variable `LD_LIBRARY_PATH` for your OpenCV installed directory.
+ * libraries to link : `opencv_core` `opencv_imgproc` `opencv_imgcodecs` `opencv_features2d`
+ * standard of C++ : `c++11`
+
+### for Windows (Windows x64 (nVidia is untested))
+
+#### VS2013:
+
+1. Download and install VS2013, OpenCV 3.0, CMake x64 and AMD APP SDK v2.9
+2. Run CMake GUI, Press Browse source and choose waifu2x-converter-cpp folder
+3. Add OPENCV_PREFIX entry, folder location point to %OpenCV%\build\ (%OpenCV% is the installed OpenCV location)
+4. Press Configure, choose Visual Studio 12 2013 x64
+5. Compile it with VS2013 and done!
+
+
