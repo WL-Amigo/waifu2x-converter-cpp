@@ -63,7 +63,7 @@ These are hints for building :
 
 #### VS2015 (Win64 only, OpenCV 3.2 only supports 64bit):
 
-See BUILDING.md for more information.
+See [BUILDING.md](BUILDING.md) for more information.
 
 ## Usage
 
@@ -86,6 +86,7 @@ Usage of this program can be seen by executing this with `-h` option.
  * Added Windows build guide
 
 ## modifided by DeadSix27
+* Improved windows build guide [BUILDING.md](BUILDING.md)
 * Added support for Visual Studio 2015 (VC14)
 * Added option to override OpenCV Detection for when you're sure its there (OVERRIDE_OPENCV)
 * VC14: Now requires OpenCV3.2 (VC12 and Linux etc still work with OpenCV3/2)
