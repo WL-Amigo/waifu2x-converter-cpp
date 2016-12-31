@@ -61,7 +61,7 @@ These are hints for building :
 4. Press Configure, choose Visual Studio 12 2013 x64
 5. Compile it with VS2013 and done!
 
-#### VS2015:
+#### VS2015 (Win64 only, OpenCV 3.2 only supports 64bit):
 
 1. Clone [DeadSix27/waifu2x-converter-cpp](https://github.com/DeadSix27/waifu2x-converter-cpp) from master
 2. Download & install [VS2015 Community](https://www.visualstudio.com/downloads/), [OpenCV 3.2 for Windows](http://opencv.org/downloads.html), [cmake-3.7.1-win64-x64.msi](https://cmake.org/download/) and [AMD APP SDK 3.0](http://developer.amd.com/tools-and-sdks/opencl-zone/amd-accelerated-parallel-processing-app-sdk/)
