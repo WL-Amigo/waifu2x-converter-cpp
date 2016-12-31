@@ -32,9 +32,11 @@ Then run the following:
 >cd output
 >cmake -DCMAKE_GENERATOR="Visual Studio 14 2015 Win64" -DOPENCV_PREFIX=%OpenCV%\build\ ..
 >msbuild Project.sln /p:Configuration=Release /p:Platform=x64
->copy %OpenCV%\opencv32\build\x64\vc14\bin\opencv_world320.dll Release\
+>copy %OpenCV%\build\x64\vc14\bin\opencv_world320.dll Release\
 ```
 Note: %OpenCV% is your path to OpenCV, e.g `G:\w2x\opencv32`
+
+Note: If you are sure you have OpenCV3.2 installed yet it does not detect it, add -DOVERRIDE_OPENCV=1 to cmake.
 
 After that you will find your Binaries in `waifu2x-converter-cpp\output\Release`
 
