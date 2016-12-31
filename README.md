@@ -64,10 +64,42 @@ These are hints for building :
 #### VS2015:
 
 1. Clone [DeadSix27/waifu2x-converter-cpp](https://github.com/DeadSix27/waifu2x-converter-cpp) from masterAo override OpenCV Detection for when you're sure its there (OVERRIDE_OPENCV)
+2. Download & install [VS2015 Community](https://www.visualstudio.com/downloads/), [OpenCV 3.2 for Windows](http://opencv.org/downloads.html), [cmake-3.7.1-win64-x64.msi](https://cmake.org/download/) and [AMD APP SDK 3.0](http://developer.amd.com/tools-and-sdks/opencl-zone/amd-accelerated-parallel-processing-app-sdk/)
+3. Run Cmake GUI, press browse source, select waifu2x-converter-cpp folder
+4. Add OPENCV_PREFIX entry, set type to path and point it to %OpenCV%\build\ (%OpenCV% is the installed OpenCV location)
+   NOTE: Make very sure to set OPENCV_PREFIX before clicking configure and clear cmake cache everytime you configure again.
+5. Press Configure, choose Visual Studio 14 2015 Win64
+6. Press Generate
+7. Press Open Project
+8. Right click Solution 'Project' and hit Build Solution.
+9. Don't forget to copy models_rgb from waifu2x-converter-cpp and %OpenCV%\build\x64\vc14\bin\opencv_world320.dll into the output folder.
+
+## Usage
+
+Usage of this program can be seen by executing this with `-h` option.
+
+(My native language is not English, then I'm sorry for my broken English.)
+
+## modifided by tanakamura
+ * Added CUDA, OpenCL(AMD GPU), x86 FMA, x86 AVX Support (That is selected automatically at runtime)
+  * OpenCL(AMD GPU) version achieves 40% of peak performance (291GFLOPS @ A10-7850K)
+ * Added CMakeLists.txt
+  * You can build it by cmake ($ cmake -D OPENCV_PREFIX=&lt;OpenCV include/lib dir&gt;)
+ * [DLL interface](src/w2xconv.h)
+  * You can use waifu2x as library. include w2xconv.h & link w2xc.lib.
+
+## modifided by max20091
+ * Updated tclap, PicoJSON, Waifu2x model
+ * Added Noise Reduction Level 3
+ * Using nagadomi original model
+ * Added Windows build guide
+
+## modifided by DeadSix27
+* Added support for Visual Studio 2015 (VC14)
+* Added option to override OpenCV Detection for when you're sure its there (OVERRIDE_OPENCV)
 * VC14: Now requires OpenCV3.2 (VC12 and Linux etc still work with OpenCV3/2)
 * VC14: Will not statically link OpenCV, you will need opencv_world320.dll in the w2x folder.
 * Added Cuda checks to prevent the cuda code mess, and get rid of the extra NoCuda branch of max20091 may or may not work properly, I have no nVidia GPU to test
 * TODO: Add proper UTF8/Unicode support
 * TODO: fix binary file handling.
 * ^Keep an eye out on my fork for those: https://github.com/DeadSix27/waifu2x-converter-cpp
-
