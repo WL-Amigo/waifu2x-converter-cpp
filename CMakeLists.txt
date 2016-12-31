@@ -22,13 +22,21 @@ else()
   link_directories(${OPENCV_PREFIX}/lib)
 endif()
 
-check_include_file_cxx("opencv2/opencv.hpp" HAVE_OPENCV)
+if(OVERRIDE_OPENCV)
+  set(HAVE_OPENCV 1 CACHE INTERNAL "Have include opencv overridden")
+else()
+  check_include_file_cxx("opencv2/opencv.hpp" HAVE_OPENCV)
+endif()
+
 find_library(IMGCODECS_LIBRARY NAMES opencv_imgcodecs opencv_highgui
   HINTS ${OPENCV_PKG_INCLUDE_DIRS} ${OPENCV_PREFIX}/lib)
 
 if(HAVE_OPENCV)
+  message("Adding " ${OPENCV_PREFIX}/include "Found OpenCV")
   add_definitions(-DHAVE_OPENCV)
   set(OPENCV_LIBRARIES opencv_core opencv_imgproc ${IMGCODECS_LIBRARY} opencv_features2d)
+else()
+  message("Adding " ${OPENCV_PREFIX}/include "opencv2/opencv.hpp not found, you can try compiling with OVERRIDE_OPENCV set to true then make sure to set OPENCV_PREFIX as well")
 endif()
 
 if(${CMAKE_SYSTEM_NAME} STREQUAL "Linux")
