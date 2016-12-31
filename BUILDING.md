@@ -46,7 +46,7 @@ After that you will find your Binaries in `waifu2x-converter-cpp\output\Release`
 #### CMake GUI:
 
 1. Clone DeadSix27/waifu2x-converter-cpp from master
-2. Download & install VS2015 Community, OpenCV 3.2 for Windows, cmake-3.7.1-win64-x64.msi and AMD APP SDK 3.0
+2. Download and install the same files as noted above in: "Download and install/extract"
 3. Run Cmake GUI, press browse source, select waifu2x-converter-cpp folder
 4. Add OPENCV_PREFIX entry, set type to path and point it to %OpenCV%\build\ (%OpenCV% is the installed OpenCV location) -- ***NOTE:** Make very sure to set OPENCV_PREFIX before clicking configure and clear cmake cache everytime you configure again.*
 5. Press Configure, choose Visual Studio 14 2015 Win64
@@ -109,7 +109,7 @@ Number of devices                                 1
 #### OpenCV 3.2
 
 
-You can also download the prebuilt package I built for Ubuntu 16.10-amd64 here: [libopencv_3.2-1_amd64.deb]()
+You can also download the prebuilt package I built for Ubuntu 16.10-amd64 here: [libopencv_3.2-1_amd64.deb](https://github.com/DeadSix27/waifu2x-converter-cpp/releases)
 
 It will install into: `/usr/local`
 
