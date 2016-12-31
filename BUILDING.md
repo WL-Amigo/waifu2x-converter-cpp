@@ -1,3 +1,5 @@
+### Building guides for Ubuntu-16.10-64bit and Windows VS2015-64bit by DeadSix27
+
 # Download pre-built binaries from:
 
 https://github.com/DeadSix27/waifu2x-converter-cpp/releases
@@ -56,8 +58,108 @@ After that you will find your Binaries in `waifu2x-converter-cpp\output\Release`
 
 ## Ubuntu
 
-See [README.md](README.md)
+### We have to build and install some requirements
+
+#### AMD SDK
+
+* Download [AMD APP SDK v3.0 (AMD-APP-SDKInstaller-v3.0.130.136-GA-linux64.tar.bz2)](http://developer.amd.com/tools-and-sdks/opencl-zone/amd-accelerated-parallel-processing-app-sdk/)
+
+Create a new folder:
+```
+$ mkdir w2x && cd w2x
+```
+
+Place AMD-APP-SDKInstaller-v3.0.130.136-GA-linux64.tar.bz2 in this folder, run:
+
+```
+$ bzip2 -dc AMD-APP-SDKInstaller-v3.0.130.136-GA-linux64.tar.bz2 | tar xvf -
+$ sudo ./AMD-APP-SDK-v3.0.130.136-GA-linux64.sh
+```
+It will verify the package, show license, read or press "Q" then hit "Y"
+
+It will ask for a location, the default /opt is fine, hit "enter"
+
+It will install into /opt/AMDAPPSDK-3.0
+
+It will tell you: You will need to log back in/open another terminal for the environment variable updates to take effect.
+
+Do that, close ssh or terminal then log back in and cd to the folder we created above then continue:
+
+
+We have to install opencl packages, this is only tested on amd64 & ubuntu 16.10 and might change in the future:
+
+```
+$ sudo apt install clinfo mesa-opencl-icd opencl-headers
+$ clinfo
+Number of platforms                               1
+  Platform Name                                   Clover
+  Platform Vendor                                 Mesa
+  Platform Version                                OpenCL 1.1 Mesa 12.0.3
+  Platform Profile                                FULL_PROFILE
+  Platform Extensions                             cl_khr_icd
+  Platform Extensions function suffix             MESA
+
+  Platform Name                                   Clover
+Number of devices                                 1
+  Device Name                                     AMD KAVERI (DRM 2.46.0 / 4.8.0-32-generic, LLVM 3.8.1)
+  .....
+  .....
+```
+
+#### OpenCV 3.2
+
+
+You can also download the prebuilt package I built for Ubuntu 16.10-amd64 here: [libopencv_3.2-1_amd64.deb]()
+
+It will install into: `/usr/local`
+
+But I did not fully test this, I recommend building it on your own using the guide below this.
+
+* Download [OpenCV 3.2 Linux Source (3.2.0.zip)](http://opencv.org/downloads.html)
+
+Create a subfolder in the folder we created above and name it ocv_source for example.
+
+Install the following packages:
+
+```
+sudo apt-get install build-essential libwebp libjpeg libtiff zlib1
+```
+
+Then:
+
+```
+$ mkdir ocv_source && cd ocv_source
+$ wget https://github.com/opencv/opencv/archive/3.2.0.zip
+$ unzip 3.2.0.zip && cd opencv-3.2.0/
+$ mkdir release && cd release
+$ cmake -D CMAKE_BUILD_TYPE=RELEASE -D CMAKE_INSTALL_PREFIX=/usr/local -D ENABLE_PRECOMPILED_HEADERS=OFF ..
+$ make -j4
+$ sudo make install
+$ cd ../..
+```
+
+Now lets build waifu2x-converter-cpp:
+
+```
+$ git clone https://github.com/DeadSix27/waifu2x-converter-cpp && cd waifu2x-converter-cpp
+$ mkdir release && cd release
+$ cmake -DOPENCV_PREFIX=/usr/local .. -DOVERRIDE_OPENCV=1
+$ make -j4
+$ cp ../models_rgb/ . -r
+```
+Done!
+You should now have a fully working linux built of waifu2x-converter-cpp.
+Try it out like below, should return your processors and GPUs:
+
+``` 
+$ ./waifu2x-converter-cpp --list-processor
+   0: AMD KAVERI (DRM 2.46.0 / 4.8.0-32-generic, LLVM 3.8.1)(OpenCL    ): num_core=6
+   1: AMD A8-7600 Radeon R7, 10 Compute Cores 4C+6G  (FMA       ): num_core=4
+```
+
 ## MacOS
+
+(I have no MAC PC myself so I will never be able to do a guide for this, sorry)
 
 See [README.md](README.md)
 
