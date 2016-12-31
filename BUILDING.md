@@ -20,8 +20,7 @@ Download and install/extract:
 
 Open a Command promt and run:
 
-`"%VSINSTALL%\VC\vcvarsall.bat" amd64` (where %VSINSTAL%L is `C:\Program Files (x86)\Microsoft Visual Studio 14.0` for example)ö
-or open the VS2015 x64 Native Tools Command Prompt
+`"%VSINSTALL%\VC\vcvarsall.bat" amd64` (where %VSINSTAL%L is `C:\Program Files (x86)\Microsoft Visual Studio 14.0` for example) or open the VS2015 x64 Native Tools Command Prompt
 
 Then run the following:
 
@@ -34,9 +33,11 @@ Then run the following:
 >msbuild Project.sln /p:Configuration=Release /p:Platform=x64
 >copy %OpenCV%\build\x64\vc14\bin\opencv_world320.dll Release\
 ```
-Note: %OpenCV% is your path to OpenCV, e.g `G:\w2x\opencv32`
+**Note:** %OpenCV% is your path to OpenCV, e.g `G:\w2x\opencv32`
 
-Note: If you are sure you have OpenCV3.2 installed yet it does not detect it, add `-DOVERRIDE_OPENCV=1` to cmake.
+**Note:** If you are sure you have OpenCV3.2 installed yet it does not detect it, add `-DOVERRIDE_OPENCV=1` to cmake.
+
+**Note:** You can also just download from github and not use git clone.
 
 After that you will find your Binaries in `waifu2x-converter-cpp\output\Release`
 
