@@ -27,11 +27,11 @@ Then run the following:
 ```
 >git clone https://github.com/DeadSix27/waifu2x-converter-cpp
 >cd waifu2x-converter-cpp
->mkdir output
->cd output
+>mkdir output && cd output
 >cmake -DCMAKE_GENERATOR="Visual Studio 14 2015 Win64" -DOPENCV_PREFIX=%OpenCV%\build\ ..
 >msbuild Project.sln /p:Configuration=Release /p:Platform=x64
 >copy %OpenCV%\build\x64\vc14\bin\opencv_world320.dll Release\
+>mkdir Release\models_rgb\ && copy ..\models_rgb Release\models_rgb\
 ```
 **Note:** %OpenCV% is your path to OpenCV, e.g `G:\w2x\opencv32`
 
@@ -52,6 +52,7 @@ After that you will find your Binaries in `waifu2x-converter-cpp\output\Release`
 7. Press Open Project
 8. Right click Solution 'Project' and hit Build Solution.
 9. Don't forget to copy models_rgb from waifu2x-converter-cpp and %OpenCV%\build\x64\vc14\bin\opencv_world320.dll into the output folder.
+10. And also copy OpenCV%\build\x64\vc14\bin\opencv_world320.dll to the output folder
 
 ## Ubuntu
 

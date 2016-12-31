@@ -195,6 +195,18 @@ setCLError(W2XConv *c,
         c->last_error.u.cl_error.error_code = error_code;
 }
 
+void removeForbiddenChar(std::string* s)
+{
+	std::string::iterator it;
+	std::string illegalChars = "\\/:?\"<>|, ";
+	for (it = s->begin() ; it < s->end() ; ++it){
+		bool found = illegalChars.find(*it) != std::string::npos;
+		if(found){
+			*it = '_';
+		}
+	}
+}
+
 bool
 initOpenCL(W2XConv *c, ComputeEnv *env, W2XConvProcessor *proc)
 {
@@ -272,7 +284,9 @@ initOpenCL(W2XConv *c, ComputeEnv *env, W2XConvProcessor *proc)
 	}
 #endif
 
-        std::string bin_path = std::string(self_path) + "/" + &dev_name[0] + ".bin";
+		std::string dev_nameStr = &dev_name[0];
+		removeForbiddenChar(&dev_nameStr);
+        std::string bin_path = std::string(self_path) + "/" + dev_nameStr + ".bin";
 
         FILE *binfp = fopen(bin_path.c_str(), "rb");
         if (binfp) {
