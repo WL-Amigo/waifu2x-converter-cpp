@@ -66,6 +66,7 @@ These are hints for building :
 1. Download & install VS2015 Community, OpenCV3.2, Cmake x64 and AMD APP SDK 3.0 (newest)
 2. Run Cmake GUI, press browse source, select waifu2x-converter-cpp folder
 3. Add OPENCV_PREFIX entry, set type to path and point it to %OpenCV%\build\ (%OpenCV% is the installed OpenCV location)
+   NOTE: Make very sure to set OPENCV_PREFIX before clicking configure and clear cmake cache everytime you configure again.
 4. Press Configure, choose Visual Studio 14 2015 Win64
 5. Press Generate
 6. Press Open Project
@@ -94,10 +95,11 @@ Usage of this program can be seen by executing this with `-h` option.
 
 ## modifided by DeadSix27
 * Added support for Visual Studio 2015 (VC14)
+* Added option to override OpenCV Detection for when you're sure its there (OVERRIDE_OPENCV)
 * VC14: Now requires OpenCV3.2 (VC12 and Linux etc still work with OpenCV3/2)
 * VC14: Will not statically link OpenCV, you will need opencv_world320.dll in the w2x folder.
 * Added Cuda checks to prevent the cuda code mess, and get rid of the extra NoCuda branch of max20091 may or may not work properly, I have no nVidia GPU to test
 * TODO: Add proper UTF8/Unicode support
 * TODO: fix binary file handling.
-* ^Keep an eye out on my fork for: https://github.com/DeadSix27/waifu2x-converter-cpp
+* ^Keep an eye out on my fork for those: https://github.com/DeadSix27/waifu2x-converter-cpp
 
