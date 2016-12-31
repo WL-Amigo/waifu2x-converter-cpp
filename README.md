@@ -28,7 +28,8 @@ https://github.com/DeadSix27/waifu2x-converter-cpp/releases
 
 ### Libraries
 
- * [OpenCV](http://opencv.org/)(version 3.0)
+ * [OpenCV](http://opencv.org/)(version 3.2)
+ * Now requires openCV 3.2
 
 This programs also depends on libraries shown below, but these are already included in this repository.
 *CUDA Support in OpenCV is optional, since not required. (in version 1.0.0, CUDA Support is not used.)*
@@ -61,8 +62,9 @@ Usage of this program can be seen by executing this with `-h` option.
  * Added Windows build guide
 
 ## modifided by DeadSix27
-* Improved windows build guide [BUILDING.md](BUILDING.md)
-* Added support for Visual Studio 2015 (VC14)
+* Improved build guide [BUILDING.md](BUILDING.md)
+* Added support for Ubuntu 16.10 amd64
+* Added support for Visual Studio 2015 (VC14) amd64
 * Added option to override OpenCV Detection for when you're sure its there (OVERRIDE_OPENCV)
 * VC14: Now requires OpenCV3.2 (VC12 and Linux etc still work with OpenCV3/2)
 * VC14: Will not statically link OpenCV, you will need opencv_world320.dll in the w2x folder.
