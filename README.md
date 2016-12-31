@@ -92,6 +92,6 @@ Usage of this program can be seen by executing this with `-h` option.
 * VC14: Now requires OpenCV3.2 (VC12 and Linux etc still work with OpenCV3/2)
 * VC14: Will not statically link OpenCV, you will need opencv_world320.dll in the w2x folder.
 * Added Cuda checks to prevent the cuda code mess, and get rid of the extra NoCuda branch of max20091 may or may not work properly, I have no nVidia GPU to test
+* TODO: Fix CL-binary file handling (**Now fixed** see: [f963753](https://github.com/DeadSix27/waifu2x-converter-cpp/commit/f963753227a09749291e93bd6769446ba1bb3945))
 * TODO: Add proper UTF8/Unicode support
-* TODO: fix binary file handling.
 * ^Keep an eye out on my fork for those: https://github.com/DeadSix27/waifu2x-converter-cpp
