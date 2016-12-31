@@ -6,7 +6,7 @@ You can use this as command-line tool of image noise reduction or/and scaling.
 
 ## Prebuilt binary-form release
 
-https://github.com/max20091/waifu2x-converter-cpp/releases
+https://github.com/DeadSix27/waifu2x-converter-cpp/releases
 
 ## waifu2x converter GUI
 
