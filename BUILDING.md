@@ -36,7 +36,7 @@ Then run the following:
 ```
 Note: %OpenCV% is your path to OpenCV, e.g `G:\w2x\opencv32`
 
-Note: If you are sure you have OpenCV3.2 installed yet it does not detect it, add -DOVERRIDE_OPENCV=1 to cmake.
+Note: If you are sure you have OpenCV3.2 installed yet it does not detect it, add `-DOVERRIDE_OPENCV=1` to cmake.
 
 After that you will find your Binaries in `waifu2x-converter-cpp\output\Release`
 
@@ -54,8 +54,8 @@ After that you will find your Binaries in `waifu2x-converter-cpp\output\Release`
 
 ## Ubuntu
 
-See README.md
+See [README.md](README.md)
 ## MacOS
 
-See README.md
+See [README.md](README.md)
 
