@@ -63,7 +63,7 @@ These are hints for building :
 
 #### VS2015:
 
-1. Clone [DeadSix27/waifu2x-converter-cpp](https://github.com/DeadSix27/waifu2x-converter-cpp) from masterAo override OpenCV Detection for when you're sure its there (OVERRIDE_OPENCV)
+1. Clone [DeadSix27/waifu2x-converter-cpp](https://github.com/DeadSix27/waifu2x-converter-cpp) from master
 2. Download & install [VS2015 Community](https://www.visualstudio.com/downloads/), [OpenCV 3.2 for Windows](http://opencv.org/downloads.html), [cmake-3.7.1-win64-x64.msi](https://cmake.org/download/) and [AMD APP SDK 3.0](http://developer.amd.com/tools-and-sdks/opencl-zone/amd-accelerated-parallel-processing-app-sdk/)
 3. Run Cmake GUI, press browse source, select waifu2x-converter-cpp folder
 4. Add OPENCV_PREFIX entry, set type to path and point it to %OpenCV%\build\ (%OpenCV% is the installed OpenCV location)
