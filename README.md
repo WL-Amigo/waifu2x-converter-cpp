@@ -63,16 +63,7 @@ These are hints for building :
 
 #### VS2015 (Win64 only, OpenCV 3.2 only supports 64bit):
 
-1. Clone [DeadSix27/waifu2x-converter-cpp](https://github.com/DeadSix27/waifu2x-converter-cpp) from master
-2. Download & install [VS2015 Community](https://www.visualstudio.com/downloads/), [OpenCV 3.2 for Windows](http://opencv.org/downloads.html), [cmake-3.7.1-win64-x64.msi](https://cmake.org/download/) and [AMD APP SDK 3.0](http://developer.amd.com/tools-and-sdks/opencl-zone/amd-accelerated-parallel-processing-app-sdk/)
-3. Run Cmake GUI, press browse source, select waifu2x-converter-cpp folder
-4. Add OPENCV_PREFIX entry, set type to path and point it to %OpenCV%\build\ (%OpenCV% is the installed OpenCV location)
-   NOTE: Make very sure to set OPENCV_PREFIX before clicking configure and clear cmake cache everytime you configure again.
-5. Press Configure, choose Visual Studio 14 2015 Win64
-6. Press Generate
-7. Press Open Project
-8. Right click Solution 'Project' and hit Build Solution.
-9. Don't forget to copy models_rgb from waifu2x-converter-cpp and %OpenCV%\build\x64\vc14\bin\opencv_world320.dll into the output folder.
+See BUILDING.md for more information.
 
 ## Usage
 
