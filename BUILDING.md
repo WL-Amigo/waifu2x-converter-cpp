@@ -56,7 +56,7 @@ After that you will find your Binaries in `waifu2x-converter-cpp\output\Release`
 9. Don't forget to copy models_rgb from waifu2x-converter-cpp and %OpenCV%\build\x64\vc14\bin\opencv_world320.dll into the output folder.
 10. And also copy OpenCV%\build\x64\vc14\bin\opencv_world320.dll to the output folder
 
-## Ubuntu 16.10 amd64
+## Ubuntu 16.10 amd64 for AMD GPUs
 
 ### We have to build and install some requirements
 
