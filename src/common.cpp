@@ -200,12 +200,18 @@ update_test(const char *dst_path,
 
 	struct stat src_st;
 	stat(src_path, &src_st);
-
-	if (src_st.st_mtim.tv_sec > dst_st.st_mtim.tv_sec) {
+#ifdef __APPLE__
+	if (src_st.st_mtimespec.tv_sec > dst_st.st_mtimespec.tv_sec) {
+#else
+        if (src_st.st_mtim.tv_sec > dst_st.st_mtim.tv_sec) {
+#endif  /* __APPLE __ */
 		return true;
 	}
-
-	if (src_st.st_mtim.tv_nsec > dst_st.st_mtim.tv_nsec) {
+#ifdef __APPLE__
+	if (src_st.st_mtimespec.tv_nsec > dst_st.st_mtimespec.tv_nsec) {
+#else
+        if(src_st.st_mtim.tv_nsec > dst_st.st_mtim.tv_nsec) {
+#endif
 		return true;
 	}
 
