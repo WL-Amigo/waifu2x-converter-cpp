@@ -1,4 +1,4 @@
-### Building guides for Ubuntu-16.10-64bit and Windows VS2015-64bit by DeadSix27
+### Building guides for Ubuntu-16.10-64bit and Windows VS2015-64bit by DeadSix27, MacOS by toyg
 
 # Download pre-built binaries from:
 
@@ -157,13 +157,26 @@ $ ./waifu2x-converter-cpp --list-processor
    1: AMD A8-7600 Radeon R7, 10 Compute Cores 4C+6G  (FMA       ): num_core=4
 ```
 
-## MacOS
+## MacOS / OSX
 
-(I have no MAC PC myself so I will never be able to do a guide for this, sorry)
+You need [Homebrew](https://brew.sh) installed, as well as XCode for the compiler.
+The following has been tested on OSX Sierra 10.12.6:
 
-See [README.md](README.md)
+```
+$ brew tap science && brew install opencv3
+$ git clone https://github.com/DeadSix27/waifu2x-converter-cpp && cd waifu2x-converter-cpp
+$ cmake -DOVERRIDE_OPENCV=1 -DOPENCV_PREFIX=/usr/local/Cellar/opencv3/<your version here> .
+$ make -j4
+$ cp -r models_rgb models
+```
+Done! Try it out like below, should return your processors and GPUs:
 
-
+``` 
+$ ./waifu2x-converter-cpp --list-processor
+   0: Intel(R) HD Graphics 530                     (OpenCL    ): num_core=24
+   1: AMD Radeon Pro 455 Compute Engine            (OpenCL    ): num_core=12
+...
+```
 ____
 
 # Archived buildguides:
