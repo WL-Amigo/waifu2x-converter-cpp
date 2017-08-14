@@ -128,7 +128,7 @@ if(ARMOPT)
   include(CheckCXXCompilerFlag)
   # -mfloat-abi=hard and -mfloat-abi=softfp cannot be mixed
   # -mfpu=neon and -march=armv7-a are not supported on armv8
-  foreach(flag -mfloat-abi=hard -mfloat-abi=softfp -mfpu=neon -march=armv7-a)
+  foreach(flag -mfloat-abi=hard -mfloat-abi=softfp -mfpu=neon -march=armv7-a -lstdc++fs)
     string(REGEX REPLACE "[-=]" "_" flagp ${flag})
     check_cxx_compiler_flag(${flag} ${flagp})
     if(${flagp} AND NOT ${flag} MATCHES "-march")
@@ -257,7 +257,7 @@ enable_testing()
 if (${HAVE_OPENCV})
   add_executable(waifu2x-converter-cpp
     src/main.cpp)
-  target_link_libraries(waifu2x-converter-cpp LINK_PUBLIC w2xc)
+  target_link_libraries(waifu2x-converter-cpp LINK_PUBLIC w2xc stdc++fs)
   add_executable(runtest w32-apps/runtest.c)
   target_link_libraries(runtest w2xc)
   add_test(runtest runtest)
