@@ -8,6 +8,7 @@
  *   (ここにファイルの説明を記入)
  */
 
+#include <cassert>
 #include <iostream>
 #include <sstream>
 #include <fstream>
@@ -16,12 +17,15 @@
 #include <cmath>
 #include "tclap/CmdLine.h"
 #include "sec.hpp"
+#include <experimental/filesystem>
 
 #include "w2xconv.h"
 
 #ifndef DEFAULT_MODELS_DIRECTORY
 #define DEFAULT_MODELS_DIRECTORY "models_rgb"
 #endif
+
+namespace fs = std::experimental::filesystem;
 
 static void
 dump_procs()
@@ -75,6 +79,66 @@ dump_procs()
 	}
 }
 
+std::string generate_output_name(std::string inputFileName, std::string outputFileName, std::string mode, int NRLevel, double scaleRatio) {
+	if (outputFileName == "(auto)") {
+		outputFileName = inputFileName;
+		int tailDot = outputFileName.find_last_of('.');
+		if(tailDot != std::string::npos)
+			outputFileName.erase(tailDot, outputFileName.length());
+		outputFileName = outputFileName + "(" + mode + ")";
+		//std::string &mode = mode;
+		if(mode.find("noise") != mode.npos){
+			outputFileName = outputFileName + "(Level" + std::to_string(NRLevel)
+			+ ")";
+		}
+		if(mode.find("scale") != mode.npos){
+			outputFileName = outputFileName + "(x" + std::to_string(scaleRatio)
+			+ ")";
+		}
+		outputFileName += ".png";
+	}
+	else if (outputFileName.find_last_of('.') == std::string::npos)
+		outputFileName += ".png";
+
+	std::cout << "outputFileName: " << outputFileName << std::endl;
+	return outputFileName;
+}
+
+void check_for_errors(W2XConv* converter, int error) {
+	if(error){
+		char *err = w2xconv_strerror(&converter->last_error);
+		int errLength = strlen(err)+1;
+		std::cout << "errLength: " << errLength << std::endl;
+		char stackErrorHolder[errLength];
+		std::memcpy(stackErrorHolder, err, errLength);
+		w2xconv_free(err);
+		throw std::runtime_error(stackErrorHolder);
+	}
+}
+
+void convert_file(std::string inputFileName, std::string outputFileName, std::string mode, int NRLevel, double scaleRatio, int blockSize, W2XConv* converter) {
+	int _nrLevel = 0;
+
+	if (mode == "noise" || mode == "noise_scale") {
+		_nrLevel = NRLevel;
+	}
+
+	double _scaleRatio = 1;
+	if (mode == "scale" || mode == "noise_scale") {
+		_scaleRatio = scaleRatio;
+	}
+
+	int error = w2xconv_convert_file(converter,
+				 outputFileName.c_str(),
+				 inputFileName.c_str(),
+				 _nrLevel,
+				 _scaleRatio, blockSize);
+
+	check_for_errors(converter, error);
+}
+
+
+
 int main(int argc, char** argv) {
 	int ret = 1;
 	for (int ai=1; ai<argc; ai++) {
@@ -87,13 +151,23 @@ int main(int argc, char** argv) {
 	// definition of command line arguments
 	TCLAP::CmdLine cmd("waifu2x reimplementation using OpenCV", ' ', w2xconv_version());
 
-	TCLAP::ValueArg<std::string> cmdInputFile("i", "input_file",
-			"path to input image file (you should input full path)", true, "",
+	//TCLAP::ValueArg<std::string> cmdInputFile("i", "input_file",
+	//		"path to input image file (you should input full path)", true, "",
+	//		"string", cmd);
+
+	//fs::path input = cmdInput.getValue();
+	TCLAP::ValueArg<fs::path> cmdInput("i", "input",
+			"path to input image file or directory (you should use the full path)", true, "",
 			"string", cmd);
 
 	TCLAP::ValueArg<std::string> cmdOutputFile("o", "output_file",
-			"path to output image file (you should input full path)", false,
+			"path to output image file (you should use the full path)", false,
 			"(auto)", "string", cmd);
+
+	TCLAP::ValueArg<bool> cmdRecursiveDirectoryIterator("r", "recursive_directory",
+			"Search recursively through directories to find more images to process. \n If this is set to 0 it will only check in the dir specified in input if a dir instead of an image is supplied. \n You mustn't supply this argument with something other than 0 or 1.", false,
+			0, "bool", cmd);
+
 
 	std::vector<std::string> cmdModeConstraintV;
 	cmdModeConstraintV.push_back("noise");
@@ -151,27 +225,6 @@ int main(int argc, char** argv) {
 		dump_procs();
 	}
 
-	std::string outputFileName = cmdOutputFile.getValue();
-	if (outputFileName == "(auto)") {
-		outputFileName = cmdInputFile.getValue();
-		int tailDot = outputFileName.find_last_of('.');
-		if(tailDot != std::string::npos)
-			outputFileName.erase(tailDot, outputFileName.length());
-		outputFileName = outputFileName + "(" + cmdMode.getValue() + ")";
-		std::string &mode = cmdMode.getValue();
-		if(mode.find("noise") != mode.npos){
-			outputFileName = outputFileName + "(Level" + std::to_string(cmdNRLevel.getValue())
-			+ ")";
-		}
-		if(mode.find("scale") != mode.npos){
-			outputFileName = outputFileName + "(x" + std::to_string(cmdScaleRatio.getValue())
-			+ ")";
-		}
-		outputFileName += ".png";
-	}
-	else if (outputFileName.find_last_of('.') == std::string::npos)
-		outputFileName += ".png";
-
 	enum W2XConvGPUMode gpu = W2XCONV_GPU_AUTO;
 
 	if (cmdDisableGPU.getValue()) {
@@ -213,35 +266,58 @@ int main(int argc, char** argv) {
 		break;
 	}
 
-	int bs = cmdBlockSize.getValue();
+	int blockSize = cmdBlockSize.getValue();
+	bool recursive_directory_iterator = cmdRecursiveDirectoryIterator.getValue();
+	int error = w2xconv_load_models(converter, cmdModelPath.getValue().c_str());
+	check_for_errors(converter, error);
 
-	int r = w2xconv_load_models(converter, cmdModelPath.getValue().c_str());
-	if (r < 0) {
-		goto error;
-	}
-
-
-	{
-		int nrLevel = 0;
-		if (cmdMode.getValue() == "noise" || cmdMode.getValue() == "noise_scale") {
-			nrLevel = cmdNRLevel.getValue();
+	//This includes errored files.
+	int numFilesProcessed=0;
+	int numErrors=0;
+	if(fs::is_directory(cmdInput.getValue())==true){
+		std::cout << "We're going to be operating in a directory. dir:" << cmdInput.getValue() << std::endl;
+		assert(cmdOutputFile.getValue()=="(auto)");
+		if(recursive_directory_iterator){
+			std::cout << "TEST1: recursive_directory_iterator" << recursive_directory_iterator << std::endl;
+			for(auto & file : fs::recursive_directory_iterator(cmdInput.getValue())){
+        			if(!fs::is_directory(file)){
+        				numFilesProcessed++;
+        				try{
+        					std::cout << "Operating on: " << fs::absolute(file) << std::endl;
+ 		       				std::string outputName = generate_output_name(fs::absolute(file), cmdOutputFile.getValue(), cmdMode.getValue(), cmdNRLevel.getValue(), cmdScaleRatio.getValue());
+ 		       				convert_file(fs::absolute(file), outputName, cmdMode.getValue(), cmdNRLevel.getValue(), cmdScaleRatio.getValue(), blockSize, converter);
+        				}catch(const std::exception& e){
+        					numErrors++;
+        					std::cout << e.what() << std::endl;
+        				}
+        			}
+        		}
+		}else{
+			std::cout << "TEST2 recursive_directory_iterator" << recursive_directory_iterator << std::endl;
+			for(auto & file : fs::directory_iterator(cmdInput.getValue())){
+        			if(!fs::is_directory(file)){
+        				numFilesProcessed++;
+        				try{
+        					std::cout << "Operating on: " << fs::absolute(file) << std::endl;
+ 		       				std::string outputName = generate_output_name(fs::absolute(file), cmdOutputFile.getValue(), cmdMode.getValue(), cmdNRLevel.getValue(), cmdScaleRatio.getValue());
+ 		       				convert_file(fs::absolute(file), outputName, cmdMode.getValue(), cmdNRLevel.getValue(), cmdScaleRatio.getValue(), blockSize, converter);
+        				}catch(const std::exception& e){
+        					numErrors++;
+        					std::cout << e.what() << std::endl;
+        				}
+        			}
+        		}
 		}
 
-		double scaleRatio = 1;
-		if (cmdMode.getValue() == "scale" || cmdMode.getValue() == "noise_scale") {
-			scaleRatio = cmdScaleRatio.getValue();
-		}
 
-		r = w2xconv_convert_file(converter,
-					 outputFileName.c_str(),
-					 cmdInputFile.getValue().c_str(),
-					 nrLevel,
-					 scaleRatio, bs);
+
+
+	}else{
+		std::string outputName = generate_output_name(cmdInput.getValue(), cmdOutputFile.getValue(), cmdMode.getValue(), cmdNRLevel.getValue(), cmdScaleRatio.getValue());
+		convert_file(cmdInput.getValue(), outputName, cmdMode.getValue(), cmdNRLevel.getValue(), cmdScaleRatio.getValue(), blockSize, converter);
 	}
 
-	if (r < 0) {
-		goto error;
-	}
+	check_for_errors(converter, error);
 
 	{
 		double time_end = getsec();
@@ -250,22 +326,13 @@ int main(int argc, char** argv) {
 		double gflops_all = (converter->flops.flop/(1000.0*1000.0*1000.0)) / (time_end-time_start);
 
 		std::cout << "process successfully done! (all:"
-			  << (time_end - time_start)
-			  << "[sec], " << gflops_all << "[GFLOPS], filter:"
+			  << (time_end - time_start) << "[sec], "
+			  << numFilesProcessed << " [files processed], "
+			  << numErrors << " [files errored], "
+			  << gflops_all << "[GFLOPS], filter:"
 			  << converter->flops.filter_sec
 			  << "[sec], " << gflops_proc << "[GFLOPS])" << std::endl;
 	}
 
-	ret = 0;
-
-error:
-	if (ret != 0) {
-		char *err = w2xconv_strerror(&converter->last_error);
-		puts(err);
-		w2xconv_free(err);
-	}
-
-	w2xconv_fini(converter);
-
-	return ret;
+	return 0;
 }
