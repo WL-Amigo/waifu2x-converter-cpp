@@ -317,7 +317,6 @@ int main(int argc, char** argv) {
 		convert_file(cmdInput.getValue(), outputName, cmdMode.getValue(), cmdNRLevel.getValue(), cmdScaleRatio.getValue(), blockSize, converter);
 	}
 
-	check_for_errors(converter, error);
 
 	{
 		double time_end = getsec();
