@@ -165,7 +165,7 @@ int main(int argc, char** argv) {
 			"(auto)", "string", cmd);
 
 	TCLAP::ValueArg<bool> cmdRecursiveDirectoryIterator("r", "recursive_directory",
-			"Search recursively through directories to find more images to process. \n If this is set to 0 it will only check in the dir specified in input if a dir instead of an image is supplied. \n You mustn't supply this argument with something other than 0 or 1.", false,
+			"Search recursively through directories to find more images to process. \n If this is set to 0 it will only check in the directory specified if the input is a directory instead of an image. \n You mustn't supply this argument with something other than 0 or 1.", false,
 			0, "bool", cmd);
 
 
