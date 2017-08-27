@@ -108,7 +108,10 @@ std::string generate_output_location(std::string inputFileName, std::string outp
 			+ ")";
 		}
 		outputFileName += ".png";
-	}else if (fs::is_directory(outputFileName)) {
+	}else if (outputFileName.back() == '/') {
+		if(!fs::is_directory(outputFileName)){
+			fs::create_directories(outputFileName);
+		}
 		//We pass tmp into generate_output_location because we will use the default way of naming processed files.
 		//We will remove everything, in the tmp string, prior to the last slash to get the filename.
 		//This removes all contextual information about where a file originated from if "recursive_directory" was enabled.
@@ -236,6 +239,12 @@ int main(int argc, char** argv) {
 
 	//We need to do this conversion because using a TCLAP::ValueArg<fs::path> can not handle spaces.
 	fs::path input = cmdInput.getValue();
+	fs::path output = cmdOutput.getValue();
+	std::cout << output << std::endl;
+	if(fs::is_directory(input) && (cmdOutput.getValue().back() != '/')){
+		output += "/";
+	}
+
 
 	if (cmdListProcessor.getValue()) {
 		dump_procs();
@@ -298,7 +307,7 @@ int main(int argc, char** argv) {
         				numFilesProcessed++;
         				try{
         					std::cout << "Operating on: " << fs::absolute(inputFile) << std::endl;
- 		       				std::string outputName = generate_output_location(fs::absolute(inputFile), cmdOutput.getValue(), cmdMode.getValue(), cmdNRLevel.getValue(), cmdScaleRatio.getValue());
+ 		       				std::string outputName = generate_output_location(fs::absolute(inputFile), output, cmdMode.getValue(), cmdNRLevel.getValue(), cmdScaleRatio.getValue());
  		       				convert_file(fs::absolute(inputFile), outputName, cmdMode.getValue(), cmdNRLevel.getValue(), cmdScaleRatio.getValue(), blockSize, converter);
         				}catch(const std::exception& e){
         					numErrors++;
@@ -312,7 +321,7 @@ int main(int argc, char** argv) {
         				numFilesProcessed++;
         				try{
         					std::cout << "Operating on: " << fs::absolute(inputFile) << std::endl;
- 		       				std::string outputName = generate_output_location(fs::absolute(inputFile), cmdOutput.getValue(), cmdMode.getValue(), cmdNRLevel.getValue(), cmdScaleRatio.getValue());
+ 		       				std::string outputName = generate_output_location(fs::absolute(inputFile), output, cmdMode.getValue(), cmdNRLevel.getValue(), cmdScaleRatio.getValue());
  		       				convert_file(fs::absolute(inputFile), outputName, cmdMode.getValue(), cmdNRLevel.getValue(), cmdScaleRatio.getValue(), blockSize, converter);
         				}catch(const std::exception& e){
         					numErrors++;
@@ -328,7 +337,7 @@ int main(int argc, char** argv) {
 	}else{
 		numFilesProcessed++;
 		try{
-			std::string outputName = generate_output_location(input, cmdOutput.getValue(), cmdMode.getValue(), cmdNRLevel.getValue(), cmdScaleRatio.getValue());
+			std::string outputName = generate_output_location(input, output, cmdMode.getValue(), cmdNRLevel.getValue(), cmdScaleRatio.getValue());
 			convert_file(input, outputName, cmdMode.getValue(), cmdNRLevel.getValue(), cmdScaleRatio.getValue(), blockSize, converter);
 		}catch(const std::exception& e){
         		numErrors++;
