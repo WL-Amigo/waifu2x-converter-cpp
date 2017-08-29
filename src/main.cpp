@@ -108,7 +108,10 @@ std::string generate_output_location(std::string inputFileName, std::string outp
 			+ ")";
 		}
 		outputFileName += ".png";
-	}else if (fs::is_directory(outputFileName)) {
+	}else if (outputFileName.back() == '/') {
+		if(!fs::is_directory(outputFileName)){
+			fs::create_directories(outputFileName);
+		}
 		//We pass tmp into generate_output_location because we will use the default way of naming processed files.
 		//We will remove everything, in the tmp string, prior to the last slash to get the filename.
 		//This removes all contextual information about where a file originated from if "recursive_directory" was enabled.
@@ -120,15 +123,18 @@ std::string generate_output_location(std::string inputFileName, std::string outp
 
 
 		outputFileName += tmp;
-	}else if (outputFileName.find_last_of('.') == std::string::npos) {
+	}else if (outputFileName.find_last_of('.') < outputFileName.find_last_of('/')) {
+		//e.g. ./test.d/out needs to be changed to ./test.d/out.png
 		outputFileName += ".png";
+	}else if (outputFileName.find_last_of('.') > outputFileName.find_last_of('/')) {
+		//We may have a regular output file here or something went wrong.
+		//outputFileName is already what it should be thus nothing needs to be done.
 	}else{
-		throw std::runtime_error("An unknown error occured.");
+		throw std::runtime_error("An unknown 'outputFileName' has been inserted into generate_output_location. outputFileName: " + outputFileName);
 	}
 	std::cout << "outputFileName: " << outputFileName << std::endl;
 	return outputFileName;
 }
-
 
 
 void convert_file(std::string inputFileName, std::string outputFileName, std::string mode, int NRLevel, double scaleRatio, int blockSize, W2XConv* converter) {
@@ -166,11 +172,11 @@ int main(int argc, char** argv) {
 	// definition of command line arguments
 	TCLAP::CmdLine cmd("waifu2x reimplementation using OpenCV", ' ', w2xconv_version());
 
-	TCLAP::ValueArg<fs::path> cmdInput("i", "input",
+	TCLAP::ValueArg<std::string> cmdInput("i", "input",
 			"path to input image file or directory (you should use the full path)", true, "",
 			"string", cmd);
 
-	TCLAP::ValueArg<std::string> cmdOutputFile("o", "output",
+	TCLAP::ValueArg<std::string> cmdOutput("o", "output",
 			"path to output image file or directory  (you should use the full path)", false,
 			"(auto)", "string", cmd);
 
@@ -231,6 +237,15 @@ int main(int argc, char** argv) {
 		std::exit(-1);
 	}
 
+	//We need to do this conversion because using a TCLAP::ValueArg<fs::path> can not handle spaces.
+	fs::path input = cmdInput.getValue();
+	fs::path output = cmdOutput.getValue();
+	std::cout << output << std::endl;
+	if(fs::is_directory(input) && (cmdOutput.getValue().back() != '/')){
+		output += "/";
+	}
+
+
 	if (cmdListProcessor.getValue()) {
 		dump_procs();
 	}
@@ -284,15 +299,15 @@ int main(int argc, char** argv) {
 	//This includes errored files.
 	int numFilesProcessed=0;
 	int numErrors=0;
-	if(fs::is_directory(cmdInput.getValue())==true){
-		std::cout << "We're going to be operating in a directory. dir:" << fs::absolute(cmdInput.getValue()) << std::endl;
+	if(fs::is_directory(input)==true){
+		std::cout << "We're going to be operating in a directory. dir:" << fs::absolute(input) << std::endl;
 		if(recursive_directory_iterator){
-			for(auto & inputFile : fs::recursive_directory_iterator(cmdInput.getValue())){
+			for(auto & inputFile : fs::recursive_directory_iterator(input)){
         			if(!fs::is_directory(inputFile)){
         				numFilesProcessed++;
         				try{
         					std::cout << "Operating on: " << fs::absolute(inputFile) << std::endl;
- 		       				std::string outputName = generate_output_location(fs::absolute(inputFile), cmdOutputFile.getValue(), cmdMode.getValue(), cmdNRLevel.getValue(), cmdScaleRatio.getValue());
+ 		       				std::string outputName = generate_output_location(fs::absolute(inputFile), output, cmdMode.getValue(), cmdNRLevel.getValue(), cmdScaleRatio.getValue());
  		       				convert_file(fs::absolute(inputFile), outputName, cmdMode.getValue(), cmdNRLevel.getValue(), cmdScaleRatio.getValue(), blockSize, converter);
         				}catch(const std::exception& e){
         					numErrors++;
@@ -301,12 +316,12 @@ int main(int argc, char** argv) {
         			}
         		}
 		}else{
-			for(auto & inputFile : fs::directory_iterator(cmdInput.getValue())){
+			for(auto & inputFile : fs::directory_iterator(input)){
         			if(!fs::is_directory(inputFile)){
         				numFilesProcessed++;
         				try{
         					std::cout << "Operating on: " << fs::absolute(inputFile) << std::endl;
- 		       				std::string outputName = generate_output_location(fs::absolute(inputFile), cmdOutputFile.getValue(), cmdMode.getValue(), cmdNRLevel.getValue(), cmdScaleRatio.getValue());
+ 		       				std::string outputName = generate_output_location(fs::absolute(inputFile), output, cmdMode.getValue(), cmdNRLevel.getValue(), cmdScaleRatio.getValue());
  		       				convert_file(fs::absolute(inputFile), outputName, cmdMode.getValue(), cmdNRLevel.getValue(), cmdScaleRatio.getValue(), blockSize, converter);
         				}catch(const std::exception& e){
         					numErrors++;
@@ -320,8 +335,14 @@ int main(int argc, char** argv) {
 
 
 	}else{
-		std::string outputName = generate_output_location(cmdInput.getValue(), cmdOutputFile.getValue(), cmdMode.getValue(), cmdNRLevel.getValue(), cmdScaleRatio.getValue());
-		convert_file(cmdInput.getValue(), outputName, cmdMode.getValue(), cmdNRLevel.getValue(), cmdScaleRatio.getValue(), blockSize, converter);
+		numFilesProcessed++;
+		try{
+			std::string outputName = generate_output_location(input, output, cmdMode.getValue(), cmdNRLevel.getValue(), cmdScaleRatio.getValue());
+			convert_file(input, outputName, cmdMode.getValue(), cmdNRLevel.getValue(), cmdScaleRatio.getValue(), blockSize, converter);
+		}catch(const std::exception& e){
+        		numErrors++;
+        		std::cout << e.what() << std::endl;
+        	}
 	}
 
 
