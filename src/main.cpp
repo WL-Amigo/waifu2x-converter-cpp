@@ -185,6 +185,8 @@ int main(int argc, char** argv) {
 			0, "bool", cmd);
 
 
+	TCLAP::SwitchArg cmdQuiet("q", "quiet", "Enable quiet mode.", cmd, false);
+
 	std::vector<std::string> cmdModeConstraintV;
 	cmdModeConstraintV.push_back("noise");
 	cmdModeConstraintV.push_back("scale");
@@ -262,14 +264,12 @@ int main(int argc, char** argv) {
 	int num_proc;
 	w2xconv_get_processor_list(&num_proc);
 	int proc = cmdTargetProcessor.getValue();
+	bool verbose = !cmdQuiet.getValue();
 
 	if (proc != -1 && proc < num_proc) {
-		converter = w2xconv_init_with_processor(proc,
-							cmdNumberOfJobs.getValue(),
-							1);
+		converter = w2xconv_init_with_processor(proc, cmdNumberOfJobs.getValue(), verbose);
 	} else {
-		converter = w2xconv_init(gpu,
-					 cmdNumberOfJobs.getValue(), 1);
+		converter = w2xconv_init(gpu, cmdNumberOfJobs.getValue(), verbose);
 	}
 
 	double time_start = getsec();
@@ -337,6 +337,7 @@ int main(int argc, char** argv) {
 	}else{
 		numFilesProcessed++;
 		try{
+			std::cout << "Operating on: " << fs::absolute(input) << std::endl;
 			std::string outputName = generate_output_location(input, output, cmdMode.getValue(), cmdNRLevel.getValue(), cmdScaleRatio.getValue());
 			convert_file(input, outputName, cmdMode.getValue(), cmdNRLevel.getValue(), cmdScaleRatio.getValue(), blockSize, converter);
 		}catch(const std::exception& e){
