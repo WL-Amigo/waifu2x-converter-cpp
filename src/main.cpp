@@ -185,9 +185,7 @@ int main(int argc, char** argv) {
 			0, "bool", cmd);
 
 
-	TCLAP::ValueArg<bool> cmdVerbose("v", "verbose",
-			"Enable verbose mode.", false,
-			true, "bool", cmd);
+	TCLAP::SwitchArg cmdQuiet("q", "quiet", "Enable quiet mode.", cmd, false);
 
 	std::vector<std::string> cmdModeConstraintV;
 	cmdModeConstraintV.push_back("noise");
@@ -266,7 +264,7 @@ int main(int argc, char** argv) {
 	int num_proc;
 	w2xconv_get_processor_list(&num_proc);
 	int proc = cmdTargetProcessor.getValue();
-	bool verbose = cmdVerbose.getValue();
+	bool verbose = !cmdQuiet.getValue();
 
 	if (proc != -1 && proc < num_proc) {
 		converter = w2xconv_init_with_processor(proc, cmdNumberOfJobs.getValue(), verbose);
