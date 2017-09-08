@@ -187,7 +187,7 @@ int main(int argc, char** argv) {
 
 	TCLAP::ValueArg<bool> cmdVerbose("v", "verbose",
 			"Enable verbose mode.", false,
-			0, "bool", cmd);
+			true, "bool", cmd);
 
 	std::vector<std::string> cmdModeConstraintV;
 	cmdModeConstraintV.push_back("noise");
