@@ -27,6 +27,15 @@
 
 namespace fs = std::experimental::filesystem;
 
+struct convInfo{
+	std::string mode;
+	int NRLevel;
+	double scaleRatio;
+	int blockSize;
+	W2XConv* converter;
+	convInfo(std::string mode, int NRLevel, double scaleRatio,  int blockSize, W2XConv* converter):mode(mode), NRLevel(NRLevel), scaleRatio(scaleRatio), blockSize(blockSize), converter(converter){};
+};
+
 static void
 dump_procs()
 {
@@ -137,28 +146,29 @@ std::string generate_output_location(std::string inputFileName, std::string outp
 }
 
 
-void convert_file(std::string inputFileName, std::string outputFileName, std::string mode, int NRLevel, double scaleRatio, int blockSize, W2XConv* converter) {
+void convert_file(convInfo info, fs::path inputName, std::string output){
+	std::cout << "Operating on: " << fs::absolute(inputFile) << std::endl;
+	std::string outputName = generate_output_location(fs::absolute(inputName), output, info.mode, info.NRLevel, info.scaleRatio);
+
 	int _nrLevel = 0;
 
-	if (mode == "noise" || mode == "noise_scale") {
-		_nrLevel = NRLevel;
+	if (info.mode == "noise" || info.mode == "noise_scale") {
+		_nrLevel = info.NRLevel;
 	}
 
 	double _scaleRatio = 1;
-	if (mode == "scale" || mode == "noise_scale") {
-		_scaleRatio = scaleRatio;
+	if (info.mode == "scale" || info.mode == "noise_scale") {
+		_scaleRatio = info.scaleRatio;
 	}
 
-	int error = w2xconv_convert_file(converter,
-				 outputFileName.c_str(),
-				 inputFileName.c_str(),
+	int error = w2xconv_convert_file(info.converter,
+				 outputName.c_str(),
+				 fs::absolute(inputName).c_str(),
 				 _nrLevel,
-				 _scaleRatio, blockSize);
+				 _scaleRatio, info.blockSize);
 
-	check_for_errors(converter, error);
+	check_for_errors(info.converter, error);
 }
-
-
 
 int main(int argc, char** argv) {
 	int ret = 1;
@@ -272,6 +282,8 @@ int main(int argc, char** argv) {
 		converter = w2xconv_init(gpu, cmdNumberOfJobs.getValue(), verbose);
 	}
 
+	convInfo convInfo(cmdMode.getValue(), cmdNRLevel.getValue(), cmdScaleRatio.getValue(), cmdBlockSize.getValue(), converter);
+
 	double time_start = getsec();
 
 	switch (converter->target_processor->type) {
@@ -291,7 +303,6 @@ int main(int argc, char** argv) {
 		break;
 	}
 
-	int blockSize = cmdBlockSize.getValue();
 	bool recursive_directory_iterator = cmdRecursiveDirectoryIterator.getValue();
 	int error = w2xconv_load_models(converter, cmdModelPath.getValue().c_str());
 	check_for_errors(converter, error);
@@ -306,13 +317,11 @@ int main(int argc, char** argv) {
         			if(!fs::is_directory(inputFile)){
         				numFilesProcessed++;
         				try{
-        					std::cout << "Operating on: " << fs::absolute(inputFile) << std::endl;
- 		       				std::string outputName = generate_output_location(fs::absolute(inputFile), output, cmdMode.getValue(), cmdNRLevel.getValue(), cmdScaleRatio.getValue());
- 		       				convert_file(fs::absolute(inputFile), outputName, cmdMode.getValue(), cmdNRLevel.getValue(), cmdScaleRatio.getValue(), blockSize, converter);
-        				}catch(const std::exception& e){
-        					numErrors++;
-        					std::cout << e.what() << std::endl;
-        				}
+						convert_file(convInfo, inputFile, output);
+					}catch(const std::exception& e){
+						numErrors++;
+						std::cout << e.what() << std::endl;
+					}
         			}
         		}
 		}else{
@@ -320,9 +329,7 @@ int main(int argc, char** argv) {
         			if(!fs::is_directory(inputFile)){
         				numFilesProcessed++;
         				try{
-        					std::cout << "Operating on: " << fs::absolute(inputFile) << std::endl;
- 		       				std::string outputName = generate_output_location(fs::absolute(inputFile), output, cmdMode.getValue(), cmdNRLevel.getValue(), cmdScaleRatio.getValue());
- 		       				convert_file(fs::absolute(inputFile), outputName, cmdMode.getValue(), cmdNRLevel.getValue(), cmdScaleRatio.getValue(), blockSize, converter);
+ 		       				convert_file(convInfo, inputFile, output);
         				}catch(const std::exception& e){
         					numErrors++;
         					std::cout << e.what() << std::endl;
@@ -337,9 +344,7 @@ int main(int argc, char** argv) {
 	}else{
 		numFilesProcessed++;
 		try{
-			std::cout << "Operating on: " << fs::absolute(input) << std::endl;
-			std::string outputName = generate_output_location(input, output, cmdMode.getValue(), cmdNRLevel.getValue(), cmdScaleRatio.getValue());
-			convert_file(input, outputName, cmdMode.getValue(), cmdNRLevel.getValue(), cmdScaleRatio.getValue(), blockSize, converter);
+			convert_file(convInfo, input, output);
 		}catch(const std::exception& e){
         		numErrors++;
         		std::cout << e.what() << std::endl;
@@ -364,3 +369,4 @@ int main(int argc, char** argv) {
 
 	return 0;
 }
+
