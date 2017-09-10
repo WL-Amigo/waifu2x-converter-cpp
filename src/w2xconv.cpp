@@ -1196,7 +1196,13 @@ w2xconv_convert_file(struct W2XConv *conv,
 		const static unsigned char iend[] = {'I','E','N','D'};
 		const static unsigned char bkgd[] = {'b','K','G','D'};
 		char sig[8];
-		png_fp = fopen(src_path, "rb");
+		
+		#ifdef _WIN32
+			png_fp = _wfopen(src_path, "rb");
+		#else
+			png_fp = fopen(src_path, "rb");
+		#endif
+		
 		if (png_fp == NULL) {
 			setPathError(conv,
 				     W2XCONV_ERROR_IMREAD_FAILED,
