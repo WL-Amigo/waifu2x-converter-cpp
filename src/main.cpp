@@ -147,8 +147,8 @@ std::string generate_output_location(std::string inputFileName, std::string outp
 
 
 void convert_file(convInfo info, fs::path inputName, std::string output){
-	std::cout << "Operating on: " << fs::absolute(inputName) << std::endl;
-	std::string outputName = generate_output_location(fs::absolute(inputName), output, info.mode, info.NRLevel, info.scaleRatio);
+	std::cout << "Operating on: " << fs::absolute(inputName).string() << std::endl;
+	std::string outputName = generate_output_location(fs::absolute(inputName).string(), output, info.mode, info.NRLevel, info.scaleRatio);
 
 	int _nrLevel = 0;
 
