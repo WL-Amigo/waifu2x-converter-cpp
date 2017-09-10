@@ -14,9 +14,9 @@ https://github.com/DeadSix27/waifu2x-converter-cpp/releases
 
 Download and install/extract: 
 * [VS2015 Community](https://www.visualstudio.com/downloads/)
-* [OpenCV 3.2 for Windows](http://opencv.org/downloads.html)
+* [OpenCV 3.2 for Windows](http://opencv.org/releases.html)
 * [cmake-3.7.1-win64-x64](https://cmake.org/download/)
-* [AMD APP SDK 3.0](http://developer.amd.com/tools-and-sdks/opencl-zone/amd-accelerated-parallel-processing-app-sdk/)
+* [AMD APP SDK 3.0](http://developer.amd.com/amd-accelerated-parallel-processing-app-sdk/)
 
 #### Command line (console) (OR use the Cmake GUI guide below, I prefer console):
 
@@ -62,7 +62,7 @@ After that you will find your Binaries in `waifu2x-converter-cpp\output\Release`
 
 #### AMD SDK
 
-* Download [AMD APP SDK v3.0 (AMD-APP-SDKInstaller-v3.0.130.136-GA-linux64.tar.bz2)](http://developer.amd.com/tools-and-sdks/opencl-zone/amd-accelerated-parallel-processing-app-sdk/)
+* Download [AMD APP SDK v3.0 (AMD-APP-SDKInstaller-v3.0.130.136-GA-linux64.tar.bz2)](http://developer.amd.com/amd-accelerated-parallel-processing-app-sdk/)
 
 Create a new folder:
 ```
@@ -115,7 +115,7 @@ It will install into: `/usr/local`
 
 But I did not fully test this, I recommend building it on your own using the guide below this.
 
-* Download [OpenCV 3.2 Linux Source (3.2.0.zip)](http://opencv.org/downloads.html)
+* Download [OpenCV 3.2 Linux Source (3.2.0.zip)](http://opencv.org/releases.html)
 
 Create a subfolder in the folder we created above and name it ocv_source for example.
 
