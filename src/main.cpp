@@ -4,7 +4,7 @@
  *
  *  Created on: 2015/05/24
  *      Author: wlamigo
- * 
+ *
  *   (ここにファイルの説明を記入)
  */
 
@@ -147,7 +147,7 @@ std::string generate_output_location(std::string inputFileName, std::string outp
 
 
 void convert_file(convInfo info, fs::path inputName, std::string output){
-	std::cout << "Operating on: " << fs::absolute(inputFile) << std::endl;
+	std::cout << "Operating on: " << fs::absolute(inputName) << std::endl;
 	std::string outputName = generate_output_location(fs::absolute(inputName), output, info.mode, info.NRLevel, info.scaleRatio);
 
 	int _nrLevel = 0;
@@ -369,4 +369,3 @@ int main(int argc, char** argv) {
 
 	return 0;
 }
-
