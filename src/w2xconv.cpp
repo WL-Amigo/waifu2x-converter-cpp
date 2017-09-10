@@ -1290,6 +1290,7 @@ w2xconv_convert_file(struct W2XConv *conv,
 	//Background colour
 	//float3 background(1.0f, 1.0f, 1.0f);
 	float3 background;
+	background.r = background.g = background.b = 1.0f;
 	get_png_background_colour(png_fp, &png_rgb, &background);
 
 	if (png_fp) {
