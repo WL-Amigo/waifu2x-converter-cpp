@@ -1169,6 +1169,8 @@ read_int2(FILE *fp) {
 
     return (c0<<8) | (c1);
 }
+
+
 //This checks if the file type is png, it defalts to the user inputted bkgd_colour otherwise.
 //The returning bool is whether the function excecuted successfully or not.
 void get_png_background_colour(FILE *png_fp, bool *png_rgb, struct float3 *bkgd_colour){
@@ -1276,11 +1278,8 @@ w2xconv_convert_file(struct W2XConv *conv,
 	bool is_rgb = (conv->impl->scale2_models[0]->getNInputPlanes() == 3);
 
 	FILE *png_fp = NULL;
-	#ifdef _WIN32
-		png_fp = _wfopen(src_path, "rb");
-	#else
-		png_fp = fopen(src_path, "rb");
-	#endif
+	png_fp = fopen(src_path, "rb");
+
 	if (png_fp == NULL) {
 		setPathError(conv, W2XCONV_ERROR_IMREAD_FAILED, src_path);
 		return -1;
