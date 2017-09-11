@@ -146,9 +146,9 @@ std::string generate_output_location(std::string inputFileName, std::string outp
 }
 
 
-void convert_file(convInfo info, fs::path inputName, std::string output){
+void convert_file(convInfo info, fs::path inputName, fs::path output){
 	std::cout << "Operating on: " << fs::absolute(inputName).string() << std::endl;
-	std::string outputName = generate_output_location(fs::absolute(inputName).string(), output, info.mode, info.NRLevel, info.scaleRatio);
+	std::string outputName = generate_output_location(fs::absolute(inputName).string(), fs::absolute(output).string(), info.mode, info.NRLevel, info.scaleRatio);
 
 	int _nrLevel = 0;
 
@@ -162,7 +162,7 @@ void convert_file(convInfo info, fs::path inputName, std::string output){
 	}
 
 	int error = w2xconv_convert_file(info.converter,
-				 outputName.c_str(),
+				 fs::absolute(output).c_str(),
 				 fs::absolute(inputName).c_str(),
 				 _nrLevel,
 				 _scaleRatio, info.blockSize);
