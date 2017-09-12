@@ -364,5 +364,7 @@ int main(int argc, char** argv) {
 			  << "[sec], " << gflops_proc << "[GFLOPS])" << std::endl;
 	}
 
+	w2xconv_fini(converter);
+
 	return 0;
 }
