@@ -91,12 +91,9 @@ dump_procs()
 void check_for_errors(W2XConv* converter, int error) {
 	if(error){
 		char *err = w2xconv_strerror(&converter->last_error);
-		int errLength = strlen(err)+1;
-		std::cout << "errLength: " << errLength << std::endl;
-		char stackErrorHolder[errLength];
-		std::memcpy(stackErrorHolder, err, errLength);
+		std::string errorMessage(err);
 		w2xconv_free(err);
-		throw std::runtime_error(stackErrorHolder);
+		throw std::runtime_error(errorMessage);
 	}
 }
 
@@ -148,7 +145,7 @@ std::string generate_output_location(std::string inputFileName, std::string outp
 
 void convert_file(convInfo info, fs::path inputName, fs::path output){
 	std::cout << "Operating on: " << fs::absolute(inputName).string() << std::endl;
-	std::string outputName = generate_output_location(fs::absolute(inputName).string(), fs::absolute(output).string(), info.mode, info.NRLevel, info.scaleRatio);
+	std::string outputName = generate_output_location(fs::absolute(inputName).string(), output.string(), info.mode, info.NRLevel, info.scaleRatio);
 
 	int _nrLevel = 0;
 
@@ -162,7 +159,7 @@ void convert_file(convInfo info, fs::path inputName, fs::path output){
 	}
 
 	int error = w2xconv_convert_file(info.converter,
-				 fs::absolute(output).c_str(),
+				 outputName.c_str(),
 				 fs::absolute(inputName).c_str(),
 				 _nrLevel,
 				 _scaleRatio, info.blockSize);
