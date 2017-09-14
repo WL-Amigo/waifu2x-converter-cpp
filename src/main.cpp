@@ -160,7 +160,7 @@ void convert_file(convInfo info, fs::path inputName, fs::path output){
 
 	int error = w2xconv_convert_file(info.converter,
 				 outputName.c_str(),
-				 fs::absolute(inputName).c_str(),
+				 fs::absolute(inputName).string().c_str(),
 				 _nrLevel,
 				 _scaleRatio, info.blockSize);
 
