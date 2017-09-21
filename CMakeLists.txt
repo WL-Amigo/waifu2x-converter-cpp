@@ -257,7 +257,13 @@ enable_testing()
 if (${HAVE_OPENCV})
   add_executable(waifu2x-converter-cpp
     src/main.cpp)
-  target_link_libraries(waifu2x-converter-cpp LINK_PUBLIC w2xc stdc++fs)
+
+  if(MSVC)
+  	target_link_libraries(waifu2x-converter-cpp LINK_PUBLIC w2xc)
+  else()
+  	target_link_libraries(waifu2x-converter-cpp LINK_PUBLIC w2xc stdc++fs)
+  endif()
+
   add_executable(runtest w32-apps/runtest.c)
   target_link_libraries(runtest w2xc)
   add_test(runtest runtest)
