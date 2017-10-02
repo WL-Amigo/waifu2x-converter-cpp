@@ -787,7 +787,7 @@ set_nearest_nontransparent(float *r, float *g, float *b,
 
 	return true;
 }
-	    
+
 
 template <typename SRC_TYPE, int src_max, int ridx, int bidx>
 static void
@@ -1149,7 +1149,6 @@ postproc_yuv2rgb(cv::Mat *dst,
 			dst_line[xi*3 + bidx] = (DST_TYPE)b;
 		}
 	}
-	
 }
 
 
@@ -1171,6 +1170,102 @@ read_int2(FILE *fp) {
     return (c0<<8) | (c1);
 }
 
+
+//This checks if the file type is png, it defalts to the user inputted bkgd_colour otherwise.
+//The returning bool is whether the function excecuted successfully or not.
+void get_png_background_colour(FILE *png_fp, bool *png_rgb, struct float3 *bkgd_colour){
+	*png_rgb = false;
+	//png file signature
+	const static unsigned char png[] = {0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A};
+	//byte signature of sub components
+	const static unsigned char ihdr[] = {'I','H','D','R'};
+	const static unsigned char iend[] = {'I','E','N','D'};
+	const static unsigned char bkgd[] = {'b','K','G','D'};
+
+	char sig[8];
+
+	//checks if the file is atleast 8 bytes long(?)
+	size_t rdsz = fread(sig, 1, 8, png_fp);
+	if (rdsz != 8) {
+		return;
+	}
+	//check if file signatures match
+	if (memcmp(png,sig,8) != 0) {
+		return;
+	}
+
+
+
+	int ihdr_size = read_int4(png_fp);
+	if (ihdr_size != 13) {
+		return;
+	}
+
+	rdsz = fread(sig, 1, 4, png_fp);
+	if (rdsz != 4) {
+		return;
+	}
+	if (memcmp(ihdr,sig,4) != 0) {
+		return;
+	}
+
+	int width = read_int4(png_fp);
+	int height = read_int4(png_fp);
+	int depth = fgetc(png_fp);
+	int type = fgetc(png_fp);
+	int compress = fgetc(png_fp);
+	int filter = fgetc(png_fp);
+	int interlace = fgetc(png_fp);
+
+	/* use IMREAD_UNCHANGED
+	 * if png && type == RGBA || depth == 16
+	 */
+	if (type == 6) {
+		if (depth == 8 || // RGBA 8bit
+		    depth == 16	  // RGBA 16bit
+			)
+		{
+			*png_rgb = true;
+		}
+	} else if (depth == 16) { // RGB 16bit
+		*png_rgb = true;
+	}
+
+	if (png_rgb) {
+		while (1) {
+			int chunk_size = read_int4(png_fp);
+			rdsz = fread(sig, 1, 4, png_fp);
+			if (rdsz != 4) {
+				break;
+			}
+
+			if (memcmp(sig,iend,4) == 0) {
+				break;
+			}
+
+			if (memcmp(sig,bkgd,4) == 0) {
+				float r = read_int2(png_fp);
+				float g = read_int2(png_fp);
+				float b = read_int2(png_fp);
+
+				if (depth == 8) {
+					bkgd_colour->r = r / 255.0f;
+					bkgd_colour->g = g / 255.0f;
+					bkgd_colour->b = b / 255.0f;
+				} else {
+					bkgd_colour->r = r / 65535.0f;
+					bkgd_colour->g = g / 65535.0f;
+					bkgd_colour->b = b / 65535.0f;
+				}
+
+				break;
+			}
+		}
+	}
+
+	return;
+}
+
 int
 w2xconv_convert_file(struct W2XConv *conv,
 		     const char *dst_path,
@@ -1182,104 +1277,21 @@ w2xconv_convert_file(struct W2XConv *conv,
 	double time_start = getsec();
 	bool is_rgb = (conv->impl->scale2_models[0]->getNInputPlanes() == 3);
 
-	bool png_rgb = false;
-
 	FILE *png_fp = NULL;
+	png_fp = fopen(src_path, "rb");
 
-	float bkgd_r = 1.0f;
-	float bkgd_g = 1.0f;
-	float bkgd_b = 1.0f;
-
-	{
-		const static unsigned char png[] = {0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A};
-		const static unsigned char ihdr[] = {'I','H','D','R'};
-		const static unsigned char iend[] = {'I','E','N','D'};
-		const static unsigned char bkgd[] = {'b','K','G','D'};
-		char sig[8];
-		png_fp = fopen(src_path, "rb");
-		if (png_fp == NULL) {
-			setPathError(conv,
-				     W2XCONV_ERROR_IMREAD_FAILED,
-				     src_path);
-			return -1;
-		}
-
-		size_t rdsz = fread(sig, 1, 8, png_fp);
-		if (rdsz != 8) {
-			goto next;
-		}
-		if (memcmp(png,sig,8) != 0) {
-			goto next;
-		}
-
-		int ihdr_size = read_int4(png_fp);
-		if (ihdr_size != 13) {
-			goto next;
-		}
-
-		rdsz = fread(sig, 1, 4, png_fp);
-		if (rdsz != 4) {
-			goto next;
-		}
-		if (memcmp(ihdr,sig,4) != 0) {
-			goto next;
-		}
-
-		int width = read_int4(png_fp);
-		int height = read_int4(png_fp);
-		int depth = fgetc(png_fp);
-		int type = fgetc(png_fp);
-		int compress = fgetc(png_fp);
-		int filter = fgetc(png_fp);
-		int interlace = fgetc(png_fp);
-
-		/* use IMREAD_UNCHANGED 
-		 * if png && type == RGBA || depth == 16 
-		 */
-		if (type == 6) {
-			if (depth == 8 || // RGBA 8bit
-			    depth == 16	  // RGBA 16bit
-				)
-			{
-				png_rgb = true;
-			}
-		} else if (depth == 16) { // RGB 16bit
-			png_rgb = true;
-		}
-
-		if (png_rgb) {
-			while (1) {
-				int chunk_size = read_int4(png_fp);
-				rdsz = fread(sig, 1, 4, png_fp);
-				if (rdsz != 4) {
-					break;
-				}
-
-				if (memcmp(sig,iend,4) == 0) {
-					break;
-				}
-
-				if (memcmp(sig,bkgd,4) == 0) {
-					float r = read_int2(png_fp);
-					float g = read_int2(png_fp);
-					float b = read_int2(png_fp);
-
-					if (depth == 8) {
-						bkgd_r = r / 255.0f;
-						bkgd_g = g / 255.0f;
-						bkgd_b = b / 255.0f;
-					} else {
-						bkgd_r = r / 65535.0f;
-						bkgd_g = g / 65535.0f;
-						bkgd_b = b / 65535.0f;
-					}
-
-					break;
-				}
-			}
-		}
+	if (png_fp == NULL) {
+		setPathError(conv, W2XCONV_ERROR_IMREAD_FAILED, src_path);
+		return -1;
 	}
-next:
+
+	bool png_rgb;
+	//Background colour
+	//float3 background(1.0f, 1.0f, 1.0f);
+	float3 background;
+	background.r = background.g = background.b = 1.0f;
+	get_png_background_colour(png_fp, &png_rgb, &background);
+
 	if (png_fp) {
 		fclose(png_fp);
 		png_fp = NULL;
@@ -1287,7 +1299,7 @@ next:
 
 	cv::Mat image_src, image_dst;
 
-	/* 
+	/*
 	 * IMREAD_COLOR                 : always BGR
 	 * IMREAD_UNCHANGED + png       : BGR or BGRA
 	 * IMREAD_UNCHANGED + otherwise : ???
@@ -1311,10 +1323,10 @@ next:
 				alpha = cv::Mat(image_src.size(), CV_32FC1);
 				if (src_depth == CV_16U) {
 					preproc_rgba2rgb<unsigned short, 65535, 2, 0>(&image, &alpha, &image_src,
-										      bkgd_r, bkgd_g, bkgd_b);
+										      background.r, background.g, background.b);
 				} else {
 					preproc_rgba2rgb<unsigned char, 255, 2, 0>(&image, &alpha, &image_src,
-										   bkgd_r, bkgd_g, bkgd_b);
+										   background.r, background.g, background.b);
 				}
 			} else {
 				preproc_rgb2rgb<unsigned short, 65535, 2, 0>(&image, &image_src);
@@ -1330,10 +1342,10 @@ next:
 				alpha = cv::Mat(image_src.size(), CV_32FC1);
 				if (src_depth == CV_16U) {
 					preproc_rgba2yuv<unsigned short, 65535, 2, 0>(&image, &alpha, &image_src,
-										      bkgd_r, bkgd_g, bkgd_b);
+										      background.r, background.g, background.b);
 				} else {
 					preproc_rgba2yuv<unsigned char, 255, 2, 0>(&image, &alpha, &image_src,
-										   bkgd_r, bkgd_g, bkgd_b);
+										   background.r, background.g, background.b);
 				}
 			} else {
 				preproc_rgb2yuv<unsigned short, 65535, 2, 0>(&image, &image_src);
@@ -1413,15 +1425,15 @@ next:
 
 		if (is_rgb) {
 			if (src_depth == CV_16U) {
-				postproc_rgb2rgba<unsigned short, 65535, 2, 0>(&image_dst, &image, &alpha, bkgd_r, bkgd_g, bkgd_b);
+				postproc_rgb2rgba<unsigned short, 65535, 2, 0>(&image_dst, &image, &alpha, background.r, background.g, background.b);
 			} else {
-				postproc_rgb2rgba<unsigned char, 255, 2, 0>(&image_dst, &image, &alpha, bkgd_r, bkgd_g, bkgd_b);
+				postproc_rgb2rgba<unsigned char, 255, 2, 0>(&image_dst, &image, &alpha, background.r, background.g, background.b);
 			}
 		} else {
 			if (src_depth == CV_16U) {
-				postproc_yuv2rgba<unsigned short, 65535, 0, 2>(&image_dst, &image, &alpha, bkgd_r, bkgd_g, bkgd_b);
+				postproc_yuv2rgba<unsigned short, 65535, 0, 2>(&image_dst, &image, &alpha, background.r, background.g, background.b);
 			} else {
-				postproc_yuv2rgba<unsigned char, 255, 0, 2>(&image_dst, &image, &alpha, bkgd_r, bkgd_g, bkgd_b);
+				postproc_yuv2rgba<unsigned char, 255, 0, 2>(&image_dst, &image, &alpha, background.r, background.g, background.b);
 			}
 		}
 	}
@@ -1441,6 +1453,8 @@ next:
 
 	return 0;
 }
+
+
 
 static void
 convert_mat(struct W2XConv *conv,
