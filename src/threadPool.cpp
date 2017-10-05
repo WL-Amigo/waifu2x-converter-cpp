@@ -13,7 +13,7 @@ namespace w2xc {
 #define wmb() __asm__ __volatile__ ("":::"memory")
 
 #elif defined _MSC_VER
-	#if _MSC_VER == 1911
+	#if _MSC_VER >= 1911
 		#define rmb() _mm_mfence()
 		#define wmb() _mm_mfence()
 	#else
