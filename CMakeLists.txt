@@ -199,7 +199,7 @@ if(${CMAKE_SYSTEM_NAME} STREQUAL "Windows")
       opencv_core300 opencv_imgproc300 opencv_imgcodecs300 opencv_features2d300 libjpeg libpng libtiff libjasper opencv_hal300
       IlmImf zlib libwebp user32 opencv_core300 opencv_hal300) # xx 300
   elseif(MSVC14)
-      target_link_libraries(w2xc opencv_world320 user32)
+      target_link_libraries(w2xc opencv_world330 user32)
   else()
     target_link_libraries(w2xc opencv_core300 opencv_imgproc300 opencv_imgcodecs300
       opencv_features2d300 ippicvmt libjpeg libpng libtiff libjasper
