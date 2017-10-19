@@ -1646,12 +1646,6 @@ w2xconv_apply_filter_y(struct W2XConv *conv,
 	return 0;
 }
 
-const char *
-w2xconv_version(void)
-{
-	return BUILD_TS;
-}
-
 #ifdef HAVE_OPENCV
 int
 w2xconv_test(struct W2XConv *conv, int block_size)

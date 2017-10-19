@@ -25,6 +25,36 @@
 #define DEFAULT_MODELS_DIRECTORY "models_rgb"
 #endif
 
+#define _VERSION "5.0"
+
+class CustomFailOutput : public TCLAP::StdOutput {
+public:
+    virtual void failure( TCLAP::CmdLineInterface& _cmd, TCLAP::ArgException& e ) override {
+		std::string progName = _cmd.getProgramName();
+
+		std::cerr << "PARSE ERROR: " << e.argId() << std::endl
+				  << "             " << e.error() << std::endl << std::endl;
+
+		if ( _cmd.hasHelpAndVersion() )
+			{
+				std::cerr << "Brief USAGE: " << std::endl;
+
+				_shortUsage( _cmd, std::cerr );	
+
+				std::cerr << std::endl << "For complete USAGE and HELP type: " 
+						  << std::endl << "   " << progName << " --help" 
+						  << std::endl << std::endl;
+				std::cerr << "Waifu2x OpenCV - Version " << _VERSION << " - https://github.com/DeadSix27/waifu2x-converter-cpp" << std::endl << std::endl;
+				std::cerr << "If you find issues or need help, visit: https://github.com/DeadSix27/waifu2x-converter-cpp/issues" << std::endl << std::endl;
+			}
+		else
+			usage(_cmd);
+
+		throw TCLAP::ExitException(1);
+    }
+};
+
+
 namespace fs = std::experimental::filesystem;
 
 struct convInfo {
@@ -197,7 +227,8 @@ int main(int argc, char** argv) {
 	}
 
 	// definition of command line arguments
-	TCLAP::CmdLine cmd("waifu2x reimplementation using OpenCV", ' ', w2xconv_version());
+	TCLAP::CmdLine cmd("waifu2x OpenCV Fork - https://github.com/DeadSix27/waifu2x-converter-cpp", ' ', _VERSION, true);
+	cmd.setOutput(new CustomFailOutput());
 
 	TCLAP::ValueArg<std::string> cmdInput("i", "input",
 		"path to input image file or directory (you should use the full path)", true, "",
