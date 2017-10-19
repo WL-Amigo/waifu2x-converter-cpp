@@ -1,4 +1,4 @@
-![Discord](https://img.shields.io/badge/Discord-Join-blue.svg) ![Downloads](https://img.shields.io/github/downloads/DeadSix27/waifu2x-converter-cpp/5.0/total.svg)
+[![Discord](https://img.shields.io/badge/Discord-Join-blue.svg)](https://discord.gg/gAvufS2) [![Downloads](https://img.shields.io/github/downloads/DeadSix27/waifu2x-converter-cpp/5.0/total.svg)](https://discord.gg/gAvufS2)
 
 # waifu2x (converter only version)
 
@@ -7,11 +7,11 @@ This is also a reimplementation of [waifu2x python version](https://marcan.st/tr
 You can use this as command-line tool of image noise reduction or/and scaling.
 
 ## I also have a Discord at:
-https://discord.gg/FeCwdW It's often easier to chat in real time, so if you want feel free to join.
+https://discord.gg/gAvufS2 It's often easier to chat in real time, so if you want feel free to join.
 
 ## Prebuilt binary-form release
 
-https://github.com/DeadSix27/waifu2x-converter-cpp/releases
+https://github.com/DeadSix27/waifu2x-converter-cpp/releases/tag/5.0
 
 ## Dependencies
 
