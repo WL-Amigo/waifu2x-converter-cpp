@@ -1,20 +1,17 @@
+![Discord](https://img.shields.io/badge/Discord-Join-blue.svg) ![Downloads](https://img.shields.io/github/downloads/DeadSix27/waifu2x-converter-cpp/5.0/total.svg)
+
 # waifu2x (converter only version)
 
 This is a reimplementation of waifu2x ([original](https://github.com/nagadomi/waifu2x)) converter function, in C++, using OpenCV.
 This is also a reimplementation of [waifu2x python version](https://marcan.st/transf/waifu2x.py) by [Hector Martin](https://marcan.st/blog/).
 You can use this as command-line tool of image noise reduction or/and scaling.
 
+## I also have a Discord at:
+https://discord.gg/FeCwdW It's often easier to chat in real time, so if you want feel free to join.
+
 ## Prebuilt binary-form release
 
 https://github.com/DeadSix27/waifu2x-converter-cpp/releases
-
-## waifu2x converter GUI
-
- * [waifu2x_win_koroshell](http://inatsuka.com/extra/koroshell/)
-   - waifu2x-converter GUI frontend that is easy to use, and so cute. You need only drag&drop to convert your image. (and also you can set converting mode, noise reduction level, scale ratio, etc..., on GUI)
-   - Both waifu2x-converter x86 and x64 are included this package, and GUI see your windows architecture(x86|x64) and selects automatically which to use. 
-   - For windows only.
-
 
 ## Dependencies
 
