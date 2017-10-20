@@ -25,7 +25,7 @@
 #define DEFAULT_MODELS_DIRECTORY "models_rgb"
 #endif
 
-#define _VERSION "5.0"
+#define _VERSION "5.1"
 
 class CustomFailOutput : public TCLAP::StdOutput {
 public:
