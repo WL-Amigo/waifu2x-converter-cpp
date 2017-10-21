@@ -11,7 +11,7 @@ add_executable(conv conv.c)
 
 if(NOT ${CMAKE_SYSTEM_NAME} STREQUAL "Windows")
  find_package(PkgConfig)
- pkg_check_modules(OPENCV_PKG opencv)
+ find_package(OpenCL)
 endif()
 
 string(TIMESTAMP TS)
@@ -212,22 +212,21 @@ else()
 endif()
 
 if(${CMAKE_SYSTEM_NAME} STREQUAL "Windows")
- if(CMAKE_COMPILER_IS_GNUCXX)
-	target_link_libraries(w2xc
-	 opencv_core300 opencv_imgproc300 opencv_imgcodecs300 opencv_features2d300 libjpeg libpng libtiff libjasper opencv_hal300
-	 IlmImf zlib libwebp user32 opencv_core300 opencv_hal300) # xx 300
- elseif(MSVC14)
-	 target_link_libraries(w2xc opencv_world330 user32)
- else()
-	target_link_libraries(w2xc opencv_core300 opencv_imgproc300 opencv_imgcodecs300
-	 opencv_features2d300 ippicvmt libjpeg libpng libtiff libjasper
-	 opencv_hal300 IlmImf zlib libwebp user32 opencv_core300 opencv_imgproc300)
- endif()
-
- add_executable(w2xcr WIN32 w32-apps/w2xcr.c w32-apps/w2xcr.rc)
- target_link_libraries(w2xcr w2xc user32 shlwapi gdi32)
-else()
- target_link_libraries(w2xc ${OPENCV_LIBRARIES} ${CMAKE_DL_LIBS} pthread)
+	if(CMAKE_COMPILER_IS_GNUCXX)
+		target_link_libraries(w2xc
+		opencv_core300 opencv_imgproc300 opencv_imgcodecs300 opencv_features2d300 libjpeg libpng libtiff libjasper opencv_hal300
+		IlmImf zlib libwebp user32 opencv_core300 opencv_hal300) # xx 300
+	elseif(MSVC14)
+		target_link_libraries(w2xc opencv_world330 user32)
+	else()
+		target_link_libraries(w2xc opencv_core300 opencv_imgproc300 opencv_imgcodecs300
+		opencv_features2d300 ippicvmt libjpeg libpng libtiff libjasper
+		opencv_hal300 IlmImf zlib libwebp user32 opencv_core300 opencv_imgproc300)
+	endif()
+		add_executable(w2xcr WIN32 w32-apps/w2xcr.c w32-apps/w2xcr.rc)
+		target_link_libraries(w2xcr w2xc user32 shlwapi gdi32)
+	else()
+		target_link_libraries(w2xc ${OPENCV_LIBRARIES} ${CMAKE_DL_LIBS} pthread)
 endif()
 
 set(CONV_EXE "$<TARGET_FILE_DIR:conv>/conv")
@@ -283,14 +282,14 @@ if (${HAVE_OPENCV})
  endif()
 
  add_executable(runtest w32-apps/runtest.c)
- target_link_libraries(runtest w2xc)
+ target_link_libraries(runtest w2xc stdc++fs stdc++)
  add_test(runtest runtest)
 
  install(TARGETS w2xc waifu2x-converter-cpp RUNTIME DESTINATION bin LIBRARY DESTINATION "lib${LIB_SUFFIX}" ARCHIVE DESTINATION "lib${LIB_SUFFIX}" )
 endif()
 
 add_executable(runbench w32-apps/runbench.c)
-target_link_libraries(runbench LINK_PUBLIC w2xc)
+target_link_libraries(runbench LINK_PUBLIC w2xc stdc++fs stdc++)
 
 install(FILES src/w2xconv.h DESTINATION include)
 

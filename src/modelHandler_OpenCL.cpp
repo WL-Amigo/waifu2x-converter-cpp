@@ -16,6 +16,16 @@
 #include "CLlib.h"
 #include "params.h"
 #include "CL/cl.h"
+#include <experimental/filesystem>
+namespace fs = std::experimental::filesystem;
+
+
+
+#ifdef __linux
+#include <unistd.h>
+#include <sys/types.h>
+#include <pwd.h>
+#endif
 
 static const char prog[] =
 #include "modelHandler_OpenCL.cl.h"
@@ -304,6 +314,12 @@ namespace w2xc {
 
 		std::string dev_nameStr = &dev_name[0];
 		removeForbiddenChar(&dev_nameStr);
+
+		
+		// std::string str = "/usr/bin";
+		// self_path = new char[str.length() + 1];
+		// strcpy(self_path, str.c_str());
+		
 		std::string bin_path = std::string(self_path) + "/" + dev_nameStr + ".bin";
 
 		FILE *binfp = fopen(bin_path.c_str(), "rb");
@@ -420,8 +436,47 @@ namespace w2xc {
 			ptrs[0] = buffer;
 
 			clGetProgramInfo(program, CL_PROGRAM_BINARIES, sizeof(ptrs), ptrs, &ret_len);
-
-			FILE *fp = fopen(bin_path.c_str(), "wb");
+			
+			FILE *fp = NULL;
+			while (fp == NULL)
+			{
+				fp = fopen(bin_path.c_str(), "wb");
+				if (fp == NULL) {
+					#if (defined __linux)
+						if (errno == 13) {
+							std::string user_folder("/tmp/.waifu2x");
+							// printf("______w_%s_______\n" , user_folder.c_str());
+							char *home_dir = getenv ("HOME");
+							// printf("______w_%s_______\n" , home_dir);
+							if (home_dir != NULL) {
+								user_folder = std::string(home_dir) + "/.waifu2x";
+							}
+							
+							if (!fs::exists(user_folder)) {
+								// printf("__got here___3\n");
+								try { fs::create_directory(user_folder); }
+								catch (fs::filesystem_error& e) {
+									printf("ERROR: %s\n",e.what());
+									exit(EXIT_FAILURE);
+								}
+							}
+							// printf("__got here___2\n");
+							bin_path = user_folder + "/" + dev_nameStr + ".bin";
+							fp = fopen(bin_path.c_str(), "wb");
+							printf("Writing OpenCL-Binary to: %s\n",bin_path.c_str());
+						}
+						else {
+							printf("Error opening file %s: [%d] %s\n",bin_path.c_str(),errno,strerror(errno));
+							exit (EXIT_FAILURE);
+						}
+					#else
+						printf("Error opening file %s: [%d] %s\n",bin_path.c_str(),errno,strerror(errno));
+						exit (EXIT_FAILURE);
+					#endif
+				}
+				else { printf("Writing OpenCL-Binary to: %s\n",bin_path.c_str()); }
+			}
+			
 
 			size_t rem = binsz;
 			char *p = buffer;
