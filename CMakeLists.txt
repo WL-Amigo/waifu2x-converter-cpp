@@ -211,23 +211,38 @@ else()
  endif()
 endif()
 
-if(${CMAKE_SYSTEM_NAME} STREQUAL "Windows")
-	if(CMAKE_COMPILER_IS_GNUCXX)
+set(LOCAL_SYS_TYPE "UNKNOWN")
+if (MINGW)
+	set(LOCAL_SYS_TYPE "MINGW")
+endif()
+if (LINUX)
+	set(LOCAL_SYS_TYPE "LINUX")
+endif()
+if (APPLE)
+	set(LOCAL_SYS_TYPE "APPLE")
+endif()
+if (MSVC)
+	set(LOCAL_SYS_TYPE "MSVC")
+endif()
+
+message("-- We are on: ${CMAKE_SYSTEM_NAME} -> ${LOCAL_SYS_TYPE}")
+
+if(${CMAKE_SYSTEM_NAME} STREQUAL "Windows") # We build FOR windows.
+	if(MINGW) # We build for windows on Linux MinGW (Cross compiling) # not yet working
 		target_link_libraries(w2xc
 		opencv_core300 opencv_imgproc300 opencv_imgcodecs300 opencv_features2d300 libjpeg libpng libtiff libjasper opencv_hal300
 		IlmImf zlib libwebp user32 opencv_core300 opencv_hal300) # xx 300
-	elseif(MSVC14)
+	elseif(MSVC) # we build natively on Visual studio
 		target_link_libraries(w2xc opencv_world330 user32)
-	else()
+	elseif(LINUX) # we build on linux.... on windows.. somehow WSL?/Cygwin? We'll see
 		target_link_libraries(w2xc opencv_core300 opencv_imgproc300 opencv_imgcodecs300
 		opencv_features2d300 ippicvmt libjpeg libpng libtiff libjasper
 		opencv_hal300 IlmImf zlib libwebp user32 opencv_core300 opencv_imgproc300)
 	endif()
 		add_executable(w2xcr WIN32 w32-apps/w2xcr.c w32-apps/w2xcr.rc)
 		target_link_libraries(w2xcr w2xc user32 shlwapi gdi32)
-	else()
-		message("If this line shows up, report it to DeadSix")
-		target_link_libraries(w2xc ${OPENCV_LIBRARIES} ${CMAKE_DL_LIBS} pthread stdc++fs stdc++)
+else() # we are on linux and build for linux
+	target_link_libraries(w2xc ${OPENCV_LIBRARIES} ${CMAKE_DL_LIBS} pthread stdc++fs stdc++)
 endif()
 
 set(CONV_EXE "$<TARGET_FILE_DIR:conv>/conv")
