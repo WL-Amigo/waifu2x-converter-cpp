@@ -27,7 +27,7 @@ message("-- We are on: ${CMAKE_SYSTEM_NAME} (${LOCAL_SYS_TYPE})")
 
 add_executable(conv conv.c)
 if(UNIX)
-	set(OPENCV_PREFIX "/usr" CACHE FILEPATH "OpenCV 3.x path")
+	set(OPENCV_PREFIX "/usr" CACHE FILEPATH "OpenCV path")
 	find_package(PkgConfig)
 	find_package(OpenCV)
 	if(${OPENCV_FOUND})
@@ -39,8 +39,8 @@ if(UNIX)
 			link_directories(${OPENCV_PREFIX}/lib)
 		endif()
 	endif()
-elseif(WIN32) # windows has no pkgconfig
-	set(OPENCV_PREFIX "opencv" CACHE FILEPATH "OpenCV 3.x path") # no real default path for windows, assume subfolder in source folder
+elseif(WIN32) # Windows has no pkgconfig
+	set(OPENCV_PREFIX "opencv" CACHE FILEPATH "OpenCV 3.x path") # No real default path for windows, assume subfolder in source folder
 	find_package(OpenCV)
 	if (NOT ${OPENCV_PKG_FOUND})
 		CHECK_INCLUDE_FILE_CXX("${OPENCV_PREFIX}/include/opencv2/opencv.hpp" HAVE_OPENCV)
@@ -202,7 +202,7 @@ if(CMAKE_SIZEOF_VOID_P EQUAL 4)
 	list(APPEND CUDA_NVCC_FLAGS "-m32")
 endif()
 
-if(${CMAKE_SYSTEM_NAME} STREQUAL "Windows")
+if(WIN32)
 	if(CUDA_FOUND)
 		list(APPEND CUDA_NVCC_FLAGS "-Xcompiler" "/wd 4819")
 	endif()
@@ -217,7 +217,7 @@ else()
 	endif()
 endif()
 
-if(${CMAKE_SYSTEM_NAME} STREQUAL "Windows") # We build FOR windows.
+if(WIN32) # We build FOR windows.
 	if(MINGW) # We build for windows on Linux MinGW (Cross compiling) # not yet working
 		target_link_libraries(w2xc opencv_core300 opencv_imgproc300 opencv_imgcodecs300 opencv_features2d300 libjpeg libpng libtiff libjasper opencv_hal300 IlmImf zlib libwebp user32 opencv_core300 opencv_hal300) # xx 300
 	elseif(MSVC) # we build natively on Visual studio
@@ -227,8 +227,7 @@ if(${CMAKE_SYSTEM_NAME} STREQUAL "Windows") # We build FOR windows.
 	endif()
 	add_executable(w2xcr WIN32 w32-apps/w2xcr.c w32-apps/w2xcr.rc)
 	target_link_libraries(w2xcr w2xc user32 shlwapi gdi32)
-else() # we are on linux and build for linux
-	message(" GOT HERE ! ")
+else() # We are on linux and build for linux
 	target_link_libraries(w2xc ${OpenCV_LIBS} ${CMAKE_DL_LIBS} pthread stdc++fs stdc++)
 endif()
 
