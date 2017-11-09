@@ -25,7 +25,7 @@ if (MSVC)
 endif()
 message("-- We are on: ${CMAKE_SYSTEM_NAME} (${LOCAL_SYS_TYPE})")
 
-if(APPLE OR UNIX OR MINGW)
+if(UNIX OR MINGW)
 	set(FILE_SYSTEM_LIB "stdc++fs")
 endif()
 
