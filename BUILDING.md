@@ -170,7 +170,7 @@ Now lets build waifu2x-converter-cpp:
 ```
 $ git clone https://github.com/DeadSix27/waifu2x-converter-cpp && cd waifu2x-converter-cpp
 $ mkdir release && cd release 
-$ cmake .. -DOPENCV_PREFIX=/usr/local
+$ cmake ..
 $ make -j4
 $ cp ../models_rgb/ . -r
 ```
