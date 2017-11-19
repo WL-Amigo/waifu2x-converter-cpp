@@ -314,11 +314,6 @@ namespace w2xc {
 
 		std::string dev_nameStr = &dev_name[0];
 		removeForbiddenChar(&dev_nameStr);
-
-		
-		// std::string str = "/usr/bin";
-		// self_path = new char[str.length() + 1];
-		// strcpy(self_path, str.c_str());
 		
 		std::string bin_path = std::string(self_path) + "/" + dev_nameStr + ".bin";
 
