@@ -440,22 +440,18 @@ namespace w2xc {
 					#if (defined __linux)
 						if (errno == 13) {
 							std::string user_folder("/tmp/.waifu2x");
-							// printf("______w_%s_______\n" , user_folder.c_str());
 							char *home_dir = getenv ("HOME");
-							// printf("______w_%s_______\n" , home_dir);
 							if (home_dir != NULL) {
 								user_folder = std::string(home_dir) + "/.waifu2x";
 							}
 							
 							if (!fs::exists(user_folder)) {
-								// printf("__got here___3\n");
 								try { fs::create_directory(user_folder); }
 								catch (fs::filesystem_error& e) {
 									printf("ERROR: %s\n",e.what());
 									exit(EXIT_FAILURE);
 								}
 							}
-							// printf("__got here___2\n");
 							bin_path = user_folder + "/" + dev_nameStr + ".bin";
 							fp = fopen(bin_path.c_str(), "wb");
 							printf("Writing OpenCL-Binary to: %s\n",bin_path.c_str());
