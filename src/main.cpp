@@ -364,7 +364,7 @@ int main(int argc, char** argv) {
 	if (fs::is_directory(input) == true) {
 		//Build files list
 		std::deque<fs::path> files_list;
-		std::cout << "We're going to be operating in a directory. dir:" << fs::absolute(input) << std::endl;
+		std::cout << "We're going to be operating in a directory. dir:" << fs::absolute(input) << std::endl << std::endl;
 		if (recursive_directory_iterator) {
 			for (auto & inputFile : fs::recursive_directory_iterator(input)) {
 				if (!fs::is_directory(inputFile)) {
