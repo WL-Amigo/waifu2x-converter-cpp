@@ -6,6 +6,9 @@ appendix/waifu2x-nocuda/lib/*~
 /Debug/
 /Release/
 output/
+out/
+release/
+debug/
 src/*.o
 waifu2x-converter-cpp
 *.s
