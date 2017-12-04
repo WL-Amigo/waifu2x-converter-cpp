@@ -387,7 +387,7 @@ int main(int argc, char** argv) {
 			++numFilesProcessed;
 			double time_file_start = getsec();
 
-			std::cout << "[" << numFilesProcessed << "/" << files_count << "] " << fn.filename() << std::endl;
+			std::cout << "[" << numFilesProcessed << "/" << files_count << "] " << fn.filename() << (verbose ? std::endl : " Ok. ");
 
 			try {
 				convert_file(convInfo, fn, output);
@@ -409,12 +409,12 @@ int main(int argc, char** argv) {
 			int el_h = elapsed / (60 * 60);
 			int el_m = (elapsed - el_h * 60 * 60) / 60;
 			int el_s = (elapsed - el_h * 60 * 60 - el_m * 60);
-			std::cout << " (elapsed: ";
+			std::cout << "Elapsed: ";
 			if (el_h)
 				std::cout << el_h << "h";
 			if (el_m)
 				std::cout << el_m << "m";
-			std::cout << el_s << "s file: " << time_file << "s avg: " << timeAvg << "s)" << std::endl;
+			std::cout << el_s << "s file: " << time_file << "s avg: " << timeAvg << "s" << std::endl;
 		}
 
 
