@@ -22,7 +22,7 @@ https://discord.gg/gAvufS2 It's often easier to chat in real time, so if you wan
 - **Other Linux** 
   - Please build from source.
 
-#### Supported platforms
+## Supported platforms
 
  - Linux
  - Windows  
@@ -41,7 +41,7 @@ See [BUILDING.md](BUILDING.md) for more information.
 
 ## Usage
 
-Usage of this program can be seen by executing this with `--help` option.
+Usage of this program can be seen by executing `waifu2x-converter-cpp --help`
 
 ## Fork logs:
 This program got forked a lot a this point, for history there is a list of author and major code changes since each fork:
