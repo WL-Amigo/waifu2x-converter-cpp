@@ -9,15 +9,24 @@ You can use this as command-line tool of image noise reduction or/and scaling.
 ## I also have a Discord at:
 https://discord.gg/gAvufS2 It's often easier to chat in real time, so if you want feel free to join.
 
-## Prebuilt binary-form release
+## Obtain it here
 
-https://github.com/DeadSix27/waifu2x-converter-cpp/releases/tag/5.0
+- **Windows downloads**
+  - https://github.com/DeadSix27/waifu2x-converter-cpp/releases/tag/5.0
+
+- **ArchLinux AUR**
+  - [waifu2x-converter-cpp-git](https://aur.archlinux.org/packages/waifu2x-converter-cpp-git/) (git master)
+  - [waifu2x-converter-cpp](https://aur.archlinux.org/packages/waifu2x-converter-cpp/) (releaes)
+  - These are maintained by [nfnty](https://aur.archlinux.org/account/nfnty). If you have issues with the AUR packages, please contact him
+
+- **Other Linux** 
+  - please built from source.
 
 ## Dependencies
 
 ### Platform
 
- * Ubuntu  
+ * Linux
  * Windows  
  * Mac OS X?  
  
