@@ -28,13 +28,8 @@ https://discord.gg/gAvufS2 It's often easier to chat in real time, so if you wan
  - Windows  
  - MacOS?
    - This is not officially supported but see here for more information: [#20](https://github.com/DeadSix27/waifu2x-converter-cpp/issues/20)
-
-### Libraries
-
- * [OpenCV](http://opencv.org/)(version 3.3.0)
- * Now requires openCV 3.3.0
  
- ## Build dependencies
+## Build dependencies
 
  - [picojson](https://github.com/kazuho/picojson) (included)
  - [TCLAP(Templatized C++ Command Line Parser Library)](http://tclap.sourceforge.net/) (included)
