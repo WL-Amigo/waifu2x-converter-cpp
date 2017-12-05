@@ -20,7 +20,7 @@ https://discord.gg/gAvufS2 It's often easier to chat in real time, so if you wan
   - These are maintained by [nfnty](https://aur.archlinux.org/account/nfnty). If you have issues with the AUR packages, please contact him.
 
 - **Other Linux** 
-  - Please build from source.
+  - Please build from source. See [BUILDING.md](BUILDING.md) for help.
 
 ## Supported platforms
 
@@ -46,4 +46,8 @@ Usage of this program can be seen by executing `waifu2x-converter-cpp --help`
 ## Fork logs:
 This program got forked a lot a this point, for history there is a list of author and major code changes since each fork:
 [Fork changes](FORK_CHANGES.md)
+
+## Notes:
+
+I'd appreciate any help on this project, I do not want yet another fork... so if you have improvement ideas or find bugs, please make a pull request or open an issue :)!
 
