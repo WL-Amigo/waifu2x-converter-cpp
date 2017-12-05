@@ -15,6 +15,7 @@
 #include <cstring>
 #include <string>
 #include <cmath>
+#include <deque>
 #include "tclap/CmdLine.h"
 #include "sec.hpp"
 #include <experimental/filesystem>
@@ -194,7 +195,7 @@ std::string generate_output_location(std::string inputFileName, std::string outp
 
 
 void convert_file(convInfo info, fs::path inputName, fs::path output) {
-	std::cout << "Operating on: " << fs::absolute(inputName).string() << std::endl;
+	//std::cout << "Operating on: " << fs::absolute(inputName).string() << std::endl;
 	std::string outputName = generate_output_location(fs::absolute(inputName).string(), output.string(), info.mode, info.NRLevel, info.scaleRatio);
 
 	int _nrLevel = 0;
@@ -361,37 +362,60 @@ int main(int argc, char** argv) {
 	int numFilesProcessed = 0;
 	int numErrors = 0;
 	if (fs::is_directory(input) == true) {
+		//Build files list
+		std::deque<fs::path> files_list;
 		std::cout << "We're going to be operating in a directory. dir:" << fs::absolute(input) << std::endl;
 		if (recursive_directory_iterator) {
 			for (auto & inputFile : fs::recursive_directory_iterator(input)) {
 				if (!fs::is_directory(inputFile)) {
-					numFilesProcessed++;
-					try {
-						convert_file(convInfo, inputFile, output);
-					}
-					catch (const std::exception& e) {
-						numErrors++;
-						std::cout << e.what() << std::endl;
-					}
+					files_list.push_back(inputFile);
 				}
 			}
 		}
 		else {
 			for (auto & inputFile : fs::directory_iterator(input)) {
 				if (!fs::is_directory(inputFile)) {
-					numFilesProcessed++;
-					try {
-						convert_file(convInfo, inputFile, output);
-					}
-					catch (const std::exception& e) {
-						numErrors++;
-						std::cout << e.what() << std::endl;
-					}
+					files_list.push_back(inputFile);
 				}
 			}
 		}
 
+		//Proceed by list
+		double timeAvg = 0.0;
+		int files_count = static_cast<int>(files_list.size());
+		for (auto &fn : files_list) {
+			++numFilesProcessed;
+			double time_file_start = getsec();
 
+			std::cout << "[" << numFilesProcessed << "/" << files_count << "] " << fn.filename() << (verbose ? "\n" : " Ok. ");
+
+			try {
+				convert_file(convInfo, fn, output);
+			}
+			catch (const std::exception& e) {
+				numErrors++;
+				std::cout << e.what() << std::endl;
+			}
+
+			//Calculate and out elapsed time
+			double time_end = getsec();
+			double time_file = time_end - time_file_start;
+			double time_all = time_end - time_start;
+			if (timeAvg > 0.0)
+				timeAvg = time_all / numFilesProcessed;
+			else
+				timeAvg = time_all;
+			double elapsed = files_count * timeAvg - time_all;
+			int el_h = elapsed / (60 * 60);
+			int el_m = (elapsed - el_h * 60 * 60) / 60;
+			int el_s = (elapsed - el_h * 60 * 60 - el_m * 60);
+			std::cout << "Elapsed: ";
+			if (el_h)
+				std::cout << el_h << "h";
+			if (el_m)
+				std::cout << el_m << "m";
+			std::cout << el_s << "s file: " << time_file << "s avg: " << timeAvg << "s" << std::endl;
+		}
 
 
 	}
