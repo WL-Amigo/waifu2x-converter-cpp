@@ -387,7 +387,11 @@ int main(int argc, char** argv) {
 			++numFilesProcessed;
 			double time_file_start = getsec();
 
-			std::cout << "[" << numFilesProcessed << "/" << files_count << "] " << fn.filename() << (verbose ? std::endl : " Ok. ");
+			std::cout << "[" << numFilesProcessed << "/" << files_count << "] " << fn.filename();
+			if (verbose)
+				std::cout << std::endl;
+			else
+				std::cout << " Ok. ";
 
 			try {
 				convert_file(convInfo, fn, output);
