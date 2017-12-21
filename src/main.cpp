@@ -16,6 +16,7 @@
 #include <string>
 #include <cmath>
 #include <deque>
+#include <stdio.h>
 #include "tclap/CmdLine.h"
 #include "sec.hpp"
 #include <experimental/filesystem>
@@ -143,7 +144,7 @@ std::string basename(const std::string& str) {
 }
 
 std::string generate_output_location(std::string inputFileName, std::string outputFileName, std::string mode, int NRLevel, double scaleRatio) {
-	if (outputFileName == "auto") {
+	if (!strcmp(outputFileName.c_str(), "auto")) {
 		outputFileName = inputFileName;
 		int tailDot = outputFileName.find_last_of('.');
 		if (tailDot != std::string::npos)
@@ -160,7 +161,7 @@ std::string generate_output_location(std::string inputFileName, std::string outp
 	}
 	else if (outputFileName.back() == '/') {
 		//outputFileName = output folder or "auto/"
-		if ((!fs::is_directory(outputFileName)) && (outputFileName != "auto/")) {
+		if ((!fs::is_directory(outputFileName))) {
 			fs::create_directories(outputFileName);
 		}
 		//We pass tmp into generate_output_location because we will use the default way of naming processed files.
@@ -168,15 +169,12 @@ std::string generate_output_location(std::string inputFileName, std::string outp
 		//This removes all contextual information about where a file originated from if "recursive_directory" was enabled.
 		std::string tmp = generate_output_location(inputFileName, "auto", mode, NRLevel, scaleRatio);
 		//tmp = full formatted output file path
-		if (outputFileName == "auto/") {
-			outputFileName = tmp;
+		int lastSlash = tmp.find_last_of('/');
+		if (lastSlash != std::string::npos){
+			tmp.erase(0, lastSlash);
 		}
-		else {
-			int lastSlash = tmp.find_last_of('/');
-			if (lastSlash != std::string::npos)
-				tmp.erase(0, lastSlash);
-			outputFileName += basename(tmp);
-		}
+
+		outputFileName += basename(tmp);
 	}
 	else if (outputFileName.find_last_of('.') < outputFileName.find_last_of('/'))
 	{
@@ -200,12 +198,12 @@ void convert_file(convInfo info, fs::path inputName, fs::path output) {
 
 	int _nrLevel = 0;
 
-	if (info.mode == "noise" || info.mode == "noise_scale") {
+	if (!(strcmp(info.mode.c_str(), "noise") || strcmp(info.mode.c_str(), "noise_scale"))) {
 		_nrLevel = info.NRLevel;
 	}
 
 	double _scaleRatio = 1;
-	if (info.mode == "scale" || info.mode == "noise_scale") {
+	if (!(strcmp(info.mode.c_str(), "scale") || strcmp(info.mode.c_str(), "noise_scale"))) {
 		_scaleRatio = info.scaleRatio;
 	}
 
@@ -301,10 +299,11 @@ int main(int argc, char** argv) {
 
 	//We need to do this conversion because using a TCLAP::ValueArg<fs::path> can not handle spaces.
 	fs::path input = cmdInput.getValue();
-	fs::path output = cmdOutput.getValue();
-	if (fs::is_directory(input) && (cmdOutput.getValue().back() != '/')) {
-		output += "/";
+	std::string tmpOutput = cmdOutput.getValue();
+	if (fs::is_directory(input) && (tmpOutput.back() != '/') && strcmp(tmpOutput.c_str(), "auto")) {
+		tmpOutput += "/";
 	}
+	fs::path output = tmpOutput;
 
 
 	if (cmdListProcessor.getValue()) {
