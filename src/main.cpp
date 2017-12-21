@@ -273,7 +273,7 @@ int main(int argc, char** argv) {
 		"number of threads launching at the same time", false, 0, "integer",
 		cmd);
 
-	TCLAP::ValueArg<int> cmdTargetProcessor("", "processor",
+	TCLAP::ValueArg<int> cmdTargetProcessor("p", "processor",
 		"set target processor", false, -1, "integer",
 		cmd);
 
