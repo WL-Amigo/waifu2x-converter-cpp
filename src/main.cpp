@@ -144,7 +144,7 @@ std::string basename(const std::string& str) {
 }
 
 std::string generate_output_location(std::string inputFileName, std::string outputFileName, std::string mode, int NRLevel, double scaleRatio) {
-	if (!strcmp(outputFileName.c_str(), "auto")) {
+	if (strcmp(outputFileName.c_str(), "auto")==0) {
 		outputFileName = inputFileName;
 		int tailDot = outputFileName.find_last_of('.');
 		if (tailDot != std::string::npos)
@@ -198,12 +198,12 @@ void convert_file(convInfo info, fs::path inputName, fs::path output) {
 
 	int _nrLevel = 0;
 
-	if (!(strcmp(info.mode.c_str(), "noise") || strcmp(info.mode.c_str(), "noise_scale"))) {
+	if (strcmp(info.mode.c_str(), "noise")==0 || strcmp(info.mode.c_str(), "noise_scale")==0) {
 		_nrLevel = info.NRLevel;
 	}
 
 	double _scaleRatio = 1;
-	if (!(strcmp(info.mode.c_str(), "scale") || strcmp(info.mode.c_str(), "noise_scale"))) {
+	if (strcmp(info.mode.c_str(), "scale")==0 || strcmp(info.mode.c_str(), "noise_scale")==0) {
 		_scaleRatio = info.scaleRatio;
 	}
 
@@ -300,7 +300,7 @@ int main(int argc, char** argv) {
 	//We need to do this conversion because using a TCLAP::ValueArg<fs::path> can not handle spaces.
 	fs::path input = cmdInput.getValue();
 	std::string tmpOutput = cmdOutput.getValue();
-	if (fs::is_directory(input) && (tmpOutput.back() != '/') && strcmp(tmpOutput.c_str(), "auto")) {
+	if (fs::is_directory(input) && (tmpOutput.back() != '/') && strcmp(tmpOutput.c_str(), "auto")!=0) {
 		tmpOutput += "/";
 	}
 	fs::path output = tmpOutput;
