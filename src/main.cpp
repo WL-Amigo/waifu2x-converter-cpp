@@ -159,7 +159,7 @@ std::string generate_output_location(std::string inputFileName, std::string outp
 		}
 		outputFileName += ".png";
 	}
-	else if (outputFileName.back() == '/') {
+	else if (outputFileName.back() == '/' || outputFileName.back() == '\\') {
 		//outputFileName = output folder or "auto/"
 		if ((!fs::is_directory(outputFileName))) {
 			fs::create_directories(outputFileName);
@@ -176,12 +176,12 @@ std::string generate_output_location(std::string inputFileName, std::string outp
 
 		outputFileName += basename(tmp);
 	}
-	else if (outputFileName.find_last_of('.') < outputFileName.find_last_of('/'))
+	else if (outputFileName.find_last_of('.') < outputFileName.find_last_of("/\\"))
 	{
 		//e.g. ./test.d/out needs to be changed to ./test.d/out.png
 		outputFileName += ".png";
 	}
-	else if (outputFileName.find_last_of('.') > outputFileName.find_last_of('/')) {
+	else if (outputFileName.find_last_of('.') > outputFileName.find_last_of("/\\")) {
 		//We may have a regular output file here or something went wrong.
 		//outputFileName is already what it should be thus nothing needs to be done.
 	}
