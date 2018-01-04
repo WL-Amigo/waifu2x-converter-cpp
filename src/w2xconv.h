@@ -2,6 +2,8 @@
 #define W2XCONV_H
 
 #include <stddef.h>
+#include <stdio.h>
+#include <stdbool.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -150,6 +152,17 @@ struct W2XConv {
 	struct W2XConvImpl *impl;
 };
 
+struct float3 {
+	float r;
+	float g;
+	float b;
+	//float3(){}
+	//float3(float r, float g, float b):r(r), g(g), b(b){}
+};
+
+//TODO: what does W2XCONV_EXPORT do?
+W2XCONV_EXPORT	void get_png_background_colour(FILE *png_fp, bool *png_rgb, struct float3 *bkgd_colour);
+
 W2XCONV_EXPORT const struct W2XConvProcessor *w2xconv_get_processor_list(int *ret_num);
 
 W2XCONV_EXPORT struct W2XConv *w2xconv_init(enum W2XConvGPUMode gpu,
@@ -215,8 +228,6 @@ W2XCONV_EXPORT int w2xconv_apply_filter_y(struct W2XConv *conv,
 					  int block_size);
 
 W2XCONV_EXPORT int w2xconv_test(struct W2XConv *conv, int block_size);
-
-W2XCONV_EXPORT const char *w2xconv_version(void);
 
 #ifdef __cplusplus
 }

@@ -13,8 +13,13 @@ namespace w2xc {
 #define wmb() __asm__ __volatile__ ("":::"memory")
 
 #elif defined _MSC_VER
-#define rmb() _ReadBarrier()
-#define wmb() _WriteBarrier()
+	#if _MSC_VER >= 1911
+		#define rmb() _mm_mfence()
+		#define wmb() _mm_mfence()
+	#else
+		#define rmb() _ReadBarrier()
+		#define wmb() _WriteBarrier()
+	#endif
 
 #elif defined __GNUC__
 

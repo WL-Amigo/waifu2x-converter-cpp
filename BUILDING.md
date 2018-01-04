@@ -1,4 +1,4 @@
-### Building guides for Ubuntu-16.10-64bit and Windows VS2015-64bit by DeadSix27, MacOS by toyg
+### Building guides for Ubuntu-16.10-64bit and Windows VS2017-64bit by DeadSix27, MacOS by toyg
 
 # Download pre-built binaries from:
 
@@ -8,61 +8,60 @@ https://github.com/DeadSix27/waifu2x-converter-cpp/releases
 
 ## Windows (64 Bit)
 
-### VS2015 (OpenCV 3.2,VC14 tested on AMD GPU only)
+### VS2017 (OpenCV 3.3,VC15 tested on AMD GPU only)
 
 (If you have an nVidia GPU and want to test, open an Issue and tell me)
 
 Download and install/extract: 
-* [VS2015 Community](https://www.visualstudio.com/downloads/)
-* [OpenCV 3.2 for Windows](http://opencv.org/releases.html)
-* [cmake-3.7.1-win64-x64](https://cmake.org/download/)
-* [AMD APP SDK 3.0](http://developer.amd.com/amd-accelerated-parallel-processing-app-sdk/)
+* [Visual Studio Community 2017](https://www.visualstudio.com/downloads/)
+* [OpenCV 3.3.0 for Windows](http://opencv.org/releases.html)
+* [cmake-3.9.4-win64-x64](https://cmake.org/download/)
+* [AMD APP SDK 3.0 via AMD-SDK-InstallManager](http://developer.amd.com/amd-accelerated-parallel-processing-app-sdk/)
 
 #### Command line (console) (OR use the Cmake GUI guide below, I prefer console):
 
 Open a Command promt and run:
 
-`"%VSINSTALL%\VC\vcvarsall.bat" amd64` (where %VSINSTAL%L is `C:\Program Files (x86)\Microsoft Visual Studio 14.0` for example) or open the VS2015 x64 Native Tools Command Prompt
+`"C:\Program Files (x86)\Microsoft Visual Studio\2017\Community\VC\Auxiliary\Build\vcvarsall.bat" amd64` or open the `x64 Native Tools Command Prompt for VS 2017`
 
-Then run the following:
+Then run the following (assuming OpenCV3.3 is installed to `G:\w2x\opencv33\build` for example):
 
 ```
 >git clone https://github.com/DeadSix27/waifu2x-converter-cpp
 >cd waifu2x-converter-cpp
 >mkdir output && cd output
->cmake -DCMAKE_GENERATOR="Visual Studio 14 2015 Win64" -DOPENCV_PREFIX=%OpenCV%\build\ ..
->msbuild Project.sln /p:Configuration=Release /p:Platform=x64
->copy %OpenCV%\build\x64\vc14\bin\opencv_world320.dll Release\
+>cmake .. -DCMAKE_GENERATOR="Visual Studio 15 2017 Win64" -DOPENCV_PREFIX="G:\w2x\opencv33\build\" 
+>msbuild waifu2xcpp.sln /p:Configuration=Release /p:Platform=x64
+>copy G:\w2x\opencv33\build\x64\vc14\bin\opencv_world330.dll Release\
 >mkdir Release\models_rgb\ && copy ..\models_rgb Release\models_rgb\
 ```
-**Note:** %OpenCV% is your path to OpenCV, e.g `G:\w2x\opencv32`
 
-**Note:** If you are sure you have OpenCV3.2 installed yet it does not detect it, add `-DOVERRIDE_OPENCV=1` to cmake.
-
-**Note:** You can also just download from github and not use git clone.
+**Note:** If you have CUDASDK and AMDSDK installed, you can force it to use either, by using -DFORCE_AMD=ON or -DFORCE_CUDA=ON
 
 After that you will find your Binaries in `waifu2x-converter-cpp\output\Release`
 
 #### CMake GUI:
 
-1. Clone DeadSix27/waifu2x-converter-cpp from master
+(Assumes OpenCV3.3 is installed to `G:\w2x\opencv33\build` for example)
+
+1. Clone https://github.com/DeadSix27/waifu2x-converter-cpp from master
 2. Download and install the same files as noted above in: "Download and install/extract"
 3. Run Cmake GUI, press browse source, select waifu2x-converter-cpp folder
-4. Add OPENCV_PREFIX entry, set type to path and point it to %OpenCV%\build\ (%OpenCV% is the installed OpenCV location) -- ***NOTE:** Make very sure to set OPENCV_PREFIX before clicking configure and clear cmake cache everytime you configure again.*
-5. Press Configure, choose Visual Studio 14 2015 Win64
+4. Add OPENCV_PREFIX entry, set type to path and point it to G:\w2x\opencv33\build\ -- ***NOTE:** Make very sure to set OPENCV_PREFIX before clicking configure and clear cmake cache everytime you configure again.*
+5. Press Configure, choose Visual Studio 15 2017 Win64
 6. Press Generate
 7. Press Open Project
-8. Right click Solution 'Project' and hit Build Solution.
-9. Don't forget to copy models_rgb from waifu2x-converter-cpp and %OpenCV%\build\x64\vc14\bin\opencv_world320.dll into the output folder.
-10. And also copy OpenCV%\build\x64\vc14\bin\opencv_world320.dll to the output folder
+8. Right click Solution 'waifu2xcpp' and hit Build Solution.
+9. Don't forget to copy models_rgb from waifu2x-converter-cpp and G:\w2x\opencv33\build\x64\vc14\bin\opencv_world330.dll into the output folder.
+10. And also copy G:\w2x\opencv33\build\x64\vc14\bin\opencv_world330.dll to the output folder
 
-## Ubuntu 16.10 amd64 for AMD GPUs
+## Ubuntu 17.04 amd64 for AMD GPUs
 
 ### We have to build and install some requirements
 
 #### AMD SDK
 
-* Download [AMD APP SDK v3.0 (AMD-APP-SDKInstaller-v3.0.130.136-GA-linux64.tar.bz2)](http://developer.amd.com/amd-accelerated-parallel-processing-app-sdk/)
+* Download [AMD APP SDK v3.0 (AMD-APP-SDKInstaller-v3.0.130.136-GA-linux64.tar.bz2](http://developer.amd.com/amd-accelerated-parallel-processing-app-sdk/) (Sadly there is no wget-able link due to the EULA)
 
 Create a new folder:
 ```
@@ -86,53 +85,81 @@ It will tell you: You will need to log back in/open another terminal for the env
 Do that, close ssh or terminal then log back in and cd to the folder we created above then continue:
 
 
-We have to install opencl packages, this is only tested on amd64 & ubuntu 16.10 and might change in the future:
+We have to install opencl packages, this is only tested on amd64 & ubuntu 17.04 and might change in the future:
 
+## For AMD GPU:
+`$ sudo apt install clinfo mesa-opencl-icd opencl-headers`
+## For Intel iGPU (open source driver):
+`$ sudo apt install clinfo beignet-opencl-icd opencl-headers`
+
+## For Intel iGPU (intel official driver, only use if above does not work):
+Download the latest Intel OpenCL runtime here: https://software.intel.com/en-us/articles/opencl-drivers#latest_CPU_runtime (wget link is below)
+`wget http://registrationcenter-download.intel.com/akdlm/irc_nas/9019/opencl_runtime_16.1.1_x64_ubuntu_6.4.0.25.tgz`
+`tar xvf opencl_runtime_16.1.1_x64_ubuntu_6.4.0.25.tgz`
+Note, this runtime supports only ubuntu 14.04, but we like to live dangerous and ignore that (seems to work fine on 17.04 anyway)
+`sudo apt install lsb-core`
+`cd opencl_runtime_16.1.1_x64_ubuntu_6.4.0.25`
+`sudo ./install.sh` (click continue when it warns about unsupported OS)
+
+Then verify by running `clinfo`, if it shows `Number of devices` is greater than 0, like below, it's working.
 ```
-$ sudo apt install clinfo mesa-opencl-icd opencl-headers
 $ clinfo
-Number of platforms                               1
+Number of platforms                               2
   Platform Name                                   Clover
   Platform Vendor                                 Mesa
-  Platform Version                                OpenCL 1.1 Mesa 12.0.3
+  Platform Version                                OpenCL 1.1 Mesa 17.0.7
   Platform Profile                                FULL_PROFILE
   Platform Extensions                             cl_khr_icd
   Platform Extensions function suffix             MESA
 
+  Platform Name                                   Intel(R) OpenCL
+  Platform Vendor                                 Intel(R) Corporation
+  Platform Version                                OpenCL 1.2 LINUX
+  Platform Profile                                FULL_PROFILE
+  Platform Extensions                             cl_khr_icd cl_khr_global_int32_base_atomics cl_khr_global_int32_extended_atomics cl_khr_local_int32_                                                                                       base_atomics cl_khr_local_int32_extended_atomics cl_khr_byte_addressable_store cl_khr_depth_images cl_khr_3d_image_writes cl_intel_exec_by_local_threa                                                                                       d cl_khr_spir cl_khr_fp64
+  Platform Extensions function suffix             INTEL
+
   Platform Name                                   Clover
+Number of devices                                 0
+
+  Platform Name                                   Intel(R) OpenCL
 Number of devices                                 1
-  Device Name                                     AMD KAVERI (DRM 2.46.0 / 4.8.0-32-generic, LLVM 3.8.1)
-  .....
-  .....
+  Device Name                                     Intel(R) Pentium(R) CPU G4620 @ 3.70GHz
+  Device Vendor                                   Intel(R) Corporation
+  Device Vendor ID                                0x8086
+  Device Version                                  OpenCL 1.2 (Build 25)
+  Driver Version                                  1.2.0.25
+  Device OpenCL C Version                         OpenCL C 1.2
 ```
 
-#### OpenCV 3.2
+#### OpenCV 3.3
 
 
-You can also download the prebuilt package I built for Ubuntu 16.10-amd64 here: [libopencv_3.2-1_amd64.deb](https://github.com/DeadSix27/waifu2x-converter-cpp/releases)
+~~You can also download the prebuilt package I built for Ubuntu 17.04-amd64 here: [libopencv_3.3-1_amd64.deb](https://github.com/DeadSix27/waifu2x-converter-cpp/releases/tag/5.0)~~
 
-It will install into: `/usr/local`
+~~It will install into: `/usr/local`~~
 
-But I did not fully test this, I recommend building it on your own using the guide below this.
+~~But I did not fully test this, I recommend building it on your own using the guide below this.~~
+(for now build it yourself)
 
-* Download [OpenCV 3.2 Linux Source (3.2.0.zip)](http://opencv.org/releases.html)
+* Download [OpenCV 3.3 Linux Source (3.3.0.tar.gz)](http://opencv.org/releases.html)
 
 Create a subfolder in the folder we created above and name it ocv_source for example.
 
 Install the following packages:
 
 ```
-sudo apt-get install build-essential libwebp libjpeg libtiff zlib1
+sudo apt-get install build-essential libwebp6 libjpeg9 zlib1g libtiff5 libtiff5-dev
 ```
 
 Then:
 
 ```
 $ mkdir ocv_source && cd ocv_source
-$ wget https://github.com/opencv/opencv/archive/3.2.0.zip
-$ unzip 3.2.0.zip && cd opencv-3.2.0/
+$ wget https://github.com/opencv/opencv/archive/3.3.0.tar.gz
+$ tar -xvzf 3.3.0.tar.gz && cd opencv-3.3.0/
 $ mkdir release && cd release
-$ cmake -D CMAKE_BUILD_TYPE=RELEASE -D CMAKE_INSTALL_PREFIX=/usr/local -D ENABLE_PRECOMPILED_HEADERS=OFF ..
+$ cmake .. -DCMAKE_BUILD_TYPE=RELEASE -DCMAKE_INSTALL_PREFIX=/usr/local -DENABLE_PRECOMPILED_HEADERS=OFF
 $ make -j4
 $ sudo make install
 $ cd ../..
@@ -142,16 +169,20 @@ Now lets build waifu2x-converter-cpp:
 
 ```
 $ git clone https://github.com/DeadSix27/waifu2x-converter-cpp && cd waifu2x-converter-cpp
-$ mkdir release && cd release
-$ cmake -DOPENCV_PREFIX=/usr/local .. -DOVERRIDE_OPENCV=1
+$ mkdir release && cd release 
+$ cmake ..
 $ make -j4
 $ cp ../models_rgb/ . -r
 ```
 Done!
 You should now have a fully working linux built of waifu2x-converter-cpp.
-Try it out like below, should return your processors and GPUs:
+Try it out like below, should return your processors and GPUs like in these examples:
 
 ``` 
+$ ./waifu2x-converter-cpp --list-processor
+   0: Intel(R) HD Graphics Kabylake Desktop GT2    (OpenCL    ): num_core=23
+   1: Intel(R) Pentium(R) CPU G4620 @ 3.70GHz      (SSE3      ): num_core=4
+
 $ ./waifu2x-converter-cpp --list-processor
    0: AMD KAVERI (DRM 2.46.0 / 4.8.0-32-generic, LLVM 3.8.1)(OpenCL    ): num_core=6
    1: AMD A8-7600 Radeon R7, 10 Compute Cores 4C+6G  (FMA       ): num_core=4
@@ -165,7 +196,7 @@ The following has been tested on OSX Sierra 10.12.6:
 ```
 $ brew tap science && brew install opencv3
 $ git clone https://github.com/DeadSix27/waifu2x-converter-cpp && cd waifu2x-converter-cpp
-$ cmake -DOVERRIDE_OPENCV=1 -DOPENCV_PREFIX=/usr/local/Cellar/opencv3/<your version here> .
+$ cmake -DOPENCV_PREFIX=/usr/local/Cellar/opencv3/<your version here> .
 $ make -j4
 $ cp -r models_rgb models
 ```
@@ -179,7 +210,7 @@ $ ./waifu2x-converter-cpp --list-processor
 ```
 ____
 
-# Archived buildguides:
+# Archived buildguides (ignore these):
 
 ### for Ubuntu
 
