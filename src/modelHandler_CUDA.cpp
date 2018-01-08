@@ -15,15 +15,20 @@ static void *handle;
 #endif
 
 #ifdef HAVE_CUDA
-static const char prog20[] = 
-#include "modelHandler_CUDA.ptx20.h"
+    #include <cuda_runtime_api.h>
+    #if !defined(CUDART_VERSION)
+        #error CUDART_VERSION must be defined by cuda_runtime_api.h
+    #endif // !defined(CUDART_VERSION)
+    // Cuda 9.0+ doesn't support Compute 2.0
+    #if CUDART_VERSION < 9000
+        static const char prog20[] =
+            #include "modelHandler_CUDA.ptx20.h"
+            ;
+    #endif // CUDART_VERSION < 9000
+    static const char prog30[] =
+        #include "modelHandler_CUDA.ptx30.h"
 	;
-static const char prog30[] = 
-#include "modelHandler_CUDA.ptx30.h"
-	;
-#else
-
-#endif
+#endif // HAVE_CUDA
 
 
 #define CUDA_DECL(name)				\
@@ -136,10 +141,13 @@ initCUDA(ComputeEnv *env, int dev_id)
 		return false;
 	}
 
-	const char *prog = prog20;
-	if (cap_major >= 3) {
-		prog = prog30;
+	const char *prog = prog30;
+	// cuda 9.0 doesn't support Compute 20
+#if CUDART_VERSION < 9000
+	if (cap_major < 3) {
+		prog = prog20;
 	}
+#endif // CUDART_VERSION < 9000
 
 	r = cuStreamCreate(&stream, 0);
 	if (r != CUDA_SUCCESS) {
