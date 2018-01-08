@@ -1,87 +1,87 @@
-<�g������>
+<使いかた>
 
-install.bat �����s���Ă�������
-�G�N�X�v���[���́u����v�ɃV���[�g�J�b�g���ǉ�����܂��B
-�����ɉ摜���f�B���N�g���𑗂��Ă��������B
+install.bat を実行してください
+エクスプローラの「送る」にショートカットが追加されます。
+ここに画像かディレクトリを送ってください。
 
-(w2xcr.exe �Ƀh���b�O�h���b�v���Ă��悢�ł�) 
+(w2xcr.exe にドラッグドロップしてもよいです) 
 
 
- - CUDA������ł�CUDA
- - AMD OpenCL������ł� OpenCL
- - FMA �����FMA
- - AVX �����AVX
- - �ǂ���Ȃ����OpenCV��filter2D
-�����s����܂��B
+ - CUDAある環境ではCUDA
+ - AMD OpenCLある環境では OpenCL
+ - FMA あればFMA
+ - AVX あればAVX
+ - どれもなければOpenCVのfilter2D
+が実行されます。
 
-�ő��ł͂Ȃ��ł����A�܂��������������̂ł͂Ȃ����Ǝv���܂��B
+最速ではないですが、まあそこそこ速いのではないかと思います。
 
-waifu2x-converter-cpp ���g���A�v���P�[�V�����Ƃ��킹�Ďg���ꍇ�́A
+waifu2x-converter-cpp を使うアプリケーションとあわせて使う場合は、
  - waifu2x-converter_x64.exe
  - w2xc.dll
-�̗������R�s�[���Ďg���Ă�������
+の両方をコピーして使ってください
 
 
-<���f���f�[�^�X�V>
-�X�V�����ꍇ�� models/*.bin �������Ă��������B
+<モデルデータ更新>
+更新した場合は models/*.bin を消してください。
 
-���̃��f���̃p�����[�^�ɂ��킹�č���Ă���̂ŕύX�������
-�����Ȃ�������x���Ȃ����肷��ꍇ������܂��B
-���̏ꍇ�̓\�[�X�ύX���邵���Ȃ��̂ł�����߂Ă��������B
+今のモデルのパラメータにあわせて作っているので変更があると
+動かなかったり遅くなったりする場合があります。
+その場合はソース変更するしかないのであきらめてください。
 
 
-<�o�O���|>
+<バグレポ>
 
-�����Ȃ��Ƃ��́A
-tanakmura@gmail ���A
-http://d.hatena.ne.jp/w_o/ �̃R�����g���A
-twitter �� @tanakmura
-�ȂǂɌ����ă��b�Z�[�W�𑗂��Ă��炦��Ɠ͂��Ǝv���܂��B
+動かないときは、
+tanakmura@gmail か、
+http://d.hatena.ne.jp/w_o/ のコメントか、
+twitter の @tanakmura
+などに向けてメッセージを送ってもらえると届くと思います。
 
-�����Ȃ������́A�����炭�摜�T�C�Y���f�o�C�X�̖��Ȃ̂ŁA
- - �摜�T�C�Y
- - CPU ��
- - GPU ��
-���ꏏ�ɑ����Ă��炦��Ə�����܂��B
+動かない原因は、おそらく画像サイズかデバイスの問題なので、
+ - 画像サイズ
+ - CPU 名
+ - GPU 名
+を一緒に送ってもらえると助かります。
 
 
 <w2xc.dll>
 
-���̃A�v���P�[�V�����Ŏg���ꍇ�́A
-samples/ �ȉ����Q�l�ɂ��� w2xc.dll �������N���Ă��������B
+他のアプリケーションで使う場合は、
+samples/ 以下を参考にして w2xc.dll をリンクしてください。
 
-�g��������
+使いかたは
 https://github.com/tanakamura/waifu2x-converter-cpp/blob/master/src/w2xconv.cpp#L511
-��������ĂȂ�Ƃ����Ă��������B
+これを見てなんとかしてください。
 
 
 
-<�ӎ�>
+<謝辞>
 
-�ȉ��̃\�t�g�E�F�A��������΍���Ă��Ȃ������Ǝv���܂��B
+以下のソフトウェアが無ければ作っていなかったと思います。
 
 
-�I���W�i���͂�����ł�
+オリジナルはこちらです
 http://ultraist.hatenablog.com/entry/2015/05/17/183436
-�w�K�f�[�^�����؂肵�Ă��܂��B
+学習データもお借りしています。
 
 
-�R�[�h�̑唼�́A@WL_Amigo �����
+コードの大半は、@WL_Amigo さんの
 https://github.com/WL-Amigo/waifu2x-converter-cpp
-���g�p���Ă܂��B
+を使用してます。
 
 
-���x�ڕW�p��
- * @logicmachine ����� https://github.com/logicmachine/waifu2x-opt
- * @mhhpnvu ����� https://github.com/lltcggie/waifu2x-caffe
-���Q�l�ɂ��܂����B
+速度目標用に
+ * @logicmachine さんの https://github.com/logicmachine/waifu2x-opt
+ * @mhhpnvu さんの https://github.com/lltcggie/waifu2x-caffe
+を参考にしました。
 
 
 
-<�Ĕz�z>
-�z�z��LICENSE�ɏ]���Ă�������
+<再配布>
+配布はLICENSEに従ってください
 
-tanakmura������������
+tanakmuraが書いた部分
 
  - src/modelhandler_CUDA.cu
  - src/modelhandler_CUDA.cpp
@@ -95,8 +95,8 @@ tanakmura������������
  - src/Buffer.hpp
  - w32-apps/*
 
-�͍D���ɂ��Ă�����Ă悢�ł��B
-���ɗ������Ƃ����l�̓R�[�q�[�������Ă�������
+は好きにしてもらってよいです。
+役に立ったという人はコーヒーおごってください
 
 
 --
