@@ -144,6 +144,10 @@ std::string basename(const std::string& str) {
 }
 
 std::string generate_output_location(std::string inputFileName, std::string outputFileName, std::string mode, int NRLevel, double scaleRatio) {
+
+	size_t lastSlashPos = outputFileName.find_last_of("/\\");
+	size_t lastDotPos = outputFileName.find_last_of('.');
+
 	if (strcmp(outputFileName.c_str(), "auto")==0) {
 		outputFileName = inputFileName;
 		int tailDot = outputFileName.find_last_of('.');
@@ -176,12 +180,11 @@ std::string generate_output_location(std::string inputFileName, std::string outp
 
 		outputFileName += basename(tmp);
 	}
-	else if (outputFileName.find_last_of('.') < outputFileName.find_last_of("/\\"))
-	{
+	else if (lastSlashPos != std::string::npos && lastDotPos < lastSlashPos) {
 		//e.g. ./test.d/out needs to be changed to ./test.d/out.png
 		outputFileName += ".png";
 	}
-	else if (outputFileName.find_last_of('.') > outputFileName.find_last_of("/\\")) {
+	else if (lastSlashPos == std::string::npos || lastDotPos > lastSlashPos) {
 		//We may have a regular output file here or something went wrong.
 		//outputFileName is already what it should be thus nothing needs to be done.
 	}
