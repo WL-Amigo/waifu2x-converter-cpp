@@ -1,4 +1,4 @@
-﻿ExtendedSendTo adds new items to "Send To" menu, but provides many more features: one of items allows specify all the options by yourself and other 5 items are quick links for popular settings. You can choose multiple files to process.
+ExtendedSendTo adds new items to "Send To" menu, but provides many more features: one of items allows specify all the options by yourself and other 5 items are quick links for popular settings. You can choose multiple files to process.
 To install just put ExtendedSendTo folder to folder with waifu2x-converter program and run the install.wsf.
 To uninstall run uninstall.wsf.
 

@@ -1,4 +1,4 @@
-﻿<job id="InputBoxInJS">
+<job id="InputBoxInJS">
 <script language="VBScript">
 	Function VBInputBox(text, title, defaultText)
 		VBInputBox = InputBox(text, title, defaultText)

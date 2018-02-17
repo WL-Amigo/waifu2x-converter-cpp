@@ -1,4 +1,4 @@
-﻿<job id="InputBoxInJS">
+<job id="InputBoxInJS">
 <script language="JScript">
 
 var WshShell = WScript.CreateObject("WScript.Shell");
