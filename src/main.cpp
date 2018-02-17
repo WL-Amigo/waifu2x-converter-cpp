@@ -180,7 +180,7 @@ std::string generate_output_location(std::string inputFileName, std::string outp
 
 		outputFileName += basename(tmp);
 	}
-	else if (lastSlashPos != std::string::npos && lastDotPos < lastSlashPos) {
+	else if (lastDotPos == std::string::npos || lastSlashPos != std::string::npos && lastDotPos < lastSlashPos) {
 		//e.g. ./test.d/out needs to be changed to ./test.d/out.png
 		outputFileName += ".png";
 	}
