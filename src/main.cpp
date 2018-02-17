@@ -29,6 +29,10 @@
 
 #define _VERSION "5.2"
 
+#ifdef HAVE_OPENCV
+#include <opencv2/opencv.hpp>
+#endif
+
 class CustomFailOutput : public TCLAP::StdOutput {
 public:
     virtual void failure( TCLAP::CmdLineInterface& _cmd, TCLAP::ArgException& e ) override {
@@ -142,6 +146,17 @@ std::string basename(const std::string& str) {
 	unsigned found = str.find_last_of("/\\");
 	return str.substr(found + 1);
 }
+std::string trim(const std::string& str)
+{
+    size_t first = str.find_first_not_of(' ');
+    if (std::string::npos == first)
+    {
+        return str;
+    }
+    size_t last = str.find_last_not_of(' ');
+    return str.substr(first, (last - first + 1));
+}
+
 
 std::string generate_output_location(std::string inputFileName, std::string outputFileName, std::string mode, int NRLevel, double scaleRatio) {
 
@@ -219,6 +234,58 @@ void convert_file(convInfo info, fs::path inputName, fs::path output) {
 	check_for_errors(info.converter, error);
 }
 
+
+std::map<std::string,bool> opencv_formats = {
+	{"PNG",  true},
+	{"JPEG", true},
+	{"TIFF", true},
+	{"WEBP", true}
+};
+	
+//check for opencv formats
+void check_opencv_formats()
+{
+	std::istringstream iss(cv::getBuildInformation());
+
+	for (std::string line; std::getline(iss, line); )
+	{
+		std::vector<std::string> strings;
+		std::istringstream f(line);
+		std::string s;
+		while (getline(f, s, ':')) {
+			s = trim(s);
+			strings.push_back(s);
+		}
+		if (strings.size() >= 2)
+		{
+			if ((strings[0] == "PNG") && (strings[1] == "NO"))
+			{
+				opencv_formats["PNG"] = false;
+			}
+			else if ((strings[0] == "JPEG") && (strings[1] == "NO"))
+			{
+				opencv_formats["JPEG"] = false;
+			}
+			else if ((strings[0] == "WEBP") && (strings[1] == "NO"))
+			{
+				opencv_formats["WEBP"] = false;
+			}
+			else if ((strings[0] == "TIFF") && (strings[1] == "NO"))
+			{
+				opencv_formats["TIFF"] = false;
+			}
+		}
+	}
+}
+void debug_show_opencv_formats()
+{
+	std::cout << "This is a list of supported formats, it depends on which formats opencv has been built with." << std::endl ;
+	for (auto const& x : opencv_formats)
+	{
+		std::cout << x.first << " -> " << (x.second ? "Yes" : "No") << std::endl ;
+	}
+}
+
 int main(int argc, char** argv) {
 	int ret = 1;
 	for (int ai = 1; ai < argc; ai++) {
@@ -226,7 +293,17 @@ int main(int argc, char** argv) {
 			dump_procs();
 			return 0;
 		}
+		#ifdef HAVE_OPENCV
+		if (strcmp(argv[ai], "--list-opencv-formats") == 0) {
+			check_opencv_formats();
+			debug_show_opencv_formats();
+			return 0;
+		}
+		#endif
 	}
+	#ifdef HAVE_OPENCV
+	check_opencv_formats();
+	#endif
 
 	// definition of command line arguments
 	TCLAP::CmdLine cmd("waifu2x OpenCV Fork - https://github.com/DeadSix27/waifu2x-converter-cpp", ' ', _VERSION, true);
@@ -287,6 +364,10 @@ int main(int argc, char** argv) {
 	TCLAP::ValueArg<int> cmdBlockSize("", "block_size", "block size",
 		false, 0, "integer", cmd);
 	TCLAP::SwitchArg cmdListProcessor("", "list-processor", "dump processor list", cmd, false);
+	
+	#ifdef HAVE_OPENCV
+	TCLAP::SwitchArg showOpenCVFormats("", "list-opencv-formats", "dump opencv supported format list", cmd, false);
+	#endif
 
 	// definition of command line argument : end
 
@@ -312,7 +393,13 @@ int main(int argc, char** argv) {
 	if (cmdListProcessor.getValue()) {
 		dump_procs();
 	}
-
+	
+	#ifdef HAVE_OPENCV
+	if (showOpenCVFormats.getValue()) {
+		debug_show_opencv_formats();
+	}
+	#endif
+	
 	enum W2XConvGPUMode gpu = W2XCONV_GPU_AUTO;
 
 	if (cmdDisableGPU.getValue()) {
