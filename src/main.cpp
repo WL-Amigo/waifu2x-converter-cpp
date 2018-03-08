@@ -295,6 +295,9 @@ void check_opencv_formats()
 				opencv_formats["JPEG"] = true;
 				opencv_formats["JPG"] = true;
 				opencv_formats["JPE"] = true;
+			}
+			else if ((strings[0] == "JPEG 2000") && (strings[1] != "NO"))
+			{
 				opencv_formats["JP2"] = true;
 			}
 			else if ((strings[0] == "WEBP") && (strings[1] != "NO"))
