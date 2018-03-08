@@ -16,6 +16,7 @@
 #include <string>
 #include <cmath>
 #include <deque>
+#include <map>
 #include <stdio.h>
 #include "tclap/CmdLine.h"
 #include "sec.hpp"
@@ -143,7 +144,7 @@ std::string ReplaceString(std::string subject, const std::string& search, const 
 	return subject;
 }
 std::string basename(const std::string& str) {
-	unsigned found = str.find_last_of("/\\");
+	size_t found = str.find_last_of("/\\");
 	return str.substr(found + 1);
 }
 std::string trim(const std::string& str)
@@ -158,6 +159,35 @@ std::string trim(const std::string& str)
 }
 
 
+std::map<std::string,bool> opencv_formats = {
+	{"BMP",  false},
+	{"DIB",  false},
+	{"PBM",  false},
+	{"PGM",  false},
+	{"PPM",  false},
+	{"SR",  false},
+	{"RAS",  false},
+	{"PNG",  false},
+	{"JPEG", false},
+	{"JPG", false},
+	{"JPE", false},
+	{"JP2", false},
+	{"WEBP", false},
+	{"TIFF", false}
+};
+
+bool check_output_extension(std::string extension) {
+	for(std::string::iterator it = extension.begin(); it != extension.end(); ++it){
+		*it = std::toupper(*it);
+	}
+	auto index = opencv_formats.find(extension);
+	if (index != opencv_formats.end()) {
+		return index->second;
+	}
+	return false;
+}
+
+
 std::string generate_output_location(std::string inputFileName, std::string outputFileName, std::string mode, int NRLevel, double scaleRatio) {
 
 	size_t lastSlashPos = outputFileName.find_last_of("/\\");
@@ -165,7 +195,7 @@ std::string generate_output_location(std::string inputFileName, std::string outp
 
 	if (strcmp(outputFileName.c_str(), "auto")==0) {
 		outputFileName = inputFileName;
-		int tailDot = outputFileName.find_last_of('.');
+		size_t tailDot = outputFileName.find_last_of('.');
 		if (tailDot != std::string::npos)
 			outputFileName.erase(tailDot, outputFileName.length());
 		outputFileName = outputFileName + "_[" + ReplaceString(mode, "noise_scale", "NS") + "-";
@@ -188,7 +218,7 @@ std::string generate_output_location(std::string inputFileName, std::string outp
 		//This removes all contextual information about where a file originated from if "recursive_directory" was enabled.
 		std::string tmp = generate_output_location(inputFileName, "auto", mode, NRLevel, scaleRatio);
 		//tmp = full formatted output file path
-		int lastSlash = tmp.find_last_of('/');
+		size_t lastSlash = tmp.find_last_of('/');
 		if (lastSlash != std::string::npos){
 			tmp.erase(0, lastSlash);
 		}
@@ -202,6 +232,11 @@ std::string generate_output_location(std::string inputFileName, std::string outp
 	else if (lastSlashPos == std::string::npos || lastDotPos > lastSlashPos) {
 		//We may have a regular output file here or something went wrong.
 		//outputFileName is already what it should be thus nothing needs to be done.
+		#ifdef HAVE_OPENCV
+		if(check_output_extension(outputFileName.substr(lastDotPos+1))==false){
+			throw std::runtime_error("Unsupported output extension. outputFileName:" + outputFileName + " extension:" +outputFileName.substr(lastDotPos+1));
+		}
+		#endif
 	}
 	else {
 		throw std::runtime_error("An unknown 'outputFileName' has been inserted into generate_output_location. outputFileName: " + outputFileName);
@@ -234,13 +269,6 @@ void convert_file(convInfo info, fs::path inputName, fs::path output) {
 	check_for_errors(info.converter, error);
 }
 
-
-std::map<std::string,bool> opencv_formats = {
-	{"PNG",  true},
-	{"JPEG", true},
-	{"TIFF", true},
-	{"WEBP", true}
-};
 	
 //check for opencv formats
 void check_opencv_formats()
@@ -258,24 +286,39 @@ void check_opencv_formats()
 		}
 		if (strings.size() >= 2)
 		{
-			if ((strings[0] == "PNG") && (strings[1] == "NO"))
+			if ((strings[0] == "PNG") && (strings[1] != "NO"))
 			{
-				opencv_formats["PNG"] = false;
+				opencv_formats["PNG"] = true;
 			}
-			else if ((strings[0] == "JPEG") && (strings[1] == "NO"))
+			else if ((strings[0] == "JPEG") && (strings[1] != "NO"))
 			{
-				opencv_formats["JPEG"] = false;
+				opencv_formats["JPEG"] = true;
+				opencv_formats["JPG"] = true;
+				opencv_formats["JPE"] = true;
+				opencv_formats["JP2"] = true;
 			}
-			else if ((strings[0] == "WEBP") && (strings[1] == "NO"))
+			else if ((strings[0] == "WEBP") && (strings[1] != "NO"))
 			{
-				opencv_formats["WEBP"] = false;
+				opencv_formats["WEBP"] = true;
 			}
-			else if ((strings[0] == "TIFF") && (strings[1] == "NO"))
+			else if ((strings[0] == "TIFF") && (strings[1] != "NO"))
 			{
-				opencv_formats["TIFF"] = false;
+				opencv_formats["TIFF"] = true;
 			}
 		}
 	}
+	// Windows Bitmaps (Always Supported)
+	opencv_formats["BMP"] = true;
+	opencv_formats["DIB"] = true;
+	
+	// Portable Image Format (Always Supported)
+	opencv_formats["PBM"] = true;
+	opencv_formats["PGM"] = true;
+	opencv_formats["PPM"] = true;
+	
+	// Sun Rasters (Always Supported)
+	opencv_formats["SR"] = true;
+	opencv_formats["RAS"] = true;
 }
 void debug_show_opencv_formats()
 {
@@ -495,9 +538,9 @@ int main(int argc, char** argv) {
 			else
 				timeAvg = time_all;
 			double elapsed = files_count * timeAvg - time_all;
-			int el_h = elapsed / (60 * 60);
-			int el_m = (elapsed - el_h * 60 * 60) / 60;
-			int el_s = (elapsed - el_h * 60 * 60 - el_m * 60);
+			int el_h = (int) elapsed / (60 * 60);
+			int el_m = (int) (elapsed - el_h * 60 * 60) / 60;
+			int el_s = (int) (elapsed - el_h * 60 * 60 - el_m * 60);
 			std::cout << "Elapsed: ";
 			if (el_h)
 				std::cout << el_h << "h";
