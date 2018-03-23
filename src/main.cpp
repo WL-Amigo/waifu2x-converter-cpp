@@ -77,7 +77,7 @@ static void
 dump_procs()
 {
 	const W2XConvProcessor *procs;
-	int num_proc;
+	size_t num_proc;
 	procs = w2xconv_get_processor_list(&num_proc);
 
 	for (int i = 0; i < num_proc; i++) {
@@ -496,7 +496,7 @@ int main(int argc, char** argv) {
 	}
 
 	W2XConv *converter;
-	int num_proc;
+	size_t num_proc;
 	w2xconv_get_processor_list(&num_proc);
 	int proc = cmdTargetProcessor.getValue();
 	bool verbose = !cmdQuiet.getValue();

@@ -326,7 +326,7 @@ proc_thread(void *ap)
 
     c = w2xconv_init_with_processor(ta->dev_id, 0, 0);
     while (1) {
-        len = GetModuleFileName(NULL, self_path, path_len);
+        len = GetModuleFileName(NULL, self_path, (DWORD) path_len);
         if (len > 0 && len != path_len) {
             break;
         }
@@ -336,7 +336,7 @@ proc_thread(void *ap)
     }
 
     {
-        int cur;
+        size_t cur;
         for (cur=strlen(self_path); cur>=0; cur--) {
             if (self_path[cur] == '\\') {
                 self_path[cur] = '\0';
@@ -449,12 +449,12 @@ on_create(HWND wnd, LPCREATESTRUCT cp)
     int *dev_list = malloc(sizeof(int) * dev_list_cap);
 
     const struct W2XConvProcessor *proc_list;
-    int num_all_dev;
+    size_t num_all_dev;
 
     SetWindowLongPtr(wnd, GWLP_USERDATA, (LONG_PTR)app);
     proc_list = w2xconv_get_processor_list(&num_all_dev);
 
-    for (i=0; i<num_all_dev; i++) {
+    for (i=0; i<(int) num_all_dev; i++) {
         const struct W2XConvProcessor *p = &proc_list[i];
 
         if ((p->type == W2XCONV_PROC_HOST) ||
@@ -554,7 +554,7 @@ update_display(struct app *app)
                       app->path_list_nelem);
         }
 
-        TextOut(dc, 10, 10, line, strlen(line));
+        TextOut(dc, 10, 10, line, (int) strlen(line));
 
         for (i=0; i<app->num_thread; i++) {
             char *cur_path = app->threads[i].cur_path;
@@ -589,8 +589,8 @@ update_display(struct app *app)
 
                 proc = &app->proc_list[app->dev_list[i]];
 
-                TextOut(dc, 10, DISP_HEIGHT*(i+1) + 10, proc->dev_name, strlen(proc->dev_name));
-                TextOut(dc, 10, DISP_HEIGHT*(i+1) + 28, line, line_len);
+                TextOut(dc, 10, DISP_HEIGHT*(i+1) + 10, proc->dev_name, (int) strlen(proc->dev_name));
+                TextOut(dc, 10, DISP_HEIGHT*(i+1) + 28, line, (int) line_len);
             }
         }
     }
@@ -609,7 +609,7 @@ initdlg_callback(HWND wnd, UINT message, WPARAM wParam, LPARAM lParam)
     case WM_COMMAND:
         switch (LOWORD(wParam)) {
         case IDC_OK:
-            param_denoise = SendDlgItemMessage(wnd, IDC_DENOISE, CB_GETCURSEL, 0, 0);
+            param_denoise = (int) SendDlgItemMessage(wnd, IDC_DENOISE, CB_GETCURSEL, 0, 0);
             GetDlgItemText(wnd, IDC_SCALE, buf, 256);
             param_scale = atof(buf);
             if (param_scale != 0) {
@@ -680,7 +680,7 @@ int main(int argc, char **argv)
     }
 
     if (interactive) {
-        int r = DialogBox(hInst, MAKEINTRESOURCE(IDD_INIT), NULL, initdlg_callback);
+        INT_PTR r = DialogBox(hInst, MAKEINTRESOURCE(IDD_INIT), NULL, initdlg_callback);
         if (r == -1) {
             return 1;
         }

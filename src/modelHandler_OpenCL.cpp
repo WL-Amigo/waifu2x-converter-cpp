@@ -292,7 +292,7 @@ namespace w2xc {
 		char *self_path = (char*)malloc(path_len + 1);
 		DWORD len;
 		while (1) {
-			len = GetModuleFileName(NULL, self_path, path_len);
+			len = GetModuleFileName(NULL, self_path, (DWORD) path_len);
 			if (len > 0 && len != path_len) {
 				break;
 			}

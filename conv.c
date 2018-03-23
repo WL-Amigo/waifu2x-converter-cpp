@@ -13,8 +13,8 @@ main(int argc, char **argv)
         char line[4096];
 
         while (fgets(line, 4096, in)) {
-            int len = strlen(line);
-            int i;
+            size_t len = strlen(line);
+            size_t i;
 
             for (i=0; i<len; i++) {
                 fprintf(out, "0x%02x,", line[i]);

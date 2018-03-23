@@ -100,7 +100,7 @@ static bool convertWithModelsBasic(W2XConv *conv,
 		double t1 = getsec();
 		double ops = filterSize.width * filterSize.height * 9.0 * 2.0 * nOutputPlanes * nInputPlanes;
 		double gflops = (ops/(1000.0*1000.0*1000.0)) / (t1-t0);
-		double bytes = filterSize.width * filterSize.height * sizeof(float) * (nOutputPlanes + nInputPlanes);
+		double bytes = (double) filterSize.width * filterSize.height * sizeof(float) * (nOutputPlanes + nInputPlanes);
 		double GBs = (bytes/(1000.0*1000.0*1000.0)) / (t1-t0);
 
 		if (enableLog) {
@@ -162,11 +162,11 @@ static bool convertWithModelsBlockSplit(W2XConv *conv,
 	// padding is not required before calling this function
 
 	// initialize local variables
-	unsigned int nModel = models.size();
+	int nModel = (int) models.size();
 
 	//insert padding to inputPlane
-	int tempWidth = inputPlane_2.view_width + nModel*2;
-	int tempHeight = inputPlane_2.view_height + nModel*2;
+	int tempWidth = (int) inputPlane_2.view_width + nModel*2;
+	int tempHeight = (int) inputPlane_2.view_height + nModel*2;
 	int inputWidth = inputPlane_2.view_width;
 	int inputHeight = inputPlane_2.view_height;
 
