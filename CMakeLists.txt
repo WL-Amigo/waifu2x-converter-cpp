@@ -225,11 +225,11 @@ endif()
 
 if(WIN32) # We build FOR windows.
 	if(MINGW) # We build for windows on Linux MinGW (Cross compiling) # not yet working
-		target_link_libraries(w2xc opencv_core330 opencv_imgproc330 opencv_imgcodecs330 opencv_features2d330 libjpeg libpng libtiff libjasper opencv_hal330 IlmImf zlib libwebp user32 opencv_core330) # xx 330
+		target_link_libraries(w2xc opencv_core300 opencv_imgproc300 opencv_imgcodecs300 opencv_features2d300 libjpeg libpng libtiff libjasper opencv_hal300 IlmImf zlib libwebp user32 opencv_core300 opencv_hal300) # xx 300
 	elseif(MSVC) # we build natively on Visual studio
 		target_link_libraries(w2xc opencv_world330 user32)
 	elseif(UNIX) # we build on linux.... on windows.. somehow WSL?/Cygwin? We'll see
-		target_link_libraries(w2xc opencv_core330 opencv_imgproc330 opencv_imgcodecs330 opencv_features2d330 ippicvmt libjpeg libpng libtiff libjasper opencv_hal330 IlmImf zlib libwebp user32 opencv_core330 opencv_imgproc330)
+		target_link_libraries(w2xc opencv_core300 opencv_imgproc300 opencv_imgcodecs300 opencv_features2d300 ippicvmt libjpeg libpng libtiff libjasper opencv_hal300 IlmImf zlib libwebp user32 opencv_core300 opencv_imgproc300)
 	endif()
 	add_executable(w2xcr WIN32 w32-apps/w2xcr.c w32-apps/w2xcr.rc)
 	target_link_libraries(w2xcr w2xc user32 shlwapi gdi32)
