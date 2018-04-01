@@ -166,7 +166,7 @@ Model::filter_CV(ComputeEnv *env,
 					}
 
 					float v = sum;
-					v += biases[oi];
+					v += (float) biases[oi];
 					float mtz = (std::max)(v, 0.0f);
 					float ltz = (std::min)(v, 0.0f);
 					v = ltz*0.1f + mtz;
@@ -220,7 +220,7 @@ bool Model::filter_AVX_OpenCL(W2XConv *conv,
 	float *fbiases_flat = (float*)w2xc_aligned_malloc(sizeof(float) * biases.size(), 64);
 
 	for (int i=0; i<(int)biases.size(); i++) {
-		fbiases_flat[i] = biases[i];
+		fbiases_flat[i] = (float) biases[i];
 	}
 
 	if (nOutputPlanes == 1) {
@@ -718,7 +718,7 @@ bool Model::loadModelFromJSONObject(picojson::object &jsonObj) {
 						picojson::array>();
 
 				for (int index = 0; index < kernelSize; index++) {
-					writeMatrix.ptr<float>(writingRow)[index] = weightMatRow[index].get<double>();
+					writeMatrix.ptr<float>(writingRow)[index] = (float) weightMatRow[index].get<double>();
 				} // for(weightMatRow) (writing 1 row finished)
 
 			} // for(weightMat) (writing 1 matrix finished)
@@ -815,7 +815,7 @@ Model::Model(FILE *binfp)
 				for (int xi=0; xi<3; xi++) {
 					double v;
 					fread(&v, 8, 1, binfp);
-					writeMatrix.at<float>(yi, xi) = v;
+					writeMatrix.at<float>(yi, xi) = (float) v;
 				}
 			}
 			this->weights.emplace_back(std::move(writeMatrix));
@@ -842,20 +842,20 @@ Model::Model(int nInputPlane,
 
 	int cur = 0;
 	// setting weight matrices
-	for (uint32_t oi=0; oi<nOutputPlanes; oi++) {
-		for (uint32_t ii=0; ii<nInputPlanes; ii++) {
+	for (uint32_t oi=0; oi<(uint32_t)nOutputPlanes; oi++) {
+		for (uint32_t ii=0; ii<(uint32_t)nInputPlanes; ii++) {
 			W2Mat writeMatrix(kernelSize, kernelSize, CV_32FC1);
 			for (int yi=0; yi<3; yi++) {
 				for (int xi=0; xi<3; xi++) {
 					double v = coef_list[cur++];
-					writeMatrix.at<float>(yi, xi) = v;
+					writeMatrix.at<float>(yi, xi) = (float) v;
 				}
 			}
 			this->weights.emplace_back(std::move(writeMatrix));
 		}
 	}
 
-	for (uint32_t oi=0; oi<nOutputPlanes; oi++) {
+	for (uint32_t oi=0; oi<(uint32_t)nOutputPlanes; oi++) {
 		double v = bias[oi];
 		biases.push_back(v);
 	}
@@ -917,7 +917,7 @@ bool modelUtility::generateModelFromJSON(const std::string &fileName,
 
 		binfp = fopen(binpath.c_str(), "wb");
 		if (binfp) {
-			uint32_t nModel = objectArray.size();
+			size_t nModel = objectArray.size();
 
 			fwrite(&nModel, 4, 1, binfp);
 			for (auto&& m : models) {
@@ -929,7 +929,7 @@ bool modelUtility::generateModelFromJSON(const std::string &fileName,
 
 				std::vector<W2Mat> &weights = m->getWeigts();
 
-				int nw = weights.size();
+				int nw = (int) weights.size();
 				for (int wi=0; wi<nw; wi++) {
 					W2Mat &wm = weights[wi];
 					double v;

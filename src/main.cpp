@@ -77,7 +77,7 @@ static void
 dump_procs()
 {
 	const W2XConvProcessor *procs;
-	int num_proc;
+	size_t num_proc;
 	procs = w2xconv_get_processor_list(&num_proc);
 
 	for (int i = 0; i < num_proc; i++) {
@@ -160,20 +160,45 @@ std::string trim(const std::string& str)
 
 
 std::map<std::string,bool> opencv_formats = {
+	// Windows Bitmaps
 	{"BMP",  false},
 	{"DIB",  false},
-	{"PBM",  false},
-	{"PGM",  false},
-	{"PPM",  false},
-	{"SR",  false},
-	{"RAS",  false},
-	{"PNG",  false},
+	
+	// JPEG Files
 	{"JPEG", false},
 	{"JPG", false},
 	{"JPE", false},
+	
+	// JPEG 2000 Files
 	{"JP2", false},
+	
+	// Portable Network Graphics
+	{"PNG",  false},
+	
+	// WebP
 	{"WEBP", false},
-	{"TIFF", false}
+	
+	// Portable Image Format
+	{"PBM",  false},
+	{"PGM",  false},
+	{"PPM",  false},
+	{"PXM",  false},
+	{"PNM",  false},
+	
+	// Sun Rasters
+	{"SR",  false},
+	{"RAS",  false},
+	
+	// TIFF Files
+	{"TIF", false},
+	{"TIFF", false},
+	
+	// OpenEXR Image Files
+	{"EXR", false},
+	
+	// Radiance HDR
+	{"HDR", false},
+	{"PIC", false}
 };
 
 bool check_output_extension(std::string extension) {
@@ -286,26 +311,32 @@ void check_opencv_formats()
 		}
 		if (strings.size() >= 2)
 		{
+			// Portable Network Graphics
 			if ((strings[0] == "PNG") && (strings[1] != "NO"))
 			{
 				opencv_formats["PNG"] = true;
 			}
+			// JPEG Files
 			else if ((strings[0] == "JPEG") && (strings[1] != "NO"))
 			{
 				opencv_formats["JPEG"] = true;
 				opencv_formats["JPG"] = true;
 				opencv_formats["JPE"] = true;
 			}
+			// JPEG 2000 Files
 			else if ((strings[0] == "JPEG 2000") && (strings[1] != "NO"))
 			{
 				opencv_formats["JP2"] = true;
 			}
+			// WebP
 			else if ((strings[0] == "WEBP") && (strings[1] != "NO"))
 			{
 				opencv_formats["WEBP"] = true;
 			}
+			// TIFF Files
 			else if ((strings[0] == "TIFF") && (strings[1] != "NO"))
 			{
+				opencv_formats["TIF"] = true;
 				opencv_formats["TIFF"] = true;
 			}
 		}
@@ -318,10 +349,19 @@ void check_opencv_formats()
 	opencv_formats["PBM"] = true;
 	opencv_formats["PGM"] = true;
 	opencv_formats["PPM"] = true;
+	opencv_formats["PXM"] = true;
+	opencv_formats["PNM"] = true;
 	
 	// Sun Rasters (Always Supported)
 	opencv_formats["SR"] = true;
 	opencv_formats["RAS"] = true;
+	
+	// Radiance HDR (Always Supported)
+	opencv_formats["HDR"] = true;
+	opencv_formats["PIC"] = true;
+	
+	// OpenEXR Image Files
+	opencv_formats["EXR"] = true;
 }
 void debug_show_opencv_formats()
 {
@@ -456,7 +496,7 @@ int main(int argc, char** argv) {
 	}
 
 	W2XConv *converter;
-	int num_proc;
+	size_t num_proc;
 	w2xconv_get_processor_list(&num_proc);
 	int proc = cmdTargetProcessor.getValue();
 	bool verbose = !cmdQuiet.getValue();

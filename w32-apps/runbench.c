@@ -8,14 +8,14 @@ main(int argc, char **argv)
 {
     int block_size = 512;
     int proc = 0;
-    int num_proc;
+    size_t num_proc;
     int num_thread = 0;
     const struct W2XConvProcessor *proc_list;
     
     proc_list = w2xconv_get_processor_list(&num_proc);
 
     if (argc>=2 && strcmp(argv[1],"-l") == 0) {
-        int i;
+        size_t i;
         for (i=0; i<num_proc; i++) {
             printf("type=%2d, subtype=%2d, name=%s\n",
                    proc_list[i].type,
@@ -64,11 +64,11 @@ main(int argc, char **argv)
 
     for (yi=0; yi<block_size; yi++) {
         for (xi=0; xi<block_size; xi++) {
-            src[yi*block_size + xi] = rand() / (double)RAND_MAX;
+            src[yi*block_size + xi] = rand() / (float)RAND_MAX;
         }
     }
     for (i=0; i< (total * 3 * 3); i++) {
-        coef[i] = (rand() / (double)RAND_MAX);
+        coef[i] = (rand() / (float)RAND_MAX);
     }
 
     w2xconv_set_model_3x3(c,

@@ -266,7 +266,7 @@ global_init()
 
 
 const struct W2XConvProcessor *
-w2xconv_get_processor_list(int *ret_num)
+w2xconv_get_processor_list(size_t *ret_num)
 {
 	global_init();
 
@@ -277,11 +277,11 @@ w2xconv_get_processor_list(int *ret_num)
 static int
 select_device(enum W2XConvGPUMode gpu)
 {
-	int n = processor_list.size();
+	size_t n = processor_list.size();
 	if (gpu == W2XCONV_GPU_FORCE_OPENCL) {
-		for (int i=0; i<n; i++) {
+		for (size_t i=0; i<n; i++) {
 			if (processor_list[i].type == W2XCONV_PROC_OPENCL) {
-				return i;
+				return (int) i;
 			}
 		}
 	}
@@ -1244,9 +1244,9 @@ void get_png_background_colour(FILE *png_fp, bool *png_rgb, struct w2xconv_rgb_f
 			}
 
 			if (memcmp(sig,bkgd,4) == 0) {
-				float r = read_int2(png_fp);
-				float g = read_int2(png_fp);
-				float b = read_int2(png_fp);
+				float r = (float) read_int2(png_fp);
+				float g = (float) read_int2(png_fp);
+				float b = (float) read_int2(png_fp);
 
 				if (depth == 8) {
 					bkgd_colour->r = r / 255.0f;
@@ -1500,8 +1500,8 @@ w2xconv_convert_rgb(struct W2XConv *conv,
 		    double scale,
 		    int block_size)
 {
-	int dst_h = src_h * scale;
-	int dst_w = src_w * scale;
+	int dst_h = (int) (src_h * scale);
+	int dst_w = (int) (src_w * scale);
 
 	cv::Mat srci(src_h, src_w, CV_8UC3, src, src_step_byte);
 	cv::Mat dsti(dst_h, dst_w, CV_8UC3, dst, dst_step_byte);
@@ -1541,8 +1541,8 @@ w2xconv_convert_rgb_f32(struct W2XConv *conv,
 		return -1;
 	}
 
-	int dst_h = src_h * scale;
-	int dst_w = src_w * scale;
+	int dst_h = (int) (src_h * scale);
+	int dst_w = (int) (src_w * scale);
 
 	cv::Mat srci(src_h, src_w, CV_32FC3, src, src_step_byte);
 	cv::Mat dsti(dst_h, dst_w, CV_32FC3, dst, dst_step_byte);
@@ -1566,8 +1566,8 @@ w2xconv_convert_yuv(struct W2XConv *conv,
 		    double scale,
 		    int block_size)
 {
-	int dst_h = src_h * scale;
-	int dst_w = src_w * scale;
+	int dst_h = (int) (src_h * scale);
+	int dst_w = (int) (src_w * scale);
 
 	bool is_rgb = (conv->impl->scale2_models[0]->getNInputPlanes() == 3);
 	if (is_rgb) {
@@ -1605,8 +1605,8 @@ w2xconv_apply_filter_y(struct W2XConv *conv,
 	struct W2XConvImpl *impl = conv->impl;
 	ComputeEnv *env = &impl->env;
 
-	W2Mat dsti(src_w, src_h, CV_32FC1, dst, dst_step_byte);
-	W2Mat srci(src_w, src_h, CV_32FC1, src, src_step_byte);
+	W2Mat dsti(src_w, src_h, CV_32FC1, dst, (int) dst_step_byte);
+	W2Mat srci(src_w, src_h, CV_32FC1, src, (int) src_step_byte);
 
 	std::vector<std::unique_ptr<w2xc::Model> > *mp = NULL;
 

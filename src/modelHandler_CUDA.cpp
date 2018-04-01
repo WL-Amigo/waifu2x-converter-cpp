@@ -371,7 +371,7 @@ filter_CUDA_impl(ComputeEnv *env,
 						&ob0};
 
 				r = cuLaunchKernel(f,
-						   h, 1, 1,
+						   (unsigned int) h, 1, 1,
 						   64, 1, 1,
 						   0,
 						   dev->stream, args, NULL);
@@ -389,7 +389,7 @@ filter_CUDA_impl(ComputeEnv *env,
 				 &w,
 				 &d_weight};
 		r = cuLaunchKernel(dev->filter_i128_o1,
-				   h, 1, 1,
+				   (unsigned int) h, 1, 1,
 				   128, 1, 1,
 				   0,
 				   dev->stream, args, NULL);
@@ -402,7 +402,7 @@ filter_CUDA_impl(ComputeEnv *env,
 				&d_weight};
 
 		r = cuLaunchKernel(dev->filter_i1_o32,
-				   h, 1, 1,
+				   (unsigned int) h, 1, 1,
 				   256, 1, 1,
 				   0,
 				   dev->stream, args, NULL);
@@ -414,7 +414,7 @@ filter_CUDA_impl(ComputeEnv *env,
 				&w,
 				&d_weight};
 		r = cuLaunchKernel(dev->filter_i3_o32,
-				   h, 1, 1,
+				   (unsigned int) h, 1, 1,
 				   192, 1, 1,
 				   0,
 				   dev->stream, args, NULL);
@@ -427,7 +427,7 @@ filter_CUDA_impl(ComputeEnv *env,
 				&d_weight};
 
 		r = cuLaunchKernel(dev->filter_i128_o3,
-				   h, 1, 1,
+				   (unsigned int) h, 1, 1,
 				   128, 1, 1,
 				   0,
 				   dev->stream, args, NULL);
@@ -442,19 +442,19 @@ filter_CUDA_impl(ComputeEnv *env,
 
 		if (nInputPlanes == 32) {
 			r = cuLaunchKernel(dev->filter_i32,
-					   h, 1, 1,
+					   (unsigned int) h, 1, 1,
 					   nOutputPlanes, 1, 1,
 					   sizeof(float) * nInputPlanes * (GPU_BLOCK_SIZE+2) * 3,
 					   dev->stream, args, NULL);
 		} else if (nInputPlanes == 64) {
 			r = cuLaunchKernel(dev->filter_i64,
-					   h, 1, 1,
+					   (unsigned int) h, 1, 1,
 					   nOutputPlanes, 1, 1,
 					   sizeof(float) * nInputPlanes * (GPU_BLOCK_SIZE+2) * 3,
 					   dev->stream, args, NULL);
 		} else if (nInputPlanes == 128) {
 			r = cuLaunchKernel(dev->filter_i128,
-					   h, 1, 1,
+					   (unsigned int) h, 1, 1,
 					   nOutputPlanes, 1, 1,
 					   sizeof(float) * nInputPlanes * (GPU_BLOCK_SIZE+2) * 3,
 					   dev->stream, args, NULL);

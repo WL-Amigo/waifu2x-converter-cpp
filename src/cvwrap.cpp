@@ -139,7 +139,7 @@ extract_view_from_cvmat(cv::Mat &m)
 
     wm.data_owner = false;
     wm.data = (char*)m.data;
-    wm.data_byte_width = m.step;
+    wm.data_byte_width = (int) m.step;
     wm.data_height = m.size().height;
 
     wm.view_top = 0;

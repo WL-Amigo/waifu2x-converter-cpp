@@ -477,11 +477,11 @@ filter_i128(const float * __restrict__ packed_input,
 #if __CUDA_ARCH__ >= 300
 static inline __device__ float
 warp_sum(float v) {
-	v += __shfl_down(v, 1);
-	v += __shfl_down(v, 2);
-	v += __shfl_down(v, 4);
-	v += __shfl_down(v, 8);
-	v += __shfl_down(v, 16);
+	v += __shfl_down_sync(0xFFFFFFFF, v, 1);
+	v += __shfl_down_sync(0xFFFFFFFF, v, 2);
+	v += __shfl_down_sync(0xFFFFFFFF, v, 4);
+	v += __shfl_down_sync(0xFFFFFFFF, v, 8);
+	v += __shfl_down_sync(0xFFFFFFFF, v, 16);
 	return v;
 }
 #endif
@@ -1352,7 +1352,6 @@ filter_i128_o3(const float * __restrict__ packed_input,
 
 	unsigned int yi = blockIdx.x;
 	unsigned int lid = threadIdx.x;
-	int slid = threadIdx.x;
 
 	size_t in_step = wsz * nInputPlanes;
 
