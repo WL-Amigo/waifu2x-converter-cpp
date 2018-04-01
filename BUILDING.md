@@ -5,9 +5,9 @@
 https://github.com/DeadSix27/waifu2x-converter-cpp/releases
 
 #### Guide Index:
-- [Windows x64]()
-- [Linux]()
-- [MacOS]()
+- [Windows x64](#windows)
+- [Linux](#linux)
+- [MacOS](#macos--osx)
 
 ---
 

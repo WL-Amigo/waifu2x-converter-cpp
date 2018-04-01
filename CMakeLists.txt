@@ -43,17 +43,29 @@ if(UNIX)
 			link_directories(${OPENCV_PREFIX}/lib)
 		endif()
 	endif()
-elseif(WIN32) # Windows has no pkgconfig nor FindOpenCV apparently
-	set(OPENCV_PREFIX "opencv" CACHE FILEPATH "OpenCV 3.x path") # No real default path for windows, assume subfolder in source folder
-	include_directories(${OPENCV_PREFIX}/include)
-	link_directories(${OPENCV_PREFIX}/lib)
-	#set(CMAKE_REQUIRED_INCLUDES ${OPENCV_PREFIX}/include)
-	#CHECK_INCLUDE_FILE_CXX("${OPENCV_PREFIX}/include/opencv2/opencv.hpp" HAVE_OPENCV)
-	if(EXISTS "${OPENCV_PREFIX}/include/opencv2/opencv.hpp")
+elseif(WIN32)
+	 if (DEFINED OPENCV_PREFIX)
+	 	set(OpenCV_DIR "${OPENCV_PREFIX}" CACHE FILEPATH "OpenCV 3.x path")
+	 endif()
+	 find_package(OpenCV)
+	 if(${OPENCV_FOUND})
+	 	set(OPENCV_WINDOWS_LIBRARY "opencv_world${OpenCV_VERSION_MAJOR}${OpenCV_VERSION_MINOR}${OpenCV_VERSION_PATCH}") # Kind of dirty, but works (as long they don't change their naming that is..)
+		include_directories(${OPENCV_PREFIX}/include)
+		link_directories(${OPENCV_PREFIX}/lib)
 		set(HAVE_OPENCV TRUE)
-		message(STATUS "Found OpenCV")
-	else()
-		message(FATAL_ERROR "Could not find OpenCV")
+	 else()
+		set(OPENCV_PREFIX "opencv" CACHE FILEPATH "OpenCV 3.x path") # No real default path for windows, assume subfolder in source folder
+		include_directories(${OPENCV_PREFIX}/include)
+		link_directories(${OPENCV_PREFIX}/lib)
+		#set(CMAKE_REQUIRED_INCLUDES ${OPENCV_PREFIX}/include)
+		#CHECK_INCLUDE_FILE_CXX("${OPENCV_PREFIX}/include/opencv2/opencv.hpp" HAVE_OPENCV)
+		if(EXISTS "${OPENCV_PREFIX}/include/opencv2/opencv.hpp")
+			set(HAVE_OPENCV TRUE)
+			message(STATUS "Found OpenCV")
+			set(OPENCV_WINDOWS_LIBRARY "opencv_world340")
+		else()
+			message(FATAL_ERROR "Could not find OpenCV")
+		endif()
 	endif()
 endif()
 
@@ -227,7 +239,7 @@ if(WIN32) # We build FOR windows.
 	if(MINGW) # We build for windows on Linux MinGW (Cross compiling) # not yet working
 		target_link_libraries(w2xc opencv_core300 opencv_imgproc300 opencv_imgcodecs300 opencv_features2d300 libjpeg libpng libtiff libjasper opencv_hal300 IlmImf zlib libwebp user32 opencv_core300 opencv_hal300) # xx 300
 	elseif(MSVC) # we build natively on Visual studio
-		target_link_libraries(w2xc opencv_world330 user32)
+		target_link_libraries(w2xc ${OPENCV_WINDOWS_LIBRARY} user32)
 	elseif(UNIX) # we build on linux.... on windows.. somehow WSL?/Cygwin? We'll see
 		target_link_libraries(w2xc opencv_core300 opencv_imgproc300 opencv_imgcodecs300 opencv_features2d300 ippicvmt libjpeg libpng libtiff libjasper opencv_hal300 IlmImf zlib libwebp user32 opencv_core300 opencv_imgproc300)
 	endif()
