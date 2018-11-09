@@ -6,7 +6,7 @@
  *
  *  Copyright (c) 2003, Michael E. Smoot .
  *  Copyright (c) 2004, Michael E. Smoot, Daniel Aarno.
- *  All rights reverved.
+ *  All rights reserved.
  *
  *  See the file COPYING in the top directory of this distribution for
  *  more information.
@@ -119,7 +119,7 @@ class CmdLine : public CmdLineInterface
 
 		/**
 		 * A list of Visitors to be explicitly deleted when the destructor
-		 * is called.  At the moment, these are the Vistors created for the
+		 * is called.  At the moment, these are the Visitors created for the
 		 * default Args.
 		 */
 		std::list<Visitor*> _visitorDeleteOnExitList;
@@ -182,11 +182,6 @@ private:
 		 * Whether or not to automatically create help and version switches.
 		 */
 		bool _helpAndVersion;
-
-		/**
-		 * Whether or not to ignore unmatched args.
-		 */
-		bool _ignoreUnmatched;
 
 	public:
 
@@ -318,13 +313,6 @@ private:
 		 */
 		void reset();
 
-		/**
-		 * Allows unmatched args to be ignored. By default false.
-		 * 
-		 * @param ignore If true the cmdline will ignore any unmatched args
-		 * and if false it will behave as normal.
-		 */
-		void ignoreUnmatched(const bool ignore);
 };
 
 
@@ -349,8 +337,7 @@ inline CmdLine::CmdLine(const std::string& m,
   _output(0),
   _handleExceptions(true),
   _userSetOutput(false),
-  _helpAndVersion(help),
-  _ignoreUnmatched(false)
+  _helpAndVersion(help)
 {
 	_constructor();
 }
@@ -483,7 +470,7 @@ inline void CmdLine::parse(std::vector<std::string>& args)
 			if ( !matched && _emptyCombined( args[i] ) )
 				matched = true;
 
-			if ( !matched && !Arg::ignoreRest() && !_ignoreUnmatched)
+			if ( !matched && !Arg::ignoreRest() )
 				throw(CmdLineParseException("Couldn't find match "
 				                            "for argument",
 				                            args[i]));
@@ -634,11 +621,6 @@ inline void CmdLine::reset()
 		(*it)->reset();
 	
 	_progName.clear();
-}
-
-inline void CmdLine::ignoreUnmatched(const bool ignore)
-{
-	_ignoreUnmatched = ignore;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
