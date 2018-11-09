@@ -9,6 +9,7 @@ add_definitions(-DBUILD_TS="${TS}")
 
 CMAKE_DEPENDENT_OPTION(FORCE_AMD "Whether to force detection of AMDSDK" OFF "NOT FORCE_CUDA" OFF) # When you have CUDASDK and AMDSDK installed but want to detect AMD primarly, set this ON
 CMAKE_DEPENDENT_OPTION(FORCE_CUDA "Whether to force detection of CUDASDK" OFF "NOT FORCE_AMD" OFF) # When you have CUDASDK and AMDSDK installed but want to detect CUDA primarly, set this ON
+CMAKE_DEPENDENT_OPTION(FORCE_DUAL "Whether to build for both AMD and NVidia" OFF "NOT FORCE_AMD;NOT FORCE_CUDA" OFF)
 
 set(LOCAL_SYS_TYPE "unknown")
 if (MINGW)
@@ -76,6 +77,12 @@ if(HAVE_OPENCV)
 	set(OPENCV_LIBRARIES opencv_core opencv_imgproc ${IMGCODECS_LIBRARY} opencv_features2d)
 endif()
 
+if(FORCE_AMD)
+	message("-- -FORCE_AMD=ON is set, not using cuda")
+else()
+	find_package(CUDA)
+endif()
+
 if(WIN32)
 	if(FORCE_AMD)
 		set(FindAMDCL_DIR ".")
@@ -85,16 +92,14 @@ if(WIN32)
 		set(FindCUDACL_DIR ".")
 		find_package(FindCUDACL REQUIRED)
 		message("-- Forced CUDA, found: ${OpenCL_INCLUDE_DIRS} ${OpenCL_LIBRARIES}")
+	elseif(FORCE_DUAL)
+		set(FindAMDCL_DIR ".")
+		find_package(FindAMDCL REQUIRED)
+		message("-- Forced DUAL Mode")
 	else()
 		find_package(OpenCL REQUIRED)
 	endif()
 	include_directories(${OpenCL_INCLUDE_DIRS})
-endif()
-
-if(FORCE_AMD)
-	message("-- -FORCE_AMD=ON is set, not using cuda")
-else()
-	find_package(CUDA)
 endif()
 
 if(CUDA_FOUND)
