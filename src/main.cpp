@@ -342,7 +342,60 @@ std::wstring generate_output_location(std::wstring inputFileName, std::wstring o
 #endif
 
 
-void convert_file(ConvInfo info, fs::path inputName, fs::path output) {
+bool has_png_header(const unsigned char* fileStart){
+	static unsigned char pngStart[4] = {0x89, 0x50, 0x4E, 0x47 };
+	for(int i = 0; i < sizeof(pngStart); i++){
+		if(fileStart[i] != pngStart[i]){
+			return false;
+		}
+	}
+	return true;
+}
+
+bool has_jpeg_header(const unsigned char* fileStart){
+	static unsigned char jpegStart[2] = {0xFF, 0xD8 };
+	for(int i = 0; i < sizeof(jpegStart); i++){
+		if(fileStart[i] != jpegStart[i]){
+			return false;
+		}
+	}
+	return true;
+}
+
+bool is_file_valid(fs::path fn){
+	static unsigned char pngStart[4] = {0x89, 0x50, 0x4E, 0x47 };
+	static unsigned char jpegStart[2] = {0xFF, 0xD8 };
+	FILE *filePointer = NULL;
+
+	std::string absPath = fs::absolute(fn).string();
+	const char* filePath = absPath.c_str();
+	filePointer = fopen(filePath, "rb");
+	if (filePointer == NULL) {
+		std::cerr << fn.filename() << "  " << std::strerror(errno) <<
+				"full path: '" << absPath << "' failed to load." << std::endl;
+		return false;
+	}
+	setbuf(filePointer, NULL );
+	unsigned char fileStart[4] = {0, 0, 0, 0};
+	int amountRead = fread(fileStart, 1, 4, filePointer);
+	fclose(filePointer);
+
+	if(amountRead < 4){
+		std::cerr << fn.filename() << ";" << amountRead << " file too small" << std::endl;
+		return false;
+	}
+
+	auto isPNG = false;
+	auto isJPEG = false;
+
+	if(		!has_jpeg_header(fileStart) &&
+			!has_png_header(fileStart)){
+		std::cerr << fn.filename() << " file is neither png nor jpeg" << std::endl;
+		return false;
+	}
+	return true;
+}
+
 	//std::cout << "Operating on: " << fs::absolute(inputName).string() << std::endl;
 	std::string outputName = generate_output_location(fs::absolute(inputName).string(), output.string(), info.mode, info.NRLevel, info.scaleRatio, info.outputFormat);
 
@@ -1076,6 +1129,10 @@ int main(int argc, char** argv) {
 			double time_file_start = getsec();
 
 			std::cout << "[" << numFilesProcessed << "/" << files_count << "] " << fn.filename() << (verbose ? "\n" : " Ok. ");
+
+			if(!is_file_valid(fn)){
+				continue;
+			}
 
 			try {
 				convert_file(convInfo, fn, output);
