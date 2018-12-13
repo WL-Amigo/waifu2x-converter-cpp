@@ -17,20 +17,20 @@ https://github.com/DeadSix27/waifu2x-converter-cpp/releases
 - [Visual Studio 2017](https://www.visualstudio.com/downloads/) (Community Edition is enough)
   - Make sure to Select these components:
     - `Desktop development with C++`
-- CMake 3.13+ [ [cmake-3.13.0-rc3-win64-x64.msi](https://cmake.org/download/) ]
+- CMake 3.13+ [ [cmake-3.13.*-win64-x64.msi](https://cmake.org/download/) ]
   - Select: Add CMake to the system PATH for the current user
 - Windows 7 or newer
 - [Git for Windows](https://git-scm.com/download/win) (Optional, for the git clone later on)
 
 #### AMD GPUs:
 1. Download the AMD APP SDK [ ~~[AMD-SDK-InstallManager-v1.4.87-1.exe](https://developer.amd.com/amd-accelerated-parallel-processing-app-sdk/)~~ ]
-	_Note: Currently that link is dead, see [here](https://community.amd.com/thread/228059) for alternative links_, what you need is: "AMD-APP-SDKInstaller-v3.0.130.135-GA-windows-F-x64.exe"
+	_Note: Currently that link is dead, see [here](https://community.amd.com/thread/228059) and [here](https://community.amd.com/message/2859052) for alternative links_, what you need is: "AMD-APP-SDKInstaller-v3.0.130.135-GA-windows-F-x64.exe"
 
 2. Install the AMD SDK  _(you only need `OpenCL` and `OpenCL runtime`)_
 
 #### nVidia GPUs:
 
-1. Download the CUDA SDK 10 [ [cuda_10.0.130_411.31_win10.exe](https://developer.nvidia.com/cuda-downloads?target_os=Windows&target_arch=x86_64&target_version=10&target_type=exelocal) ]
+1. Download the CUDA SDK 10 [ [cuda_10.*_win10.exe](https://developer.nvidia.com/cuda-downloads?target_os=Windows&target_arch=x86_64&target_version=10&target_type=exelocal) ]
 
 2. Install the CUDA SDK _(you only need to select `CUDA->Development` and `CUDA->Runtime`)_.
 
@@ -42,7 +42,7 @@ Install both SDK's as shown above, but later add "-DFORCE_DUAL=ON" to the cmake 
 ##### We will be using `K:/w2x` as our base folder for this guide.
 ##### If you want to build for both GPU brands, just install both SDKs (see above).
 
-1. Download OpenCV 4.0.0-beta [ [opencv-4.0.0-beta-vc14_vc15.exe](https://opencv.org/releases.html) ]
+1. Download OpenCV 4.* [ [opencv-4.*-vc14_vc15.exe](https://opencv.org/releases.html) ]
 
 2. Extract OpenCV to your base folder e.g `K:/w2x/opencv`
 
@@ -93,6 +93,7 @@ cmake ..
 make -j4
 sudo make install
 ```
+If needed run `sudo ldconfig` after the install.
 
 # MacOS / OSX
 
