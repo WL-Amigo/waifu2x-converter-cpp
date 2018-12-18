@@ -375,7 +375,7 @@ void debug_show_opencv_formats()
 int main(int argc, char** argv) {
 	int ret = 1;
 	for (int ai = 1; ai < argc; ai++) {
-		if (strcmp(argv[ai], "--list-processor") == 0) {
+		if ((strcmp(argv[ai], "--list-processor") == 0) || (strcmp(argv[ai], "-l") == 0)) {
 			dump_procs();
 			return 0;
 		}
@@ -449,7 +449,7 @@ int main(int argc, char** argv) {
 
 	TCLAP::ValueArg<int> cmdBlockSize("", "block_size", "block size",
 		false, 0, "integer", cmd);
-	TCLAP::SwitchArg cmdListProcessor("", "list-processor", "dump processor list", cmd, false);
+	TCLAP::SwitchArg cmdListProcessor("l", "list-processor", "dump processor list", cmd, false);
 	
 	#ifdef HAVE_OPENCV
 	TCLAP::SwitchArg showOpenCVFormats("", "list-opencv-formats", "dump opencv supported format list", cmd, false);
