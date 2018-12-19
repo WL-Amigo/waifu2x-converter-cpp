@@ -331,7 +331,7 @@ install(FILES src/w2xconv.h DESTINATION include)
 
 # Better add support for multiple directories where to find models
 # with paths separated by : (a la PATH) then install unconditionally
-option(INSTALL_MODELS "Install waifu2x RGB models" true)
+option(INSTALL_MODELS "Install waifu2x RGB models" false)
 if(INSTALL_MODELS)
 	add_definitions(-DDEFAULT_MODELS_DIRECTORY="${CMAKE_INSTALL_PREFIX}/share/waifu2x-converter-cpp")
 	install(DIRECTORY models_rgb/ DESTINATION share/waifu2x-converter-cpp)
