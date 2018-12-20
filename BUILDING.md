@@ -63,7 +63,7 @@ Install both SDK's as shown above, but later add "-DFORCE_DUAL=ON" to the cmake 
 # Linux
 
 ### Requirements:
-- GCC
+- GCC 5+
 - CMake
 - OpenCV 3+
 
