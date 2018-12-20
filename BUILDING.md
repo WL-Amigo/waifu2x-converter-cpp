@@ -24,7 +24,7 @@ https://github.com/DeadSix27/waifu2x-converter-cpp/releases
 
 #### AMD GPUs:
 1. Download the AMD APP SDK [ ~~[AMD-SDK-InstallManager-v1.4.87-1.exe](https://developer.amd.com/amd-accelerated-parallel-processing-app-sdk/)~~ ]
-	_Note: Currently that link is dead, see [here](https://community.amd.com/thread/228059) and [here](https://community.amd.com/message/2859052) for alternative links_, what you need is: "AMD-APP-SDKInstaller-v3.0.130.135-GA-windows-F-x64.exe"
+	_Note: Currently that link is dead, see [here](https://community.amd.com/thread/228059) for info and [here](https://github.com/DeadSix27/waifu2x-converter-cpp/issues/74) for alternative downloads._
 
 2. Install the AMD SDK  _(you only need `OpenCL` and `OpenCL runtime`)_
 
