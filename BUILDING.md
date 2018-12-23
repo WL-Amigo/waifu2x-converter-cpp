@@ -34,8 +34,6 @@ https://github.com/DeadSix27/waifu2x-converter-cpp/releases
 
 2. Install the CUDA SDK _(you only need to select `CUDA->Development` and `CUDA->Runtime`)_.
 
-3. Reboot your computer.
-
 #### Building for both GPU brands:
 
 Install both SDK's as shown above, but later add "-DFORCE_DUAL=ON" to the cmake command.
