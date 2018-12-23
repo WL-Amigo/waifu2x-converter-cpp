@@ -34,7 +34,7 @@ https://github.com/DeadSix27/waifu2x-converter-cpp/releases
 
 2. Install the CUDA SDK _(you only need to select `CUDA->Development` and `CUDA->Runtime`)_.
 
-3. Add system environment variables CUDA_TOOLKIT_ROOT_DIR to your CUDA Toolkit path (ex: `C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v10.0`)
+3. Reboot your computer.
 
 #### Building for both GPU brands:
 
