@@ -223,11 +223,14 @@ std::string generate_output_location(std::string inputFileName, std::string outp
 		size_t tailDot = outputFileName.find_last_of('.');
 		if (tailDot != std::string::npos)
 			outputFileName.erase(tailDot, outputFileName.length());
-		outputFileName = outputFileName + "_[" + ReplaceString(mode, "noise_scale", "NS") + "-";
+		outputFileName = outputFileName + "_[" + ReplaceString(mode, "noise_scale", "NS");
 		//std::string &mode = mode;
 		if (mode.find("noise") != mode.npos) {
-			outputFileName = outputFileName + "L" + std::to_string(NRLevel) + "]";
+			outputFileName = outputFileName + "-L" + std::to_string(NRLevel) + "]";
 		}
+		else
+			outputFileName = outputFileName + "]";
+		
 		if (mode.find("scale") != mode.npos) {
 			outputFileName = outputFileName + "[x" + std::to_string(scaleRatio) + "]";
 		}
@@ -274,7 +277,7 @@ void convert_file(convInfo info, fs::path inputName, fs::path output) {
 	//std::cout << "Operating on: " << fs::absolute(inputName).string() << std::endl;
 	std::string outputName = generate_output_location(fs::absolute(inputName).string(), output.string(), info.mode, info.NRLevel, info.scaleRatio);
 
-	int _nrLevel = 0;
+	int _nrLevel = -1;
 
 	if (strcmp(info.mode.c_str(), "noise")==0 || strcmp(info.mode.c_str(), "noise_scale")==0) {
 		_nrLevel = info.NRLevel;
@@ -419,6 +422,7 @@ int main(int argc, char** argv) {
 		false, "noise_scale", &cmdModeConstraint, cmd);
 
 	std::vector<int> cmdNRLConstraintV;
+	cmdNRLConstraintV.push_back(0);
 	cmdNRLConstraintV.push_back(1);
 	cmdNRLConstraintV.push_back(2);
 	cmdNRLConstraintV.push_back(3);

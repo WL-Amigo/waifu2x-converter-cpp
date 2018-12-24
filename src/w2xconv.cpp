@@ -35,6 +35,7 @@ struct W2XConvImpl {
 
 	ComputeEnv env;
 
+	std::vector<std::unique_ptr<w2xc::Model> > noise0_models;
 	std::vector<std::unique_ptr<w2xc::Model> > noise1_models;
 	std::vector<std::unique_ptr<w2xc::Model> > noise2_models;
 	std::vector<std::unique_ptr<w2xc::Model> > noise3_models;
@@ -518,10 +519,18 @@ w2xconv_load_models(W2XConv *conv, const char *model_dir)
 
 	std::string modelFileName(model_dir);
 
+	impl->noise0_models.clear();
 	impl->noise1_models.clear();
 	impl->noise2_models.clear();
 	impl->noise3_models.clear();
 	impl->scale2_models.clear();
+
+	if (!w2xc::modelUtility::generateModelFromJSON(modelFileName + "/noise0_model.json", impl->noise0_models)) {
+		setPathError(conv,
+			     W2XCONV_ERROR_MODEL_LOAD_FAILED,
+			     modelFileName + "/noise0_model.json");
+		return -1;
+	}
 
 	if (!w2xc::modelUtility::generateModelFromJSON(modelFileName + "/noise1_model.json", impl->noise1_models)) {
 		setPathError(conv,
@@ -566,6 +575,9 @@ w2xconv_set_model_3x3(struct W2XConv *conv,
 	std::vector<std::unique_ptr<w2xc::Model> > *models = nullptr;
 
 	switch (m) {
+	case W2XCONV_FILTER_DENOISE0:
+		models = &impl->noise0_models;
+		break;
 	case W2XCONV_FILTER_DENOISE1:
 		models = &impl->noise1_models;
 		break;
@@ -634,17 +646,22 @@ apply_denoise(struct W2XConv *conv,
 	W2Mat output_2;
 	W2Mat input_2(extract_view_from_cvmat(*input));
 
-	if (denoise_level == 1) {
+	if (denoise_level == 0) {
+		w2xc::convertWithModels(conv, env, input_2, output_2,
+					impl->noise0_models,
+					&conv->flops, blockSize, fmt, conv->enable_log);
+	}
+	else if (denoise_level == 1) {
 		w2xc::convertWithModels(conv, env, input_2, output_2,
 					impl->noise1_models,
 					&conv->flops, blockSize, fmt, conv->enable_log);
 	}
-	if (denoise_level == 2) {
+	else if (denoise_level == 2) {
 		w2xc::convertWithModels(conv, env, input_2, output_2,
 					impl->noise2_models,
 					&conv->flops, blockSize, fmt, conv->enable_log);
 	}
-	if (denoise_level == 3) {
+	else if (denoise_level == 3) {
 		w2xc::convertWithModels(conv, env, input_2, output_2,
 					impl->noise3_models,
 					&conv->flops, blockSize, fmt, conv->enable_log);
@@ -1358,7 +1375,7 @@ w2xconv_convert_file(struct W2XConv *conv,
 	}
 	image_src.release();
 
-	if (denoise_level != 0) {
+	if (denoise_level != -1) {
 		apply_denoise(conv, image, denoise_level, blockSize, fmt);
 	}
 
@@ -1465,7 +1482,7 @@ convert_mat(struct W2XConv *conv,
 	    int blockSize,
 	    enum w2xc::image_format fmt)
 {
-	if (denoise_level != 0) {
+	if (denoise_level != -1) {
 		apply_denoise(conv, image, denoise_level, blockSize, fmt);
 	}
 
@@ -1611,6 +1628,10 @@ w2xconv_apply_filter_y(struct W2XConv *conv,
 	std::vector<std::unique_ptr<w2xc::Model> > *mp = NULL;
 
 	switch (type) {
+	case W2XCONV_FILTER_DENOISE0:
+		mp = &impl->noise0_models;
+		break;
+		
 	case W2XCONV_FILTER_DENOISE1:
 		mp = &impl->noise1_models;
 		break;

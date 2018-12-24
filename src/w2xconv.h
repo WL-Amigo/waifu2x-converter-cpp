@@ -92,6 +92,7 @@ enum W2XConvProcessorType {
 };
 
 enum W2XConvFilterType {
+	W2XCONV_FILTER_DENOISE0,
 	W2XCONV_FILTER_DENOISE1,
 	W2XCONV_FILTER_DENOISE2,
 	W2XCONV_FILTER_DENOISE3,
@@ -193,7 +194,7 @@ W2XCONV_EXPORT void w2xconv_fini(struct W2XConv *conv);
 W2XCONV_EXPORT int w2xconv_convert_file(struct W2XConv *conv,
 					const char *dst_path,
 					const char *src_path,
-					int denoise_level, /* 0:none, 1:L1 denoise, other:L2 denoise  */
+					int denoise_level, /* -1:none, 0:L0 denoise, 1:L1 denoise, 2:L2 denoise, 3:L3 denoise  */
 					double scale,
 					int block_size);
 
@@ -201,7 +202,7 @@ W2XCONV_EXPORT int w2xconv_convert_rgb(struct W2XConv *conv,
 				       unsigned char *dst, size_t dst_step_byte, /* rgb24 (src_w*ratio, src_h*ratio) */
 				       unsigned char *src, size_t src_step_byte, /* rgb24 (src_w, src_h) */
 				       int src_w, int src_h,
-				       int denoise_level, /* 0:none, 1:L1 denoise, other:L2 denoise  */
+				       int denoise_level, /* -1:none, 0:L0 denoise, 1:L1 denoise, 2:L2 denoise, 3:L3 denoise  */
 				       double scale,
 				       int block_size);
 
@@ -209,14 +210,14 @@ W2XCONV_EXPORT int w2xconv_convert_rgb_f32(struct W2XConv *conv,
 					   unsigned char *dst, size_t dst_step_byte, /* rgb float32x3 normalized[0-1] (src_w*ratio, src_h*ratio) */
 					   unsigned char *src, size_t src_step_byte, /* rgb float32x3 normalized[0-1] (src_w, src_h) */
 					   int src_w, int src_h,
-					   int denoise_level, /* 0:none, 1:L1 denoise, other:L2 denoise  */
+					   int denoise_level, /* -1:none, 0:L0 denoise, 1:L1 denoise, 2:L2 denoise, 3:L3 denoise  */
 					   double scale,
 					   int block_size);
 
 W2XCONV_EXPORT int w2xconv_convert_yuv(struct W2XConv *conv,
 				       unsigned char *dst, size_t dst_step_byte, /* float32x3 normalized[0-1] (src_w*ratio, src_h*ratio) */
 				       unsigned char *src, size_t src_step_byte, /* float32x3 normalized[0-1] (src_w, src_h) */
-				       int denoise_level, /* 0:none, 1:L1 denoise, other:L2 denoise  */
+				       int denoise_level, /* -1:none, 0:L0 denoise, 1:L1 denoise, 2:L2 denoise, 3:L3 denoise  */
 				       double scale,
 				       int block_size);
 
