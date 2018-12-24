@@ -4,6 +4,12 @@ project(waifu2xcpp)
 include("CMakeDependentOption")
 include("CheckIncludeFileCXX")
 
+if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+  if(CMAKE_CXX_COMPILER_VERSION VERSION_LESS "6.0")
+    message(FATAL_ERROR "This software requires GCC 6 or higher")
+  endif()
+endif()
+
 string(TIMESTAMP TS)
 add_definitions(-DBUILD_TS="${TS}")
 
