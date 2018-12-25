@@ -27,7 +27,7 @@ main(int argc, char **argv)
     strcpy(dst_path+4, argv[1]);
 
     c = w2xconv_init(W2XCONV_GPU_AUTO, 0, 0);
-    r = w2xconv_load_models(c, "models");
+    r = w2xconv_load_models(c, "models\\rgb");
     if (r < 0) {
         goto error;
     }
