@@ -13,8 +13,10 @@ static int block_size = 0;
 
 enum param_denoise_code {
     DENOISE_NONE,
+    DENOISE_0,
     DENOISE_1,
     DENOISE_2,
+    DENOISE_JPEG_0,
     DENOISE_JPEG_1,
     DENOISE_JPEG_2,
 };
@@ -147,13 +149,17 @@ add_file(struct app *app, const char *src_path)
 
     WIN32_FIND_DATA orig_st, mai_st;
     HANDLE finder;
-    int denoise = 0;
+    int denoise = -1;
 
-    int denoise_jpg = 0;
-    int denoise_default = 0;
+    int denoise_jpg = -1;
+    int denoise_default = -1;
 
     switch ((enum param_denoise_code)param_denoise) {
     case DENOISE_NONE:
+        denoise_jpg = -1;
+        denoise_default = -1;
+        break;
+    case DENOISE_0:
         denoise_jpg = 0;
         denoise_default = 0;
         break;
@@ -166,13 +172,17 @@ add_file(struct app *app, const char *src_path)
         denoise_default = 2;
         break;
 
+    case DENOISE_JPEG_0:
+        denoise_jpg = 0;
+        denoise_default = -1;
+        break;
     case DENOISE_JPEG_1:
         denoise_jpg = 1;
-        denoise_default = 0;
+        denoise_default = -1;
         break;
     case DENOISE_JPEG_2:
         denoise_jpg = 2;
-        denoise_default = 0;
+        denoise_default = -1;
         break;
     }
 
@@ -628,8 +638,10 @@ initdlg_callback(HWND wnd, UINT message, WPARAM wParam, LPARAM lParam)
     case WM_INITDIALOG:
         SetDlgItemText(wnd, IDC_SCALE, "2.0");
         SendDlgItemMessage(wnd, IDC_DENOISE, CB_ADDSTRING, 0, (LPARAM)"none");
+        SendDlgItemMessage(wnd, IDC_DENOISE, CB_ADDSTRING, 0, (LPARAM)"0");
         SendDlgItemMessage(wnd, IDC_DENOISE, CB_ADDSTRING, 0, (LPARAM)"1");
         SendDlgItemMessage(wnd, IDC_DENOISE, CB_ADDSTRING, 0, (LPARAM)"2");
+        SendDlgItemMessage(wnd, IDC_DENOISE, CB_ADDSTRING, 0, (LPARAM)"0(jpeg only)");
         SendDlgItemMessage(wnd, IDC_DENOISE, CB_ADDSTRING, 0, (LPARAM)"1(jpeg only)");
         SendDlgItemMessage(wnd, IDC_DENOISE, CB_ADDSTRING, 0, (LPARAM)"2(jpeg only)");
         SendDlgItemMessage(wnd, IDC_DENOISE, CB_SETCURSEL, 1, 0);
