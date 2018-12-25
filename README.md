@@ -1,4 +1,4 @@
-[![Discord](https://img.shields.io/badge/Discord-Join-blue.svg)](https://discord.gg/gAvufS2) :: [![Downloads](https://img.shields.io/github/downloads/DeadSix27/waifu2x-converter-cpp/v5.2.1/total.svg)](https://github.com/DeadSix27/waifu2x-converter-cpp/releases)
+[![Discord](https://img.shields.io/badge/Discord-Join-blue.svg)](https://discord.gg/gAvufS2) :: [![Downloads522](https://img.shields.io/github/downloads/DeadSix27/waifu2x-converter-cpp/latest/total.svg)](https://github.com/DeadSix27/waifu2x-converter-cpp/releases) :: [![TotalDownloads](https://img.shields.io/github/downloads/DeadSix27/waifu2x-converter-cpp/total.svg)](https://github.com/DeadSix27/waifu2x-converter-cpp/releases)
 
 # waifu2x (converter only version)
 
