@@ -17,6 +17,10 @@ extern "C" {
 #define W2XCONV_EXPORT __declspec(dllimport)
 #endif
 
+#ifdef UNICODE
+#include <Windows.h>
+#endif
+
 
 #else
 
@@ -197,6 +201,15 @@ W2XCONV_EXPORT int w2xconv_convert_file(struct W2XConv *conv,
 					int denoise_level, /* -1:none, 0:L0 denoise, 1:L1 denoise, 2:L2 denoise, 3:L3 denoise  */
 					double scale,
 					int block_size);
+
+#if defined(WIN32) && defined(UNICODE)		
+W2XCONV_EXPORT int w2xconv_convert_fileW(struct W2XConv *conv,
+					const WCHAR *dst_path,
+					const WCHAR *src_path,
+					int denoise_level, /* -1:none, 0:L0 denoise, 1:L1 denoise, 2:L2 denoise, 3:L3 denoise  */
+					double scale,
+					int block_size);
+#endif			
 
 W2XCONV_EXPORT int w2xconv_convert_rgb(struct W2XConv *conv,
 				       unsigned char *dst, size_t dst_step_byte, /* rgb24 (src_w*ratio, src_h*ratio) */
