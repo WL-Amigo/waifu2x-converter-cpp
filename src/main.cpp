@@ -21,6 +21,14 @@
 #include "tclap/CmdLine.h"
 #include "sec.hpp"
 #include <experimental/filesystem>
+#include <algorithm>
+
+#if defined(WIN32) && defined(UNICODE)
+#include <Windows.h>
+#include <io.h>
+#include <fcntl.h>
+#pragma comment ( linker, "/entry:\"wmainCRTStartup\"" )
+#endif
 
 #include "w2xconv.h"
 
@@ -72,6 +80,17 @@ struct convInfo {
 	W2XConv* converter;
 	convInfo(std::string mode, int NRLevel, double scaleRatio, int blockSize, W2XConv* converter) :mode(mode), NRLevel(NRLevel), scaleRatio(scaleRatio), blockSize(blockSize), converter(converter) {};
 };
+
+#if defined(WIN32) && defined(UNICODE)
+struct convInfoW {
+	std::wstring mode;
+	int NRLevel;
+	double scaleRatio;
+	int blockSize;
+	W2XConv* converter;
+	convInfoW(std::wstring mode, int NRLevel, double scaleRatio, int blockSize, W2XConv* converter) :mode(mode), NRLevel(NRLevel), scaleRatio(scaleRatio), blockSize(blockSize), converter(converter) {};
+};
+#endif
 
 static void
 dump_procs()
@@ -143,10 +162,31 @@ std::string ReplaceString(std::string subject, const std::string& search, const 
 	}
 	return subject;
 }
+
+#if defined(WIN32) && defined(UNICODE)
+std::wstring ReplaceStringW(std::wstring subject, const std::wstring& search, const std::wstring& replace) {
+	size_t pos = 0;
+	while ((pos = subject.find(search, pos)) != std::wstring::npos) {
+		subject.replace(pos, search.length(), replace);
+		pos += replace.length();
+	}
+	return subject;
+}
+#endif
+
 std::string basename(const std::string& str) {
 	size_t found = str.find_last_of("/\\");
 	return str.substr(found + 1);
 }
+
+#if defined(WIN32) && defined(UNICODE)
+std::wstring basenameW(const std::wstring& str) {
+	size_t found = str.find_last_of(L"/\\");
+	return str.substr(found + 1);
+}
+
+#endif
+
 std::string trim(const std::string& str)
 {
     size_t first = str.find_first_not_of(' ');
@@ -201,6 +241,50 @@ std::map<std::string,bool> opencv_formats = {
 	{"PIC", false}
 };
 
+#if defined(WIN32) && defined(UNICODE)
+std::map<std::wstring,bool> opencv_formatsW = {
+	// Windows Bitmaps
+	{L"BMP",  false},
+	{L"DIB",  false},
+	
+	// JPEG Files
+	{L"JPEG", false},
+	{L"JPG", false},
+	{L"JPE", false},
+	
+	// JPEG 2000 Files
+	{L"JP2", false},
+	
+	// Portable Network Graphics
+	{L"PNG",  false},
+	
+	// WebP
+	{L"WEBP", false},
+	
+	// Portable Image Format
+	{L"PBM",  false},
+	{L"PGM",  false},
+	{L"PPM",  false},
+	{L"PXM",  false},
+	{L"PNM",  false},
+	
+	// Sun Rasters
+	{L"SR",  false},
+	{L"RAS",  false},
+	
+	// TIFF Files
+	{L"TIF", false},
+	{L"TIFF", false},
+	
+	// OpenEXR Image Files
+	{L"EXR", false},
+	
+	// Radiance HDR
+	{L"HDR", false},
+	{L"PIC", false}
+};
+#endif
+
 bool check_output_extension(std::string extension) {
 	for(std::string::iterator it = extension.begin(); it != extension.end(); ++it){
 		*it = std::toupper(*it);
@@ -212,6 +296,16 @@ bool check_output_extension(std::string extension) {
 	return false;
 }
 
+#if defined(WIN32) && defined(UNICODE)
+bool check_output_extensionW(std::wstring extension) {
+	std::transform(extension.begin(), extension.end(), extension.begin(), ::toupper);
+	auto index = opencv_formatsW.find(extension);
+	if (index != opencv_formatsW.end()) {
+		return index->second;
+	}
+	return false;
+}
+#endif
 
 std::string generate_output_location(std::string inputFileName, std::string outputFileName, std::string mode, int NRLevel, double scaleRatio) {
 
@@ -272,6 +366,66 @@ std::string generate_output_location(std::string inputFileName, std::string outp
 	return outputFileName;
 }
 
+#if defined(WIN32) && defined(UNICODE)
+std::wstring generate_output_locationW(std::wstring inputFileName, std::wstring outputFileName, std::wstring mode, int NRLevel, double scaleRatio) {
+
+	size_t lastSlashPos = outputFileName.find_last_of(L"/\\");
+	size_t lastDotPos = outputFileName.find_last_of(L'.');
+
+	if (wcscmp(outputFileName.c_str(), L"auto")==0) {
+		outputFileName = inputFileName;
+		size_t tailDot = outputFileName.find_last_of(L'.');
+		if (tailDot != std::wstring::npos)
+			outputFileName.erase(tailDot, outputFileName.length());
+		outputFileName = outputFileName + L"_[" + ReplaceStringW(mode, L"noise_scale", L"NS");
+		//std::wstring &mode = mode;
+		if (mode.find(L"noise") != mode.npos) {
+			outputFileName = outputFileName + L"-L" + std::to_wstring(NRLevel) + L"]";
+		}
+		else
+			outputFileName = outputFileName + L"]";
+		
+		if (mode.find(L"scale") != mode.npos) {
+			outputFileName = outputFileName + L"[x" + std::to_wstring(scaleRatio) + L"]";
+		}
+		outputFileName += L".png";
+	}
+	else if (outputFileName.back() == L'/' || outputFileName.back() == L'\\') {
+		//outputFileName = output folder or "auto/"
+		if ((!fs::is_directory(outputFileName))) {
+			fs::create_directories(outputFileName);
+		}
+		//We pass tmp into generate_output_location because we will use the default way of naming processed files.
+		//We will remove everything, in the tmp string, prior to the last slash to get the filename.
+		//This removes all contextual information about where a file originated from if "recursive_directory" was enabled.
+		std::wstring tmp = generate_output_locationW(inputFileName, L"auto", mode, NRLevel, scaleRatio);
+		//tmp = full formatted output file path
+		size_t lastSlash = tmp.find_last_of(L'/');
+		if (lastSlash != std::wstring::npos){
+			tmp.erase(0, lastSlash);
+		}
+
+		outputFileName += basenameW(tmp);
+	}
+	else if (lastDotPos == std::wstring::npos || lastSlashPos != std::wstring::npos && lastDotPos < lastSlashPos) {
+		//e.g. ./test.d/out needs to be changed to ./test.d/out.png
+		outputFileName += L".png";
+	}
+	else if (lastSlashPos == std::wstring::npos || lastDotPos > lastSlashPos) {
+		//We may have a regular output file here or something went wrong.
+		//outputFileName is already what it should be thus nothing needs to be done.
+		#ifdef HAVE_OPENCV
+		if(check_output_extensionW(outputFileName.substr(lastDotPos+1))==false){
+			throw std::runtime_error("Unsupported output extension.");
+		}
+		#endif
+	}
+	else {
+		throw std::runtime_error("An unknown 'outputFileName' has been inserted into generate_output_location.");
+	}
+	return outputFileName;
+}
+#endif
 
 void convert_file(convInfo info, fs::path inputName, fs::path output) {
 	//std::cout << "Operating on: " << fs::absolute(inputName).string() << std::endl;
@@ -297,6 +451,32 @@ void convert_file(convInfo info, fs::path inputName, fs::path output) {
 	check_for_errors(info.converter, error);
 }
 
+#if defined(WIN32) && defined(UNICODE)
+void convert_fileW(convInfoW info, fs::path inputName, fs::path output) {
+	//std::cout << "Operating on: " << fs::absolute(inputName).string() << std::endl;
+	std::wstring outputName = generate_output_locationW(fs::absolute(inputName).wstring(), output.wstring(), info.mode, info.NRLevel, info.scaleRatio);
+
+	int _nrLevel = -1;
+
+	if (wcscmp(info.mode.c_str(), L"noise")==0 || wcscmp(info.mode.c_str(), L"noise_scale")==0) {
+		_nrLevel = info.NRLevel;
+	}
+
+	double _scaleRatio = 1;
+	if (wcscmp(info.mode.c_str(), L"scale")==0 || wcscmp(info.mode.c_str(), L"noise_scale")==0) {
+		_scaleRatio = info.scaleRatio;
+	}
+
+	int error = w2xconv_convert_fileW(info.converter,
+		outputName.c_str(),
+		fs::absolute(inputName).wstring().c_str(),
+		_nrLevel,
+		_scaleRatio, info.blockSize);
+
+	check_for_errors(info.converter, error);
+}
+#endif
+
 	
 //check for opencv formats
 void check_opencv_formats()
@@ -318,53 +498,73 @@ void check_opencv_formats()
 			if ((strings[0] == "PNG") && (strings[1] != "NO"))
 			{
 				opencv_formats["PNG"] = true;
+				opencv_formatsW[L"PNG"] = true;
 			}
 			// JPEG Files
 			else if ((strings[0] == "JPEG") && (strings[1] != "NO"))
 			{
 				opencv_formats["JPEG"] = true;
+				opencv_formatsW[L"JPEG"] = true;
 				opencv_formats["JPG"] = true;
+				opencv_formatsW[L"JPG"] = true;
 				opencv_formats["JPE"] = true;
+				opencv_formatsW[L"JPE"] = true;
 			}
 			// JPEG 2000 Files
 			else if ((strings[0] == "JPEG 2000") && (strings[1] != "NO"))
 			{
 				opencv_formats["JP2"] = true;
+				opencv_formatsW[L"JP2"] = true;
 			}
 			// WebP
 			else if ((strings[0] == "WEBP") && (strings[1] != "NO"))
 			{
 				opencv_formats["WEBP"] = true;
+				opencv_formatsW[L"WEBP"] = true;
 			}
 			// TIFF Files
 			else if ((strings[0] == "TIFF") && (strings[1] != "NO"))
 			{
 				opencv_formats["TIF"] = true;
+				opencv_formatsW[L"TIF"] = true;
 				opencv_formats["TIFF"] = true;
+				opencv_formatsW[L"TIFF"] = true;
 			}
 		}
 	}
 	// Windows Bitmaps (Always Supported)
 	opencv_formats["BMP"] = true;
+	opencv_formatsW[L"BMP"] = true;
 	opencv_formats["DIB"] = true;
+	opencv_formatsW[L"DIB"] = true;
 	
 	// Portable Image Format (Always Supported)
 	opencv_formats["PBM"] = true;
+	opencv_formatsW[L"PBM"] = true;
 	opencv_formats["PGM"] = true;
+	opencv_formatsW[L"PGM"] = true;
 	opencv_formats["PPM"] = true;
+	opencv_formatsW[L"PPM"] = true;
 	opencv_formats["PXM"] = true;
+	opencv_formatsW[L"PXM"] = true;
 	opencv_formats["PNM"] = true;
+	opencv_formatsW[L"PNM"] = true;
 	
 	// Sun Rasters (Always Supported)
 	opencv_formats["SR"] = true;
+	opencv_formatsW[L"SR"] = true;
 	opencv_formats["RAS"] = true;
+	opencv_formatsW[L"RAS"] = true;
 	
 	// Radiance HDR (Always Supported)
 	opencv_formats["HDR"] = true;
+	opencv_formatsW[L"HDR"] = true;
 	opencv_formats["PIC"] = true;
+	opencv_formatsW[L"PIC"] = true;
 	
 	// OpenEXR Image Files
 	opencv_formats["EXR"] = true;
+	opencv_formatsW[L"EXR"] = true;
 }
 void debug_show_opencv_formats()
 {
@@ -375,6 +575,130 @@ void debug_show_opencv_formats()
 	}
 }
 
+#if defined(WIN32) && defined(UNICODE)
+int wmain(void){
+	int argc = 0;
+	std::wstring inputFileName, outputFileName;
+	LPWSTR *argv = CommandLineToArgvW(GetCommandLine(), &argc);
+	HWND hWnd = GetConsoleWindow();
+
+	//Switch the Console to UTF-16 mode
+	//_setmode(_fileno(stdout), _O_U16TEXT);
+	
+	std::wcout << L"Argument Count: " << argc << std::endl;
+	
+	for (int i = 0; i < argc; i++)
+		std::wcout << L"argv[" << i << L"]: " << argv[i] << std::endl;
+	
+	int ret = 1;
+	
+	if( argc >= 2 ){
+		inputFileName = std::wstring(argv[1]);
+		
+		if( argc >= 3 )
+			outputFileName = std::wstring(argv[2]);
+		else {
+			size_t tailDot = inputFileName.find_last_of(L'.');
+			outputFileName = inputFileName;
+			outputFileName.erase(tailDot, outputFileName.length());
+			outputFileName = outputFileName + L"_waifu2x";
+			outputFileName += L".png";
+		}
+	}
+	for (int ai = 1; ai < argc; ai++) {
+		if ((wcscmp(argv[ai], L"--list-processor") == 0) || (wcscmp(argv[ai], L"-l") == 0)) {
+			dump_procs();
+			return 0;
+		}
+		#ifdef HAVE_OPENCV
+		if (wcscmp(argv[ai], L"--list-opencv-formats") == 0) {
+			check_opencv_formats();
+			debug_show_opencv_formats();
+			return 0;
+		}
+		#endif
+	}
+	
+	printf("dd\n");
+	
+	#ifdef HAVE_OPENCV
+	check_opencv_formats();
+	#endif
+
+	fs::path input = inputFileName;
+	fs::path output = outputFileName;
+	
+	enum W2XConvGPUMode gpu = W2XCONV_GPU_AUTO;
+	
+	W2XConv *converter;
+	size_t num_proc;
+	
+	w2xconv_get_processor_list(&num_proc);
+	
+	converter = w2xconv_init(gpu, 0, false);
+
+	convInfoW convInfoW( L"noise_scale", 1, 1.6, 0, converter);
+	
+	printf("dds\n");
+	
+	double time_start = getsec();
+
+	switch (converter->target_processor->type) {
+	case W2XCONV_PROC_HOST:
+		printf("CPU: %s\n",
+			converter->target_processor->dev_name);
+		break;
+
+	case W2XCONV_PROC_CUDA:
+		printf("CUDA: %s\n",
+			converter->target_processor->dev_name);
+		break;
+
+	case W2XCONV_PROC_OPENCL:
+		printf("OpenCL: %s\n",
+			converter->target_processor->dev_name);
+		break;
+	}
+
+	int error = w2xconv_load_models(converter, "models_rgb");
+	check_for_errors(converter, error);
+
+	//This includes errored files.
+	int numFilesProcessed = 0;
+	int numErrors = 0;
+	
+	numFilesProcessed++;
+	try {
+		convert_fileW(convInfoW, input, output);
+	}
+	catch (const std::exception& e) {
+		numErrors++;
+		std::cout << e.what() << std::endl;
+	}
+	
+
+
+	{
+		double time_end = getsec();
+
+		double gflops_proc = (converter->flops.flop / (1000.0*1000.0*1000.0)) / converter->flops.filter_sec;
+		double gflops_all = (converter->flops.flop / (1000.0*1000.0*1000.0)) / (time_end - time_start);
+
+		std::cout << "process successfully done! (all:"
+			<< (time_end - time_start) << "[sec], "
+			<< numFilesProcessed << " [files processed], "
+			<< numErrors << " [files errored], "
+			<< gflops_all << "[GFLOPS], filter:"
+			<< converter->flops.filter_sec
+			<< "[sec], " << gflops_proc << "[GFLOPS])" << std::endl;
+	}
+
+	w2xconv_fini(converter);
+
+	return 0;
+}
+
+#else
 int main(int argc, char** argv) {
 	int ret = 1;
 	for (int ai = 1; ai < argc; ai++) {
@@ -629,3 +953,5 @@ int main(int argc, char** argv) {
 
 	return 0;
 }
+#endif
+

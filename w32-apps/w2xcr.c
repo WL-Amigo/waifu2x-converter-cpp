@@ -147,7 +147,7 @@ add_file(struct app *app, const char *src_path)
     char fname[_MAX_FNAME];
     char ext[_MAX_EXT];
 
-    WIN32_FIND_DATA orig_st, mai_st;
+    WIN32_FIND_DATAA orig_st, mai_st;
     HANDLE finder;
     int denoise = -1;
 
@@ -235,14 +235,14 @@ add_file(struct app *app, const char *src_path)
         return 0;
     }
 
-    finder = FindFirstFile(src_path, &orig_st);
+    finder = FindFirstFileA(src_path, &orig_st);
     if (finder == INVALID_HANDLE_VALUE) {
         free(dst_path);
         return 0;
     }
     FindClose(finder);
 
-    finder = FindFirstFile(dst_path, &mai_st);
+    finder = FindFirstFileA(dst_path, &mai_st);
     FindClose(finder);
 
     if (finder != INVALID_HANDLE_VALUE) {
@@ -275,16 +275,16 @@ add_file(struct app *app, const char *src_path)
 static int
 traverse_dir(struct app *app, const char *src_path)
 {
-    WIN32_FIND_DATA fd;
+    WIN32_FIND_DATAA fd;
     HANDLE finder;
 
     char pattern[MAX_PATH] = "";
     char sub[MAX_PATH] = "";
     int r = 0;
 
-    PathCombine(pattern, src_path, "*");
+    PathCombineA(pattern, src_path, "*");
 
-    finder = FindFirstFile(pattern, &fd);
+    finder = FindFirstFileA(pattern, &fd);
     if (finder != INVALID_HANDLE_VALUE) {
         do {
             if ((strcmp(fd.cFileName,".") == 0) ||
@@ -292,7 +292,7 @@ traverse_dir(struct app *app, const char *src_path)
             {
                 /* ignore */
             } else {
-                PathCombine(sub, src_path, fd.cFileName);
+                PathCombineA(sub, src_path, fd.cFileName);
 
                 if (fd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) {
                     r = traverse_dir(app, sub);
@@ -304,7 +304,7 @@ traverse_dir(struct app *app, const char *src_path)
                     break;
                 }
             }
-        } while(FindNextFile(finder, &fd));
+        } while(FindNextFileA(finder, &fd));
 
         FindClose(finder);
     }
@@ -336,7 +336,7 @@ proc_thread(void *ap)
 
     c = w2xconv_init_with_processor(ta->dev_id, 0, 0);
     while (1) {
-        len = GetModuleFileName(NULL, self_path, (DWORD) path_len);
+        len = GetModuleFileNameA(NULL, self_path, (DWORD) path_len);
         if (len > 0 && len != path_len) {
             break;
         }
@@ -420,7 +420,7 @@ proc_thread(void *ap)
 error:
     if (r != -2) {
         char *err = w2xconv_strerror(&c->last_error);
-        MessageBox(NULL, err, "error", MB_OK);
+        MessageBoxA(NULL, err, "error", MB_OK);
         w2xconv_free(err);
     }
 
@@ -551,7 +551,7 @@ update_display(struct app *app)
 
     if ((app->processed == 0) && app->state == STATE_FINI) {
         static const char msg[] = "nop";
-        TextOut(dc, 10, 10, msg, sizeof(msg)-1);
+        TextOutA(dc, 10, 10, msg, sizeof(msg)-1);
     } else {
         char line[4096];
         char path[128];
@@ -564,7 +564,7 @@ update_display(struct app *app)
                       app->path_list_nelem);
         }
 
-        TextOut(dc, 10, 10, line, (int) strlen(line));
+        TextOutA(dc, 10, 10, line, (int) strlen(line));
 
         for (i=0; i<app->num_thread; i++) {
             char *cur_path = app->threads[i].cur_path;
@@ -599,8 +599,8 @@ update_display(struct app *app)
 
                 proc = &app->proc_list[app->dev_list[i]];
 
-                TextOut(dc, 10, DISP_HEIGHT*(i+1) + 10, proc->dev_name, (int) strlen(proc->dev_name));
-                TextOut(dc, 10, DISP_HEIGHT*(i+1) + 28, line, (int) line_len);
+                TextOutA(dc, 10, DISP_HEIGHT*(i+1) + 10, proc->dev_name, (int) strlen(proc->dev_name));
+                TextOutA(dc, 10, DISP_HEIGHT*(i+1) + 28, line, (int) line_len);
             }
         }
     }
@@ -620,12 +620,12 @@ initdlg_callback(HWND wnd, UINT message, WPARAM wParam, LPARAM lParam)
         switch (LOWORD(wParam)) {
         case IDC_OK:
             param_denoise = (int) SendDlgItemMessage(wnd, IDC_DENOISE, CB_GETCURSEL, 0, 0);
-            GetDlgItemText(wnd, IDC_SCALE, buf, 256);
+            GetDlgItemTextA(wnd, IDC_SCALE, buf, 256);
             param_scale = atof(buf);
             if (param_scale != 0) {
                 EndDialog(wnd, 0);
             } else {
-                MessageBox(NULL, "invalid scale value", "w2xcr", MB_OK);
+                MessageBoxA(NULL, "invalid scale value", "w2xcr", MB_OK);
             }
             return (INT_PTR)TRUE;
 
@@ -636,7 +636,7 @@ initdlg_callback(HWND wnd, UINT message, WPARAM wParam, LPARAM lParam)
         break;
 
     case WM_INITDIALOG:
-        SetDlgItemText(wnd, IDC_SCALE, "2.0");
+        SetDlgItemTextA(wnd, IDC_SCALE, "2.0");
         SendDlgItemMessage(wnd, IDC_DENOISE, CB_ADDSTRING, 0, (LPARAM)"none");
         SendDlgItemMessage(wnd, IDC_DENOISE, CB_ADDSTRING, 0, (LPARAM)"0");
         SendDlgItemMessage(wnd, IDC_DENOISE, CB_ADDSTRING, 0, (LPARAM)"1");
@@ -670,7 +670,7 @@ int main(int argc, char **argv)
     HINSTANCE hInst = GetModuleHandle(NULL);
 #endif
 
-    WNDCLASSEX cls={0};
+    WNDCLASSEXA cls={0};
     struct app app;
     HWND win;
     int run = 1, fini_count;
@@ -700,7 +700,7 @@ int main(int argc, char **argv)
 
     int rem = argc - argi;
     if (rem == 0) {
-        MessageBox(NULL, "usage : w2xcr [--block_size <size>] <in>", "w2xcr", MB_OK);
+        MessageBoxA(NULL, "usage : w2xcr [--block_size <size>] <in>", "w2xcr", MB_OK);
         return 1;
     }
 
@@ -712,18 +712,18 @@ int main(int argc, char **argv)
     for (; argi<argc; argi++) {
         src_path = argv[argi];
 
-        pathlen = GetFullPathName(src_path, 0, NULL, NULL);
+        pathlen = GetFullPathNameA(src_path, 0, NULL, NULL);
         if (pathlen == 0) {
-            MessageBox(NULL, "open failed", src_path, MB_OK);
+            MessageBoxA(NULL, "open failed", src_path, MB_OK);
             return 1;
         }
 
         fullpath = malloc(pathlen);
-        GetFullPathName(src_path, pathlen, fullpath, &filepart);
+        GetFullPathNameA(src_path, pathlen, fullpath, &filepart);
 
-        attr = GetFileAttributes(fullpath);
+        attr = GetFileAttributesA(fullpath);
         if (attr < 0) {
-            MessageBox(NULL, "open failed", fullpath, MB_OK);
+            MessageBoxA(NULL, "open failed", fullpath, MB_OK);
             return 1;
         }
 
@@ -741,17 +741,17 @@ int main(int argc, char **argv)
     cls.lpfnWndProc = wnd_proc;
     cls.hInstance = hInst;
     cls.hIcon = NULL;
-    cls.hCursor = LoadCursor(NULL, (LPCSTR)IDC_ARROW);
+    cls.hCursor = LoadCursorA(NULL, (LPCSTR)IDC_ARROW);
     cls.hbrBackground = NULL;
     cls.lpszMenuName = NULL;
     cls.lpszClassName = "w2xcr";
     cls.hIconSm = NULL;
 
-    RegisterClassEx(&cls);
+    RegisterClassExA(&cls);
 
     queue_init(&app.from_worker);
 
-    win = CreateWindowEx(0,
+    win = CreateWindowExA(0,
                          "w2xcr",
                          "w2xcr",
                          WS_OVERLAPPEDWINDOW,

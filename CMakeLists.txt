@@ -87,9 +87,15 @@ if(HAVE_OPENCV)
 endif()
 
 if(FORCE_AMD)
-	message("-- -FORCE_AMD=ON is set, not using cuda")
+	message("-- FORCE_AMD=ON is set, not using cuda")
 else()
 	find_package(CUDA)
+endif()
+
+if(BUILD_UNICODE)
+	add_definitions(-DUNICODE)
+	add_definitions(-D_UNICODE)
+	message("-- BUILD_UNICODE=ON is set, Compiles with UNICODE Mode")
 endif()
 
 if(WIN32)

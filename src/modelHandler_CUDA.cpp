@@ -42,7 +42,7 @@ void
 initCUDAGlobal(std::vector<W2XConvProcessor> *proc_list)
 {
 #ifdef _WIN32
-	handle = LoadLibrary("nvcuda.dll");
+	handle = LoadLibraryA("nvcuda.dll");
 #elif defined __APPLE__
 	handle = dlopen("libcuda.dylib", RTLD_LAZY);
 #define GetProcAddress dlsym

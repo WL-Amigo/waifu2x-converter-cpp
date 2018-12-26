@@ -54,7 +54,7 @@ namespace w2xc {
 		initOpenCLGlobal(std::vector<W2XConvProcessor> *proc_list)
 	{
 #ifdef _WIN32
-		handle = LoadLibrary("OpenCL.dll");
+		handle = LoadLibraryA("OpenCL.dll");
 #elif defined __APPLE__
 		handle = dlopen("/System/Library/Frameworks/OpenCL.framework/Versions/A/OpenCL", RTLD_LAZY);
 #define GetProcAddress dlsym
@@ -292,7 +292,7 @@ namespace w2xc {
 		char *self_path = (char*)malloc(path_len + 1);
 		DWORD len;
 		while (1) {
-			len = GetModuleFileName(NULL, self_path, (DWORD) path_len);
+			len = GetModuleFileNameA(NULL, self_path, (DWORD) path_len);
 			if (len > 0 && len != path_len) {
 				break;
 			}
@@ -300,8 +300,8 @@ namespace w2xc {
 			path_len *= 2;
 			self_path = (char*)realloc(self_path, path_len + 1);
 		}
-		WIN32_FIND_DATA self_st;
-		HANDLE finder = FindFirstFile(self_path, &self_st);
+		WIN32_FIND_DATAA self_st;
+		HANDLE finder = FindFirstFileA(self_path, &self_st);
 		FindClose(finder);
 
 		for (int si = len - 1; si >= 0; si--) {
@@ -335,8 +335,8 @@ namespace w2xc {
 			}
 			size_t bin_sz = bin_st.st_size;
 #else
-			WIN32_FIND_DATA bin_st;
-			HANDLE finder = FindFirstFile(bin_path.c_str(), &bin_st);
+			WIN32_FIND_DATAA bin_st;
+			HANDLE finder = FindFirstFileA(bin_path.c_str(), &bin_st);
 			FindClose(finder);
 
 			bool old = false;

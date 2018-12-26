@@ -171,16 +171,16 @@ update_test(const char *dst_path,
 	    const char *src_path)
 {
 #if (defined _WIN32)
-	WIN32_FIND_DATA dst_st;
-	HANDLE finder = FindFirstFile(dst_path, &dst_st);
+	WIN32_FIND_DATAA dst_st;
+	HANDLE finder = FindFirstFileA(dst_path, &dst_st);
 	if (finder == INVALID_HANDLE_VALUE) {
 		return true;
 	}
 
 	FindClose(finder);
 
-	WIN32_FIND_DATA src_st;
-	finder = FindFirstFile(src_path, &src_st);
+	WIN32_FIND_DATAA src_st;
+	finder = FindFirstFileA(src_path, &src_st);
 	FindClose(finder);
 
 	bool old = false;
