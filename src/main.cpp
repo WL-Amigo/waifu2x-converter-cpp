@@ -498,73 +498,93 @@ void check_opencv_formats()
 			if ((strings[0] == "PNG") && (strings[1] != "NO"))
 			{
 				opencv_formats["PNG"] = true;
+				#if defined(WIN32) && defined(UNICODE)
 				opencv_formatsW[L"PNG"] = true;
+				#endif
 			}
 			// JPEG Files
 			else if ((strings[0] == "JPEG") && (strings[1] != "NO"))
 			{
 				opencv_formats["JPEG"] = true;
-				opencv_formatsW[L"JPEG"] = true;
 				opencv_formats["JPG"] = true;
-				opencv_formatsW[L"JPG"] = true;
 				opencv_formats["JPE"] = true;
+				#if defined(WIN32) && defined(UNICODE)
+				opencv_formatsW[L"JPEG"] = true;
+				opencv_formatsW[L"JPG"] = true;
 				opencv_formatsW[L"JPE"] = true;
+				#endif
 			}
 			// JPEG 2000 Files
 			else if ((strings[0] == "JPEG 2000") && (strings[1] != "NO"))
 			{
 				opencv_formats["JP2"] = true;
+				#if defined(WIN32) && defined(UNICODE)
 				opencv_formatsW[L"JP2"] = true;
+				#endif
 			}
 			// WebP
 			else if ((strings[0] == "WEBP") && (strings[1] != "NO"))
 			{
 				opencv_formats["WEBP"] = true;
+				#if defined(WIN32) && defined(UNICODE)
 				opencv_formatsW[L"WEBP"] = true;
+				#endif
 			}
 			// TIFF Files
 			else if ((strings[0] == "TIFF") && (strings[1] != "NO"))
 			{
 				opencv_formats["TIF"] = true;
-				opencv_formatsW[L"TIF"] = true;
 				opencv_formats["TIFF"] = true;
+				#if defined(WIN32) && defined(UNICODE)
+				opencv_formatsW[L"TIF"] = true;
 				opencv_formatsW[L"TIFF"] = true;
+				#endif
 			}
 		}
 	}
 	// Windows Bitmaps (Always Supported)
 	opencv_formats["BMP"] = true;
-	opencv_formatsW[L"BMP"] = true;
 	opencv_formats["DIB"] = true;
+	#if defined(WIN32) && defined(UNICODE)
+	opencv_formatsW[L"BMP"] = true;
 	opencv_formatsW[L"DIB"] = true;
+	#endif
 	
 	// Portable Image Format (Always Supported)
 	opencv_formats["PBM"] = true;
-	opencv_formatsW[L"PBM"] = true;
 	opencv_formats["PGM"] = true;
-	opencv_formatsW[L"PGM"] = true;
 	opencv_formats["PPM"] = true;
-	opencv_formatsW[L"PPM"] = true;
 	opencv_formats["PXM"] = true;
-	opencv_formatsW[L"PXM"] = true;
 	opencv_formats["PNM"] = true;
+	#if defined(WIN32) && defined(UNICODE)
+	opencv_formatsW[L"PBM"] = true;
+	opencv_formatsW[L"PGM"] = true;
+	opencv_formatsW[L"PPM"] = true;
+	opencv_formatsW[L"PXM"] = true;
 	opencv_formatsW[L"PNM"] = true;
+	#endif
 	
 	// Sun Rasters (Always Supported)
 	opencv_formats["SR"] = true;
-	opencv_formatsW[L"SR"] = true;
 	opencv_formats["RAS"] = true;
+	#if defined(WIN32) && defined(UNICODE)
+	opencv_formatsW[L"SR"] = true;
 	opencv_formatsW[L"RAS"] = true;
+	#endif
 	
 	// Radiance HDR (Always Supported)
 	opencv_formats["HDR"] = true;
-	opencv_formatsW[L"HDR"] = true;
 	opencv_formats["PIC"] = true;
+	#if defined(WIN32) && defined(UNICODE)
+	opencv_formatsW[L"HDR"] = true;
 	opencv_formatsW[L"PIC"] = true;
+	#endif
 	
 	// OpenEXR Image Files
 	opencv_formats["EXR"] = true;
+	#if defined(WIN32) && defined(UNICODE)
 	opencv_formatsW[L"EXR"] = true;
+	#endif
 }
 void debug_show_opencv_formats()
 {
