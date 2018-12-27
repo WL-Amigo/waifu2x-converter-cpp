@@ -18,10 +18,11 @@
 #include <deque>
 #include <map>
 #include <stdio.h>
-#include "tclap/CmdLine.h"
-#include "sec.hpp"
 #include <experimental/filesystem>
 #include <algorithm>
+
+#include "tclap/CmdLine.h"
+#include "sec.hpp"
 
 #if defined(WIN32) && defined(UNICODE)
 #include <Windows.h>
@@ -31,6 +32,7 @@
 #endif
 
 #include "w2xconv.h"
+#include "wcsfunc.hpp"
 
 #ifndef DEFAULT_MODELS_DIRECTORY
 #define DEFAULT_MODELS_DIRECTORY "models_rgb"
@@ -144,65 +146,6 @@ void check_for_errors(W2XConv* converter, int error) {
 }
 
 
-std::string ReplaceString(std::string subject, const std::string& search, const std::string& replace) {
-	size_t pos = 0;
-	while ((pos = subject.find(search, pos)) != std::string::npos) {
-		subject.replace(pos, search.length(), replace);
-		pos += replace.length();
-	}
-	return subject;
-}
-
-#if defined(WIN32) && defined(UNICODE)
-std::wstring ReplaceStringW(std::wstring subject, const std::wstring& search, const std::wstring& replace) {
-	size_t pos = 0;
-	while ((pos = subject.find(search, pos)) != std::wstring::npos) {
-		subject.replace(pos, search.length(), replace);
-		pos += replace.length();
-	}
-	return subject;
-}
-#endif
-
-#if defined(WIN32) && defined(UNICODE)
-std::wstring to_wcs(std::string str){
-	std::wstring result;
-	result.assign(str.begin(), str.end());
-	return result;
-}
-
-std::string to_mbs(std::wstring str){
-	std::string result;
-	result.assign(str.begin(), str.end());
-	return result;
-}
-#endif
-
-std::string basename(const std::string& str) {
-	size_t found = str.find_last_of("/\\");
-	return str.substr(found + 1);
-}
-
-#if defined(WIN32) && defined(UNICODE)
-std::wstring basename(const std::wstring& str) {
-	size_t found = str.find_last_of(L"/\\");
-	return str.substr(found + 1);
-}
-
-#endif
-
-std::string trim(const std::string& str)
-{
-	size_t first = str.find_first_not_of(' ');
-	if (std::string::npos == first)
-	{
-		return str;
-	}
-	size_t last = str.find_last_not_of(' ');
-	return str.substr(first, (last - first + 1));
-}
-
-
 std::map<std::string,bool> opencv_formats = {
 	// Windows Bitmaps
 	{"BMP",  false},
@@ -245,7 +188,6 @@ std::map<std::string,bool> opencv_formats = {
 	{"PIC", false}
 };
 
-#if defined(WIN32) && defined(UNICODE)
 std::map<std::wstring,bool> opencv_formatsW = {
 	// Windows Bitmaps
 	{L"BMP",  false},
@@ -287,7 +229,7 @@ std::map<std::wstring,bool> opencv_formatsW = {
 	{L"HDR", false},
 	{L"PIC", false}
 };
-#endif
+
 
 bool check_output_extension(std::string extension) {
 	for(std::string::iterator it = extension.begin(); it != extension.end(); ++it){
@@ -300,8 +242,7 @@ bool check_output_extension(std::string extension) {
 	return false;
 }
 
-#if defined(WIN32) && defined(UNICODE)
-bool check_output_extensionW(std::wstring extension) {
+bool check_output_extension(std::wstring extension) {
 	std::transform(extension.begin(), extension.end(), extension.begin(), ::toupper);
 	auto index = opencv_formatsW.find(extension);
 	if (index != opencv_formatsW.end()) {
@@ -309,7 +250,7 @@ bool check_output_extensionW(std::wstring extension) {
 	}
 	return false;
 }
-#endif
+
 
 std::string generate_output_location(std::string inputFileName, std::string outputFileName, std::string mode, int NRLevel, double scaleRatio) {
 
@@ -430,6 +371,7 @@ std::wstring generate_output_locationW(std::wstring inputFileName, std::wstring 
 	return outputFileName;
 }
 #endif
+
 
 void convert_file(ConvInfo info, fs::path inputName, fs::path output) {
 	//std::cout << "Operating on: " << fs::absolute(inputName).string() << std::endl;
@@ -598,6 +540,7 @@ void debug_show_opencv_formats()
 		std::cout << x.first << " -> " << (x.second ? "Yes" : "No") << std::endl ;
 	}
 }
+
 
 //CommandLineToArgvA source from: http://alter.org.ua/en/docs/win/args/
 PCHAR* CommandLineToArgvA( PCHAR CmdLine, int* _argc ) {
