@@ -640,6 +640,17 @@ int wmain(void){
 				outputFileName = std::wstring(argv_w[ai+1]);
 			continue;
 		}
+		else if ((wcscmp(argv_w[ai], L"-l") == 0) || (wcscmp(argv_w[ai], L"--list-processor") == 0)) {
+			dump_procs();
+			return 0;
+		}
+		#ifdef HAVE_OPENCV
+		else if ((wcscmp(argv_w[ai], L"--list-opencv-formats") == 0)) {
+			check_opencv_formats();
+			debug_show_opencv_formats();
+			return 0;
+		}
+		#endif
 	}
 	
 	#ifdef HAVE_OPENCV
@@ -890,6 +901,20 @@ int wmain(void){
 #else
 int main(int argc, char** argv) {
 	int ret = 1;
+	
+	for (int ai = 1; ai < argc; ai++) {
+		if ((strcmp(argv[ai], "--list-processor") == 0) || (strcmp(argv[ai], "-l") == 0)) {
+			dump_procs();
+			return 0;
+		}
+		#ifdef HAVE_OPENCV
+		if (strcmp(argv[ai], "--list-opencv-formats") == 0) {
+			check_opencv_formats();
+			debug_show_opencv_formats();
+			return 0;
+		}
+		#endif
+	}
 	
 	#ifdef HAVE_OPENCV
 	check_opencv_formats();
