@@ -18,6 +18,7 @@
 #include <deque>
 #include <map>
 #include <stdio.h>
+#include <stdlib.h>
 #include <experimental/filesystem>
 #include <algorithm>
 
@@ -555,7 +556,7 @@ char** CommandLineToArgvA( char* CmdLine, int* _argc ) {
 	bool  in_SPACE;
 	len = strlen(CmdLine);
 	i = ((len+2)/2)*sizeof(void*) + sizeof(void*);
-	argv = (char**)GlobalAlloc(GMEM_FIXED, i + (len+2)*sizeof(char));
+	argv = (char**)malloc(i + (len+2)*sizeof(char));
 	_argv = (char*)(((unsigned char*)argv)+i);
 	argc = 0;
 	argv[argc] = _argv;
@@ -621,7 +622,7 @@ int wmain(void){
 	int ret = 1;
 	int argc = 0, argc_w = 0;
 	std::wstring inputFileName, outputFileName=L"auto";
-	char* *argv = CommandLineToArgvA(GetCommandLineA(), &argc);
+	char **argv = CommandLineToArgvA(GetCommandLineA(), &argc);
 	LPWSTR *argv_w = CommandLineToArgvW(GetCommandLineW(), &argc_w);
 	HWND hWnd = GetConsoleWindow();
 
@@ -881,7 +882,7 @@ int wmain(void){
 	}
 
 	w2xconv_fini(converter);
-	GlobalFree(argv);
+	free(argv);
 	LocalFree(argv_w);
 	return 0;
 }
