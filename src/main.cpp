@@ -550,24 +550,24 @@ char** CommandLineToArgvA( char* CmdLine, int* _argc ) {
 	int   argc;
 	char   a;
 	size_t   i, j;
-	BOOLEAN  in_QM;
-	BOOLEAN  in_TEXT;
-	BOOLEAN  in_SPACE;
+	bool  in_QM;
+	bool  in_TEXT;
+	bool  in_SPACE;
 	len = strlen(CmdLine);
-	i = ((len+2)/2)*sizeof(PVOID) + sizeof(PVOID);
+	i = ((len+2)/2)*sizeof(void*) + sizeof(void*);
 	argv = (char**)GlobalAlloc(GMEM_FIXED, i + (len+2)*sizeof(char));
 	_argv = (char*)(((unsigned char*)argv)+i);
 	argc = 0;
 	argv[argc] = _argv;
-	in_QM = FALSE;
-	in_TEXT = FALSE;
-	in_SPACE = TRUE;
+	in_QM = false;
+	in_TEXT = false;
+	in_SPACE = true;
 	i = 0;
 	j = 0;
 	while( a = CmdLine[i] ) {
 		if(in_QM) {
 			if(a == '\"') {
-				in_QM = FALSE;
+				in_QM = false;
 			} else {
 				_argv[j] = a;
 				j++;
@@ -575,13 +575,13 @@ char** CommandLineToArgvA( char* CmdLine, int* _argc ) {
 		} else {
 			switch(a) {
 			case '\"':
-				in_QM = TRUE;
-				in_TEXT = TRUE;
+				in_QM = true;
+				in_TEXT = true;
 				if(in_SPACE) {
 					argv[argc] = _argv+j;
 					argc++;
 				}
-				in_SPACE = FALSE;
+				in_SPACE = false;
 				break;
 			case ' ':
 			case '\t':
@@ -591,25 +591,25 @@ char** CommandLineToArgvA( char* CmdLine, int* _argc ) {
 					_argv[j] = '\0';
 					j++;
 				}
-				in_TEXT = FALSE;
-				in_SPACE = TRUE;
+				in_TEXT = false;
+				in_SPACE = true;
 				break;
 			default:
-				in_TEXT = TRUE;
+				in_TEXT = true;
 				if(in_SPACE) {
 					argv[argc] = _argv+j;
 					argc++;
 				}
 				_argv[j] = a;
 				j++;
-				in_SPACE = FALSE;
+				in_SPACE = false;
 				break;
 			}
 		}
 		i++;
 	}
 	_argv[j] = '\0';
-	argv[argc] = NULL;
+	argv[argc] = nullptr;
 	
 	(*_argc) = argc;
 	return argv;
