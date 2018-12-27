@@ -22,6 +22,14 @@
 
 #include <limits.h>
 #include <sstream>
+
+#if defined(WIN32) && defined(UNICODE)
+#include <experimental/filesystem>
+
+namespace fs = std::experimental::filesystem;
+
+#endif
+
 #include "w2xconv.h"
 #include "sec.hpp"
 #include "Buffer.hpp"
@@ -509,10 +517,11 @@ setPathError(W2XConv *conv,
              enum W2XConvErrorCode code,
              std::wstring const &path)
 {
+	fs::path fspath = path;
 	clearError(conv);
 
 	conv->last_error.code = code;
-	conv->last_error.u.path = strdup(to_mbs(path).c_str());
+	conv->last_error.u.path = strdup(fspath.string().c_str());
 }
 #endif
 
