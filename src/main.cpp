@@ -542,6 +542,7 @@ void debug_show_opencv_formats()
 	}
 }
 
+#if defined(WIN32) && defined(UNICODE)
 
 //CommandLineToArgvA source from: http://alter.org.ua/en/docs/win/args/
 char** CommandLineToArgvA( char* CmdLine, int* _argc ) {
@@ -617,7 +618,6 @@ char** CommandLineToArgvA( char* CmdLine, int* _argc ) {
 	}
 
 
-#if defined(WIN32) && defined(UNICODE)
 int wmain(void){
 	int ret = 1;
 	int argc = 0, argc_w = 0;
