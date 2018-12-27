@@ -42,4 +42,3 @@ runtest
 *.isa
 *.il
 .gdbinit
-*.bat
