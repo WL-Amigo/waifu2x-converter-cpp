@@ -543,20 +543,20 @@ void debug_show_opencv_formats()
 
 
 //CommandLineToArgvA source from: http://alter.org.ua/en/docs/win/args/
-PCHAR* CommandLineToArgvA( PCHAR CmdLine, int* _argc ) {
-	PCHAR* argv;
-	PCHAR  _argv;
+char** CommandLineToArgvA( char* CmdLine, int* _argc ) {
+	char** argv;
+	char*  _argv;
 	size_t   len;
 	int   argc;
-	CHAR   a;
+	char   a;
 	size_t   i, j;
 	BOOLEAN  in_QM;
 	BOOLEAN  in_TEXT;
 	BOOLEAN  in_SPACE;
 	len = strlen(CmdLine);
 	i = ((len+2)/2)*sizeof(PVOID) + sizeof(PVOID);
-	argv = (PCHAR*)GlobalAlloc(GMEM_FIXED, i + (len+2)*sizeof(CHAR));
-	_argv = (PCHAR)(((PUCHAR)argv)+i);
+	argv = (char**)GlobalAlloc(GMEM_FIXED, i + (len+2)*sizeof(char));
+	_argv = (char*)(((unsigned char*)argv)+i);
 	argc = 0;
 	argv[argc] = _argv;
 	in_QM = FALSE;
@@ -621,7 +621,7 @@ int wmain(void){
 	int ret = 1;
 	int argc = 0, argc_w = 0;
 	std::wstring inputFileName, outputFileName=L"auto";
-	PCHAR *argv = CommandLineToArgvA(GetCommandLineA(), &argc);
+	char* *argv = CommandLineToArgvA(GetCommandLineA(), &argc);
 	LPWSTR *argv_w = CommandLineToArgvW(GetCommandLineW(), &argc_w);
 	HWND hWnd = GetConsoleWindow();
 
