@@ -3,7 +3,7 @@
 *   (ここにファイルの簡易説明を記入)
 *
 *  Created on: 2015/05/24
-*      Author: wlamigo
+*	  Author: wlamigo
 *
 *   (ここにファイルの説明を記入)
 */
@@ -44,11 +44,11 @@
 
 class CustomFailOutput : public TCLAP::StdOutput {
 public:
-    virtual void failure( TCLAP::CmdLineInterface& _cmd, TCLAP::ArgException& e ) override {
+	virtual void failure( TCLAP::CmdLineInterface& _cmd, TCLAP::ArgException& e ) override {
 		std::string progName = _cmd.getProgramName();
 
 		std::cerr << "PARSE ERROR: " << e.argId() << std::endl
-				  << "             " << e.error() << std::endl << std::endl;
+				  << "			 " << e.error() << std::endl << std::endl;
 
 		if ( _cmd.hasHelpAndVersion() )
 			{
@@ -66,31 +66,21 @@ public:
 			usage(_cmd);
 
 		throw TCLAP::ExitException(1);
-    }
+	}
 };
 
 
 namespace fs = std::experimental::filesystem;
 
-struct convInfo {
+struct ConvInfo {
 	std::string mode;
 	int NRLevel;
 	double scaleRatio;
 	int blockSize;
 	W2XConv* converter;
-	convInfo(std::string mode, int NRLevel, double scaleRatio, int blockSize, W2XConv* converter) :mode(mode), NRLevel(NRLevel), scaleRatio(scaleRatio), blockSize(blockSize), converter(converter) {};
+	ConvInfo(std::string mode, int NRLevel, double scaleRatio, int blockSize, W2XConv* converter) :mode(mode), NRLevel(NRLevel), scaleRatio(scaleRatio), blockSize(blockSize), converter(converter) {};
 };
 
-#if defined(WIN32) && defined(UNICODE)
-struct convInfoW {
-	std::wstring mode;
-	int NRLevel;
-	double scaleRatio;
-	int blockSize;
-	W2XConv* converter;
-	convInfoW(std::wstring mode, int NRLevel, double scaleRatio, int blockSize, W2XConv* converter) :mode(mode), NRLevel(NRLevel), scaleRatio(scaleRatio), blockSize(blockSize), converter(converter) {};
-};
-#endif
 
 static void
 dump_procs()
@@ -174,13 +164,27 @@ std::wstring ReplaceStringW(std::wstring subject, const std::wstring& search, co
 }
 #endif
 
+#if defined(WIN32) && defined(UNICODE)
+std::wstring to_wcs(std::string str){
+	std::wstring result;
+	result.assign(str.begin(), str.end());
+	return result;
+}
+
+std::string to_mbs(std::wstring str){
+	std::string result;
+	result.assign(str.begin(), str.end());
+	return result;
+}
+#endif
+
 std::string basename(const std::string& str) {
 	size_t found = str.find_last_of("/\\");
 	return str.substr(found + 1);
 }
 
 #if defined(WIN32) && defined(UNICODE)
-std::wstring basenameW(const std::wstring& str) {
+std::wstring basename(const std::wstring& str) {
 	size_t found = str.find_last_of(L"/\\");
 	return str.substr(found + 1);
 }
@@ -189,13 +193,13 @@ std::wstring basenameW(const std::wstring& str) {
 
 std::string trim(const std::string& str)
 {
-    size_t first = str.find_first_not_of(' ');
-    if (std::string::npos == first)
-    {
-        return str;
-    }
-    size_t last = str.find_last_not_of(' ');
-    return str.substr(first, (last - first + 1));
+	size_t first = str.find_first_not_of(' ');
+	if (std::string::npos == first)
+	{
+		return str;
+	}
+	size_t last = str.find_last_not_of(' ');
+	return str.substr(first, (last - first + 1));
 }
 
 
@@ -367,7 +371,7 @@ std::string generate_output_location(std::string inputFileName, std::string outp
 }
 
 #if defined(WIN32) && defined(UNICODE)
-std::wstring generate_output_locationW(std::wstring inputFileName, std::wstring outputFileName, std::wstring mode, int NRLevel, double scaleRatio) {
+std::wstring generate_output_locationW(std::wstring inputFileName, std::wstring outputFileName, std::string mode, int NRLevel, double scaleRatio) {
 
 	size_t lastSlashPos = outputFileName.find_last_of(L"/\\");
 	size_t lastDotPos = outputFileName.find_last_of(L'.');
@@ -377,15 +381,15 @@ std::wstring generate_output_locationW(std::wstring inputFileName, std::wstring 
 		size_t tailDot = outputFileName.find_last_of(L'.');
 		if (tailDot != std::wstring::npos)
 			outputFileName.erase(tailDot, outputFileName.length());
-		outputFileName = outputFileName + L"_[" + ReplaceStringW(mode, L"noise_scale", L"NS");
+		outputFileName = outputFileName + L"_[" + to_wcs(ReplaceString(mode, "noise_scale", "NS"));
 		//std::wstring &mode = mode;
-		if (mode.find(L"noise") != mode.npos) {
+		if (mode.find("noise") != mode.npos) {
 			outputFileName = outputFileName + L"-L" + std::to_wstring(NRLevel) + L"]";
 		}
 		else
 			outputFileName = outputFileName + L"]";
 		
-		if (mode.find(L"scale") != mode.npos) {
+		if (mode.find("scale") != mode.npos) {
 			outputFileName = outputFileName + L"[x" + std::to_wstring(scaleRatio) + L"]";
 		}
 		outputFileName += L".png";
@@ -405,7 +409,7 @@ std::wstring generate_output_locationW(std::wstring inputFileName, std::wstring 
 			tmp.erase(0, lastSlash);
 		}
 
-		outputFileName += basenameW(tmp);
+		outputFileName += basename(tmp);
 	}
 	else if (lastDotPos == std::wstring::npos || lastSlashPos != std::wstring::npos && lastDotPos < lastSlashPos) {
 		//e.g. ./test.d/out needs to be changed to ./test.d/out.png
@@ -427,7 +431,7 @@ std::wstring generate_output_locationW(std::wstring inputFileName, std::wstring 
 }
 #endif
 
-void convert_file(convInfo info, fs::path inputName, fs::path output) {
+void convert_file(ConvInfo info, fs::path inputName, fs::path output) {
 	//std::cout << "Operating on: " << fs::absolute(inputName).string() << std::endl;
 	std::string outputName = generate_output_location(fs::absolute(inputName).string(), output.string(), info.mode, info.NRLevel, info.scaleRatio);
 
@@ -452,18 +456,18 @@ void convert_file(convInfo info, fs::path inputName, fs::path output) {
 }
 
 #if defined(WIN32) && defined(UNICODE)
-void convert_fileW(convInfoW info, fs::path inputName, fs::path output) {
+void convert_fileW(ConvInfo info, fs::path inputName, fs::path output) {
 	//std::cout << "Operating on: " << fs::absolute(inputName).string() << std::endl;
 	std::wstring outputName = generate_output_locationW(fs::absolute(inputName).wstring(), output.wstring(), info.mode, info.NRLevel, info.scaleRatio);
 
 	int _nrLevel = -1;
 
-	if (wcscmp(info.mode.c_str(), L"noise")==0 || wcscmp(info.mode.c_str(), L"noise_scale")==0) {
+	if (strcmp(info.mode.c_str(), "noise")==0 || strcmp(info.mode.c_str(), "noise_scale")==0) {
 		_nrLevel = info.NRLevel;
 	}
 
 	double _scaleRatio = 1;
-	if (wcscmp(info.mode.c_str(), L"scale")==0 || wcscmp(info.mode.c_str(), L"noise_scale")==0) {
+	if (strcmp(info.mode.c_str(), "scale")==0 || strcmp(info.mode.c_str(), "noise_scale")==0) {
 		_scaleRatio = info.scaleRatio;
 	}
 
@@ -595,71 +599,230 @@ void debug_show_opencv_formats()
 	}
 }
 
+//CommandLineToArgvA source from: http://alter.org.ua/en/docs/win/args/
+PCHAR* CommandLineToArgvA( PCHAR CmdLine, int* _argc ) {
+	PCHAR* argv;
+	PCHAR  _argv;
+	size_t   len;
+	int   argc;
+	CHAR   a;
+	size_t   i, j;
+	BOOLEAN  in_QM;
+	BOOLEAN  in_TEXT;
+	BOOLEAN  in_SPACE;
+	len = strlen(CmdLine);
+	i = ((len+2)/2)*sizeof(PVOID) + sizeof(PVOID);
+	argv = (PCHAR*)GlobalAlloc(GMEM_FIXED, i + (len+2)*sizeof(CHAR));
+	_argv = (PCHAR)(((PUCHAR)argv)+i);
+	argc = 0;
+	argv[argc] = _argv;
+	in_QM = FALSE;
+	in_TEXT = FALSE;
+	in_SPACE = TRUE;
+	i = 0;
+	j = 0;
+	while( a = CmdLine[i] ) {
+		if(in_QM) {
+			if(a == '\"') {
+				in_QM = FALSE;
+			} else {
+				_argv[j] = a;
+				j++;
+			}
+		} else {
+			switch(a) {
+			case '\"':
+				in_QM = TRUE;
+				in_TEXT = TRUE;
+				if(in_SPACE) {
+					argv[argc] = _argv+j;
+					argc++;
+				}
+				in_SPACE = FALSE;
+				break;
+			case ' ':
+			case '\t':
+			case '\n':
+			case '\r':
+				if(in_TEXT) {
+					_argv[j] = '\0';
+					j++;
+				}
+				in_TEXT = FALSE;
+				in_SPACE = TRUE;
+				break;
+			default:
+				in_TEXT = TRUE;
+				if(in_SPACE) {
+					argv[argc] = _argv+j;
+					argc++;
+				}
+				_argv[j] = a;
+				j++;
+				in_SPACE = FALSE;
+				break;
+			}
+		}
+		i++;
+	}
+	_argv[j] = '\0';
+	argv[argc] = NULL;
+	
+	(*_argc) = argc;
+	return argv;
+	}
+
+
 #if defined(WIN32) && defined(UNICODE)
 int wmain(void){
-	int argc = 0;
-	std::wstring inputFileName, outputFileName;
-	LPWSTR *argv = CommandLineToArgvW(GetCommandLine(), &argc);
+	int ret = 1;
+	int argc = 0, argc_w = 0;
+	std::wstring inputFileName, outputFileName=L"auto";
+	PCHAR *argv = CommandLineToArgvA(GetCommandLineA(), &argc);
+	LPWSTR *argv_w = CommandLineToArgvW(GetCommandLineW(), &argc_w);
 	HWND hWnd = GetConsoleWindow();
 
 	//Switch the Console to UTF-16 mode
 	//_setmode(_fileno(stdout), _O_U16TEXT);
 	
-	std::wcout << L"Argument Count: " << argc << std::endl;
-	
-	for (int i = 0; i < argc; i++)
-		std::wcout << L"argv[" << i << L"]: " << argv[i] << std::endl;
-	
-	int ret = 1;
-	
-	if( argc >= 2 ){
-		inputFileName = std::wstring(argv[1]);
-		
-		if( argc >= 3 )
-			outputFileName = std::wstring(argv[2]);
-		else {
-			size_t tailDot = inputFileName.find_last_of(L'.');
-			outputFileName = inputFileName;
-			outputFileName.erase(tailDot, outputFileName.length());
-			outputFileName = outputFileName + L"_waifu2x";
-			outputFileName += L".png";
+	for (int ai = 1; ai < argc_w; ai++) {
+		if ((wcscmp(argv_w[ai], L"-i") == 0) || (wcscmp(argv_w[ai], L"-input") == 0)) {
+			if( ai+1 < argc_w )
+				inputFileName = std::wstring(argv_w[ai+1]);
+			continue;
+		}
+		else if ((wcscmp(argv_w[ai], L"-o") == 0) || (wcscmp(argv_w[ai], L"-output") == 0)) {
+			if( ai+1 < argc_w )
+				outputFileName = std::wstring(argv_w[ai+1]);
+			continue;
 		}
 	}
-	for (int ai = 1; ai < argc; ai++) {
-		if ((wcscmp(argv[ai], L"--list-processor") == 0) || (wcscmp(argv[ai], L"-l") == 0)) {
-			dump_procs();
-			return 0;
-		}
-		#ifdef HAVE_OPENCV
-		if (wcscmp(argv[ai], L"--list-opencv-formats") == 0) {
-			check_opencv_formats();
-			debug_show_opencv_formats();
-			return 0;
-		}
-		#endif
-	}
-	
-	printf("dd\n");
 	
 	#ifdef HAVE_OPENCV
 	check_opencv_formats();
 	#endif
+	
+	// definition of command line arguments
+	TCLAP::CmdLine cmd("waifu2x OpenCV Fork - https://github.com/DeadSix27/waifu2x-converter-cpp", ' ', _VERSION, true);
+	cmd.setOutput(new CustomFailOutput());
 
+	TCLAP::ValueArg<std::string> cmdInput("i", "input",
+		"path to input image file or directory (you should use the full path)", true, "",
+		"string", cmd);
+
+	TCLAP::ValueArg<std::string> cmdOutput("o", "output",
+		"path to output image file or directory  (you should use the full path)", false,
+		"auto", "string", cmd);
+
+	TCLAP::ValueArg<bool> cmdRecursiveDirectoryIterator("r", "recursive_directory",
+		"Search recursively through directories to find more images to process. \n If this is set to 0 it will only check in the directory specified if the input is a directory instead of an image. \n You mustn't supply this argument with something other than 0 or 1.", false,
+		0, "bool", cmd);
+
+
+	TCLAP::SwitchArg cmdQuiet("q", "quiet", "Enable quiet mode.", cmd, false);
+
+	std::vector<std::string> cmdModeConstraintV;
+	cmdModeConstraintV.push_back("noise");
+	cmdModeConstraintV.push_back("scale");
+	cmdModeConstraintV.push_back("noise_scale");
+	TCLAP::ValuesConstraint<std::string> cmdModeConstraint(cmdModeConstraintV);
+	TCLAP::ValueArg<std::string> cmdMode("m", "mode", "image processing mode",
+		false, "noise_scale", &cmdModeConstraint, cmd);
+
+	std::vector<int> cmdNRLConstraintV;
+	cmdNRLConstraintV.push_back(0);
+	cmdNRLConstraintV.push_back(1);
+	cmdNRLConstraintV.push_back(2);
+	cmdNRLConstraintV.push_back(3);
+	TCLAP::ValuesConstraint<int> cmdNRLConstraint(cmdNRLConstraintV);
+	TCLAP::ValueArg<int> cmdNRLevel("", "noise_level", "noise reduction level",
+		false, 1, &cmdNRLConstraint, cmd);
+
+	TCLAP::ValueArg<double> cmdScaleRatio("", "scale_ratio",
+		"custom scale ratio", false, 2.0, "double", cmd);
+
+	TCLAP::ValueArg<std::string> cmdModelPath("", "model_dir",
+		"path to custom model directory (don't append last / )", false,
+		DEFAULT_MODELS_DIRECTORY, "string", cmd);
+
+	TCLAP::ValueArg<int> cmdNumberOfJobs("j", "jobs",
+		"number of threads launching at the same time", false, 0, "integer",
+		cmd);
+
+	TCLAP::ValueArg<int> cmdTargetProcessor("p", "processor",
+		"set target processor", false, -1, "integer",
+		cmd);
+
+	TCLAP::SwitchArg cmdForceOpenCL("", "force-OpenCL",
+		"force to use OpenCL on Intel Platform",
+		cmd, false);
+
+	TCLAP::SwitchArg cmdDisableGPU("", "disable-gpu", "disable GPU", cmd, false);
+
+	TCLAP::ValueArg<int> cmdBlockSize("", "block_size", "block size",
+		false, 0, "integer", cmd);
+	TCLAP::SwitchArg cmdListProcessor("l", "list-processor", "dump processor list", cmd, false);
+	
+	#ifdef HAVE_OPENCV
+	TCLAP::SwitchArg showOpenCVFormats("", "list-opencv-formats", "dump opencv supported format list", cmd, false);
+	#endif
+
+	// definition of command line argument : end
+
+	// parse command line arguments
+	try {
+		cmd.parse(argc, argv);
+	}
+	catch (std::exception &e) {
+		std::cerr << e.what() << std::endl;
+		std::cerr << "Error : cmd.parse() threw exception" << std::endl;
+		std::exit(-1);
+	}
+	
+	//We need to do this conversion because using a TCLAP::ValueArg<fs::path> can not handle spaces.
 	fs::path input = inputFileName;
-	fs::path output = outputFileName;
+	std::wstring tmpOutput = outputFileName;
+	if (fs::is_directory(input) && (tmpOutput.back() != L'/') && wcscmp(tmpOutput.c_str(), L"auto")!=0) {
+		tmpOutput += L"/";
+	}
+	fs::path output = tmpOutput;
+
+
+	if (cmdListProcessor.getValue()) {
+		dump_procs();
+		return 0;
+	}
+	
+	#ifdef HAVE_OPENCV
+	if (showOpenCVFormats.getValue()) {
+		debug_show_opencv_formats();
+		return 0;
+	}
+	#endif
 	
 	enum W2XConvGPUMode gpu = W2XCONV_GPU_AUTO;
-	
+
+	if (cmdDisableGPU.getValue()) {
+		gpu = W2XCONV_GPU_DISABLE;
+	}
+	else if (cmdForceOpenCL.getValue()) {
+		gpu = W2XCONV_GPU_FORCE_OPENCL;
+	}
+
 	W2XConv *converter;
 	size_t num_proc;
-	
 	w2xconv_get_processor_list(&num_proc);
-	
-	converter = w2xconv_init(gpu, 0, false);
+	int proc = cmdTargetProcessor.getValue();
+	bool verbose = !cmdQuiet.getValue();
 
-	convInfoW convInfoW( L"noise_scale", 1, 1.6, 0, converter);
-	
-	printf("dds\n");
+	if (proc != -1 && proc < num_proc) {
+		converter = w2xconv_init_with_processor(proc, cmdNumberOfJobs.getValue(), verbose);
+	}
+	else {
+		converter = w2xconv_init(gpu, cmdNumberOfJobs.getValue(), verbose);
+	}
+
+	ConvInfo convInfo(cmdMode.getValue(), cmdNRLevel.getValue(), cmdScaleRatio.getValue(), cmdBlockSize.getValue(), converter);
 	
 	double time_start = getsec();
 
@@ -680,20 +843,81 @@ int wmain(void){
 		break;
 	}
 
-	int error = w2xconv_load_models(converter, "models_rgb");
+	bool recursive_directory_iterator = cmdRecursiveDirectoryIterator.getValue();
+	int error = w2xconv_load_models(converter, cmdModelPath.getValue().c_str());
 	check_for_errors(converter, error);
 
 	//This includes errored files.
 	int numFilesProcessed = 0;
 	int numErrors = 0;
 	
-	numFilesProcessed++;
-	try {
-		convert_fileW(convInfoW, input, output);
+	if (fs::is_directory(input) == true) {
+		//Build files list
+		std::deque<fs::path> files_list;
+		std::cout << "We're going to be operating in a directory. dir:" << fs::absolute(input) << std::endl;
+		if (recursive_directory_iterator) {
+			for (auto & inputFile : fs::recursive_directory_iterator(input)) {
+				if (!fs::is_directory(inputFile)) {
+					files_list.push_back(inputFile);
+				}
+			}
+		}
+		else {
+			for (auto & inputFile : fs::directory_iterator(input)) {
+				if (!fs::is_directory(inputFile)) {
+					files_list.push_back(inputFile);
+				}
+			}
+		}
+
+		//Proceed by list
+		double timeAvg = 0.0;
+		int files_count = static_cast<int>(files_list.size());
+		for (auto &fn : files_list) {
+			++numFilesProcessed;
+			double time_file_start = getsec();
+
+			std::cout << "[" << numFilesProcessed << "/" << files_count << "] " << fn.filename() << (verbose ? "\n" : " Ok. ");
+
+			try {
+				convert_fileW(convInfo, fn, output);
+			}
+			catch (const std::exception& e) {
+				numErrors++;
+				std::cout << e.what() << std::endl;
+			}
+
+			//Calculate and out elapsed time
+			double time_end = getsec();
+			double time_file = time_end - time_file_start;
+			double time_all = time_end - time_start;
+			if (timeAvg > 0.0)
+				timeAvg = time_all / numFilesProcessed;
+			else
+				timeAvg = time_all;
+			double elapsed = files_count * timeAvg - time_all;
+			int el_h = (int) elapsed / (60 * 60);
+			int el_m = (int) (elapsed - el_h * 60 * 60) / 60;
+			int el_s = (int) (elapsed - el_h * 60 * 60 - el_m * 60);
+			std::cout << "Elapsed: ";
+			if (el_h)
+				std::cout << el_h << "h";
+			if (el_m)
+				std::cout << el_m << "m";
+			std::cout << el_s << "s file: " << time_file << "s avg: " << timeAvg << "s" << std::endl;
+		}
+
+
 	}
-	catch (const std::exception& e) {
-		numErrors++;
-		std::cout << e.what() << std::endl;
+	else {
+		numFilesProcessed++;
+		try {
+			convert_fileW(convInfo, input, output);
+		}
+		catch (const std::exception& e) {
+			numErrors++;
+			std::cout << e.what() << std::endl;
+		}
 	}
 	
 
@@ -714,26 +938,15 @@ int wmain(void){
 	}
 
 	w2xconv_fini(converter);
-
+	GlobalFree(argv);
+	LocalFree(argv_w);
 	return 0;
 }
 
 #else
 int main(int argc, char** argv) {
 	int ret = 1;
-	for (int ai = 1; ai < argc; ai++) {
-		if ((strcmp(argv[ai], "--list-processor") == 0) || (strcmp(argv[ai], "-l") == 0)) {
-			dump_procs();
-			return 0;
-		}
-		#ifdef HAVE_OPENCV
-		if (strcmp(argv[ai], "--list-opencv-formats") == 0) {
-			check_opencv_formats();
-			debug_show_opencv_formats();
-			return 0;
-		}
-		#endif
-	}
+	
 	#ifdef HAVE_OPENCV
 	check_opencv_formats();
 	#endif
@@ -826,11 +1039,13 @@ int main(int argc, char** argv) {
 
 	if (cmdListProcessor.getValue()) {
 		dump_procs();
+		return 0;
 	}
 	
 	#ifdef HAVE_OPENCV
 	if (showOpenCVFormats.getValue()) {
 		debug_show_opencv_formats();
+		return 0;
 	}
 	#endif
 	
@@ -856,7 +1071,7 @@ int main(int argc, char** argv) {
 		converter = w2xconv_init(gpu, cmdNumberOfJobs.getValue(), verbose);
 	}
 
-	convInfo convInfo(cmdMode.getValue(), cmdNRLevel.getValue(), cmdScaleRatio.getValue(), cmdBlockSize.getValue(), converter);
+	ConvInfo convInfo(cmdMode.getValue(), cmdNRLevel.getValue(), cmdScaleRatio.getValue(), cmdBlockSize.getValue(), converter);
 
 	double time_start = getsec();
 
