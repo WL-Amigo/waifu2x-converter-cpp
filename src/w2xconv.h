@@ -5,6 +5,11 @@
 #include <stdio.h>
 #include <stdbool.h>
 
+#if defined(WIN32) && defined(UNICODE)
+#include <Windows.h>
+#include "wcsfunc.hpp"
+#endif
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -16,11 +21,6 @@ extern "C" {
 #else
 #define W2XCONV_EXPORT __declspec(dllimport)
 #endif
-
-#ifdef UNICODE
-#include <Windows.h>
-#endif
-
 
 #else
 

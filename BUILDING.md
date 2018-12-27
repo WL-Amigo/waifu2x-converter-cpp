@@ -38,6 +38,10 @@ https://github.com/DeadSix27/waifu2x-converter-cpp/releases
 
 Install both SDK's as shown above, but later add "-DFORCE_DUAL=ON" to the cmake command.
 
+#### Building with UNICODE support:
+
+Add "-DBUILD_UNICODE=ON" to the cmake command.
+
 ### Building:
 ##### We will be using `K:/w2x` as our base folder for this guide.
 ##### If you want to build for both GPU brands, just install both SDKs (see above).

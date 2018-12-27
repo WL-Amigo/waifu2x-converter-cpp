@@ -18,10 +18,12 @@
 #include <deque>
 #include <map>
 #include <stdio.h>
-#include "tclap/CmdLine.h"
-#include "sec.hpp"
+#include <stdlib.h>
 #include <experimental/filesystem>
 #include <algorithm>
+
+#include "tclap/CmdLine.h"
+#include "sec.hpp"
 
 #if defined(WIN32) && defined(UNICODE)
 #include <Windows.h>
@@ -31,6 +33,7 @@
 #endif
 
 #include "w2xconv.h"
+#include "wcsfunc.hpp"
 
 #ifndef DEFAULT_MODELS_DIRECTORY
 #define DEFAULT_MODELS_DIRECTORY "models_rgb"
@@ -144,65 +147,6 @@ void check_for_errors(W2XConv* converter, int error) {
 }
 
 
-std::string ReplaceString(std::string subject, const std::string& search, const std::string& replace) {
-	size_t pos = 0;
-	while ((pos = subject.find(search, pos)) != std::string::npos) {
-		subject.replace(pos, search.length(), replace);
-		pos += replace.length();
-	}
-	return subject;
-}
-
-#if defined(WIN32) && defined(UNICODE)
-std::wstring ReplaceStringW(std::wstring subject, const std::wstring& search, const std::wstring& replace) {
-	size_t pos = 0;
-	while ((pos = subject.find(search, pos)) != std::wstring::npos) {
-		subject.replace(pos, search.length(), replace);
-		pos += replace.length();
-	}
-	return subject;
-}
-#endif
-
-#if defined(WIN32) && defined(UNICODE)
-std::wstring to_wcs(std::string str){
-	std::wstring result;
-	result.assign(str.begin(), str.end());
-	return result;
-}
-
-std::string to_mbs(std::wstring str){
-	std::string result;
-	result.assign(str.begin(), str.end());
-	return result;
-}
-#endif
-
-std::string basename(const std::string& str) {
-	size_t found = str.find_last_of("/\\");
-	return str.substr(found + 1);
-}
-
-#if defined(WIN32) && defined(UNICODE)
-std::wstring basename(const std::wstring& str) {
-	size_t found = str.find_last_of(L"/\\");
-	return str.substr(found + 1);
-}
-
-#endif
-
-std::string trim(const std::string& str)
-{
-	size_t first = str.find_first_not_of(' ');
-	if (std::string::npos == first)
-	{
-		return str;
-	}
-	size_t last = str.find_last_not_of(' ');
-	return str.substr(first, (last - first + 1));
-}
-
-
 std::map<std::string,bool> opencv_formats = {
 	// Windows Bitmaps
 	{"BMP",  false},
@@ -245,7 +189,6 @@ std::map<std::string,bool> opencv_formats = {
 	{"PIC", false}
 };
 
-#if defined(WIN32) && defined(UNICODE)
 std::map<std::wstring,bool> opencv_formatsW = {
 	// Windows Bitmaps
 	{L"BMP",  false},
@@ -287,7 +230,7 @@ std::map<std::wstring,bool> opencv_formatsW = {
 	{L"HDR", false},
 	{L"PIC", false}
 };
-#endif
+
 
 bool check_output_extension(std::string extension) {
 	for(std::string::iterator it = extension.begin(); it != extension.end(); ++it){
@@ -300,8 +243,7 @@ bool check_output_extension(std::string extension) {
 	return false;
 }
 
-#if defined(WIN32) && defined(UNICODE)
-bool check_output_extensionW(std::wstring extension) {
+bool check_output_extension(std::wstring extension) {
 	std::transform(extension.begin(), extension.end(), extension.begin(), ::toupper);
 	auto index = opencv_formatsW.find(extension);
 	if (index != opencv_formatsW.end()) {
@@ -309,7 +251,7 @@ bool check_output_extensionW(std::wstring extension) {
 	}
 	return false;
 }
-#endif
+
 
 std::string generate_output_location(std::string inputFileName, std::string outputFileName, std::string mode, int NRLevel, double scaleRatio) {
 
@@ -371,7 +313,7 @@ std::string generate_output_location(std::string inputFileName, std::string outp
 }
 
 #if defined(WIN32) && defined(UNICODE)
-std::wstring generate_output_locationW(std::wstring inputFileName, std::wstring outputFileName, std::string mode, int NRLevel, double scaleRatio) {
+std::wstring generate_output_location(std::wstring inputFileName, std::wstring outputFileName, std::string mode, int NRLevel, double scaleRatio) {
 
 	size_t lastSlashPos = outputFileName.find_last_of(L"/\\");
 	size_t lastDotPos = outputFileName.find_last_of(L'.');
@@ -402,7 +344,7 @@ std::wstring generate_output_locationW(std::wstring inputFileName, std::wstring 
 		//We pass tmp into generate_output_location because we will use the default way of naming processed files.
 		//We will remove everything, in the tmp string, prior to the last slash to get the filename.
 		//This removes all contextual information about where a file originated from if "recursive_directory" was enabled.
-		std::wstring tmp = generate_output_locationW(inputFileName, L"auto", mode, NRLevel, scaleRatio);
+		std::wstring tmp = generate_output_location(inputFileName, L"auto", mode, NRLevel, scaleRatio);
 		//tmp = full formatted output file path
 		size_t lastSlash = tmp.find_last_of(L'/');
 		if (lastSlash != std::wstring::npos){
@@ -419,7 +361,7 @@ std::wstring generate_output_locationW(std::wstring inputFileName, std::wstring 
 		//We may have a regular output file here or something went wrong.
 		//outputFileName is already what it should be thus nothing needs to be done.
 		#ifdef HAVE_OPENCV
-		if(check_output_extensionW(outputFileName.substr(lastDotPos+1))==false){
+		if(check_output_extension(outputFileName.substr(lastDotPos+1))==false){
 			throw std::runtime_error("Unsupported output extension.");
 		}
 		#endif
@@ -430,6 +372,7 @@ std::wstring generate_output_locationW(std::wstring inputFileName, std::wstring 
 	return outputFileName;
 }
 #endif
+
 
 void convert_file(ConvInfo info, fs::path inputName, fs::path output) {
 	//std::cout << "Operating on: " << fs::absolute(inputName).string() << std::endl;
@@ -458,7 +401,7 @@ void convert_file(ConvInfo info, fs::path inputName, fs::path output) {
 #if defined(WIN32) && defined(UNICODE)
 void convert_fileW(ConvInfo info, fs::path inputName, fs::path output) {
 	//std::cout << "Operating on: " << fs::absolute(inputName).string() << std::endl;
-	std::wstring outputName = generate_output_locationW(fs::absolute(inputName).wstring(), output.wstring(), info.mode, info.NRLevel, info.scaleRatio);
+	std::wstring outputName = generate_output_location(fs::absolute(inputName).wstring(), output.wstring(), info.mode, info.NRLevel, info.scaleRatio);
 
 	int _nrLevel = -1;
 
@@ -599,32 +542,34 @@ void debug_show_opencv_formats()
 	}
 }
 
+#if defined(WIN32) && defined(UNICODE)
+
 //CommandLineToArgvA source from: http://alter.org.ua/en/docs/win/args/
-PCHAR* CommandLineToArgvA( PCHAR CmdLine, int* _argc ) {
-	PCHAR* argv;
-	PCHAR  _argv;
+char** CommandLineToArgvA( char* CmdLine, int* _argc ) {
+	char** argv;
+	char*  _argv;
 	size_t   len;
 	int   argc;
-	CHAR   a;
+	char   a;
 	size_t   i, j;
-	BOOLEAN  in_QM;
-	BOOLEAN  in_TEXT;
-	BOOLEAN  in_SPACE;
+	bool  in_QM;
+	bool  in_TEXT;
+	bool  in_SPACE;
 	len = strlen(CmdLine);
-	i = ((len+2)/2)*sizeof(PVOID) + sizeof(PVOID);
-	argv = (PCHAR*)GlobalAlloc(GMEM_FIXED, i + (len+2)*sizeof(CHAR));
-	_argv = (PCHAR)(((PUCHAR)argv)+i);
+	i = ((len+2)/2)*sizeof(void*) + sizeof(void*);
+	argv = (char**)malloc(i + (len+2)*sizeof(char));
+	_argv = (char*)(((unsigned char*)argv)+i);
 	argc = 0;
 	argv[argc] = _argv;
-	in_QM = FALSE;
-	in_TEXT = FALSE;
-	in_SPACE = TRUE;
+	in_QM = false;
+	in_TEXT = false;
+	in_SPACE = true;
 	i = 0;
 	j = 0;
 	while( a = CmdLine[i] ) {
 		if(in_QM) {
 			if(a == '\"') {
-				in_QM = FALSE;
+				in_QM = false;
 			} else {
 				_argv[j] = a;
 				j++;
@@ -632,13 +577,13 @@ PCHAR* CommandLineToArgvA( PCHAR CmdLine, int* _argc ) {
 		} else {
 			switch(a) {
 			case '\"':
-				in_QM = TRUE;
-				in_TEXT = TRUE;
+				in_QM = true;
+				in_TEXT = true;
 				if(in_SPACE) {
 					argv[argc] = _argv+j;
 					argc++;
 				}
-				in_SPACE = FALSE;
+				in_SPACE = false;
 				break;
 			case ' ':
 			case '\t':
@@ -648,37 +593,36 @@ PCHAR* CommandLineToArgvA( PCHAR CmdLine, int* _argc ) {
 					_argv[j] = '\0';
 					j++;
 				}
-				in_TEXT = FALSE;
-				in_SPACE = TRUE;
+				in_TEXT = false;
+				in_SPACE = true;
 				break;
 			default:
-				in_TEXT = TRUE;
+				in_TEXT = true;
 				if(in_SPACE) {
 					argv[argc] = _argv+j;
 					argc++;
 				}
 				_argv[j] = a;
 				j++;
-				in_SPACE = FALSE;
+				in_SPACE = false;
 				break;
 			}
 		}
 		i++;
 	}
 	_argv[j] = '\0';
-	argv[argc] = NULL;
+	argv[argc] = nullptr;
 	
 	(*_argc) = argc;
 	return argv;
 	}
 
 
-#if defined(WIN32) && defined(UNICODE)
 int wmain(void){
 	int ret = 1;
 	int argc = 0, argc_w = 0;
 	std::wstring inputFileName, outputFileName=L"auto";
-	PCHAR *argv = CommandLineToArgvA(GetCommandLineA(), &argc);
+	char **argv = CommandLineToArgvA(GetCommandLineA(), &argc);
 	LPWSTR *argv_w = CommandLineToArgvW(GetCommandLineW(), &argc_w);
 	HWND hWnd = GetConsoleWindow();
 
@@ -938,7 +882,7 @@ int wmain(void){
 	}
 
 	w2xconv_fini(converter);
-	GlobalFree(argv);
+	free(argv);
 	LocalFree(argv_w);
 	return 0;
 }
