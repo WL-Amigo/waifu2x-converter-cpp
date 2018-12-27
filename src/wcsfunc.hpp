@@ -1,5 +1,6 @@
 #ifndef W2XC_WCSFUNC_HPP
 #define W2XC_WCSFUNC_HPP
+#ifdef __cplusplus
 
 #include <cstring>
 #include <string>
@@ -20,4 +21,5 @@ std::wstring get_extension(const std::wstring& str);
 std::string trim(const std::string& str);
 std::wstring trim(const std::wstring& str);
 
+#endif
 #endif

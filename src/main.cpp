@@ -312,7 +312,7 @@ std::string generate_output_location(std::string inputFileName, std::string outp
 }
 
 #if defined(WIN32) && defined(UNICODE)
-std::wstring generate_output_locationW(std::wstring inputFileName, std::wstring outputFileName, std::string mode, int NRLevel, double scaleRatio) {
+std::wstring generate_output_location(std::wstring inputFileName, std::wstring outputFileName, std::string mode, int NRLevel, double scaleRatio) {
 
 	size_t lastSlashPos = outputFileName.find_last_of(L"/\\");
 	size_t lastDotPos = outputFileName.find_last_of(L'.');
@@ -343,7 +343,7 @@ std::wstring generate_output_locationW(std::wstring inputFileName, std::wstring 
 		//We pass tmp into generate_output_location because we will use the default way of naming processed files.
 		//We will remove everything, in the tmp string, prior to the last slash to get the filename.
 		//This removes all contextual information about where a file originated from if "recursive_directory" was enabled.
-		std::wstring tmp = generate_output_locationW(inputFileName, L"auto", mode, NRLevel, scaleRatio);
+		std::wstring tmp = generate_output_location(inputFileName, L"auto", mode, NRLevel, scaleRatio);
 		//tmp = full formatted output file path
 		size_t lastSlash = tmp.find_last_of(L'/');
 		if (lastSlash != std::wstring::npos){
@@ -360,7 +360,7 @@ std::wstring generate_output_locationW(std::wstring inputFileName, std::wstring 
 		//We may have a regular output file here or something went wrong.
 		//outputFileName is already what it should be thus nothing needs to be done.
 		#ifdef HAVE_OPENCV
-		if(check_output_extensionW(outputFileName.substr(lastDotPos+1))==false){
+		if(check_output_extension(outputFileName.substr(lastDotPos+1))==false){
 			throw std::runtime_error("Unsupported output extension.");
 		}
 		#endif
@@ -400,7 +400,7 @@ void convert_file(ConvInfo info, fs::path inputName, fs::path output) {
 #if defined(WIN32) && defined(UNICODE)
 void convert_fileW(ConvInfo info, fs::path inputName, fs::path output) {
 	//std::cout << "Operating on: " << fs::absolute(inputName).string() << std::endl;
-	std::wstring outputName = generate_output_locationW(fs::absolute(inputName).wstring(), output.wstring(), info.mode, info.NRLevel, info.scaleRatio);
+	std::wstring outputName = generate_output_location(fs::absolute(inputName).wstring(), output.wstring(), info.mode, info.NRLevel, info.scaleRatio);
 
 	int _nrLevel = -1;
 

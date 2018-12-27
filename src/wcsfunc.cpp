@@ -8,7 +8,6 @@
 
 #include "wcsfunc.hpp"
 
-
 std::wstring to_wcs(std::string str){
 	std::wstring result;
 	result.assign(str.begin(), str.end());

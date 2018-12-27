@@ -503,6 +503,19 @@ setPathError(W2XConv *conv,
 	conv->last_error.u.path = strdup(path.c_str());
 }
 
+#if defined(WIN32) && defined(UNICODE)
+static void
+setPathError(W2XConv *conv,
+             enum W2XConvErrorCode code,
+             std::wstring const &path)
+{
+	clearError(conv);
+
+	conv->last_error.code = code;
+	conv->last_error.u.path = strdup(to_mbs(path).c_str());
+}
+#endif
+
 static void
 setError(W2XConv *conv,
 	 enum W2XConvErrorCode code)
@@ -1527,7 +1540,7 @@ w2xconv_convert_fileW(struct W2XConv *conv,
 	png_fp = _wfopen(src_path, L"rb");
 
 	if (png_fp == NULL) {
-		setPathError(conv, W2XCONV_ERROR_IMREAD_FAILED, "src_path");
+		setPathError(conv, W2XCONV_ERROR_IMREAD_FAILED, src_path);
 		return -1;
 	}
 
@@ -1687,7 +1700,7 @@ w2xconv_convert_fileW(struct W2XConv *conv,
 	if (!write_imageW(dst_path, image_dst)) {
 		setPathError(conv,
 			     W2XCONV_ERROR_IMWRITE_FAILED,
-			     "dst_path");
+			     dst_path);
 		return -1;
 	}
 
