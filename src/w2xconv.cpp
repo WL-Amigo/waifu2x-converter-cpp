@@ -1305,49 +1305,18 @@ void get_png_background_colour(FILE *png_fp, bool *png_rgb, struct w2xconv_rgb_f
 	return;
 }
 
-int
-w2xconv_convert_file(struct W2XConv *conv,
-		     const char *dst_path,
-                     const char *src_path,
-                     int denoise_level,
-                     double scale,
-		     int blockSize)
-{
-	double time_start = getsec();
+void
+w2xconv_convert_mat(struct W2XConv *conv, 
+			cv::Mat& image_dst, 
+					cv::Mat& image_src, 
+					int denoise_level, 
+					double scale, 
+			int blockSize,
+			 w2xconv_rgb_float3 background,
+			 bool png_rgb,
+			 bool dst_png){
+				
 	bool is_rgb = (conv->impl->scale2_models[0]->getNInputPlanes() == 3);
-
-	FILE *png_fp = NULL;
-	png_fp = fopen(src_path, "rb");
-
-	if (png_fp == NULL) {
-		setPathError(conv, W2XCONV_ERROR_IMREAD_FAILED, src_path);
-		return -1;
-	}
-
-	bool png_rgb;
-	//Background colour
-	//float3 background(1.0f, 1.0f, 1.0f);
-	w2xconv_rgb_float3 background;
-	background.r = background.g = background.b = 1.0f;
-	get_png_background_colour(png_fp, &png_rgb, &background);
-
-	if (png_fp) {
-		fclose(png_fp);
-		png_fp = NULL;
-	}
-
-	cv::Mat image_src, image_dst;
-
-	/*
-	 * IMREAD_COLOR                 : always BGR
-	 * IMREAD_UNCHANGED + png       : BGR or BGRA
-	 * IMREAD_UNCHANGED + otherwise : ???
-	 */
-	if (png_rgb) {
-		image_src = cv::imread(src_path, cv::IMREAD_UNCHANGED);
-	} else {
-		image_src = cv::imread(src_path, cv::IMREAD_COLOR);
-	}
 	enum w2xc::image_format fmt;
 
 	int src_depth = CV_MAT_DEPTH(image_src.type());
@@ -1425,20 +1394,6 @@ w2xconv_convert_file(struct W2XConv *conv,
 		}
 	}
 
-	bool dst_png = false;
-	{
-		size_t len = strlen(dst_path);
-		if (len >= 4) {
-			if (tolower(dst_path[len-4]) == '.' &&
-			    tolower(dst_path[len-3]) == 'p' &&
-			    tolower(dst_path[len-2]) == 'n' &&
-			    tolower(dst_path[len-1]) == 'g')
-			{
-				dst_png = true;
-			}
-		}
-	}
-
 	if (alpha.empty() || !dst_png) {
 		image_dst = cv::Mat(image.size(), CV_MAKETYPE(src_depth,3));
 
@@ -1476,6 +1431,67 @@ w2xconv_convert_file(struct W2XConv *conv,
 			}
 		}
 	}
+}
+
+int
+w2xconv_convert_file(struct W2XConv *conv,
+		     const char *dst_path,
+                     const char *src_path,
+                     int denoise_level,
+                     double scale,
+		     int blockSize)
+{
+	double time_start = getsec();
+
+	FILE *png_fp = NULL;
+	png_fp = fopen(src_path, "rb");
+
+	if (png_fp == NULL) {
+		setPathError(conv, W2XCONV_ERROR_IMREAD_FAILED, src_path);
+		return -1;
+	}
+
+	bool png_rgb;
+	//Background colour
+	//float3 background(1.0f, 1.0f, 1.0f);
+	w2xconv_rgb_float3 background;
+	background.r = background.g = background.b = 1.0f;
+	get_png_background_colour(png_fp, &png_rgb, &background);
+
+	if (png_fp) {
+		fclose(png_fp);
+		png_fp = NULL;
+	}
+
+	cv::Mat image_src, image_dst;
+
+	/*
+	 * IMREAD_COLOR                 : always BGR
+	 * IMREAD_UNCHANGED + png       : BGR or BGRA
+	 * IMREAD_UNCHANGED + otherwise : ???
+	 */
+	if (png_rgb) {
+		image_src = cv::imread(src_path, cv::IMREAD_UNCHANGED);
+	} else {
+		image_src = cv::imread(src_path, cv::IMREAD_COLOR);
+	}
+
+	bool dst_png = false;
+	{
+		size_t len = strlen(dst_path);
+		if (len >= 4) {
+			if (tolower(dst_path[len-4]) == '.' &&
+			    tolower(dst_path[len-3]) == 'p' &&
+			    tolower(dst_path[len-2]) == 'n' &&
+			    tolower(dst_path[len-1]) == 'g')
+			{
+				dst_png = true;
+			}
+		}
+	}
+	
+	w2xconv_convert_mat(conv, image_dst, image_src, denoise_level, scale, blockSize, background, png_rgb, dst_png);
+	
 
 	if (!cv::imwrite(dst_path, image_dst)) {
 		setPathError(conv,
@@ -1543,7 +1559,6 @@ w2xconv_convert_fileW(struct W2XConv *conv,
 		     int blockSize)
 {
 	double time_start = getsec();
-	bool is_rgb = (conv->impl->scale2_models[0]->getNInputPlanes() == 3);
 
 	FILE *png_fp = NULL;
 	png_fp = _wfopen(src_path, L"rb");
@@ -1577,82 +1592,6 @@ w2xconv_convert_fileW(struct W2XConv *conv,
 	} else {
 		image_src = read_imageW(src_path, cv::IMREAD_COLOR);
 	}
-	enum w2xc::image_format fmt;
-
-	int src_depth = CV_MAT_DEPTH(image_src.type());
-	int src_cn = CV_MAT_CN(image_src.type());
-	cv::Mat image = cv::Mat(image_src.size(), CV_32FC3);
-	cv::Mat alpha;
-
-	if (is_rgb) {
-		if (png_rgb) {
-			if (src_cn == 4) {
-				// save alpha
-				alpha = cv::Mat(image_src.size(), CV_32FC1);
-				if (src_depth == CV_16U) {
-					preproc_rgba2rgb<unsigned short, 65535, 2, 0>(&image, &alpha, &image_src,
-										      background.r, background.g, background.b);
-				} else {
-					preproc_rgba2rgb<unsigned char, 255, 2, 0>(&image, &alpha, &image_src,
-										   background.r, background.g, background.b);
-				}
-			} else {
-				preproc_rgb2rgb<unsigned short, 65535, 2, 0>(&image, &image_src);
-			}
-		} else {
-			preproc_rgb2rgb<unsigned char, 255, 2, 0>(&image, &image_src);
-		}
-		fmt = w2xc::IMAGE_RGB_F32;
-	} else {
-		if (png_rgb) {
-			if (src_cn == 4) {
-				// save alpha
-				alpha = cv::Mat(image_src.size(), CV_32FC1);
-				if (src_depth == CV_16U) {
-					preproc_rgba2yuv<unsigned short, 65535, 2, 0>(&image, &alpha, &image_src,
-										      background.r, background.g, background.b);
-				} else {
-					preproc_rgba2yuv<unsigned char, 255, 2, 0>(&image, &alpha, &image_src,
-										   background.r, background.g, background.b);
-				}
-			} else {
-				preproc_rgb2yuv<unsigned short, 65535, 2, 0>(&image, &image_src);
-			}
-		} else {
-			preproc_rgb2yuv<unsigned char, 255, 2, 0>(&image, &image_src);
-		}
-
-		fmt = w2xc::IMAGE_Y;
-	}
-	image_src.release();
-
-	if (denoise_level != -1) {
-		apply_denoise(conv, image, denoise_level, blockSize, fmt);
-	}
-
-	if (scale != 1.0) {
-		// calculate iteration times of 2x scaling and shrink ratio which will use at last
-		int iterTimesTwiceScaling = static_cast<int>(std::ceil(std::log2(scale)));
-		double shrinkRatio = 0.0;
-		if (static_cast<int>(scale)
-		    != std::pow(2, iterTimesTwiceScaling))
-		{
-			shrinkRatio = scale / std::pow(2.0, static_cast<double>(iterTimesTwiceScaling));
-		}
-
-		apply_scale(conv, image, iterTimesTwiceScaling, blockSize, fmt);
-
-		if (shrinkRatio != 0.0) {
-			cv::Size lastImageSize = image.size();
-			lastImageSize.width =
-				static_cast<int>(static_cast<double>(lastImageSize.width
-								     * shrinkRatio));
-			lastImageSize.height =
-				static_cast<int>(static_cast<double>(lastImageSize.height
-								     * shrinkRatio));
-			cv::resize(image, image, lastImageSize, 0, 0, cv::INTER_LINEAR);
-		}
-	}
 
 	bool dst_png = false;
 	{
@@ -1668,43 +1607,7 @@ w2xconv_convert_fileW(struct W2XConv *conv,
 		}
 	}
 
-	if (alpha.empty() || !dst_png) {
-		image_dst = cv::Mat(image.size(), CV_MAKETYPE(src_depth,3));
-
-		if (is_rgb) {
-			if (src_depth == CV_16U) {
-				postproc_rgb2rgb<unsigned short, 65535, 2, 0>(&image_dst, &image);
-			} else {
-				postproc_rgb2rgb<unsigned char, 255, 2, 0>(&image_dst, &image);
-			}
-		} else {
-			if (src_depth == CV_16U) {
-				postproc_yuv2rgb<unsigned short, 65535, 0, 2>(&image_dst, &image);
-			} else {
-				postproc_yuv2rgb<unsigned char, 255, 0, 2>(&image_dst, &image);
-			}
-		}
-	} else {
-		image_dst = cv::Mat(image.size(), CV_MAKETYPE(src_depth,4));
-
-		if (image.size() != alpha.size()) {
-			cv::resize(alpha, alpha, image.size(), 0, 0, cv::INTER_LINEAR);
-		}
-
-		if (is_rgb) {
-			if (src_depth == CV_16U) {
-				postproc_rgb2rgba<unsigned short, 65535, 2, 0>(&image_dst, &image, &alpha, background.r, background.g, background.b);
-			} else {
-				postproc_rgb2rgba<unsigned char, 255, 2, 0>(&image_dst, &image, &alpha, background.r, background.g, background.b);
-			}
-		} else {
-			if (src_depth == CV_16U) {
-				postproc_yuv2rgba<unsigned short, 65535, 0, 2>(&image_dst, &image, &alpha, background.r, background.g, background.b);
-			} else {
-				postproc_yuv2rgba<unsigned char, 255, 0, 2>(&image_dst, &image, &alpha, background.r, background.g, background.b);
-			}
-		}
-	}
+	w2xconv_convert_mat(conv, image_dst, image_src, denoise_level, scale, blockSize, background, png_rgb, dst_png);
 
 	if (!write_imageW(dst_path, image_dst)) {
 		setPathError(conv,
