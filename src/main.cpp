@@ -741,19 +741,6 @@ int wmain(void){
 		tmpOutput += L"/";
 	}
 	fs::path output = tmpOutput;
-
-
-	if (cmdListProcessor.getValue()) {
-		dump_procs();
-		return 0;
-	}
-	
-	#ifdef HAVE_OPENCV
-	if (showOpenCVFormats.getValue()) {
-		debug_show_opencv_formats();
-		return 0;
-	}
-	#endif
 	
 	enum W2XConvGPUMode gpu = W2XCONV_GPU_AUTO;
 
@@ -1004,19 +991,6 @@ int main(int argc, char** argv) {
 		tmpOutput += "/";
 	}
 	fs::path output = tmpOutput;
-
-
-	if (cmdListProcessor.getValue()) {
-		dump_procs();
-		return 0;
-	}
-	
-	#ifdef HAVE_OPENCV
-	if (showOpenCVFormats.getValue()) {
-		debug_show_opencv_formats();
-		return 0;
-	}
-	#endif
 	
 	enum W2XConvGPUMode gpu = W2XCONV_GPU_AUTO;
 
