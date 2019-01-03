@@ -87,9 +87,15 @@ if(HAVE_OPENCV)
 endif()
 
 if(FORCE_AMD)
-	message("-- -FORCE_AMD=ON is set, not using cuda")
+	message("-- FORCE_AMD=ON is set, not using cuda")
 else()
 	find_package(CUDA)
+endif()
+
+if(BUILD_UNICODE)
+	add_definitions(-DUNICODE)
+	add_definitions(-D_UNICODE)
+	message("-- BUILD_UNICODE=ON is set, Compiles with UNICODE Mode")
 endif()
 
 if(WIN32)
@@ -196,7 +202,7 @@ endif()
 add_library(w2xc SHARED
 	src/modelHandler.cpp ${OPT_SOURCES}
 	src/modelHandler_OpenCL.cpp src/convertRoutine.cpp src/threadPool.cpp
-	src/modelHandler_CUDA.cpp src/w2xconv.cpp src/common.cpp
+	src/modelHandler_CUDA.cpp src/w2xconv.cpp src/common.cpp src/wcsfunc.cpp
 	src/cvwrap.cpp
 	src/Env.cpp src/Buffer.cpp
 )
@@ -307,7 +313,7 @@ add_custom_target(gensrcs ALL DEPENDS ${GPU_CODE})
 enable_testing()
 
 if (${HAVE_OPENCV})
-	add_executable(waifu2x-converter-cpp src/main.cpp)
+	add_executable(waifu2x-converter-cpp src/main.cpp src/wcsfunc.cpp)
 
 	if(MSVC)
 		target_link_libraries(waifu2x-converter-cpp LINK_PUBLIC w2xc)

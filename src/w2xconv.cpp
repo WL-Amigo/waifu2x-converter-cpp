@@ -22,6 +22,14 @@
 
 #include <limits.h>
 #include <sstream>
+
+#if defined(WIN32) && defined(UNICODE)
+#include <experimental/filesystem>
+
+namespace fs = std::experimental::filesystem;
+
+#endif
+
 #include "w2xconv.h"
 #include "sec.hpp"
 #include "Buffer.hpp"
@@ -502,6 +510,20 @@ setPathError(W2XConv *conv,
 	conv->last_error.code = code;
 	conv->last_error.u.path = strdup(path.c_str());
 }
+
+#if defined(WIN32) && defined(UNICODE)
+static void
+setPathError(W2XConv *conv,
+             enum W2XConvErrorCode code,
+             std::wstring const &path)
+{
+	fs::path fspath = path;
+	clearError(conv);
+
+	conv->last_error.code = code;
+	conv->last_error.u.path = strdup(fspath.string().c_str());
+}
+#endif
 
 static void
 setError(W2XConv *conv,
@@ -1283,49 +1305,18 @@ void get_png_background_colour(FILE *png_fp, bool *png_rgb, struct w2xconv_rgb_f
 	return;
 }
 
-int
-w2xconv_convert_file(struct W2XConv *conv,
-		     const char *dst_path,
-                     const char *src_path,
-                     int denoise_level,
-                     double scale,
-		     int blockSize)
-{
-	double time_start = getsec();
+void
+w2xconv_convert_mat(struct W2XConv *conv, 
+			cv::Mat& image_dst, 
+					cv::Mat& image_src, 
+					int denoise_level, 
+					double scale, 
+			int blockSize,
+			 w2xconv_rgb_float3 background,
+			 bool png_rgb,
+			 bool dst_png){
+				
 	bool is_rgb = (conv->impl->scale2_models[0]->getNInputPlanes() == 3);
-
-	FILE *png_fp = NULL;
-	png_fp = fopen(src_path, "rb");
-
-	if (png_fp == NULL) {
-		setPathError(conv, W2XCONV_ERROR_IMREAD_FAILED, src_path);
-		return -1;
-	}
-
-	bool png_rgb;
-	//Background colour
-	//float3 background(1.0f, 1.0f, 1.0f);
-	w2xconv_rgb_float3 background;
-	background.r = background.g = background.b = 1.0f;
-	get_png_background_colour(png_fp, &png_rgb, &background);
-
-	if (png_fp) {
-		fclose(png_fp);
-		png_fp = NULL;
-	}
-
-	cv::Mat image_src, image_dst;
-
-	/*
-	 * IMREAD_COLOR                 : always BGR
-	 * IMREAD_UNCHANGED + png       : BGR or BGRA
-	 * IMREAD_UNCHANGED + otherwise : ???
-	 */
-	if (png_rgb) {
-		image_src = cv::imread(src_path, cv::IMREAD_UNCHANGED);
-	} else {
-		image_src = cv::imread(src_path, cv::IMREAD_COLOR);
-	}
 	enum w2xc::image_format fmt;
 
 	int src_depth = CV_MAT_DEPTH(image_src.type());
@@ -1403,20 +1394,6 @@ w2xconv_convert_file(struct W2XConv *conv,
 		}
 	}
 
-	bool dst_png = false;
-	{
-		size_t len = strlen(dst_path);
-		if (len >= 4) {
-			if (tolower(dst_path[len-4]) == '.' &&
-			    tolower(dst_path[len-3]) == 'p' &&
-			    tolower(dst_path[len-2]) == 'n' &&
-			    tolower(dst_path[len-1]) == 'g')
-			{
-				dst_png = true;
-			}
-		}
-	}
-
 	if (alpha.empty() || !dst_png) {
 		image_dst = cv::Mat(image.size(), CV_MAKETYPE(src_depth,3));
 
@@ -1454,6 +1431,67 @@ w2xconv_convert_file(struct W2XConv *conv,
 			}
 		}
 	}
+}
+
+int
+w2xconv_convert_file(struct W2XConv *conv,
+		     const char *dst_path,
+                     const char *src_path,
+                     int denoise_level,
+                     double scale,
+		     int blockSize)
+{
+	double time_start = getsec();
+
+	FILE *png_fp = NULL;
+	png_fp = fopen(src_path, "rb");
+
+	if (png_fp == NULL) {
+		setPathError(conv, W2XCONV_ERROR_IMREAD_FAILED, src_path);
+		return -1;
+	}
+
+	bool png_rgb;
+	//Background colour
+	//float3 background(1.0f, 1.0f, 1.0f);
+	w2xconv_rgb_float3 background;
+	background.r = background.g = background.b = 1.0f;
+	get_png_background_colour(png_fp, &png_rgb, &background);
+
+	if (png_fp) {
+		fclose(png_fp);
+		png_fp = NULL;
+	}
+
+	cv::Mat image_src, image_dst;
+
+	/*
+	 * IMREAD_COLOR                 : always BGR
+	 * IMREAD_UNCHANGED + png       : BGR or BGRA
+	 * IMREAD_UNCHANGED + otherwise : ???
+	 */
+	if (png_rgb) {
+		image_src = cv::imread(src_path, cv::IMREAD_UNCHANGED);
+	} else {
+		image_src = cv::imread(src_path, cv::IMREAD_COLOR);
+	}
+
+	bool dst_png = false;
+	{
+		size_t len = strlen(dst_path);
+		if (len >= 4) {
+			if (tolower(dst_path[len-4]) == '.' &&
+			    tolower(dst_path[len-3]) == 'p' &&
+			    tolower(dst_path[len-2]) == 'n' &&
+			    tolower(dst_path[len-1]) == 'g')
+			{
+				dst_png = true;
+			}
+		}
+	}
+	
+	w2xconv_convert_mat(conv, image_dst, image_src, denoise_level, scale, blockSize, background, png_rgb, dst_png);
+	
 
 	if (!cv::imwrite(dst_path, image_dst)) {
 		setPathError(conv,
@@ -1471,6 +1509,122 @@ w2xconv_convert_file(struct W2XConv *conv,
 	return 0;
 }
 
+
+#if defined(WIN32) && defined(UNICODE)
+
+cv::Mat read_imageW(const WCHAR* filepath, int flags=cv::IMREAD_COLOR)
+{
+    FILE* fp = _wfopen(filepath, L"rb");
+    if (!fp)
+    {
+        return cv::Mat::zeros(1, 1, CV_8U);
+    }
+    fseek(fp, 0, SEEK_END);
+    long end = ftell(fp);
+    char* buf = new char[end];
+    fseek(fp, 0, SEEK_SET);
+    size_t n = fread(buf, 1, end, fp);
+    cv::_InputArray arr(buf, end);
+    cv::Mat img = cv::imdecode(arr, flags);
+    delete[] buf;
+    fclose(fp);
+    return img;
+}
+
+bool write_imageW(const WCHAR* filepath, cv::Mat& img, std::vector<int> param = std::vector<int>(0))
+{
+	std::vector<uchar> buf;
+	std::wstring ext_w = std::wstring(filepath);
+	std::string ext;
+	ext.assign(ext_w.begin(), ext_w.end());
+	ext = ext.substr(ext.find_last_of("."));
+	
+	if(!cv::imencode(ext.c_str(),img, buf, param))
+		return false;
+	
+    FILE* fp = _wfopen(filepath, L"wb+");
+    if (!fp)
+        return false;
+	fwrite(buf.data(), sizeof(unsigned char), buf.size(), fp);
+    fclose(fp);
+    return true;
+}
+
+int
+w2xconv_convert_fileW(struct W2XConv *conv,
+		     const WCHAR *dst_path,
+                     const WCHAR *src_path,
+                     int denoise_level,
+                     double scale,
+		     int blockSize)
+{
+	double time_start = getsec();
+
+	FILE *png_fp = NULL;
+	png_fp = _wfopen(src_path, L"rb");
+
+	if (png_fp == NULL) {
+		setPathError(conv, W2XCONV_ERROR_IMREAD_FAILED, src_path);
+		return -1;
+	}
+
+	bool png_rgb;
+	//Background colour
+	//float3 background(1.0f, 1.0f, 1.0f);
+	w2xconv_rgb_float3 background;
+	background.r = background.g = background.b = 1.0f;
+	get_png_background_colour(png_fp, &png_rgb, &background);
+
+	if (png_fp) {
+		fclose(png_fp);
+		png_fp = NULL;
+	}
+
+	cv::Mat image_src, image_dst;
+
+	/*
+	 * IMREAD_COLOR                 : always BGR
+	 * IMREAD_UNCHANGED + png       : BGR or BGRA
+	 * IMREAD_UNCHANGED + otherwise : ???
+	 */
+	if (png_rgb) {
+		image_src = read_imageW(src_path, cv::IMREAD_UNCHANGED);
+	} else {
+		image_src = read_imageW(src_path, cv::IMREAD_COLOR);
+	}
+
+	bool dst_png = false;
+	{
+		size_t len = wcslen(dst_path);
+		if (len >= 4) {
+			if (towlower(dst_path[len-4]) == L'.' &&
+			    towlower(dst_path[len-3]) == L'p' &&
+			    towlower(dst_path[len-2]) == L'n' &&
+			    towlower(dst_path[len-1]) == L'g')
+			{
+				dst_png = true;
+			}
+		}
+	}
+
+	w2xconv_convert_mat(conv, image_dst, image_src, denoise_level, scale, blockSize, background, png_rgb, dst_png);
+
+	if (!write_imageW(dst_path, image_dst)) {
+		setPathError(conv,
+			     W2XCONV_ERROR_IMWRITE_FAILED,
+			     dst_path);
+		return -1;
+	}
+
+	double time_end = getsec();
+
+	conv->flops.process_sec += time_end - time_start;
+
+	//printf("== %f == \n", conv->impl->env.transfer_wait);
+
+	return 0;
+}
+#endif
 
 
 static void
