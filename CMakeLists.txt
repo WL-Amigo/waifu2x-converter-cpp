@@ -247,12 +247,6 @@ if(WIN32)
 	set_target_properties(w2xc PROPERTIES PREFIX "")
 	set_target_properties(w2xc PROPERTIES IMPORT_PREFIX "")
 	set_target_properties(w2xc PROPERTIES IMPORT_SUFFIX ".lib")
-else()
-	# Lower GCC version to avoid #error in host_config.h
-	find_program(GCC NAMES g++-4.7 g++47 g++-4.8 g++48)
-	if(GCC)
-		list(APPEND CUDA_NVCC_FLAGS "-ccbin" "${GCC}")
-	endif()
 endif()
 
 if(WIN32) # We build FOR windows.
