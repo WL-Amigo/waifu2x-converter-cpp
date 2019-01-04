@@ -67,7 +67,7 @@ Add "-DBUILD_UNICODE=ON" to the cmake command.
 # Linux
 
 ### Requirements:
-- GCC 6+
+- GCC 5+
 - CMake
 - OpenCV 3+
 
