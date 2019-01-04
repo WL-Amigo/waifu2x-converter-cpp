@@ -34,7 +34,7 @@ https://discord.gg/gAvufS2 It's often easier to chat in real time, so if you wan
  
 ## Build dependencies
 
- - [GCC 6](https://gcc.gnu.org/) (Linux)
+ - [GCC 5](https://gcc.gnu.org/) (Linux)
  - [Visual Studio 2017](https://visualstudio.microsoft.com/downloads/) (Windows)
  - [picojson](https://github.com/kazuho/picojson) (included)
  - [TCLAP(Templatized C++ Command Line Parser Library)](http://tclap.sourceforge.net/) (included)
