@@ -6,6 +6,8 @@ This is a reimplementation of waifu2x ([original](https://github.com/nagadomi/wa
 This is also a reimplementation of [waifu2x python version](https://marcan.st/transf/waifu2x.py) by [Hector Martin](https://marcan.st/blog/).
 You can use this as command-line tool of image noise reduction or/and scaling.
 
+This software was originally made by @WL-Amigo and has been improved a lot over the years, see [FORK_CHANGES.md](FORK_CHANGES.md) for more info on that.
+
 ## I also have a Discord at:
 https://discord.gg/gAvufS2 It's often easier to chat in real time, so if you want feel free to join.
 
@@ -25,12 +27,15 @@ https://discord.gg/gAvufS2 It's often easier to chat in real time, so if you wan
 ## Supported platforms
 
  - Linux
- - Windows  
+ - LInux (ARM)
+ - Windows 7+  
  - MacOS?
    - This is not officially supported but see here for more information: [#20](https://github.com/DeadSix27/waifu2x-converter-cpp/issues/20)
  
 ## Build dependencies
 
+ - [GCC 6](https://gcc.gnu.org/) (Linux)
+ - [Visual Studio 2017](https://visualstudio.microsoft.com/downloads/) (Windows)
  - [picojson](https://github.com/kazuho/picojson) (included)
  - [TCLAP(Templatized C++ Command Line Parser Library)](http://tclap.sourceforge.net/) (included)
  - [OpenCV 3+](https://opencv.org/releases.html)
@@ -43,11 +48,12 @@ See [BUILDING.md](BUILDING.md) for more information.
 
 Usage of this program can be seen by executing `waifu2x-converter-cpp --help`
 
-## Fork logs:
-This program got forked a lot a this point, for history there is a list of author and major code changes since each fork:
-[Fork changes](FORK_CHANGES.md)
-
 ## Notes:
 
 I'd appreciate any help on this project, I do not want yet another fork... so if you have improvement ideas or find bugs, please make a pull request or open an issue :)!
 
+## A big thanks to these people helping me maintain this fork:
+
+- @YukihoAA
+- @iame6162013
+- https://github.com/DeadSix27/waifu2x-converter-cpp/graphs/contributors
