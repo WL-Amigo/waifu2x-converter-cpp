@@ -5,9 +5,9 @@ include("CMakeDependentOption")
 include("CheckIncludeFileCXX")
 
 if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
-  if(CMAKE_CXX_COMPILER_VERSION VERSION_LESS "6.0")
-    message(FATAL_ERROR "This software requires GCC 6 or higher")
-  endif()
+	if(CMAKE_CXX_COMPILER_VERSION VERSION_LESS "5.0")
+		message(FATAL_ERROR "This software requires GCC 5 or higher")
+	endif()
 endif()
 
 string(TIMESTAMP TS)
@@ -212,7 +212,7 @@ add_dependencies(w2xc gensrcs)
 
 if(CMAKE_COMPILER_IS_GNUCXX OR ${CMAKE_CXX_COMPILER_ID} STREQUAL "Clang")
 	set(CMAKE_CXX_STANDARD 17)
-	# set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -std=c++1z")
+	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++1z")
 	set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall")
 
 	if (${CMAKE_SYSTEM_NAME} STREQUAL "Darwin")
