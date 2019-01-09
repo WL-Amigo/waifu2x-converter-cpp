@@ -1,2 +1,2 @@
 * text=auto
-*.wsf diff text
+*.wsf diff text crlf
