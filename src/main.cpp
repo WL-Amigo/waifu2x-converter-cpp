@@ -189,64 +189,12 @@ std::map<std::string,bool> opencv_formats = {
 	{"PIC", false}
 };
 
-std::map<std::wstring,bool> opencv_formatsW = {
-	// Windows Bitmaps
-	{L"BMP",  false},
-	{L"DIB",  false},
-	
-	// JPEG Files
-	{L"JPEG", false},
-	{L"JPG", false},
-	{L"JPE", false},
-	
-	// JPEG 2000 Files
-	{L"JP2", false},
-	
-	// Portable Network Graphics
-	{L"PNG",  false},
-	
-	// WebP
-	{L"WEBP", false},
-	
-	// Portable Image Format
-	{L"PBM",  false},
-	{L"PGM",  false},
-	{L"PPM",  false},
-	{L"PXM",  false},
-	{L"PNM",  false},
-	
-	// Sun Rasters
-	{L"SR",  false},
-	{L"RAS",  false},
-	
-	// TIFF Files
-	{L"TIF", false},
-	{L"TIFF", false},
-	
-	// OpenEXR Image Files
-	{L"EXR", false},
-	
-	// Radiance HDR
-	{L"HDR", false},
-	{L"PIC", false}
-};
-
-
 bool check_output_extension(std::string extension) {
 	for(std::string::iterator it = extension.begin(); it != extension.end(); ++it){
 		*it = std::toupper(*it);
 	}
 	auto index = opencv_formats.find(extension);
 	if (index != opencv_formats.end()) {
-		return index->second;
-	}
-	return false;
-}
-
-bool check_output_extension(std::wstring extension) {
-	std::transform(extension.begin(), extension.end(), extension.begin(), ::toupper);
-	auto index = opencv_formatsW.find(extension);
-	if (index != opencv_formatsW.end()) {
 		return index->second;
 	}
 	return false;
@@ -361,7 +309,7 @@ std::wstring generate_output_location(std::wstring inputFileName, std::wstring o
 		//We may have a regular output file here or something went wrong.
 		//outputFileName is already what it should be thus nothing needs to be done.
 		#ifdef HAVE_OPENCV
-		if(check_output_extension(outputFileName.substr(lastDotPos+1))==false){
+		if(check_output_extension(to_mbs(outputFileName.substr(lastDotPos+1)))==false){
 			throw std::runtime_error("Unsupported output extension.");
 		}
 		#endif
@@ -445,9 +393,6 @@ void check_opencv_formats()
 			if ((strings[0] == "PNG") && (strings[1] != "NO"))
 			{
 				opencv_formats["PNG"] = true;
-				#if defined(WIN32) && defined(UNICODE)
-				opencv_formatsW[L"PNG"] = true;
-				#endif
 			}
 			// JPEG Files
 			else if ((strings[0] == "JPEG") && (strings[1] != "NO"))
@@ -455,47 +400,28 @@ void check_opencv_formats()
 				opencv_formats["JPEG"] = true;
 				opencv_formats["JPG"] = true;
 				opencv_formats["JPE"] = true;
-				#if defined(WIN32) && defined(UNICODE)
-				opencv_formatsW[L"JPEG"] = true;
-				opencv_formatsW[L"JPG"] = true;
-				opencv_formatsW[L"JPE"] = true;
-				#endif
 			}
 			// JPEG 2000 Files
 			else if ((strings[0] == "JPEG 2000") && (strings[1] != "NO"))
 			{
 				opencv_formats["JP2"] = true;
-				#if defined(WIN32) && defined(UNICODE)
-				opencv_formatsW[L"JP2"] = true;
-				#endif
 			}
 			// WebP
 			else if ((strings[0] == "WEBP") && (strings[1] != "NO"))
 			{
 				opencv_formats["WEBP"] = true;
-				#if defined(WIN32) && defined(UNICODE)
-				opencv_formatsW[L"WEBP"] = true;
-				#endif
 			}
 			// TIFF Files
 			else if ((strings[0] == "TIFF") && (strings[1] != "NO"))
 			{
 				opencv_formats["TIF"] = true;
 				opencv_formats["TIFF"] = true;
-				#if defined(WIN32) && defined(UNICODE)
-				opencv_formatsW[L"TIF"] = true;
-				opencv_formatsW[L"TIFF"] = true;
-				#endif
 			}
 		}
 	}
 	// Windows Bitmaps (Always Supported)
 	opencv_formats["BMP"] = true;
 	opencv_formats["DIB"] = true;
-	#if defined(WIN32) && defined(UNICODE)
-	opencv_formatsW[L"BMP"] = true;
-	opencv_formatsW[L"DIB"] = true;
-	#endif
 	
 	// Portable Image Format (Always Supported)
 	opencv_formats["PBM"] = true;
@@ -503,35 +429,17 @@ void check_opencv_formats()
 	opencv_formats["PPM"] = true;
 	opencv_formats["PXM"] = true;
 	opencv_formats["PNM"] = true;
-	#if defined(WIN32) && defined(UNICODE)
-	opencv_formatsW[L"PBM"] = true;
-	opencv_formatsW[L"PGM"] = true;
-	opencv_formatsW[L"PPM"] = true;
-	opencv_formatsW[L"PXM"] = true;
-	opencv_formatsW[L"PNM"] = true;
-	#endif
 	
 	// Sun Rasters (Always Supported)
 	opencv_formats["SR"] = true;
 	opencv_formats["RAS"] = true;
-	#if defined(WIN32) && defined(UNICODE)
-	opencv_formatsW[L"SR"] = true;
-	opencv_formatsW[L"RAS"] = true;
-	#endif
 	
 	// Radiance HDR (Always Supported)
 	opencv_formats["HDR"] = true;
 	opencv_formats["PIC"] = true;
-	#if defined(WIN32) && defined(UNICODE)
-	opencv_formatsW[L"HDR"] = true;
-	opencv_formatsW[L"PIC"] = true;
-	#endif
 	
 	// OpenEXR Image Files
 	opencv_formats["EXR"] = true;
-	#if defined(WIN32) && defined(UNICODE)
-	opencv_formatsW[L"EXR"] = true;
-	#endif
 }
 void debug_show_opencv_formats()
 {

@@ -1443,10 +1443,10 @@ w2xconv_convert_file(struct W2XConv *conv,
 {
 	double time_start = getsec();
 
-	FILE *png_fp = NULL;
+	FILE *png_fp = nullptr;
 	png_fp = fopen(src_path, "rb");
 
-	if (png_fp == NULL) {
+	if (png_fp == nullptr) {
 		setPathError(conv, W2XCONV_ERROR_IMREAD_FAILED, src_path);
 		return -1;
 	}
@@ -1460,7 +1460,7 @@ w2xconv_convert_file(struct W2XConv *conv,
 
 	if (png_fp) {
 		fclose(png_fp);
-		png_fp = NULL;
+		png_fp = nullptr;
 	}
 
 	cv::Mat image_src, image_dst;
@@ -1512,41 +1512,53 @@ w2xconv_convert_file(struct W2XConv *conv,
 
 #if defined(WIN32) && defined(UNICODE)
 
-cv::Mat read_imageW(const WCHAR* filepath, int flags=cv::IMREAD_COLOR)
-{
-    FILE* fp = _wfopen(filepath, L"rb");
-    if (!fp)
-    {
+cv::Mat read_imageW(const WCHAR* filepath, int flags=cv::IMREAD_COLOR) {
+	long lSize;
+	char* imgBuffer;
+    FILE* pFile = _wfopen(filepath, L"rb");
+	
+    if (!pFile) {
         return cv::Mat::zeros(1, 1, CV_8U);
     }
-    fseek(fp, 0, SEEK_END);
-    long end = ftell(fp);
-    char* buf = new char[end];
-    fseek(fp, 0, SEEK_SET);
-    size_t n = fread(buf, 1, end, fp);
-    cv::_InputArray arr(buf, end);
+	
+    fseek(pFile, 0, SEEK_END);
+    lSize = ftell(pFile);
+    fseek(pFile, 0, SEEK_SET);
+	
+    imgBuffer = new char[lSize];
+	
+	if(!imgBuffer) {
+        return cv::Mat::zeros(1, 1, CV_8U);
+	}
+	
+    fread(imgBuffer, 1, lSize, pFile);
+	
+    fclose(pFile);
+	
+    cv::_InputArray arr(imgBuffer, lSize);
     cv::Mat img = cv::imdecode(arr, flags);
-    delete[] buf;
-    fclose(fp);
+	
+    delete[] imgBuffer;
     return img;
 }
 
 bool write_imageW(const WCHAR* filepath, cv::Mat& img, std::vector<int> param = std::vector<int>(0))
 {
-	std::vector<uchar> buf;
-	std::wstring ext_w = std::wstring(filepath);
-	std::string ext;
-	ext.assign(ext_w.begin(), ext_w.end());
-	ext = ext.substr(ext.find_last_of("."));
+	FILE* pFile;
+	std::vector<uchar> imageBuffer;
+	std::wstring ext = std::wstring(filepath);
+	ext = ext.substr(ext.find_last_of(L'.'));
 	
-	if(!cv::imencode(ext.c_str(),img, buf, param))
+	if(!cv::imencode(to_mbs(ext).c_str(),img, imageBuffer, param))
 		return false;
 	
-    FILE* fp = _wfopen(filepath, L"wb+");
-    if (!fp)
+    pFile = _wfopen(filepath, L"wb+");
+    if (!pFile)
         return false;
-	fwrite(buf.data(), sizeof(unsigned char), buf.size(), fp);
-    fclose(fp);
+	
+	fwrite(imageBuffer.data(), sizeof(unsigned char), imageBuffer.size(), pFile);
+	
+    fclose(pFile);
     return true;
 }
 
@@ -1560,10 +1572,10 @@ w2xconv_convert_fileW(struct W2XConv *conv,
 {
 	double time_start = getsec();
 
-	FILE *png_fp = NULL;
+	FILE *png_fp = nullptr;
 	png_fp = _wfopen(src_path, L"rb");
 
-	if (png_fp == NULL) {
+	if (png_fp == nullptr) {
 		setPathError(conv, W2XCONV_ERROR_IMREAD_FAILED, src_path);
 		return -1;
 	}
@@ -1577,7 +1589,7 @@ w2xconv_convert_fileW(struct W2XConv *conv,
 
 	if (png_fp) {
 		fclose(png_fp);
-		png_fp = NULL;
+		png_fp = nullptr;
 	}
 
 	cv::Mat image_src, image_dst;
