@@ -1,10 +1,11 @@
+
 # Waifu2x source building guides
 
 #### You can download pre-built Windows binaries from:
 
 https://github.com/DeadSix27/waifu2x-converter-cpp/releases
 
-#### Guide Index:
+#### Index:
 - [Windows x64](#windows)
 - [Linux](#linux) (ARM is not supported, but could work maybe, open an issue if you get it working.)
 - [MacOS](#macos--osx)
@@ -53,21 +54,21 @@ Add "-DBUILD_UNICODE=ON" to the cmake command.
 3. Open a Command prompt and run the following command: `"C:\Program Files (x86)\Microsoft Visual Studio\2017\Community\VC\Auxiliary\Build\vcvarsall.bat" x64`
 
 4. Now run these commands in order, to build w2x:
-    ```bat
-    	cd "K:\w2x\"
-    	git clone "https://github.com/DeadSix27/waifu2x-converter-cpp"
-    	cd "waifu2x-converter-cpp"
-    	mkdir out && cd out
-    	cmake .. -DCMAKE_GENERATOR="Visual Studio 15 2017 Win64" -DOPENCV_PREFIX="K:/w2x/opencv/build/"
-    	msbuild waifu2xcpp.sln /p:Configuration=Release /p:Platform=x64
-    	copy K:\w2x\opencv\build\x64\vc15\bin\opencv_world400.dll Release\
-    	mkdir Release\models_rgb\ && copy ..\models_rgb Release\models_rgb\
-    	cd ..
-    ```
+	```bat
+	cd "K:\w2x\"
+	git clone "https://github.com/DeadSix27/waifu2x-converter-cpp"
+	cd "waifu2x-converter-cpp"
+	mkdir out && cd out
+	cmake .. -DCMAKE_GENERATOR="Visual Studio 15 2017 Win64" -DOPENCV_PREFIX="K:/w2x/opencv/build/"
+	msbuild waifu2xcpp.sln /p:Configuration=Release /p:Platform=x64
+	copy K:\w2x\opencv\build\x64\vc15\bin\opencv_world400.dll Release\
+	mkdir Release\models_rgb\ && copy ..\models_rgb Release\models_rgb\
+	cd ..
+	```
 5. (Optional) Add to SendTo menu (right click on file in Windows Explorer).
 
-    ```bat
-    copy /y w32-apps\install.bat out\Release\
+	```bat
+	copy /y w32-apps\install.bat out\Release\
 	copy /y w32-apps\install.js out\Release\
 	copy /y w32-apps\uninstall.bat out\Release\
 	copy /y w32-apps\uninstall.js out\Release\
@@ -76,7 +77,8 @@ Add "-DBUILD_UNICODE=ON" to the cmake command.
 	install.bat
 	cd ExtendedSendTo
 	install.wsf
-	cd .. && cd .. && cd ..```
+	cd .. && cd .. && cd ..
+	```
 
 # Linux
 
@@ -98,7 +100,7 @@ Add "-DBUILD_UNICODE=ON" to the cmake command.
    - sudo apt install mesa-opencl-icd opencl-headers
 
 #### nVidia GPUs:
-- _Feel free to contribute to this guide_
+- (?) Open an issue or a PR if you know the exact packages needed for this.
 
 ### Building:
 ##### If you want to build for all GPU brands, just install all packages (untested, see above).
