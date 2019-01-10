@@ -51,32 +51,32 @@ Add "-DBUILD_UNICODE=ON" to the cmake command.
 2. Extract OpenCV to your base folder e.g `K:\w2x\opencv`
 
 3. Open a Command prompt and run the following command: `"C:\Program Files (x86)\Microsoft Visual Studio\2017\Community\VC\Auxiliary\Build\vcvarsall.bat" x64`
+
 4. Now run these commands in order, to build w2x:
-	```cmd
-		cd "K:\w2x\"
-		git clone "https://github.com/DeadSix27/waifu2x-converter-cpp"
-		cd "waifu2x-converter-cpp"
-		mkdir out && cd out
-		cmake .. -DCMAKE_GENERATOR="Visual Studio 15 2017 Win64" -DOPENCV_PREFIX="K:/w2x/opencv/build/"
-		msbuild waifu2xcpp.sln /p:Configuration=Release /p:Platform=x64
-		copy K:\w2x\opencv\build\x64\vc15\bin\opencv_world400.dll Release\
-		mkdir Release\models_rgb\ && copy ..\models_rgb Release\models_rgb\
-		cd ..
-	```
-##### (Optional) Add to SendTo menu (right click on file in Windows Explorer).
-	```cmd
-		copy /y w32-apps\install.bat out\Release\
-		copy /y w32-apps\install.js out\Release\
-		copy /y w32-apps\uninstall.bat out\Release\
-		copy /y w32-apps\uninstall.js out\Release\
-		mkdir out\Release\ExtendedSendTo\ && copy /y w32-apps\ExtendedSendTo\ out\Release\ExtendedSendTo\
-		cd out\Release
-		install.bat
-		cd ExtendedSendTo
-		install.wsf
-		cd .. && cd .. && cd ..
-	```
----
+    ```bat
+    	cd "K:\w2x\"
+    	git clone "https://github.com/DeadSix27/waifu2x-converter-cpp"
+    	cd "waifu2x-converter-cpp"
+    	mkdir out && cd out
+    	cmake .. -DCMAKE_GENERATOR="Visual Studio 15 2017 Win64" -DOPENCV_PREFIX="K:/w2x/opencv/build/"
+    	msbuild waifu2xcpp.sln /p:Configuration=Release /p:Platform=x64
+    	copy K:\w2x\opencv\build\x64\vc15\bin\opencv_world400.dll Release\
+    	mkdir Release\models_rgb\ && copy ..\models_rgb Release\models_rgb\
+    	cd ..
+    ```
+5. (Optional) Add to SendTo menu (right click on file in Windows Explorer).
+
+    ```bat
+    copy /y w32-apps\install.bat out\Release\
+	copy /y w32-apps\install.js out\Release\
+	copy /y w32-apps\uninstall.bat out\Release\
+	copy /y w32-apps\uninstall.js out\Release\
+	mkdir out\Release\ExtendedSendTo\ && copy /y w32-apps\ExtendedSendTo\ out\Release\ExtendedSendTo\
+	cd out\Release
+	install.bat
+	cd ExtendedSendTo
+	install.wsf
+	cd .. && cd .. && cd ..```
 
 # Linux
 
