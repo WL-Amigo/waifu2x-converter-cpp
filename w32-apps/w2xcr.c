@@ -637,14 +637,14 @@ initdlg_callback(HWND wnd, UINT message, WPARAM wParam, LPARAM lParam)
 
     case WM_INITDIALOG:
         SetDlgItemTextA(wnd, IDC_SCALE, "2.0");
-        SendDlgItemMessage(wnd, IDC_DENOISE, CB_ADDSTRING, 0, (LPARAM)"none");
-        SendDlgItemMessage(wnd, IDC_DENOISE, CB_ADDSTRING, 0, (LPARAM)"0");
-        SendDlgItemMessage(wnd, IDC_DENOISE, CB_ADDSTRING, 0, (LPARAM)"1");
-        SendDlgItemMessage(wnd, IDC_DENOISE, CB_ADDSTRING, 0, (LPARAM)"2");
-        SendDlgItemMessage(wnd, IDC_DENOISE, CB_ADDSTRING, 0, (LPARAM)"0(jpeg only)");
-        SendDlgItemMessage(wnd, IDC_DENOISE, CB_ADDSTRING, 0, (LPARAM)"1(jpeg only)");
-        SendDlgItemMessage(wnd, IDC_DENOISE, CB_ADDSTRING, 0, (LPARAM)"2(jpeg only)");
-        SendDlgItemMessage(wnd, IDC_DENOISE, CB_SETCURSEL, 1, 0);
+        SendDlgItemMessageA(wnd, IDC_DENOISE, CB_ADDSTRING, 0, (LPARAM)"none");
+        SendDlgItemMessageA(wnd, IDC_DENOISE, CB_ADDSTRING, 0, (LPARAM)"0");
+        SendDlgItemMessageA(wnd, IDC_DENOISE, CB_ADDSTRING, 0, (LPARAM)"1");
+        SendDlgItemMessageA(wnd, IDC_DENOISE, CB_ADDSTRING, 0, (LPARAM)"2");
+        SendDlgItemMessageA(wnd, IDC_DENOISE, CB_ADDSTRING, 0, (LPARAM)"0(jpeg only)");
+        SendDlgItemMessageA(wnd, IDC_DENOISE, CB_ADDSTRING, 0, (LPARAM)"1(jpeg only)");
+        SendDlgItemMessageA(wnd, IDC_DENOISE, CB_ADDSTRING, 0, (LPARAM)"2(jpeg only)");
+        SendDlgItemMessageA(wnd, IDC_DENOISE, CB_SETCURSEL, 1, 0);
         break;
     }
 
