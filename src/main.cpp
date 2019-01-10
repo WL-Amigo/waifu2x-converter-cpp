@@ -564,7 +564,7 @@ int wmain(void){
 	#endif
 	
 	// definition of command line arguments
-	TCLAP::CmdLine cmd("waifu2x OpenCV Fork - https://github.com/DeadSix27/waifu2x-converter-cpp", ' ', std::string(GIT_TAG) + "(" + GIT_BRANCH + "-" + GIT_COMMIT_HASH + ")", true);
+	TCLAP::CmdLine cmd("waifu2x OpenCV Fork - https://github.com/DeadSix27/waifu2x-converter-cpp", ' ', std::string(GIT_TAG) + " (" + GIT_BRANCH + "-" + GIT_COMMIT_HASH + ")", true);
 	cmd.setOutput(new CustomFailOutput());
 
 	TCLAP::ValueArg<std::string> cmdInput("i", "input",
@@ -814,7 +814,7 @@ int main(int argc, char** argv) {
 	#endif
 
 	// definition of command line arguments
-	TCLAP::CmdLine cmd("waifu2x OpenCV Fork - https://github.com/DeadSix27/waifu2x-converter-cpp", ' ', std::string(GIT_TAG) + "(" + GIT_BRANCH + "-" + GIT_COMMIT_HASH + ")", true);
+	TCLAP::CmdLine cmd("waifu2x OpenCV Fork - https://github.com/DeadSix27/waifu2x-converter-cpp", ' ', std::string(GIT_TAG) + " (" + GIT_BRANCH + "-" + GIT_COMMIT_HASH + ")", true);
 	cmd.setOutput(new CustomFailOutput());
 
 	TCLAP::ValueArg<std::string> cmdInput("i", "input",
