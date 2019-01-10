@@ -39,8 +39,6 @@
 #define DEFAULT_MODELS_DIRECTORY "models_rgb"
 #endif
 
-#define _VERSION "5.2"
-
 #ifdef HAVE_OPENCV
 #include <opencv2/opencv.hpp>
 #endif
@@ -62,7 +60,7 @@ public:
 				std::cerr << std::endl << "For complete USAGE and HELP type: " 
 						  << std::endl << "   " << progName << " --help" 
 						  << std::endl << std::endl;
-				std::cerr << "Waifu2x OpenCV - Version " << _VERSION << " - https://github.com/DeadSix27/waifu2x-converter-cpp" << std::endl << std::endl;
+				std::cerr << "Waifu2x OpenCV - Version " << GIT_TAG << " (" << GIT_COMMIT_HASH << ") - https://github.com/DeadSix27/waifu2x-converter-cpp" << std::endl << std::endl;
 				std::cerr << "If you find issues or need help, visit: https://github.com/DeadSix27/waifu2x-converter-cpp/issues" << std::endl << std::endl;
 			}
 		else
@@ -566,7 +564,7 @@ int wmain(void){
 	#endif
 	
 	// definition of command line arguments
-	TCLAP::CmdLine cmd("waifu2x OpenCV Fork - https://github.com/DeadSix27/waifu2x-converter-cpp", ' ', _VERSION, true);
+	TCLAP::CmdLine cmd("waifu2x OpenCV Fork - https://github.com/DeadSix27/waifu2x-converter-cpp", ' ', std::string(GIT_TAG) + "(" + GIT_BRANCH + "-" + GIT_COMMIT_HASH + ")", true);
 	cmd.setOutput(new CustomFailOutput());
 
 	TCLAP::ValueArg<std::string> cmdInput("i", "input",
@@ -816,7 +814,7 @@ int main(int argc, char** argv) {
 	#endif
 
 	// definition of command line arguments
-	TCLAP::CmdLine cmd("waifu2x OpenCV Fork - https://github.com/DeadSix27/waifu2x-converter-cpp", ' ', _VERSION, true);
+	TCLAP::CmdLine cmd("waifu2x OpenCV Fork - https://github.com/DeadSix27/waifu2x-converter-cpp", ' ', std::string(GIT_TAG) + "(" + GIT_BRANCH + "-" + GIT_COMMIT_HASH + ")", true);
 	cmd.setOutput(new CustomFailOutput());
 
 	TCLAP::ValueArg<std::string> cmdInput("i", "input",
