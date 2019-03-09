@@ -536,12 +536,12 @@ int wmain(void){
 	//_setmode(_fileno(stdout), _O_U16TEXT);
 	
 	for (int ai = 1; ai < argc_w; ai++) {
-		if ((wcscmp(argv_w[ai], L"-i") == 0) || (wcscmp(argv_w[ai], L"-input") == 0)) {
+		if ((wcscmp(argv_w[ai], L"-i") == 0) || (wcscmp(argv_w[ai], L"--input") == 0)) {
 			if( ai+1 < argc_w )
 				inputFileName = std::wstring(argv_w[ai+1]);
 			continue;
 		}
-		else if ((wcscmp(argv_w[ai], L"-o") == 0) || (wcscmp(argv_w[ai], L"-output") == 0)) {
+		else if ((wcscmp(argv_w[ai], L"-o") == 0) || (wcscmp(argv_w[ai], L"--output") == 0)) {
 			if( ai+1 < argc_w )
 				outputFileName = std::wstring(argv_w[ai+1]);
 			continue;
