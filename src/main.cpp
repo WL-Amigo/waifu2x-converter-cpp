@@ -575,7 +575,7 @@ int wmain(void){
 		"path to output image file or directory  (you should use the full path)", false,
 		"auto", "string", cmd);
 
-	TCLAP::ValueArg<bool> cmdRecursiveDirectoryIterator("r", "recursive_directory",
+	TCLAP::ValueArg<bool> cmdRecursiveDirectoryIterator("r", "recursive-directory",
 		"Search recursively through directories to find more images to process. \n If this is set to 0 it will only check in the directory specified if the input is a directory instead of an image. \n You mustn't supply this argument with something other than 0 or 1.", false,
 		0, "bool", cmd);
 
@@ -588,7 +588,7 @@ int wmain(void){
 	cmdModeConstraintV.push_back("noise_scale");
 	TCLAP::ValuesConstraint<std::string> cmdModeConstraint(cmdModeConstraintV);
 	TCLAP::ValueArg<std::string> cmdMode("m", "mode", "image processing mode",
-		false, "noise_scale", &cmdModeConstraint, cmd);
+		false, "noise-scale", &cmdModeConstraint, cmd);
 
 	std::vector<int> cmdNRLConstraintV;
 	cmdNRLConstraintV.push_back(0);
@@ -596,13 +596,13 @@ int wmain(void){
 	cmdNRLConstraintV.push_back(2);
 	cmdNRLConstraintV.push_back(3);
 	TCLAP::ValuesConstraint<int> cmdNRLConstraint(cmdNRLConstraintV);
-	TCLAP::ValueArg<int> cmdNRLevel("", "noise_level", "noise reduction level",
+	TCLAP::ValueArg<int> cmdNRLevel("", "noise-level", "noise reduction level",
 		false, 1, &cmdNRLConstraint, cmd);
 
-	TCLAP::ValueArg<double> cmdScaleRatio("", "scale_ratio",
+	TCLAP::ValueArg<double> cmdScaleRatio("", "scale-ratio",
 		"custom scale ratio", false, 2.0, "double", cmd);
 
-	TCLAP::ValueArg<std::string> cmdModelPath("", "model_dir",
+	TCLAP::ValueArg<std::string> cmdModelPath("", "model-dir",
 		"path to custom model directory (don't append last / )", false,
 		DEFAULT_MODELS_DIRECTORY, "string", cmd);
 
@@ -620,7 +620,7 @@ int wmain(void){
 
 	TCLAP::SwitchArg cmdDisableGPU("", "disable-gpu", "disable GPU", cmd, false);
 
-	TCLAP::ValueArg<int> cmdBlockSize("", "block_size", "block size",
+	TCLAP::ValueArg<int> cmdBlockSize("", "block-size", "block size",
 		false, 0, "integer", cmd);
 	TCLAP::SwitchArg cmdListProcessor("l", "list-processor", "dump processor list", cmd, false);
 	
@@ -825,7 +825,7 @@ int main(int argc, char** argv) {
 		"path to output image file or directory  (you should use the full path)", false,
 		"auto", "string", cmd);
 
-	TCLAP::ValueArg<bool> cmdRecursiveDirectoryIterator("r", "recursive_directory",
+	TCLAP::ValueArg<bool> cmdRecursiveDirectoryIterator("r", "recursive-directory",
 		"Search recursively through directories to find more images to process. \n If this is set to 0 it will only check in the directory specified if the input is a directory instead of an image. \n You mustn't supply this argument with something other than 0 or 1.", false,
 		0, "bool", cmd);
 
@@ -846,13 +846,13 @@ int main(int argc, char** argv) {
 	cmdNRLConstraintV.push_back(2);
 	cmdNRLConstraintV.push_back(3);
 	TCLAP::ValuesConstraint<int> cmdNRLConstraint(cmdNRLConstraintV);
-	TCLAP::ValueArg<int> cmdNRLevel("", "noise_level", "noise reduction level",
+	TCLAP::ValueArg<int> cmdNRLevel("", "noise-level", "noise reduction level",
 		false, 1, &cmdNRLConstraint, cmd);
 
-	TCLAP::ValueArg<double> cmdScaleRatio("", "scale_ratio",
+	TCLAP::ValueArg<double> cmdScaleRatio("", "scale-ratio",
 		"custom scale ratio", false, 2.0, "double", cmd);
 
-	TCLAP::ValueArg<std::string> cmdModelPath("", "model_dir",
+	TCLAP::ValueArg<std::string> cmdModelPath("", "model-dir",
 		"path to custom model directory (don't append last / )", false,
 		DEFAULT_MODELS_DIRECTORY, "string", cmd);
 
@@ -870,7 +870,7 @@ int main(int argc, char** argv) {
 
 	TCLAP::SwitchArg cmdDisableGPU("", "disable-gpu", "disable GPU", cmd, false);
 
-	TCLAP::ValueArg<int> cmdBlockSize("", "block_size", "block size",
+	TCLAP::ValueArg<int> cmdBlockSize("", "block-size", "block size",
 		false, 0, "integer", cmd);
 	TCLAP::SwitchArg cmdListProcessor("l", "list-processor", "dump processor list", cmd, false);
 	
