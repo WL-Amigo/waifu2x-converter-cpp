@@ -209,7 +209,7 @@ std::string generate_output_location(std::string inputFileName, std::string outp
 		size_t tailDot = outputFileName.find_last_of('.');
 		if (tailDot != std::string::npos)
 			outputFileName.erase(tailDot, outputFileName.length());
-		outputFileName = outputFileName + "_[" + ReplaceString(mode, "noise_scale", "NS");
+		outputFileName = outputFileName + "_[" + ReplaceString(mode, "noise-scale", "NS");
 		//std::string &mode = mode;
 		if (mode.find("noise") != mode.npos) {
 			outputFileName = outputFileName + "-L" + std::to_string(NRLevel) + "]";
@@ -269,7 +269,7 @@ std::wstring generate_output_location(std::wstring inputFileName, std::wstring o
 		size_t tailDot = outputFileName.find_last_of(L'.');
 		if (tailDot != std::wstring::npos)
 			outputFileName.erase(tailDot, outputFileName.length());
-		outputFileName = outputFileName + L"_[" + to_wcs(ReplaceString(mode, "noise_scale", "NS"));
+		outputFileName = outputFileName + L"_[" + to_wcs(ReplaceString(mode, "noise-scale", "NS"));
 		//std::wstring &mode = mode;
 		if (mode.find("noise") != mode.npos) {
 			outputFileName = outputFileName + L"-L" + std::to_wstring(NRLevel) + L"]";
@@ -326,12 +326,12 @@ void convert_file(ConvInfo info, fs::path inputName, fs::path output) {
 
 	int _nrLevel = -1;
 
-	if (strcmp(info.mode.c_str(), "noise")==0 || strcmp(info.mode.c_str(), "noise_scale")==0) {
+	if (strcmp(info.mode.c_str(), "noise")==0 || strcmp(info.mode.c_str(), "noise-scale")==0) {
 		_nrLevel = info.NRLevel;
 	}
 
 	double _scaleRatio = 1;
-	if (strcmp(info.mode.c_str(), "scale")==0 || strcmp(info.mode.c_str(), "noise_scale")==0) {
+	if (strcmp(info.mode.c_str(), "scale")==0 || strcmp(info.mode.c_str(), "noise-scale")==0) {
 		_scaleRatio = info.scaleRatio;
 	}
 
@@ -351,12 +351,12 @@ void convert_fileW(ConvInfo info, fs::path inputName, fs::path output) {
 
 	int _nrLevel = -1;
 
-	if (strcmp(info.mode.c_str(), "noise")==0 || strcmp(info.mode.c_str(), "noise_scale")==0) {
+	if (strcmp(info.mode.c_str(), "noise")==0 || strcmp(info.mode.c_str(), "noise-scale")==0) {
 		_nrLevel = info.NRLevel;
 	}
 
 	double _scaleRatio = 1;
-	if (strcmp(info.mode.c_str(), "scale")==0 || strcmp(info.mode.c_str(), "noise_scale")==0) {
+	if (strcmp(info.mode.c_str(), "scale")==0 || strcmp(info.mode.c_str(), "noise-scale")==0) {
 		_scaleRatio = info.scaleRatio;
 	}
 
@@ -585,7 +585,7 @@ int wmain(void){
 	std::vector<std::string> cmdModeConstraintV;
 	cmdModeConstraintV.push_back("noise");
 	cmdModeConstraintV.push_back("scale");
-	cmdModeConstraintV.push_back("noise_scale");
+	cmdModeConstraintV.push_back("noise-scale");
 	TCLAP::ValuesConstraint<std::string> cmdModeConstraint(cmdModeConstraintV);
 	TCLAP::ValueArg<std::string> cmdMode("m", "mode", "image processing mode",
 		false, "noise-scale", &cmdModeConstraint, cmd);
@@ -835,10 +835,10 @@ int main(int argc, char** argv) {
 	std::vector<std::string> cmdModeConstraintV;
 	cmdModeConstraintV.push_back("noise");
 	cmdModeConstraintV.push_back("scale");
-	cmdModeConstraintV.push_back("noise_scale");
+	cmdModeConstraintV.push_back("noise-scale");
 	TCLAP::ValuesConstraint<std::string> cmdModeConstraint(cmdModeConstraintV);
 	TCLAP::ValueArg<std::string> cmdMode("m", "mode", "image processing mode",
-		false, "noise_scale", &cmdModeConstraint, cmd);
+		false, "noise-scale", &cmdModeConstraint, cmd);
 
 	std::vector<int> cmdNRLConstraintV;
 	cmdNRLConstraintV.push_back(0);
