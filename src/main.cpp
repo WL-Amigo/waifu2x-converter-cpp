@@ -604,7 +604,7 @@ int wmain(void){
 		"auto", "string", cmd);
 
 	TCLAP::ValueArg<bool> cmdRecursiveDirectoryIterator("r", "recursive-directory",
-		"Search recursively through directories to find more images to process. \n If this is set to 0 it will only check in the directory specified if the input is a directory instead of an image. \n You mustn't supply this argument with something other than 0 or 1.", false,
+		"Search recursively through directories to find more images to process.\nIf this is set to 0 it will only check in the directory specified if the input is a directory instead of an image.\nYou mustn't supply this argument with something other than 0 or 1.", false,
 		0, "bool", cmd);
 
 
@@ -657,7 +657,7 @@ int wmain(void){
 	TCLAP::ValueArg<int> cmdPngCompression("c", "png-compression", "Set PNG compression level (0-9), 9 = Max compression (slowest & smallest)",
 		false, 5, "0-9", cmd);
 		
-	TCLAP::ValueArg<std::string> cmdOutputFormat("f", "output-format", "The format used when running in auto/recursive mode",
+	TCLAP::ValueArg<std::string> cmdOutputFormat("f", "output-format", "The format used when running in recursive/folder mode\nSee --list-opencv-formats for a list of supported formats/extensions.",
 		false, "png", "png,jpg,webp,...", cmd);
 		
 	TCLAP::SwitchArg cmdListProcessor("l", "list-processor", "dump processor list", cmd, false);
@@ -891,7 +891,7 @@ int main(int argc, char** argv) {
 		"auto", "string", cmd);
 
 	TCLAP::ValueArg<bool> cmdRecursiveDirectoryIterator("r", "recursive-directory",
-		"Search recursively through directories to find more images to process. \n If this is set to 0 it will only check in the directory specified if the input is a directory instead of an image. \n You mustn't supply this argument with something other than 0 or 1.", false,
+		"Search recursively through directories to find more images to process.\nIf this is set to 0 it will only check in the directory specified if the input is a directory instead of an image.\nYou mustn't supply this argument with something other than 0 or 1.", false,
 		0, "bool", cmd);
 
 
@@ -944,7 +944,7 @@ int main(int argc, char** argv) {
 	TCLAP::ValueArg<int> cmdPngCompression("c", "png-compression", "Set PNG compression level (0-9), 9 = Max compression (slowest & smallest)",
 		false, 5, "0-9", cmd);
 		
-	TCLAP::ValueArg<std::string> cmdOutputFormat("f", "output-format", "The format used when running in auto/recursive mode",
+	TCLAP::ValueArg<std::string> cmdOutputFormat("f", "output-format", "The format used when running in recursive/folder mode\nSee --list-opencv-formats for a list of supported formats/extensions.",
 		false, "png", "png,jpg,webp,...", cmd);
 	
 	TCLAP::SwitchArg cmdListProcessor("l", "list-processor", "dump processor list", cmd, false);
