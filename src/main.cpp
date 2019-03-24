@@ -472,7 +472,7 @@ void debug_show_opencv_formats()
 	std::cout << "This is a list of supported formats, it depends on which formats opencv has been built with." << std::endl ;
 	for (auto const& x : opencv_formats)
 	{
-		std::cout << x.first << " -> " << (x.second ? "Yes" : "No") << std::endl ;
+		std::cout << "\t" << std::setw(4) << x.first << " -> " << (x.second ? "Yes" : "No") << std::endl ;
 	}
 }
 
