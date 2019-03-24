@@ -389,13 +389,21 @@ proc_thread(void *ap)
             /* finished */
             break;
         }
+		
+		int imwrite_params[6];
+		imwrite_params[0] = 64; //cv::IMWRITE_WEBP_QUALITY;
+		imwrite_params[1] = 90;
+		imwrite_params[2] = 1;  //cv::IMWRITE_JPEG_QUALITY;
+		imwrite_params[3] = 90;
+		imwrite_params[4] = 16; //cv::IMWRITE_PNG_COMPRESSION
+		imwrite_params[5] = 5;
 
         p = &app->path_list[li];
         r = w2xconv_convert_file(c,
                                  p->dst_path,
                                  p->src_path,
                                  p->denoise,
-                                 param_scale, block_size);
+                                 param_scale, block_size, imwrite_params);
 
         if (r != 0) {
             goto error;

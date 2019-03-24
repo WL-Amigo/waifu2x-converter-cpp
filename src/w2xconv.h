@@ -200,7 +200,8 @@ W2XCONV_EXPORT int w2xconv_convert_file(struct W2XConv *conv,
 					const char *src_path,
 					int denoise_level, /* -1:none, 0:L0 denoise, 1:L1 denoise, 2:L2 denoise, 3:L3 denoise  */
 					double scale,
-					int block_size);
+					int block_size,
+					int* imwrite_params);
 
 #if defined(WIN32) && defined(UNICODE)		
 W2XCONV_EXPORT int w2xconv_convert_fileW(struct W2XConv *conv,
@@ -208,7 +209,8 @@ W2XCONV_EXPORT int w2xconv_convert_fileW(struct W2XConv *conv,
 					const WCHAR *src_path,
 					int denoise_level, /* -1:none, 0:L0 denoise, 1:L1 denoise, 2:L2 denoise, 3:L3 denoise  */
 					double scale,
-					int block_size);
+					int block_size,
+					int* imwrite_params);
 #endif			
 
 W2XCONV_EXPORT int w2xconv_convert_rgb(struct W2XConv *conv,

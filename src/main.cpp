@@ -79,7 +79,8 @@ struct ConvInfo {
 	double scaleRatio;
 	int blockSize;
 	W2XConv* converter;
-	ConvInfo(std::string mode, int NRLevel, double scaleRatio, int blockSize, W2XConv* converter) :mode(mode), NRLevel(NRLevel), scaleRatio(scaleRatio), blockSize(blockSize), converter(converter) {};
+	int* imwrite_params;
+	ConvInfo(std::string mode, int NRLevel, double scaleRatio, int blockSize, W2XConv* converter, int* imwrite_params) :mode(mode), NRLevel(NRLevel), scaleRatio(scaleRatio), blockSize(blockSize), converter(converter), imwrite_params(imwrite_params) {};
 };
 
 
@@ -336,10 +337,13 @@ void convert_file(ConvInfo info, fs::path inputName, fs::path output) {
 	}
 
 	int error = w2xconv_convert_file(info.converter,
-		outputName.c_str(),
-		fs::absolute(inputName).string().c_str(),
-		_nrLevel,
-		_scaleRatio, info.blockSize);
+			outputName.c_str(),
+			fs::absolute(inputName).string().c_str(),
+			_nrLevel,
+			_scaleRatio,
+			info.blockSize,
+			info.imwrite_params
+		);
 
 	check_for_errors(info.converter, error);
 }
@@ -361,10 +365,13 @@ void convert_fileW(ConvInfo info, fs::path inputName, fs::path output) {
 	}
 
 	int error = w2xconv_convert_fileW(info.converter,
-		outputName.c_str(),
-		fs::absolute(inputName).wstring().c_str(),
-		_nrLevel,
-		_scaleRatio, info.blockSize);
+			outputName.c_str(),
+			fs::absolute(inputName).wstring().c_str(),
+			_nrLevel,
+			_scaleRatio,
+			info.blockSize,
+			info.imwrite_params
+		);
 
 	check_for_errors(info.converter, error);
 }
@@ -622,6 +629,13 @@ int wmain(void){
 
 	TCLAP::ValueArg<int> cmdBlockSize("", "block-size", "block size",
 		false, 0, "integer", cmd);
+		
+	TCLAP::ValueArg<int> cmdImgQuality("q", "image-quality", "Set JPEG and WebP compression quality (0-100)",
+		false, 90, "0-100", cmd);
+		
+	TCLAP::ValueArg<int> cmdPngCompression("c", "png-compression", "Set PNG compression level (0-9), 9 = Max compression (slowest & smallest)",
+		false, 5, "0-9", cmd);
+		
 	TCLAP::SwitchArg cmdListProcessor("l", "list-processor", "dump processor list", cmd, false);
 	
 	#ifdef HAVE_OPENCV
@@ -637,6 +651,18 @@ int wmain(void){
 	catch (std::exception &e) {
 		std::cerr << e.what() << std::endl;
 		std::cerr << "Error : cmd.parse() threw exception" << std::endl;
+		std::exit(-1);
+	}
+	
+	//Check Quality/Compression option ranges.
+	if (cmdPngCompression.getValue() < 0 || cmdPngCompression.getValue() > 9)
+	{
+		std::cout << "Error: PNG Compression level range is 0-9, 9 being the slowest and resulting in the smallest file size." << std::endl;
+		std::exit(-1);
+	}
+	if (cmdImgQuality.getValue() < 0 || cmdImgQuality.getValue() > 100)
+	{
+		std::cout << "Error: JPEG & WebP Compression quality range is 0-100, 100 having the best quality but largest file size." << std::endl;
 		std::exit(-1);
 	}
 	
@@ -669,8 +695,16 @@ int wmain(void){
 	else {
 		converter = w2xconv_init(gpu, cmdNumberOfJobs.getValue(), verbose);
 	}
+	
+	int imwrite_params[6];
+	imwrite_params[0] = cv::IMWRITE_WEBP_QUALITY;
+	imwrite_params[1] = cmdImgQuality.getValue();
+	imwrite_params[2] = cv::IMWRITE_JPEG_QUALITY;
+	imwrite_params[3] = cmdImgQuality.getValue();
+	imwrite_params[4] = cv::IMWRITE_PNG_COMPRESSION;
+	imwrite_params[5] = cmdPngCompression.getValue();
 
-	ConvInfo convInfo(cmdMode.getValue(), cmdNRLevel.getValue(), cmdScaleRatio.getValue(), cmdBlockSize.getValue(), converter);
+	ConvInfo convInfo(cmdMode.getValue(), cmdNRLevel.getValue(), cmdScaleRatio.getValue(), cmdBlockSize.getValue(), converter, imwrite_params);
 	
 	double time_start = getsec();
 
@@ -872,6 +906,13 @@ int main(int argc, char** argv) {
 
 	TCLAP::ValueArg<int> cmdBlockSize("", "block-size", "block size",
 		false, 0, "integer", cmd);
+		
+	TCLAP::ValueArg<int> cmdImgQuality("q", "image-quality", "Define JPEG and WebP compression quality (0-100)",
+		false, 90, "integer", cmd);
+		
+	TCLAP::ValueArg<int> cmdPngCompression("c", "png-compression", "Set PNG compression level (0-9), 9 = Max compression (slowest & smallest)",
+		false, 5, "0-9", cmd);
+	
 	TCLAP::SwitchArg cmdListProcessor("l", "list-processor", "dump processor list", cmd, false);
 	
 	#ifdef HAVE_OPENCV
@@ -887,6 +928,18 @@ int main(int argc, char** argv) {
 	catch (std::exception &e) {
 		std::cerr << e.what() << std::endl;
 		std::cerr << "Error : cmd.parse() threw exception" << std::endl;
+		std::exit(-1);
+	}
+	
+	//Check Quality/Compression option ranges.
+	if (cmdPngCompression.getValue() < 0 || cmdPngCompression.getValue() > 9)
+	{
+		std::cout << "Error: PNG Compression level range is 0-9, 9 being the slowest and resulting in the smallest file size." << std::endl;
+		std::exit(-1);
+	}
+	if (cmdImgQuality.getValue() < 0 || cmdImgQuality.getValue() > 100)
+	{
+		std::cout << "Error: JPEG & WebP Compression quality range is 0-100, 100 having the best quality but largest file size." << std::endl;
 		std::exit(-1);
 	}
 
@@ -919,8 +972,16 @@ int main(int argc, char** argv) {
 	else {
 		converter = w2xconv_init(gpu, cmdNumberOfJobs.getValue(), verbose);
 	}
-
-	ConvInfo convInfo(cmdMode.getValue(), cmdNRLevel.getValue(), cmdScaleRatio.getValue(), cmdBlockSize.getValue(), converter);
+	
+	int imwrite_params[6];
+	imwrite_params[0] = cv::IMWRITE_WEBP_QUALITY;
+	imwrite_params[1] = cmdImgQuality.getValue();
+	imwrite_params[2] = cv::IMWRITE_JPEG_QUALITY;
+	imwrite_params[3] = cmdImgQuality.getValue();
+	imwrite_params[4] = cv::IMWRITE_PNG_COMPRESSION;
+	imwrite_params[5] = cmdPngCompression.getValue();
+	
+	ConvInfo convInfo(cmdMode.getValue(), cmdNRLevel.getValue(), cmdScaleRatio.getValue(), cmdBlockSize.getValue(), converter, imwrite_params);
 
 	double time_start = getsec();
 
