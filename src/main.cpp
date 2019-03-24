@@ -580,7 +580,7 @@ int wmain(void){
 		0, "bool", cmd);
 
 
-	TCLAP::SwitchArg cmdQuiet("q", "quiet", "Enable quiet mode.", cmd, false);
+	TCLAP::SwitchArg cmdQuiet("s", "silent", "Enable silent mode.", cmd, false);
 
 	std::vector<std::string> cmdModeConstraintV;
 	cmdModeConstraintV.push_back("noise");
@@ -830,7 +830,7 @@ int main(int argc, char** argv) {
 		0, "bool", cmd);
 
 
-	TCLAP::SwitchArg cmdQuiet("q", "quiet", "Enable quiet mode.", cmd, false);
+	TCLAP::SwitchArg cmdQuiet("s", "silent", "Enable silent mode.", cmd, false);
 
 	std::vector<std::string> cmdModeConstraintV;
 	cmdModeConstraintV.push_back("noise");
