@@ -1053,14 +1053,16 @@ int main(int argc, char** argv) {
 		//Build files list
 		std::deque<fs::path> files_list;
 		std::cout << "We're going to be operating in a directory. dir:" << fs::absolute(input) << std::endl;
+
+//		TODO: Use a variant instead of so much repeated code
 		if (recursive_directory_iterator) {
 			for (auto & inputFile : fs::recursive_directory_iterator(input)) {
 				if (!fs::is_directory(inputFile)) {
-					if(validate_format_extension(inputFile.filename())){
+					if(validate_format_extension(inputFile.path().filename())){
 						files_list.push_back(inputFile);
 					}
 					else {
-						std::cout << "Skipping file '" << inputFile.filename() <<  "' for having an unsupported file extension" << std::endl;
+						std::cout << "Skipping file '" << inputFile.path().filename() <<  "' for having an unsupported file extension" << std::endl;
 						continue;
 					}
 				}
@@ -1069,11 +1071,11 @@ int main(int argc, char** argv) {
 		else {
 			for (auto & inputFile : fs::directory_iterator(input)) {
 				if (!fs::is_directory(inputFile)) {
-					if(validate_format_extension(inputFile.filename())){
+					if(validate_format_extension(inputFile.path().filename())){
 						files_list.push_back(inputFile);
 					}
 					else {
-						std::cout << "Skipping file '" << inputFile.filename() <<  "' for having an unsupported file extension" << std::endl;
+						std::cout << "Skipping file '" << inputFile.path().filename() <<  "' for having an unsupported file extension" << std::endl;
 						continue;
 					}
 				}
