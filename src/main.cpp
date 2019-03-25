@@ -1058,11 +1058,12 @@ int main(int argc, char** argv) {
 		if (recursive_directory_iterator) {
 			for (auto & inputFile : fs::recursive_directory_iterator(input)) {
 				if (!fs::is_directory(inputFile)) {
-					if(validate_format_extension(inputFile.path().filename())){
+					if(validate_format_extension(inputFile.path().extension().native().substr(1))){
 						files_list.push_back(inputFile);
 					}
 					else {
-						std::cout << "Skipping file '" << inputFile.path().filename() <<  "' for having an unsupported file extension" << std::endl;
+						std::cout << "Skipping file '" << inputFile.path().filename().native() <<
+								"' for having an unsupported file extension (" << inputFile.path().extension().native().substr(1) << ")" << std::endl;
 						continue;
 					}
 				}
@@ -1071,11 +1072,12 @@ int main(int argc, char** argv) {
 		else {
 			for (auto & inputFile : fs::directory_iterator(input)) {
 				if (!fs::is_directory(inputFile)) {
-					if(validate_format_extension(inputFile.path().filename())){
+					if(validate_format_extension(inputFile.path().extension().native().substr(1))){
 						files_list.push_back(inputFile);
 					}
 					else {
-						std::cout << "Skipping file '" << inputFile.path().filename() <<  "' for having an unsupported file extension" << std::endl;
+						std::cout << "Skipping file '" << inputFile.path().filename().native() <<
+								"' for having an unsupported file extension (" << inputFile.path().extension().native().substr(1) << ")" << std::endl;
 						continue;
 					}
 				}
@@ -1086,12 +1088,10 @@ int main(int argc, char** argv) {
 		double timeAvg = 0.0;
 		int files_count = static_cast<int>(files_list.size());
 		for (auto &fn : files_list) {
-
 			++numFilesProcessed;
 			double time_file_start = getsec();
 
 			std::cout << "[" << numFilesProcessed << "/" << files_count << "] " << fn.filename() << (verbose ? "\n" : " Ok. ");
-
 
 			try {
 				convert_file(convInfo, fn, output);
