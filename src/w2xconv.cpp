@@ -1439,13 +1439,14 @@ w2xconv_convert_mat(struct W2XConv *conv,
 	}
 }
 
-int
-w2xconv_convert_file(struct W2XConv *conv,
-		     const char *dst_path,
-                     const char *src_path,
-                     int denoise_level,
-                     double scale,
-		     int blockSize)
+int w2xconv_convert_file(
+	struct W2XConv *conv,
+	const char *dst_path,
+	const char *src_path,
+	int denoise_level,
+	double scale,
+	int blockSize,
+	int* imwrite_params) 
 {
 	double time_start = getsec();
 
@@ -1498,8 +1499,13 @@ w2xconv_convert_file(struct W2XConv *conv,
 	
 	w2xconv_convert_mat(conv, image_dst, image_src, denoise_level, scale, blockSize, background, png_rgb, dst_png);
 	
+	std::vector<int> compression_params;	
+	for ( int i = 0; i < sizeof(imwrite_params); i = i + 1 )
+	{
+		compression_params.push_back(imwrite_params[i]);
+	}	
 
-	if (!cv::imwrite(dst_path, image_dst)) {
+	if (!cv::imwrite(dst_path, image_dst, compression_params)) {
 		setPathError(conv,
 			     W2XCONV_ERROR_IMWRITE_FAILED,
 			     dst_path);
@@ -1548,14 +1554,19 @@ cv::Mat read_imageW(const WCHAR* filepath, int flags=cv::IMREAD_COLOR) {
     return img;
 }
 
-bool write_imageW(const WCHAR* filepath, cv::Mat& img, std::vector<int> param = std::vector<int>(0))
+bool write_imageW(const WCHAR* filepath, cv::Mat& img, int* param)
 {
 	FILE* pFile;
 	std::vector<uchar> imageBuffer;
 	std::wstring ext = std::wstring(filepath);
 	ext = ext.substr(ext.find_last_of(L'.'));
 	
-	if(!cv::imencode(to_mbs(ext).c_str(),img, imageBuffer, param))
+	std::vector<int> compression_params;	
+	for ( int i = 0; i < sizeof(param); i = i + 1 )
+	{
+		compression_params.push_back(param[i]);
+	}	
+	if(!cv::imencode(to_mbs(ext).c_str(),img, imageBuffer, compression_params) )
 		return false;
 	
     pFile = _wfopen(filepath, L"wb+");
@@ -1568,13 +1579,14 @@ bool write_imageW(const WCHAR* filepath, cv::Mat& img, std::vector<int> param = 
     return true;
 }
 
-int
-w2xconv_convert_fileW(struct W2XConv *conv,
-		     const WCHAR *dst_path,
-                     const WCHAR *src_path,
-                     int denoise_level,
-                     double scale,
-		     int blockSize)
+int w2xconv_convert_fileW(
+	struct W2XConv *conv,
+	const WCHAR *dst_path,
+	const WCHAR *src_path,
+	int denoise_level,
+	double scale,
+	int blockSize,
+	int* imwrite_params)
 {
 	double time_start = getsec();
 
@@ -1627,7 +1639,7 @@ w2xconv_convert_fileW(struct W2XConv *conv,
 
 	w2xconv_convert_mat(conv, image_dst, image_src, denoise_level, scale, blockSize, background, png_rgb, dst_png);
 
-	if (!write_imageW(dst_path, image_dst)) {
+	if (!write_imageW(dst_path, image_dst, imwrite_params)) {
 		setPathError(conv,
 			     W2XCONV_ERROR_IMWRITE_FAILED,
 			     dst_path);
