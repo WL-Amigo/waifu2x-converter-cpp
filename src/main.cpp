@@ -167,15 +167,15 @@ std::map<std::string,bool> opencv_formats = {
 	{"DIB",  false},
 	
 	// JPEG Files
-	{"JPEG", false},
-	{"JPG", false},
-	{"JPE", false},
+	{"JPEG", true},
+	{"JPG", true},
+	{"JPE", true},
 	
 	// JPEG 2000 Files
 	{"JP2", false},
 	
 	// Portable Network Graphics
-	{"PNG",  false},
+	{"PNG",  true},
 	
 	// WebP
 	{"WEBP", false},
@@ -203,7 +203,7 @@ std::map<std::string,bool> opencv_formats = {
 	{"PIC", false}
 };
 
-bool check_output_extension(std::string extension) {
+bool validate_format_extension(std::string extension) {
 	for(std::string::iterator it = extension.begin(); it != extension.end(); ++it){
 		*it = std::toupper(*it);
 	}
@@ -263,7 +263,7 @@ std::string generate_output_location(std::string inputFileName, std::string outp
 		//We may have a regular output file here or something went wrong.
 		//outputFileName is already what it should be thus nothing needs to be done.
 		#ifdef HAVE_OPENCV
-		if(check_output_extension(outputFileName.substr(lastDotPos+1))==false){
+		if(validate_format_extension(outputFileName.substr(lastDotPos+1))==false){
 			throw std::runtime_error("Unsupported output extension. outputFileName:" + outputFileName + " extension:" +outputFileName.substr(lastDotPos+1));
 		}
 		#endif
@@ -329,7 +329,7 @@ std::wstring generate_output_location(std::wstring inputFileName, std::wstring o
 		//We may have a regular output file here or something went wrong.
 		//outputFileName is already what it should be thus nothing needs to be done.
 		#ifdef HAVE_OPENCV
-		if(check_output_extension(to_mbs(outputFileName.substr(lastDotPos+1)))==false){
+		if(validate_format_extension(to_mbs(outputFileName.substr(lastDotPos+1)))==false){
 			throw std::runtime_error("Unsupported output extension.");
 		}
 		#endif
@@ -342,60 +342,7 @@ std::wstring generate_output_location(std::wstring inputFileName, std::wstring o
 #endif
 
 
-bool has_png_header(const unsigned char* fileStart){
-	static unsigned char pngStart[4] = {0x89, 0x50, 0x4E, 0x47 };
-	for(int i = 0; i < sizeof(pngStart); i++){
-		if(fileStart[i] != pngStart[i]){
-			return false;
-		}
-	}
-	return true;
-}
-
-bool has_jpeg_header(const unsigned char* fileStart){
-	static unsigned char jpegStart[2] = {0xFF, 0xD8 };
-	for(int i = 0; i < sizeof(jpegStart); i++){
-		if(fileStart[i] != jpegStart[i]){
-			return false;
-		}
-	}
-	return true;
-}
-
-bool is_file_valid(fs::path fn){
-	static unsigned char pngStart[4] = {0x89, 0x50, 0x4E, 0x47 };
-	static unsigned char jpegStart[2] = {0xFF, 0xD8 };
-	FILE *filePointer = NULL;
-
-	std::string absPath = fs::absolute(fn).string();
-	const char* filePath = absPath.c_str();
-	filePointer = fopen(filePath, "rb");
-	if (filePointer == NULL) {
-		std::cerr << fn.filename() << "  " << std::strerror(errno) <<
-				"full path: '" << absPath << "' failed to load." << std::endl;
-		return false;
-	}
-	setbuf(filePointer, NULL );
-	unsigned char fileStart[4] = {0, 0, 0, 0};
-	int amountRead = fread(fileStart, 1, 4, filePointer);
-	fclose(filePointer);
-
-	if(amountRead < 4){
-		std::cerr << fn.filename() << ";" << amountRead << " file too small" << std::endl;
-		return false;
-	}
-
-	auto isPNG = false;
-	auto isJPEG = false;
-
-	if(		!has_jpeg_header(fileStart) &&
-			!has_png_header(fileStart)){
-		std::cerr << fn.filename() << " file is neither png nor jpeg" << std::endl;
-		return false;
-	}
-	return true;
-}
-
+void convert_file(ConvInfo info, fs::path inputName, fs::path output) {
 	//std::cout << "Operating on: " << fs::absolute(inputName).string() << std::endl;
 	std::string outputName = generate_output_location(fs::absolute(inputName).string(), output.string(), info.mode, info.NRLevel, info.scaleRatio, info.outputFormat);
 
@@ -469,16 +416,16 @@ void check_opencv_formats()
 		if (strings.size() >= 2)
 		{
 			// Portable Network Graphics
-			if ((strings[0] == "PNG") && (strings[1] != "NO"))
+			if ((strings[0] == "PNG"))
 			{
-				opencv_formats["PNG"] = true;
+				opencv_formats["PNG"] = strings[1] != "NO";
 			}
 			// JPEG Files
-			else if ((strings[0] == "JPEG") && (strings[1] != "NO"))
+			else if ((strings[0] == "JPEG"))
 			{
-				opencv_formats["JPEG"] = true;
-				opencv_formats["JPG"] = true;
-				opencv_formats["JPE"] = true;
+				opencv_formats["JPEG"] = (strings[1] != "NO");
+				opencv_formats["JPG"] = (strings[1] != "NO");
+				opencv_formats["JPE"] = (strings[1] != "NO");
 			}
 			// JPEG 2000 Files
 			else if ((strings[0] == "JPEG 2000") && (strings[1] != "NO"))
@@ -743,7 +690,7 @@ int wmain(void){
 		std::exit(-1);
 	}
 	#ifdef HAVE_OPENCV
-	if(check_output_extension(cmdOutputFormat.getValue())==false){
+	if(validate_format_extension(cmdOutputFormat.getValue())==false){
 		printf("Unsupported output extension: %s\nUse option --list-opencv-formats to see a list of supported formats", cmdOutputFormat.getValue().c_str());
 		std::exit(-1);
 	}
@@ -1030,7 +977,7 @@ int main(int argc, char** argv) {
 		std::exit(-1);
 	}
 	#ifdef HAVE_OPENCV
-	if(check_output_extension(cmdOutputFormat.getValue())==false){
+	if(validate_format_extension(cmdOutputFormat.getValue())==false){
 		printf("Unsupported output extension: %s\nUse option --list-opencv-formats to see a list of supported formats", cmdOutputFormat.getValue().c_str());
 		std::exit(-1);
 	}
@@ -1109,14 +1056,26 @@ int main(int argc, char** argv) {
 		if (recursive_directory_iterator) {
 			for (auto & inputFile : fs::recursive_directory_iterator(input)) {
 				if (!fs::is_directory(inputFile)) {
-					files_list.push_back(inputFile);
+					if(validate_format_extension(inputFile.filename())){
+						files_list.push_back(inputFile);
+					}
+					else {
+						std::cout << "Skipping file '" << inputFile.filename() <<  "' for having an unsupported file extension" << std::endl;
+						continue;
+					}
 				}
 			}
 		}
 		else {
 			for (auto & inputFile : fs::directory_iterator(input)) {
 				if (!fs::is_directory(inputFile)) {
-					files_list.push_back(inputFile);
+					if(validate_format_extension(inputFile.filename())){
+						files_list.push_back(inputFile);
+					}
+					else {
+						std::cout << "Skipping file '" << inputFile.filename() <<  "' for having an unsupported file extension" << std::endl;
+						continue;
+					}
 				}
 			}
 		}
@@ -1125,14 +1084,12 @@ int main(int argc, char** argv) {
 		double timeAvg = 0.0;
 		int files_count = static_cast<int>(files_list.size());
 		for (auto &fn : files_list) {
+
 			++numFilesProcessed;
 			double time_file_start = getsec();
 
 			std::cout << "[" << numFilesProcessed << "/" << files_count << "] " << fn.filename() << (verbose ? "\n" : " Ok. ");
 
-			if(!is_file_valid(fn)){
-				continue;
-			}
 
 			try {
 				convert_file(convInfo, fn, output);
