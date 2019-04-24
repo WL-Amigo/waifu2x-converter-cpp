@@ -651,8 +651,8 @@ int wmain(void){
 	TCLAP::ValueArg<int> cmdBlockSize("", "block-size", "block size",
 		false, 0, "integer", cmd);
 		
-	TCLAP::ValueArg<int> cmdImgQuality("q", "image-quality", "Set JPEG and WebP compression quality (0-100)",
-		false, 90, "0-100", cmd);
+	TCLAP::ValueArg<int> cmdImgQuality("q", "image-quality", "Set JPEG and WebP compression quality (0-101), use 101 for lossless WebP",
+		false, 90, "0-101", cmd);
 		
 	TCLAP::ValueArg<int> cmdPngCompression("c", "png-compression", "Set PNG compression level (0-9), 9 = Max compression (slowest & smallest)",
 		false, 5, "0-9", cmd);
@@ -684,9 +684,9 @@ int wmain(void){
 		std::cout << "Error: PNG Compression level range is 0-9, 9 being the slowest and resulting in the smallest file size." << std::endl;
 		std::exit(-1);
 	}
-	if (cmdImgQuality.getValue() < 0 || cmdImgQuality.getValue() > 100)
+	if (cmdImgQuality.getValue() < 0 || cmdImgQuality.getValue() > 101)
 	{
-		std::cout << "Error: JPEG & WebP Compression quality range is 0-100, 100 having the best quality but largest file size." << std::endl;
+		std::cout << "Error: JPEG & WebP Compression quality range is 0-101 (0 being smallest size and lowest quality). Using 101 enables WebP lossless mode. " << std::endl;
 		std::exit(-1);
 	}
 	#ifdef HAVE_OPENCV
