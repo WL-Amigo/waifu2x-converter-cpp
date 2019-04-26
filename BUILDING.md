@@ -11,6 +11,18 @@ https://github.com/DeadSix27/waifu2x-converter-cpp/releases
 
 ---
 
+##### CMake options:
+- `-DENABLE_OPENCV`
+	- Build with OpenCV support? (Default: ON)
+- `-ENABLE_UNICODE`
+	- Build with Unicode support? (Default: ON)
+- `-ENABLE_CUDA`
+	- Build with CUDA support? (Default: ON)
+- `-INSTALL_MODELS`
+	- Install models? (Default: ON on Linux, OFF on Windows)
+
+---
+
 # Windows
 
 ### Requirements:
