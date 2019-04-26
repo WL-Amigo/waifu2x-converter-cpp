@@ -9,10 +9,9 @@ option(ENABLE_CUDA "Build with CUDA support? (Default: ON)" ON)
 option(ENABLE_UNICODE "Build with Unicode support? (Default: ON)" ON)
 # Better add support for multiple directories where to find models
 # with paths separated by : (a la PATH) then install unconditionally
+set(INSTALL_MODELS "Install waifu2x RGB models? (Default OFF)" ON)
 if(WIN32)
-	set(INSTALL_MODELS "Install waifu2x RGB models? (Default OFF)" OFF)
-else()
-	set(INSTALL_MODELS "Install waifu2x RGB models? (Default ON)" ON)
+	set(INSTALL_MODELS OFF)
 endif()
 
 if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
