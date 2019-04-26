@@ -90,6 +90,7 @@ if (WIN32)
 	else()
 		message(STATUS "Found /CL/cl.h in ${OpenCL_INCLUDE_DIRS}")
 		message(STATUS "Errors about 'missing: OpenCL_LIBRARY' can be ignored, that is not needed.")
+		include_directories(${OpenCL_INCLUDE_DIRS})
 	endif()
 endif()
 
