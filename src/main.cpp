@@ -1058,12 +1058,12 @@ int main(int argc, char** argv) {
 		if (recursive_directory_iterator) {
 			for (auto & inputFile : fs::recursive_directory_iterator(input)) {
 				if (!fs::is_directory(inputFile)) {
-					if(validate_format_extension(inputFile.path().extension().native().substr(1))){
+					if(validate_format_extension(inputFile.path().extension().string().substr(1))){
 						files_list.push_back(inputFile);
 					}
 					else {
-						std::cout << "Skipping file '" << inputFile.path().filename().native() <<
-								"' for having an unsupported file extension (" << inputFile.path().extension().native().substr(1) << ")" << std::endl;
+						std::cout << "Skipping file '" << inputFile.path().filename().string() <<
+								"' for having an unsupported file extension (" << inputFile.path().extension().string().substr(1) << ")" << std::endl;
 						continue;
 					}
 				}
@@ -1072,12 +1072,12 @@ int main(int argc, char** argv) {
 		else {
 			for (auto & inputFile : fs::directory_iterator(input)) {
 				if (!fs::is_directory(inputFile)) {
-					if(validate_format_extension(inputFile.path().extension().native().substr(1))){
+					if(validate_format_extension(inputFile.path().extension().string().substr(1))){
 						files_list.push_back(inputFile);
 					}
 					else {
-						std::cout << "Skipping file '" << inputFile.path().filename().native() <<
-								"' for having an unsupported file extension (" << inputFile.path().extension().native().substr(1) << ")" << std::endl;
+						std::cout << "Skipping file '" << inputFile.path().filename().string() <<
+								"' for having an unsupported file extension (" << inputFile.path().extension().string().substr(1) << ")" << std::endl;
 						continue;
 					}
 				}
