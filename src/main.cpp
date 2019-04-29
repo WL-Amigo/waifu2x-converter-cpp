@@ -163,44 +163,44 @@ void check_for_errors(W2XConv* converter, int error) {
 
 std::map<std::string,bool> opencv_formats = {
 	// Windows Bitmaps
-	{"BMP",  false},
-	{"DIB",  false},
+	{"BMP",  true},
+	{"DIB",  true},
 	
 	// JPEG Files
 	{"JPEG", true},
-	{"JPG", true},
-	{"JPE", true},
+	{"JPG",  true},
+	{"JPE",  true},
 	
 	// JPEG 2000 Files
-	{"JP2", false},
+	{"JP2",  true},
 	
 	// Portable Network Graphics
 	{"PNG",  true},
 	
 	// WebP
-	{"WEBP", false},
+	{"WEBP", true},
 	
 	// Portable Image Format
-	{"PBM",  false},
-	{"PGM",  false},
-	{"PPM",  false},
-	{"PXM",  false},
-	{"PNM",  false},
+	{"PBM",  true},
+	{"PGM",  true},
+	{"PPM",  true},
+	{"PXM",  true},
+	{"PNM",  true},
 	
 	// Sun Rasters
-	{"SR",  false},
-	{"RAS",  false},
+	{"SR",   true},
+	{"RAS",  true},
 	
 	// TIFF Files
-	{"TIF", false},
-	{"TIFF", false},
+	{"TIF",  true},
+	{"TIFF", true},
 	
 	// OpenEXR Image Files
-	{"EXR", false},
+	{"EXR",  true},
 	
 	// Radiance HDR
-	{"HDR", false},
-	{"PIC", false}
+	{"HDR",  true},
+	{"PIC",  true}
 };
 
 bool validate_format_extension(std::string extension) {
@@ -402,49 +402,46 @@ void convert_fileW(ConvInfo info, fs::path inputName, fs::path output) {
 //check for opencv formats
 void check_opencv_formats()
 {
-	std::istringstream iss(cv::getBuildInformation());
-
-	for (std::string line; std::getline(iss, line); )
+	// Portable Network Graphics
+	if (!cvHaveImageWriter(".png"))
 	{
-		std::vector<std::string> strings;
-		std::istringstream f(line);
-		std::string s;
-		while (getline(f, s, ':')) {
-			s = trim(s);
-			strings.push_back(s);
-		}
-		if (strings.size() >= 2)
-		{
-			// Portable Network Graphics
-			if ((strings[0] == "PNG"))
-			{
-				opencv_formats["PNG"] = strings[1] != "NO";
-			}
-			// JPEG Files
-			else if ((strings[0] == "JPEG"))
-			{
-				opencv_formats["JPEG"] = (strings[1] != "NO");
-				opencv_formats["JPG"] = (strings[1] != "NO");
-				opencv_formats["JPE"] = (strings[1] != "NO");
-			}
-			// JPEG 2000 Files
-			else if ((strings[0] == "JPEG 2000") && (strings[1] != "NO"))
-			{
-				opencv_formats["JP2"] = true;
-			}
-			// WebP
-			else if ((strings[0] == "WEBP") && (strings[1] != "NO"))
-			{
-				opencv_formats["WEBP"] = true;
-			}
-			// TIFF Files
-			else if ((strings[0] == "TIFF") && (strings[1] != "NO"))
-			{
-				opencv_formats["TIF"] = true;
-				opencv_formats["TIFF"] = true;
-			}
-		}
+		opencv_formats["PNG"] = false;
 	}
+	
+	// JPEG Files
+	if (!cvHaveImageWriter(".jpg"))
+	{
+		opencv_formats["JPEG"] = false;
+		opencv_formats["JPG"] = false;
+		opencv_formats["JPE"] = false;
+	}
+	
+	// JPEG 2000 Files
+	if (!cvHaveImageWriter(".jp2"))
+	{
+		opencv_formats["JP2"] = false;
+	}
+	
+	// WebP
+	if (!cvHaveImageWriter(".webp"))
+	{
+		opencv_formats["WEBP"] = false;
+	}
+	
+	// TIFF Files
+	if (!cvHaveImageWriter(".tif"))
+	{
+		opencv_formats["TIF"] = false;
+		opencv_formats["TIFF"] = false;
+	}
+	
+	// OpenEXR Image Files
+	if(!cvHaveImageWriter(".exr"))
+	{
+		opencv_formats["EXR"] = false;
+	}
+
+	/* These formats are always available.
 	// Windows Bitmaps (Always Supported)
 	opencv_formats["BMP"] = true;
 	opencv_formats["DIB"] = true;
@@ -463,9 +460,7 @@ void check_opencv_formats()
 	// Radiance HDR (Always Supported)
 	opencv_formats["HDR"] = true;
 	opencv_formats["PIC"] = true;
-	
-	// OpenEXR Image Files
-	opencv_formats["EXR"] = true;
+	*/
 }
 void debug_show_opencv_formats()
 {
