@@ -253,7 +253,11 @@ add_dependencies(w2xc gensrcs)
 
 if(CMAKE_COMPILER_IS_GNUCXX OR ${CMAKE_CXX_COMPILER_ID} MATCHES "^(Apple)?Clang$")
 	set(CMAKE_CXX_STANDARD 17)
-	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++17")
+	if(CMAKE_COMPILER_IS_GNUCXX)
+		set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=gnu++17")
+	else()
+		set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++17")
+	endif()
 	set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall")
 
 	if (${CMAKE_SYSTEM_NAME} STREQUAL "Darwin")
@@ -381,7 +385,7 @@ else()
 	target_link_libraries(runbench LINK_PUBLIC w2xc ${FILE_SYSTEM_LIB} stdc++)
 endif()
 install(FILES src/w2xconv.h DESTINATION include)
-	
+
 if(INSTALL_MODELS)
 	add_definitions(-DDEFAULT_MODELS_DIRECTORY="${CMAKE_INSTALL_PREFIX}/share/waifu2x-converter-cpp")
 	install(DIRECTORY models_rgb/ DESTINATION share/waifu2x-converter-cpp)
