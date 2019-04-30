@@ -172,7 +172,7 @@ std::map<std::string,bool> opencv_formats = {
 	{"JPE",  true},
 	
 	// JPEG 2000 Files
-	{"JP2",  true},
+	{"JP2",  false},
 	
 	// Portable Network Graphics
 	{"PNG",  true},
@@ -416,11 +416,13 @@ void check_opencv_formats()
 		opencv_formats["JPE"] = false;
 	}
 	
+	Disabled due to vulnerabilities in Jasper codec, see: https://github.com/opencv/opencv/issues/14058
 	// JPEG 2000 Files
 	if (!cv::haveImageWriter(".jp2"))
 	{
 		opencv_formats["JP2"] = false;
 	}
+	*/
 	
 	// WebP
 	if (!cv::haveImageWriter(".webp"))
