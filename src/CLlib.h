@@ -9,7 +9,8 @@ extern "C" {
 
 #if defined(__APPLE__) || defined(__MACOSX)
 #include <OpenCL/opencl.h>
-#else
+#else	
+#define CL_TARGET_OPENCL_VERSION 220
 #include <CL/opencl.h>
 #endif // !__APPLE__
 
