@@ -416,6 +416,7 @@ void check_opencv_formats()
 		opencv_formats["JPE"] = false;
 	}
 	
+	/* 
 	Disabled due to vulnerabilities in Jasper codec, see: https://github.com/opencv/opencv/issues/14058
 	// JPEG 2000 Files
 	if (!cv::haveImageWriter(".jp2"))
