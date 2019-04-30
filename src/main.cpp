@@ -403,13 +403,13 @@ void convert_fileW(ConvInfo info, fs::path inputName, fs::path output) {
 void check_opencv_formats()
 {
 	// Portable Network Graphics
-	if (!cvHaveImageWriter(".png"))
+	if (!cv::haveImageWriter(".png"))
 	{
 		opencv_formats["PNG"] = false;
 	}
 	
 	// JPEG Files
-	if (!cvHaveImageWriter(".jpg"))
+	if (!cv::haveImageWriter(".jpg"))
 	{
 		opencv_formats["JPEG"] = false;
 		opencv_formats["JPG"] = false;
@@ -417,26 +417,26 @@ void check_opencv_formats()
 	}
 	
 	// JPEG 2000 Files
-	if (!cvHaveImageWriter(".jp2"))
+	if (!cv::haveImageWriter(".jp2"))
 	{
 		opencv_formats["JP2"] = false;
 	}
 	
 	// WebP
-	if (!cvHaveImageWriter(".webp"))
+	if (!cv::haveImageWriter(".webp"))
 	{
 		opencv_formats["WEBP"] = false;
 	}
 	
 	// TIFF Files
-	if (!cvHaveImageWriter(".tif"))
+	if (!cv::haveImageWriter(".tif"))
 	{
 		opencv_formats["TIF"] = false;
 		opencv_formats["TIFF"] = false;
 	}
 	
 	// OpenEXR Image Files
-	if(!cvHaveImageWriter(".exr"))
+	if(!cv::haveImageWriter(".exr"))
 	{
 		opencv_formats["EXR"] = false;
 	}
