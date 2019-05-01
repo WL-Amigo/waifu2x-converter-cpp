@@ -163,47 +163,47 @@ void check_for_errors(W2XConv* converter, int error) {
 
 std::map<std::string,bool> opencv_formats = {
 	// Windows Bitmaps
-	{"BMP",  false},
-	{"DIB",  false},
+	{"BMP",  true},
+	{"DIB",  true},
 	
 	// JPEG Files
-	{"JPEG", false},
-	{"JPG", false},
-	{"JPE", false},
+	{"JPEG", true},
+	{"JPG",  true},
+	{"JPE",  true},
 	
 	// JPEG 2000 Files
-	{"JP2", false},
+	{"JP2",  false},
 	
 	// Portable Network Graphics
-	{"PNG",  false},
+	{"PNG",  true},
 	
 	// WebP
-	{"WEBP", false},
+	{"WEBP", true},
 	
 	// Portable Image Format
-	{"PBM",  false},
-	{"PGM",  false},
-	{"PPM",  false},
-	{"PXM",  false},
-	{"PNM",  false},
+	{"PBM",  true},
+	{"PGM",  true},
+	{"PPM",  true},
+	{"PXM",  true},
+	{"PNM",  true},
 	
 	// Sun Rasters
-	{"SR",  false},
-	{"RAS",  false},
+	{"SR",   true},
+	{"RAS",  true},
 	
 	// TIFF Files
-	{"TIF", false},
-	{"TIFF", false},
+	{"TIF",  true},
+	{"TIFF", true},
 	
 	// OpenEXR Image Files
-	{"EXR", false},
+	{"EXR",  true},
 	
 	// Radiance HDR
-	{"HDR", false},
-	{"PIC", false}
+	{"HDR",  true},
+	{"PIC",  true}
 };
 
-bool check_output_extension(std::string extension) {
+bool validate_format_extension(std::string extension) {
 	for(std::string::iterator it = extension.begin(); it != extension.end(); ++it){
 		*it = std::toupper(*it);
 	}
@@ -263,7 +263,7 @@ std::string generate_output_location(std::string inputFileName, std::string outp
 		//We may have a regular output file here or something went wrong.
 		//outputFileName is already what it should be thus nothing needs to be done.
 		#ifdef HAVE_OPENCV
-		if(check_output_extension(outputFileName.substr(lastDotPos+1))==false){
+		if(validate_format_extension(outputFileName.substr(lastDotPos+1))==false){
 			throw std::runtime_error("Unsupported output extension. outputFileName:" + outputFileName + " extension:" +outputFileName.substr(lastDotPos+1));
 		}
 		#endif
@@ -329,7 +329,7 @@ std::wstring generate_output_location(std::wstring inputFileName, std::wstring o
 		//We may have a regular output file here or something went wrong.
 		//outputFileName is already what it should be thus nothing needs to be done.
 		#ifdef HAVE_OPENCV
-		if(check_output_extension(to_mbs(outputFileName.substr(lastDotPos+1)))==false){
+		if(validate_format_extension(to_mbs(outputFileName.substr(lastDotPos+1)))==false){
 			throw std::runtime_error("Unsupported output extension.");
 		}
 		#endif
@@ -402,49 +402,49 @@ void convert_fileW(ConvInfo info, fs::path inputName, fs::path output) {
 //check for opencv formats
 void check_opencv_formats()
 {
-	std::istringstream iss(cv::getBuildInformation());
-
-	for (std::string line; std::getline(iss, line); )
+	// Portable Network Graphics
+	if (!cv::haveImageWriter(".png"))
 	{
-		std::vector<std::string> strings;
-		std::istringstream f(line);
-		std::string s;
-		while (getline(f, s, ':')) {
-			s = trim(s);
-			strings.push_back(s);
-		}
-		if (strings.size() >= 2)
-		{
-			// Portable Network Graphics
-			if ((strings[0] == "PNG") && (strings[1] != "NO"))
-			{
-				opencv_formats["PNG"] = true;
-			}
-			// JPEG Files
-			else if ((strings[0] == "JPEG") && (strings[1] != "NO"))
-			{
-				opencv_formats["JPEG"] = true;
-				opencv_formats["JPG"] = true;
-				opencv_formats["JPE"] = true;
-			}
-			// JPEG 2000 Files
-			else if ((strings[0] == "JPEG 2000") && (strings[1] != "NO"))
-			{
-				opencv_formats["JP2"] = true;
-			}
-			// WebP
-			else if ((strings[0] == "WEBP") && (strings[1] != "NO"))
-			{
-				opencv_formats["WEBP"] = true;
-			}
-			// TIFF Files
-			else if ((strings[0] == "TIFF") && (strings[1] != "NO"))
-			{
-				opencv_formats["TIF"] = true;
-				opencv_formats["TIFF"] = true;
-			}
-		}
+		opencv_formats["PNG"] = false;
 	}
+	
+	// JPEG Files
+	if (!cv::haveImageWriter(".jpg"))
+	{
+		opencv_formats["JPEG"] = false;
+		opencv_formats["JPG"] = false;
+		opencv_formats["JPE"] = false;
+	}
+	
+	/* 
+	Disabled due to vulnerabilities in Jasper codec, see: https://github.com/opencv/opencv/issues/14058
+	// JPEG 2000 Files
+	if (!cv::haveImageWriter(".jp2"))
+	{
+		opencv_formats["JP2"] = false;
+	}
+	*/
+	
+	// WebP
+	if (!cv::haveImageWriter(".webp"))
+	{
+		opencv_formats["WEBP"] = false;
+	}
+	
+	// TIFF Files
+	if (!cv::haveImageWriter(".tif"))
+	{
+		opencv_formats["TIF"] = false;
+		opencv_formats["TIFF"] = false;
+	}
+	
+	// OpenEXR Image Files
+	if(!cv::haveImageWriter(".exr"))
+	{
+		opencv_formats["EXR"] = false;
+	}
+
+	/* These formats are always available.
 	// Windows Bitmaps (Always Supported)
 	opencv_formats["BMP"] = true;
 	opencv_formats["DIB"] = true;
@@ -463,9 +463,7 @@ void check_opencv_formats()
 	// Radiance HDR (Always Supported)
 	opencv_formats["HDR"] = true;
 	opencv_formats["PIC"] = true;
-	
-	// OpenEXR Image Files
-	opencv_formats["EXR"] = true;
+	*/
 }
 void debug_show_opencv_formats()
 {
@@ -690,7 +688,7 @@ int wmain(void){
 		std::exit(-1);
 	}
 	#ifdef HAVE_OPENCV
-	if(check_output_extension(cmdOutputFormat.getValue())==false){
+	if(validate_format_extension(cmdOutputFormat.getValue())==false){
 		printf("Unsupported output extension: %s\nUse option --list-opencv-formats to see a list of supported formats", cmdOutputFormat.getValue().c_str());
 		std::exit(-1);
 	}
@@ -977,7 +975,7 @@ int main(int argc, char** argv) {
 		std::exit(-1);
 	}
 	#ifdef HAVE_OPENCV
-	if(check_output_extension(cmdOutputFormat.getValue())==false){
+	if(validate_format_extension(cmdOutputFormat.getValue())==false){
 		printf("Unsupported output extension: %s\nUse option --list-opencv-formats to see a list of supported formats", cmdOutputFormat.getValue().c_str());
 		std::exit(-1);
 	}
@@ -1053,17 +1051,33 @@ int main(int argc, char** argv) {
 		//Build files list
 		std::deque<fs::path> files_list;
 		std::cout << "We're going to be operating in a directory. dir:" << fs::absolute(input) << std::endl;
+
+//		TODO: Use a variant instead of so much repeated code
 		if (recursive_directory_iterator) {
 			for (auto & inputFile : fs::recursive_directory_iterator(input)) {
 				if (!fs::is_directory(inputFile)) {
-					files_list.push_back(inputFile);
+					if(validate_format_extension(inputFile.path().extension().string().substr(1))){
+						files_list.push_back(inputFile);
+					}
+					else {
+						std::cout << "Skipping file '" << inputFile.path().filename().string() <<
+								"' for having an unsupported file extension (" << inputFile.path().extension().string().substr(1) << ")" << std::endl;
+						continue;
+					}
 				}
 			}
 		}
 		else {
 			for (auto & inputFile : fs::directory_iterator(input)) {
 				if (!fs::is_directory(inputFile)) {
-					files_list.push_back(inputFile);
+					if(validate_format_extension(inputFile.path().extension().string().substr(1))){
+						files_list.push_back(inputFile);
+					}
+					else {
+						std::cout << "Skipping file '" << inputFile.path().filename().string() <<
+								"' for having an unsupported file extension (" << inputFile.path().extension().string().substr(1) << ")" << std::endl;
+						continue;
+					}
 				}
 			}
 		}
