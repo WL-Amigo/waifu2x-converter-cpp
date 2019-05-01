@@ -79,7 +79,7 @@ if(UNIX)
 	endif()
 elseif(WIN32)
 	 if (DEFINED OPENCV_PREFIX)
-	 	set(OpenCV_DIR "${OPENCV_PREFIX}" CACHE FILEPATH "OpenCV 3.x path")
+	 	set(OpenCV_DIR "${OPENCV_PREFIX}" CACHE FILEPATH "OpenCV 4.x path")
 	 endif()
 	 find_package(OpenCV)
 	 if(${OPENCV_FOUND})
@@ -88,7 +88,7 @@ elseif(WIN32)
 		link_directories(${OPENCV_PREFIX}/lib)
 		set(HAVE_OPENCV TRUE)
 	 else()
-		set(OPENCV_PREFIX "opencv" CACHE FILEPATH "OpenCV 3.x path") # No real default path for windows, assume subfolder in source folder
+		set(OPENCV_PREFIX "opencv" CACHE FILEPATH "OpenCV 4.x path") # No real default path for windows, assume subfolder in source folder
 		include_directories(${OPENCV_PREFIX}/include)
 		link_directories(${OPENCV_PREFIX}/lib)
 		#set(CMAKE_REQUIRED_INCLUDES ${OPENCV_PREFIX}/include)
@@ -96,7 +96,7 @@ elseif(WIN32)
 		if(EXISTS "${OPENCV_PREFIX}/include/opencv2/opencv.hpp")
 			set(HAVE_OPENCV TRUE)
 			message(STATUS "Found OpenCV")
-			set(OPENCV_WINDOWS_LIBRARY "opencv_world340")
+			set(OPENCV_WINDOWS_LIBRARY "opencv_world410")
 		else()
 			message(FATAL_ERROR "Could not find OpenCV")
 		endif()
@@ -106,6 +106,9 @@ endif()
 find_library(IMGCODECS_LIBRARY NAMES opencv_imgcodecs opencv_highgui HINTS ${OPENCV_PREFIX}/lib)
 
 if(HAVE_OPENCV)
+	if("${OpenCV_VERSION_MAJOR}" VERSION_LESS "4")
+		message(FATAL_ERROR "This software requires OpenCV 4.0.0 or higher")
+	endif()
 	add_definitions(-DHAVE_OPENCV)
 	set(OPENCV_LIBRARIES opencv_core opencv_imgproc ${IMGCODECS_LIBRARY} opencv_features2d)
 endif()
@@ -275,11 +278,11 @@ endif()
 
 if(WIN32) # We build FOR windows.
 	if(MINGW) # We build for windows on Linux MinGW (Cross compiling) # not yet working
-		target_link_libraries(w2xc opencv_core300 opencv_imgproc300 opencv_imgcodecs300 opencv_features2d300 libjpeg libpng libtiff libjasper opencv_hal300 IlmImf zlib libwebp user32 opencv_core300 opencv_hal300) # xx 300
+		target_link_libraries(w2xc ${OPENCV_WINDOWS_LIBRARY} user32) # xx 300
 	elseif(MSVC) # we build natively on Visual studio
 		target_link_libraries(w2xc ${OPENCV_WINDOWS_LIBRARY} user32)
 	elseif(UNIX) # we build on linux.... on windows.. somehow WSL?/Cygwin? We'll see
-		target_link_libraries(w2xc opencv_core300 opencv_imgproc300 opencv_imgcodecs300 opencv_features2d300 ippicvmt libjpeg libpng libtiff libjasper opencv_hal300 IlmImf zlib libwebp user32 opencv_core300 opencv_imgproc300)
+		target_link_libraries(w2xc ${OPENCV_WINDOWS_LIBRARY} user32 ippicvmt)
 	endif()
 	add_executable(w2xcr WIN32 w32-apps/w2xcr.c w32-apps/w2xcr.rc)
 	target_link_libraries(w2xcr w2xc user32 shlwapi gdi32)
