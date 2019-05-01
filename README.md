@@ -38,7 +38,7 @@ https://discord.gg/gAvufS2 It's often easier to chat in real time, so if you wan
  - [Visual Studio 2017](https://visualstudio.microsoft.com/downloads/) (Windows)
  - [picojson](https://github.com/kazuho/picojson) (included)
  - [TCLAP(Templatized C++ Command Line Parser Library)](http://tclap.sourceforge.net/) (included)
- - [OpenCV 3+](https://opencv.org/releases.html)
+ - [OpenCV 4+](https://opencv.org/releases.html)
 
 ## How to build
 
