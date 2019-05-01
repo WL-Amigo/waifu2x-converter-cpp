@@ -403,13 +403,21 @@ void convert_fileW(ConvInfo info, fs::path inputName, fs::path output) {
 void check_opencv_formats()
 {
 	// Portable Network Graphics
+#ifdef HAVE_OPENCV_3_X
+	if (!cvHaveImageWriter(".png"))
+#else
 	if (!cv::haveImageWriter(".png"))
+#endif
 	{
 		opencv_formats["PNG"] = false;
 	}
 	
 	// JPEG Files
+#ifdef HAVE_OPENCV_3_X
+	if (!cvHaveImageWriter(".jpg"))
+#else
 	if (!cv::haveImageWriter(".jpg"))
+#endif
 	{
 		opencv_formats["JPEG"] = false;
 		opencv_formats["JPG"] = false;
@@ -419,27 +427,43 @@ void check_opencv_formats()
 	/* 
 	Disabled due to vulnerabilities in Jasper codec, see: https://github.com/opencv/opencv/issues/14058
 	// JPEG 2000 Files
+#ifdef HAVE_OPENCV_3_X
+	if (!cvHaveImageWriter(".jp2"))
+#else
 	if (!cv::haveImageWriter(".jp2"))
+#endif
 	{
 		opencv_formats["JP2"] = false;
 	}
 	*/
 	
-	// WebP
+	// WebP Files
+#ifdef HAVE_OPENCV_3_X
+	if (!cvHaveImageWriter(".webp"))
+#else
 	if (!cv::haveImageWriter(".webp"))
+#endif
 	{
 		opencv_formats["WEBP"] = false;
 	}
 	
 	// TIFF Files
+#ifdef HAVE_OPENCV_3_X
+	if (!cvHaveImageWriter(".tif"))
+#else
 	if (!cv::haveImageWriter(".tif"))
+#endif
 	{
 		opencv_formats["TIF"] = false;
 		opencv_formats["TIFF"] = false;
 	}
 	
 	// OpenEXR Image Files
-	if(!cv::haveImageWriter(".exr"))
+#ifdef HAVE_OPENCV_3_X
+	if (!cvHaveImageWriter(".exr"))
+#else
+	if (!cv::haveImageWriter(".exr"))
+#endif
 	{
 		opencv_formats["EXR"] = false;
 	}
