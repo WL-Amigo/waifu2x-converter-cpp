@@ -32,6 +32,9 @@ public:
 
     W2Mat(int data_width, int data_height, int type);
     W2Mat(int data_width, int data_height, int type, void *data, int data_step);
+	W2Mat(const W2Mat &rhs,
+		int view_left_offset, int view_top_offset,
+		int view_width, int view_height);
     W2Mat();
 
     W2Mat(const W2Mat &) = delete;
@@ -45,9 +48,7 @@ public:
     ~W2Mat();
 
 	static void copy_full(W2Mat &target, W2Mat &rhs);
-	static void clip_view(W2Mat &target, W2Mat &rhs,
-		int view_left_offset, int view_top_offset,
-		int view_width, int view_height);
+	
 		
 #ifdef HAVE_OPENCV
 

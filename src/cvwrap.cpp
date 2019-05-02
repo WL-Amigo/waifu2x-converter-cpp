@@ -71,22 +71,21 @@ W2Mat::operator=(W2Mat &&rhs)
     return *this;
 }
 
-void
-W2Mat::clip_view(W2Mat & view, W2Mat & rhs,
-	int view_left_offset, int view_top_offset,
-	int view_width, int view_height)
-{
-    view.data_owner = false;
-    view.data = rhs.data;
-    view.data_byte_width = rhs.data_byte_width;
-    view.data_height = rhs.data_height;
+W2Mat::W2Mat(const W2Mat & rhs,
+                 int view_left_offset, int view_top_offset,
+                 int view_width, int view_height)
+{	
+    this->data_owner = false;
+    this->data = rhs.data;
+    this->data_byte_width = rhs.data_byte_width;
+    this->data_height = rhs.data_height;
 
-    view.view_left = rhs.view_left + view_left_offset;
-    view.view_top = rhs.view_top + view_top_offset;
-    view.view_width = view_width;
-    view.view_height = view_height;
+    this->view_left = rhs.view_left + view_left_offset;
+    this->view_top = rhs.view_top + view_top_offset;
+    this->view_width = view_width;
+    this->view_height = view_height;
 
-    view.type = rhs.type;
+    this->type = rhs.type;
 }
 
 void
