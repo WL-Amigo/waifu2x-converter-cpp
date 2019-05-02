@@ -60,7 +60,9 @@ static bool convertWithModelsBasic(W2XConv *conv,
 	// padding is require before calling this function
 
 	std::vector<W2Mat> inputPlanes;
-	inputPlanes.emplace_back(W2Mat::clip_view(inputPlane,0,0,0,0));
+	W2Mat cliped_view;
+	W2Mat::clip_view(cliped_view,inputPlane,0,0,0,0);
+	inputPlanes.emplace_back(cliped_view);
 
 	W2Size filterSize(inputPlane.view_width, inputPlane.view_height);
 	int filterWidth = filterSize.width;
@@ -364,10 +366,12 @@ static bool convertWithModelsBlockSplit(W2XConv *conv,
 
 			int curBlockWidth = clipEndX - clipStartX;
 			int curBlockHeight = clipEndY - clipStartY;
-
-			W2Mat processBlock(W2Mat::clip_view(tempMat_2,
+			
+			W2Mat processBlock;
+			
+			W2Mat::clip_view(processBlock, tempMat_2,
 							    clipStartX, clipStartY,
-							    curBlockWidth, curBlockHeight));
+							    curBlockWidth, curBlockHeight);
 
 			if (enableLog) {
 				std::cout << "start process block (" << c << "," << r << ") ..."

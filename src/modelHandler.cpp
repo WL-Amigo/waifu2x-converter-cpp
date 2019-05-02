@@ -744,9 +744,13 @@ bool Model::filterWorker(std::vector<W2Mat> &inputPlanes_w2,
 			 std::vector<W2Mat> &outputPlanes_w2, unsigned int beginningIndex,
 			 unsigned int nWorks) {
 
-	std::vector<cv::Mat> inputPlanes = extract_viewlist_to_cvmat(inputPlanes_w2);
-	std::vector<cv::Mat> weightMatrices = extract_viewlist_to_cvmat(weightMatrices_w2);
-	std::vector<cv::Mat> outputPlanes = extract_viewlist_to_cvmat(outputPlanes_w2);
+	std::vector<cv::Mat> inputPlanes;
+	std::vector<cv::Mat> weightMatrices;
+	std::vector<cv::Mat> outputPlanes;
+	
+	extract_viewlist_to_cvmat(inputPlanes, inputPlanes_w2);
+	extract_viewlist_to_cvmat(weightMatrices, weightMatrices_w2);
+	extract_viewlist_to_cvmat(outputPlanes, outputPlanes_w2);
 			 
 	cv::Size ipSize = inputPlanes[0].size();
 	// filter processing

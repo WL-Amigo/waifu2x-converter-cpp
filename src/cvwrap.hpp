@@ -4,7 +4,19 @@
 #include <utility>
 #include <vector>
 
-struct W2Mat {
+
+#ifdef HAVE_OPENCV
+	#include <opencv2/opencv.hpp>
+#else
+	#define CV_32FC3 12
+	#define CV_32FC1 4
+	#define CV_8UC3 3
+	#define CV_8UC1 1
+	#define CV_ELEM_SIZE(type) (type)
+#endif
+
+class W2Mat {
+public:
     bool data_owner;
 
     char *data;
@@ -25,17 +37,24 @@ struct W2Mat {
     W2Mat(const W2Mat &) = delete;
     W2Mat& operator=(const W2Mat&) = delete;
 
-    W2Mat & operator= (W2Mat &&);
+    W2Mat& operator= (W2Mat &&);
     W2Mat(W2Mat &&rhs) {
         *this = std::move(rhs);
     }
 
     ~W2Mat();
 
-    static W2Mat copy_full(W2Mat &rhs);
-    static W2Mat clip_view(const W2Mat &rhs,
-                           int view_left_offset, int view_top_offset, 
-                           int view_width, int view_height);
+	static void copy_full(W2Mat &target, W2Mat &rhs);
+	static void clip_view(W2Mat &target, W2Mat &rhs,
+		int view_left_offset, int view_top_offset,
+		int view_width, int view_height);
+		
+#ifdef HAVE_OPENCV
+
+	W2Mat(cv::Mat &cvmat);
+	void to_cvmat(cv::Mat &cvmat);
+	
+#endif
 
     template<typename T> T *ptr(int yi);
     template<typename T> T &at(int y, int x) {
@@ -52,42 +71,10 @@ struct W2Size {
 };
 
 #ifdef HAVE_OPENCV
-#include <opencv2/opencv.hpp>
 
-typedef cv::Mat Mat_t;
-typedef cv::Point Point_t;
-
-W2Mat copy_from_cvmat(cv::Mat &m);
-cv::Mat copy_to_cvmat(W2Mat &m);
-W2Mat extract_view_from_cvmat(cv::Mat &m);
-cv::Mat extract_view_to_cvmat(W2Mat &m);
-
-W2Mat extract_view_from_cvmat_offset(cv::Mat &m,
-                                     int view_left_offset,
-                                     int view_top_offset,
-                                     int view_width,
-                                     int view_height);
-
-std::vector<W2Mat> extract_viewlist_from_cvmat(std::vector<cv::Mat> &list);
-std::vector<cv::Mat> extract_viewlist_to_cvmat(std::vector<W2Mat> &list);
-
-static inline cv::Size cvSize_from_w2(W2Size const &s) {
-    return cv::Size(s.width, s.height);
-}
-
-static inline W2Size W2Size_from_cv(cv::Size const &sz) {
-    return W2Size(sz.width, sz.height);
-}
-
-#else
-
-#define CV_32FC3 12
-#define CV_32FC1 4
-#define CV_8UC3 3
-#define CV_8UC1 1
-
-#define CV_ELEM_SIZE(type) (type)
-
+void extract_viewlist_from_cvmat(std::vector<W2Mat> &list, std::vector<cv::Mat> &cvmat);
+void extract_viewlist_to_cvmat(std::vector<cv::Mat> &cvmat, std::vector<W2Mat> &list);
+	
 #endif
 
 template<typename T> T *

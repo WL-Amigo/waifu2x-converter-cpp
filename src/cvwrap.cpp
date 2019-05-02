@@ -4,40 +4,41 @@
 
 W2Mat::~W2Mat()
 {
-    if (data_owner) {
-        free(data);
-    }
+	if (data_owner) {
+		data_owner=false;
+		free(data);
+		data = nullptr;
+	}
 }
 
 
 W2Mat::W2Mat()
-    :data_owner(false),
-     data(NULL),
-     data_byte_width(0),
-     data_height(0),
-     view_top(0),
-     view_left(0),
-     view_width(0),
-     view_height(0)
+	:data_owner(false),
+	data(nullptr),
+	data_byte_width(0),
+	data_height(0),
+	view_top(0),
+	view_left(0),
+	view_width(0),
+	view_height(0)
 {
 }
 
 W2Mat::W2Mat(int width, int height, int type)
-    :data_owner(true),
-     data_byte_width(width*CV_ELEM_SIZE(type)),
-     data_height(height),
-     view_top(0),
-     view_left(0),
-     view_width(width),
-     view_height(height),
-     type(type)
+	:data_owner(true),
+	data_byte_width(width*CV_ELEM_SIZE(type)),
+	data_height(height),
+	view_top(0),
+	view_left(0),
+	view_width(width),
+	view_height(height),
+	type(type)
 {
-    this->data = (char*)malloc(width * height * CV_ELEM_SIZE(type));
+	this->data = (char*)calloc(height, data_byte_width);
 }
 
 W2Mat::W2Mat(int width, int height, int type, void *data, int data_step)
-    :data_owner(false),
-     data((char*)data),
+    :data_owner(true),
      data_byte_width(data_step),
      data_height(height),
      view_top(0),
@@ -45,7 +46,10 @@ W2Mat::W2Mat(int width, int height, int type, void *data, int data_step)
      view_width(width),
      view_height(height),
      type(type)
-{}
+{
+	this->data = (char*)calloc(height, data_byte_width);
+	memcpy(this->data, data, height * data_byte_width);
+}
 
 
 W2Mat &
@@ -67,13 +71,11 @@ W2Mat::operator=(W2Mat &&rhs)
     return *this;
 }
 
-W2Mat
-W2Mat::clip_view(const W2Mat & rhs,
-                 int view_left_offset, int view_top_offset,
-                 int view_width, int view_height)
+void
+W2Mat::clip_view(W2Mat & view, W2Mat & rhs,
+	int view_left_offset, int view_top_offset,
+	int view_width, int view_height)
 {
-    W2Mat view;
-
     view.data_owner = false;
     view.data = rhs.data;
     view.data_byte_width = rhs.data_byte_width;
@@ -85,155 +87,98 @@ W2Mat::clip_view(const W2Mat & rhs,
     view.view_height = view_height;
 
     view.type = rhs.type;
-
-    return view;
 }
 
-W2Mat
-W2Mat::copy_full(W2Mat & rhs)
+void
+W2Mat::copy_full(W2Mat & target, W2Mat & rhs)
 {
-    W2Mat ret(rhs.view_width,
-              rhs.view_height,
-              rhs.type);
+	target = W2Mat(rhs.view_width,
+		rhs.view_height,
+		rhs.type);
 
-    int elem_size = CV_ELEM_SIZE(rhs.type);
-    int w = rhs.view_width;
-    int h = rhs.view_height;
+	int elem_size = CV_ELEM_SIZE(rhs.type);
+	int w = rhs.view_width;
+	int h = rhs.view_height;
 
-    for (int yi=0; yi<h; yi++) {
-        char *out = ret.ptr<char>(yi);
-        char *in = rhs.ptr<char>(yi);
+	for (int yi = 0; yi < h; yi++) {
+		char *out = target.ptr<char>(yi);
+		char *in = rhs.ptr<char>(yi);
 
-        memcpy(out, in, w * elem_size);
-    }
-    return ret;
+		memcpy(out, in, w * elem_size);
+	}
 }
 
 #ifdef HAVE_OPENCV
-W2Mat
-copy_from_cvmat(cv::Mat &m)
+W2Mat::W2Mat(cv::Mat &m)
+    :data_owner(true),
+     view_top(0),
+     view_left(0)
 {
-    int w = m.size().width;
-    int h = m.size().height;
+	int w = m.size().width;
+	int h = m.size().height;
+	
+	this->data_byte_width = w * CV_ELEM_SIZE(m.type());
+	this->data_height = h;
+	this->view_width = w;
+	this->view_height = h;
+	this->type = m.type();
+	this->data = (char*)calloc(h, this->data_byte_width);
 
-    W2Mat wm(w, h, m.type());
-    int elem_size = CV_ELEM_SIZE(m.type());
 
-    for (int yi=0; yi<h; yi++) {
-        void *in = m.ptr(yi);
-        char *out = wm.ptr<char>(yi);
+	for (int yi = 0; yi < h; yi++) {
+		void *in = m.ptr(yi);
+		char *out = this->ptr<char>(yi);
 
-        memcpy(out, in, w * elem_size);
-    }
-
-    return std::move(wm);
+		memcpy(out, in, this->data_byte_width);
+	}
 }
 
-W2Mat
-extract_view_from_cvmat(cv::Mat &m)
+void
+W2Mat::to_cvmat(cv::Mat &target)
 {
-    W2Mat wm;
+	int w = this->view_width;
+	int h = this->view_height;
 
-    int w = m.size().width;
-    int h = m.size().height;
+	target = cv::Mat::zeros(cv::Size(w, h), this->type);
+	int elem_size = CV_ELEM_SIZE(this->type);
 
-    wm.data_owner = false;
-    wm.data = (char*)m.data;
-    wm.data_byte_width = (int) m.step;
-    wm.data_height = m.size().height;
+	for (int yi = 0; yi < h; yi++) {
+		void *out = target.ptr(yi);
+		void *in = this->ptr<char>(yi);
 
-    wm.view_top = 0;
-    wm.view_left = 0;
-    wm.view_width = m.size().width;
-    wm.view_height = m.size().height;
-    wm.type = m.type();
-
-    return std::move(wm);
+		memcpy(out, in, w * elem_size);
+	}
 }
 
-W2Mat
-extract_view_from_cvmat_offset(cv::Mat &m,
-                               int view_left_offset,
-                               int view_top_offset,
-                               int view_width,
-                               int view_height)
+void
+extract_viewlist_from_cvmat(std::vector<W2Mat> &list, std::vector<cv::Mat> &cvmat)
 {
-    W2Mat ret = extract_view_from_cvmat(m);
-
-    ret.view_top = view_top_offset;
-    ret.view_left = view_left_offset;
-    ret.view_width = view_width;
-    ret.view_height = view_height;
-
-    return ret;
+	std::for_each(cvmat.begin(), cvmat.end(),
+		[&list](cv::Mat &cvm) {
+		list.push_back(W2Mat(cvm));
+	});
 }
 
-cv::Mat
-copy_to_cvmat(W2Mat &m)
+void
+extract_viewlist_to_cvmat(std::vector<cv::Mat> &cvmat, std::vector<W2Mat> &list)
 {
-    int w = m.view_width;
-    int h = m.view_height;
+	std::for_each(list.begin(), list.end(),
+		[&cvmat](W2Mat &w2) {
+		int w = w2.view_width;
+		int h = w2.view_height;
 
-    cv::Mat ret = cv::Mat::zeros(cv::Size(w, h), m.type);
-    int elem_size = CV_ELEM_SIZE(m.type);
+		char *data = (char*)w2.data;
 
-    for (int yi=0; yi<h; yi++) {
-        void *out = ret.ptr(yi);
-        void *in = m.ptr<char>(yi);
+		int byte_offset = 0;
+		byte_offset += w2.view_top * w2.data_byte_width;
+		byte_offset += w2.view_left * CV_ELEM_SIZE(w2.type);
 
-        memcpy(out, in, w * elem_size);
-    }
-
-    return std::move(ret);
-
+		cv::Mat cvm = cv::Mat(cv::Size(w, h),
+			w2.type,
+			data + byte_offset,
+			w2.data_byte_width);
+		cvmat.push_back(cvm);
+	});
 }
 
-cv::Mat
-extract_view_to_cvmat(W2Mat &m)
-{
-    int w = m.view_width;
-    int h = m.view_height;
-
-    char *data = (char*)m.data;
-
-    int byte_offset = 0;
-    byte_offset += m.view_top * m.data_byte_width;
-    byte_offset += m.view_left * CV_ELEM_SIZE(m.type);
-
-    cv::Mat ret(cv::Size(w,h),
-                m.type,
-                data + byte_offset,
-                m.data_byte_width);
-
-    return std::move(ret);
-
-}
-
-std::vector<W2Mat>
-extract_viewlist_from_cvmat(std::vector<cv::Mat> &list)
-{
-    std::vector<W2Mat> ret;
-
-    std::for_each(list.begin(), list.end(),
-                  [&ret](cv::Mat &cv) {
-                      W2Mat w2 = extract_view_from_cvmat(cv);
-                      ret.push_back(std::move(w2));
-                  });
-
-    return std::move(ret);
-}
-
-std::vector<cv::Mat>
-extract_viewlist_to_cvmat(std::vector<W2Mat> &list)
-{
-    std::vector<cv::Mat> ret;
-
-    std::for_each(list.begin(), list.end(),
-                  [&ret](W2Mat &w2) {
-                      cv::Mat cv = extract_view_to_cvmat(w2);
-                      ret.push_back(std::move(cv));
-                  });
-
-    return std::move(ret);
-}
 #endif
