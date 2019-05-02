@@ -248,7 +248,7 @@ std::string generate_output_location(std::string inputFileName, std::string outp
 		//This removes all contextual information about where a file originated from if "recursive_directory" was enabled.
 		std::string tmp = generate_output_location(inputFileName, "auto", mode, NRLevel, scaleRatio, outputFormat);
 		//tmp = full formatted output file path
-		size_t lastSlash = tmp.find_last_of('/');
+		size_t lastSlash = tmp.find_last_of("/\\");
 		if (lastSlash != std::string::npos){
 			tmp.erase(0, lastSlash);
 		}
@@ -311,7 +311,7 @@ std::wstring generate_output_location(std::wstring inputFileName, std::wstring o
 		//This removes all contextual information about where a file originated from if "recursive_directory" was enabled.
 		std::wstring tmp = generate_output_location(inputFileName, L"auto", mode, NRLevel, scaleRatio, outputFormat);
 		//tmp = full formatted output file path
-		size_t lastSlash = tmp.find_last_of(L'/');
+		size_t lastSlash = tmp.find_last_of(L"/\\");
 		if (lastSlash != std::wstring::npos){
 			tmp.erase(0, lastSlash);
 		}
