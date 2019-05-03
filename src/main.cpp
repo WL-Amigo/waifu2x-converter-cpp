@@ -906,9 +906,9 @@ int main(int argc, char* argv[])
 	}
 
 	w2xconv_fini(converter);
-	free(argv);
 	
 #if defined(WIN32) && defined(UNICODE)
+	free(argv);
 	LocalFree(argv_w);
 #endif
 
