@@ -44,6 +44,10 @@
 #include <opencv2/opencv.hpp>
 #endif
 
+namespace fs = std::experimental::filesystem;
+
+
+
 class CustomFailOutput : public TCLAP::StdOutput {
 public:
 	virtual void failure( TCLAP::CmdLineInterface& _cmd, TCLAP::ArgException& e ) override {
@@ -70,35 +74,6 @@ public:
 		throw TCLAP::ExitException(1);
 	}
 };
-
-
-namespace fs = std::experimental::filesystem;
-
-struct ConvInfo {
-	std::string mode;
-	int NRLevel;
-	double scaleRatio;
-	int blockSize;
-	W2XConv* converter;
-	int* imwrite_params;
-	std::string outputFormat;
-	ConvInfo(
-		std::string mode,
-		int NRLevel,
-		double scaleRatio,
-		int blockSize,
-		W2XConv* converter,
-		int* imwrite_params,
-		std::string outputFormat
-	) :	mode(mode),
-		NRLevel(NRLevel),
-		scaleRatio(scaleRatio),
-		blockSize(blockSize),
-		converter(converter),
-		imwrite_params(imwrite_params),
-		outputFormat(outputFormat) {};
-};
-
 
 static void
 dump_procs()
@@ -162,6 +137,7 @@ void check_for_errors(W2XConv* converter, int error) {
 }
 
 
+
 std::map<std::string,bool> opencv_formats = {
 	// Windows Bitmaps
 	{"BMP",  true},
@@ -214,6 +190,116 @@ bool validate_format_extension(std::string extension) {
 	}
 	return false;
 }
+
+
+#ifdef HAVE_OPENCV_3_X
+	#define w2xHaveImageWriter(x) cvHaveImageWriter(x)
+#else
+	#define w2xHaveImageWriter(x) cv::haveImageWriter(x)
+#endif
+	
+//check for opencv formats
+void check_opencv_formats()
+{
+	// Portable Network Graphics
+	if (!w2xHaveImageWriter(".png"))
+	{
+		opencv_formats["PNG"] = false;
+	}
+	
+	// JPEG Files
+	if (!w2xHaveImageWriter(".jpg"))
+	{
+		opencv_formats["JPEG"] = false;
+		opencv_formats["JPG"] = false;
+		opencv_formats["JPE"] = false;
+	}
+	
+	/* 
+	Disabled due to vulnerabilities in Jasper codec, see: https://github.com/opencv/opencv/issues/14058
+	// JPEG 2000 Files
+	if (!w2xHaveImageWriter(".jp2"))
+	{
+		opencv_formats["JP2"] = false;
+	}
+	*/
+	
+	// WebP Files
+	if (!w2xHaveImageWriter(".webp"))
+	{
+		opencv_formats["WEBP"] = false;
+	}
+	
+	// TIFF Files
+	if (!w2xHaveImageWriter(".tif"))
+	{
+		opencv_formats["TIF"] = false;
+		opencv_formats["TIFF"] = false;
+	}
+	
+	// OpenEXR Image Files
+	if (!w2xHaveImageWriter(".exr"))
+	{
+		opencv_formats["EXR"] = false;
+	}
+
+	/* These formats are always available.
+	// Windows Bitmaps (Always Supported)
+	opencv_formats["BMP"] = true;
+	opencv_formats["DIB"] = true;
+	
+	// Portable Image Format (Always Supported)
+	opencv_formats["PBM"] = true;
+	opencv_formats["PGM"] = true;
+	opencv_formats["PPM"] = true;
+	opencv_formats["PXM"] = true;
+	opencv_formats["PNM"] = true;
+	
+	// Sun Rasters (Always Supported)
+	opencv_formats["SR"] = true;
+	opencv_formats["RAS"] = true;
+	
+	// Radiance HDR (Always Supported)
+	opencv_formats["HDR"] = true;
+	opencv_formats["PIC"] = true;
+	*/
+}
+
+void debug_show_opencv_formats()
+{
+	std::cout << "This is a list of supported formats, it depends on which formats opencv has been built with." << std::endl ;
+	for (auto const& x : opencv_formats)
+	{
+		std::cout << "\t" << std::setw(4) << x.first << " -> " << (x.second ? "Yes" : "No") << std::endl ;
+	}
+}
+
+
+
+struct ConvInfo {
+	std::string mode;
+	int NRLevel;
+	double scaleRatio;
+	int blockSize;
+	W2XConv* converter;
+	int* imwrite_params;
+	std::string outputFormat;
+	ConvInfo(
+		std::string mode,
+		int NRLevel,
+		double scaleRatio,
+		int blockSize,
+		W2XConv* converter,
+		int* imwrite_params,
+		std::string outputFormat
+	) :	mode(mode),
+		NRLevel(NRLevel),
+		scaleRatio(scaleRatio),
+		blockSize(blockSize),
+		converter(converter),
+		imwrite_params(imwrite_params),
+		outputFormat(outputFormat) {};
+};
 
 
 std::string generate_output_location(std::string inputFileName, std::string outputFileName, std::string mode, int NRLevel, double scaleRatio, std::string outputFormat) {
@@ -399,89 +485,9 @@ void convert_fileW(ConvInfo info, fs::path inputName, fs::path output) {
 }
 #endif
 
-#ifdef HAVE_OPENCV_3_X
-	#define w2xHaveImageWriter(x) cvHaveImageWriter(x)
-#else
-	#define w2xHaveImageWriter(x) cv::haveImageWriter(x)
-#endif
-	
-//check for opencv formats
-void check_opencv_formats()
-{
-	// Portable Network Graphics
-	if (!w2xHaveImageWriter(".png"))
-	{
-		opencv_formats["PNG"] = false;
-	}
-	
-	// JPEG Files
-	if (!w2xHaveImageWriter(".jpg"))
-	{
-		opencv_formats["JPEG"] = false;
-		opencv_formats["JPG"] = false;
-		opencv_formats["JPE"] = false;
-	}
-	
-	/* 
-	Disabled due to vulnerabilities in Jasper codec, see: https://github.com/opencv/opencv/issues/14058
-	// JPEG 2000 Files
-	if (!w2xHaveImageWriter(".jp2"))
-	{
-		opencv_formats["JP2"] = false;
-	}
-	*/
-	
-	// WebP Files
-	if (!w2xHaveImageWriter(".webp"))
-	{
-		opencv_formats["WEBP"] = false;
-	}
-	
-	// TIFF Files
-	if (!w2xHaveImageWriter(".tif"))
-	{
-		opencv_formats["TIF"] = false;
-		opencv_formats["TIFF"] = false;
-	}
-	
-	// OpenEXR Image Files
-	if (!w2xHaveImageWriter(".exr"))
-	{
-		opencv_formats["EXR"] = false;
-	}
 
-	/* These formats are always available.
-	// Windows Bitmaps (Always Supported)
-	opencv_formats["BMP"] = true;
-	opencv_formats["DIB"] = true;
-	
-	// Portable Image Format (Always Supported)
-	opencv_formats["PBM"] = true;
-	opencv_formats["PGM"] = true;
-	opencv_formats["PPM"] = true;
-	opencv_formats["PXM"] = true;
-	opencv_formats["PNM"] = true;
-	
-	// Sun Rasters (Always Supported)
-	opencv_formats["SR"] = true;
-	opencv_formats["RAS"] = true;
-	
-	// Radiance HDR (Always Supported)
-	opencv_formats["HDR"] = true;
-	opencv_formats["PIC"] = true;
-	*/
-}
-void debug_show_opencv_formats()
-{
-	std::cout << "This is a list of supported formats, it depends on which formats opencv has been built with." << std::endl ;
-	for (auto const& x : opencv_formats)
-	{
-		std::cout << "\t" << std::setw(4) << x.first << " -> " << (x.second ? "Yes" : "No") << std::endl ;
-	}
-}
 
-#if 1
-
+#if defined(WIN32) && defined(UNICODE)
 //CommandLineToArgvA source from: http://alter.org.ua/en/docs/win/args/
 char** CommandLineToArgvA( char* CmdLine, int* _argc ) {
 	char** argv;
@@ -553,7 +559,10 @@ char** CommandLineToArgvA( char* CmdLine, int* _argc ) {
 	
 	(*_argc) = argc;
 	return argv;
-	}
+}
+
+#endif
+
 
 
 #if defined(WIN32) && defined(UNICODE)
@@ -914,4 +923,3 @@ int main(int argc, char** argv)
 
 	return 0;
 }
-#endif
