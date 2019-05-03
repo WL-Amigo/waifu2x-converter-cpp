@@ -559,7 +559,7 @@ char** CommandLineToArgvA( char* CmdLine, int* _argc ) {
 #if defined(WIN32) && defined(UNICODE)
 int wmain(void)
 #else
-int main(int argc, char* argv[])
+int main(int argc, char** argv)
 #endif
 {
 	int ret = 1;
@@ -803,7 +803,7 @@ int main(int argc, char* argv[])
 			for (auto & inputFile : fs::recursive_directory_iterator(input)) {
 				if (!fs::is_directory(inputFile)) {
 					std::string ext = inputFile.path().extension().string().substr(1);
-					if(validate_format_extension(ext)){
+					if (validate_format_extension(ext)) {
 						files_list.push_back(inputFile);
 					}
 					else {
@@ -906,7 +906,7 @@ int main(int argc, char* argv[])
 	}
 
 	w2xconv_fini(converter);
-	
+
 #if defined(WIN32) && defined(UNICODE)
 	free(argv);
 	LocalFree(argv_w);
