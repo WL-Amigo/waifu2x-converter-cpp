@@ -27,12 +27,11 @@
 
 #if defined(WIN32) && defined(UNICODE)
 #include <Windows.h>
-#else
 #include <io.h>
 #include <fcntl.h>
+#pragma comment ( linker, "/entry:\"wmainCRTStartup\"" )
 #endif
 
-#pragma comment ( linker, "/entry:\"wmainCRTStartup\"" )
 
 #include "w2xconv.h"
 #include "wcsfunc.hpp"
@@ -557,12 +556,16 @@ char** CommandLineToArgvA( char* CmdLine, int* _argc ) {
 	}
 
 
-int wmain(void){
+#if defined(WIN32) && defined(UNICODE)
+int wmain(void)
+#else
+int main(int argc, char* argv[])
+#endif
+{
 	int ret = 1;
+#if defined(WIN32) && defined(UNICODE)
 	int argc = 0;
 	char **argv = CommandLineToArgvA(GetCommandLineA(), &argc);
-
-#if defined(WIN32) && defined(UNICODE)
 	int argc_w = 0;
 	std::wstring inputFileName, outputFileName=L"auto";
 	LPWSTR *argv_w = CommandLineToArgvW(GetCommandLineW(), &argc_w);
