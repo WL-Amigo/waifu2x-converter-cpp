@@ -226,7 +226,7 @@ std::string generate_output_location(std::string inputFileName, std::string outp
 		if (tailDot != std::string::npos)
 			outputFileName.erase(tailDot, outputFileName.length());
 		outputFileName = outputFileName + "_[" + ReplaceString(mode, "noise-scale", "NS");
-		//std::string &mode = mode;
+		
 		if (mode.find("noise") != mode.npos) {
 			outputFileName = outputFileName + "-L" + std::to_string(NRLevel) + "]";
 		}
@@ -248,7 +248,7 @@ std::string generate_output_location(std::string inputFileName, std::string outp
 		//This removes all contextual information about where a file originated from if "recursive_directory" was enabled.
 		std::string tmp = generate_output_location(inputFileName, "auto", mode, NRLevel, scaleRatio, outputFormat);
 		//tmp = full formatted output file path
-		size_t lastSlash = tmp.find_last_of('/');
+		size_t lastSlash = tmp.find_last_of("/\\");
 		if (lastSlash != std::string::npos){
 			tmp.erase(0, lastSlash);
 		}
@@ -286,7 +286,7 @@ std::wstring generate_output_location(std::wstring inputFileName, std::wstring o
 		if (tailDot != std::wstring::npos)
 			outputFileName.erase(tailDot, outputFileName.length());
 		outputFileName = outputFileName + L"_[" + to_wcs(ReplaceString(mode, "noise-scale", "NS"));
-		//std::wstring &mode = mode;
+		
 		if (mode.find("noise") != mode.npos) {
 			outputFileName = outputFileName + L"-L" + std::to_wstring(NRLevel) + L"]";
 		}
@@ -311,7 +311,7 @@ std::wstring generate_output_location(std::wstring inputFileName, std::wstring o
 		//This removes all contextual information about where a file originated from if "recursive_directory" was enabled.
 		std::wstring tmp = generate_output_location(inputFileName, L"auto", mode, NRLevel, scaleRatio, outputFormat);
 		//tmp = full formatted output file path
-		size_t lastSlash = tmp.find_last_of(L'/');
+		size_t lastSlash = tmp.find_last_of(L"/\\");
 		if (lastSlash != std::wstring::npos){
 			tmp.erase(0, lastSlash);
 		}
@@ -771,17 +771,34 @@ int wmain(void){
 		//Build files list
 		std::deque<fs::path> files_list;
 		std::cout << "We're going to be operating in a directory. dir:" << fs::absolute(input) << std::endl;
+		
 		if (recursive_directory_iterator) {
 			for (auto & inputFile : fs::recursive_directory_iterator(input)) {
 				if (!fs::is_directory(inputFile)) {
-					files_list.push_back(inputFile);
+					std::string ext = inputFile.path().extension().string().substr(1);
+					if(validate_format_extension(ext)){
+						files_list.push_back(inputFile);
+					}
+					else {
+						std::cout << "Skipping file '" << inputFile.path().filename().string() <<
+								"' for having an unsupported file extension (" << ext << ")" << std::endl;
+						continue;
+					}
 				}
 			}
 		}
 		else {
 			for (auto & inputFile : fs::directory_iterator(input)) {
 				if (!fs::is_directory(inputFile)) {
-					files_list.push_back(inputFile);
+					std::string ext = inputFile.path().extension().string().substr(1);
+					if (validate_format_extension(ext)) {
+						files_list.push_back(inputFile);
+					}
+					else {
+						std::cout << "Skipping file '" << inputFile.path().filename().string() <<
+								"' for having an unsupported file extension (" << ext << ")" << std::endl;
+						continue;
+					}
 				}
 			}
 		}
@@ -1057,30 +1074,31 @@ int main(int argc, char** argv) {
 		std::deque<fs::path> files_list;
 		std::cout << "We're going to be operating in a directory. dir:" << fs::absolute(input) << std::endl;
 
-//		TODO: Use a variant instead of so much repeated code
 		if (recursive_directory_iterator) {
 			for (auto & inputFile : fs::recursive_directory_iterator(input)) {
 				if (!fs::is_directory(inputFile)) {
-					if(validate_format_extension(inputFile.path().extension().string().substr(1))){
+					std::string ext = inputFile.path().extension().string().substr(1);
+					if (validate_format_extension(ext)) {
 						files_list.push_back(inputFile);
 					}
 					else {
 						std::cout << "Skipping file '" << inputFile.path().filename().string() <<
-								"' for having an unsupported file extension (" << inputFile.path().extension().string().substr(1) << ")" << std::endl;
+								"' for having an unsupported file extension (" << ext << ")" << std::endl;
 						continue;
 					}
 				}
 			}
 		}
-		else {
+		else{
 			for (auto & inputFile : fs::directory_iterator(input)) {
 				if (!fs::is_directory(inputFile)) {
-					if(validate_format_extension(inputFile.path().extension().string().substr(1))){
+					std::string ext = inputFile.path().extension().string().substr(1);
+					if (validate_format_extension(ext)) {
 						files_list.push_back(inputFile);
 					}
 					else {
 						std::cout << "Skipping file '" << inputFile.path().filename().string() <<
-								"' for having an unsupported file extension (" << inputFile.path().extension().string().substr(1) << ")" << std::endl;
+								"' for having an unsupported file extension (" << ext << ")" << std::endl;
 						continue;
 					}
 				}
