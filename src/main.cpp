@@ -27,10 +27,12 @@
 
 #if defined(WIN32) && defined(UNICODE)
 #include <Windows.h>
+#else
 #include <io.h>
 #include <fcntl.h>
-#pragma comment ( linker, "/entry:\"wmainCRTStartup\"" )
 #endif
+
+#pragma comment ( linker, "/entry:\"wmainCRTStartup\"" )
 
 #include "w2xconv.h"
 #include "wcsfunc.hpp"
@@ -479,7 +481,7 @@ void debug_show_opencv_formats()
 	}
 }
 
-#if defined(WIN32) && defined(UNICODE)
+#if 1
 
 //CommandLineToArgvA source from: http://alter.org.ua/en/docs/win/args/
 char** CommandLineToArgvA( char* CmdLine, int* _argc ) {
@@ -557,14 +559,13 @@ char** CommandLineToArgvA( char* CmdLine, int* _argc ) {
 
 int wmain(void){
 	int ret = 1;
-	int argc = 0, argc_w = 0;
-	std::wstring inputFileName, outputFileName=L"auto";
+	int argc = 0;
 	char **argv = CommandLineToArgvA(GetCommandLineA(), &argc);
-	LPWSTR *argv_w = CommandLineToArgvW(GetCommandLineW(), &argc_w);
-	HWND hWnd = GetConsoleWindow();
 
-	//Switch the Console to UTF-16 mode
-	//_setmode(_fileno(stdout), _O_U16TEXT);
+#if defined(WIN32) && defined(UNICODE)
+	int argc_w = 0;
+	std::wstring inputFileName, outputFileName=L"auto";
+	LPWSTR *argv_w = CommandLineToArgvW(GetCommandLineW(), &argc_w);
 	
 	for (int ai = 1; ai < argc_w; ai++) {
 		if ((wcscmp(argv_w[ai], L"-i") == 0) || (wcscmp(argv_w[ai], L"--input") == 0)) {
@@ -589,10 +590,25 @@ int wmain(void){
 		}
 		#endif
 	}
+#else
+	for (int ai = 1; ai < argc; ai++) {
+		if ((strcmp(argv[ai], "--list-processor") == 0) || (strcmp(argv[ai], "-l") == 0)) {
+			dump_procs();
+			return 0;
+		}
+		#ifdef HAVE_OPENCV
+		if (strcmp(argv[ai], "--list-opencv-formats") == 0) {
+			check_opencv_formats();
+			debug_show_opencv_formats();
+			return 0;
+		}
+		#endif
+	}
+#endif	
 	
-	#ifdef HAVE_OPENCV
+#ifdef HAVE_OPENCV
 	check_opencv_formats();
-	#endif
+#endif
 	
 	// definition of command line arguments
 	TCLAP::CmdLine cmd("waifu2x OpenCV Fork - https://github.com/DeadSix27/waifu2x-converter-cpp", ' ', std::string(GIT_TAG) + " (" + GIT_BRANCH + "-" + GIT_COMMIT_HASH + ")", true);
@@ -700,11 +716,19 @@ int wmain(void){
 	#endif
 	
 	//We need to do this conversion because using a TCLAP::ValueArg<fs::path> can not handle spaces.
+#if defined(WIN32) && defined(UNICODE)
 	fs::path input = inputFileName;
 	std::wstring tmpOutput = outputFileName;
 	if (fs::is_directory(input) && (tmpOutput.back() != L'/') && wcscmp(tmpOutput.c_str(), L"auto")!=0) {
 		tmpOutput += L"/";
 	}
+#else
+	fs::path input = cmdInput.getValue();
+	std::string tmpOutput = cmdOutput.getValue();
+	if (fs::is_directory(input) && (tmpOutput.back() != '/') && strcmp(tmpOutput.c_str(), "auto")!=0) {
+		tmpOutput += "/";
+	}
+#endif
 	fs::path output = tmpOutput;
 	
 	enum W2XConvGPUMode gpu = W2XCONV_GPU_AUTO;
@@ -813,7 +837,11 @@ int wmain(void){
 			std::cout << "[" << numFilesProcessed << "/" << files_count << "] " << fn.filename() << (verbose ? "\n" : " Ok. ");
 
 			try {
+#if defined(WIN32) && defined(UNICODE)
 				convert_fileW(convInfo, fn, output);
+#else
+				convert_file(convInfo, fn, output);
+#endif
 			}
 			catch (const std::exception& e) {
 				numErrors++;
@@ -845,7 +873,11 @@ int wmain(void){
 	else {
 		numFilesProcessed++;
 		try {
+#if defined(WIN32) && defined(UNICODE)
 			convert_fileW(convInfo, input, output);
+#else
+			convert_file(convInfo, input, output);
+#endif
 		}
 		catch (const std::exception& e) {
 			numErrors++;
@@ -872,308 +904,11 @@ int wmain(void){
 
 	w2xconv_fini(converter);
 	free(argv);
+	
+#if defined(WIN32) && defined(UNICODE)
 	LocalFree(argv_w);
-	return 0;
-}
-
-#else
-int main(int argc, char** argv) {
-	int ret = 1;
-	
-	for (int ai = 1; ai < argc; ai++) {
-		if ((strcmp(argv[ai], "--list-processor") == 0) || (strcmp(argv[ai], "-l") == 0)) {
-			dump_procs();
-			return 0;
-		}
-		#ifdef HAVE_OPENCV
-		if (strcmp(argv[ai], "--list-opencv-formats") == 0) {
-			check_opencv_formats();
-			debug_show_opencv_formats();
-			return 0;
-		}
-		#endif
-	}
-	
-	#ifdef HAVE_OPENCV
-	check_opencv_formats();
-	#endif
-
-	// definition of command line arguments
-	TCLAP::CmdLine cmd("waifu2x OpenCV Fork - https://github.com/DeadSix27/waifu2x-converter-cpp", ' ', std::string(GIT_TAG) + " (" + GIT_BRANCH + "-" + GIT_COMMIT_HASH + ")", true);
-	cmd.setOutput(new CustomFailOutput());
-
-	TCLAP::ValueArg<std::string> cmdInput("i", "input",
-		"path to input image file or directory (you should use the full path)", true, "",
-		"string", cmd);
-
-	TCLAP::ValueArg<std::string> cmdOutput("o", "output",
-		"path to output image file or directory  (you should use the full path)", false,
-		"auto", "string", cmd);
-
-	TCLAP::ValueArg<bool> cmdRecursiveDirectoryIterator("r", "recursive-directory",
-		"Search recursively through directories to find more images to process.\nIf this is set to 0 it will only check in the directory specified if the input is a directory instead of an image.\nYou mustn't supply this argument with something other than 0 or 1.", false,
-		0, "bool", cmd);
-
-
-	TCLAP::SwitchArg cmdQuiet("s", "silent", "Enable silent mode.", cmd, false);
-
-	std::vector<std::string> cmdModeConstraintV;
-	cmdModeConstraintV.push_back("noise");
-	cmdModeConstraintV.push_back("scale");
-	cmdModeConstraintV.push_back("noise-scale");
-	TCLAP::ValuesConstraint<std::string> cmdModeConstraint(cmdModeConstraintV);
-	TCLAP::ValueArg<std::string> cmdMode("m", "mode", "image processing mode",
-		false, "noise-scale", &cmdModeConstraint, cmd);
-
-	std::vector<int> cmdNRLConstraintV;
-	cmdNRLConstraintV.push_back(0);
-	cmdNRLConstraintV.push_back(1);
-	cmdNRLConstraintV.push_back(2);
-	cmdNRLConstraintV.push_back(3);
-	TCLAP::ValuesConstraint<int> cmdNRLConstraint(cmdNRLConstraintV);
-	TCLAP::ValueArg<int> cmdNRLevel("", "noise-level", "noise reduction level",
-		false, 1, &cmdNRLConstraint, cmd);
-
-	TCLAP::ValueArg<double> cmdScaleRatio("", "scale-ratio",
-		"custom scale ratio", false, 2.0, "double", cmd);
-
-	TCLAP::ValueArg<std::string> cmdModelPath("", "model-dir",
-		"path to custom model directory (don't append last / )", false,
-		DEFAULT_MODELS_DIRECTORY, "string", cmd);
-
-	TCLAP::ValueArg<int> cmdNumberOfJobs("j", "jobs",
-		"number of threads launching at the same time", false, 0, "integer",
-		cmd);
-
-	TCLAP::ValueArg<int> cmdTargetProcessor("p", "processor",
-		"set target processor", false, -1, "integer",
-		cmd);
-
-	TCLAP::SwitchArg cmdForceOpenCL("", "force-OpenCL",
-		"force to use OpenCL on Intel Platform",
-		cmd, false);
-
-	TCLAP::SwitchArg cmdDisableGPU("", "disable-gpu", "disable GPU", cmd, false);
-
-	TCLAP::ValueArg<int> cmdBlockSize("", "block-size", "block size",
-		false, 0, "integer", cmd);
-		
-	TCLAP::ValueArg<int> cmdImgQuality("q", "image-quality", "JPEG & WebP Compression quality (0-101, 0 being smallest size and lowest quality), use 101 for lossless WebP",
-		false, 90, "0-101", cmd);
-		
-	TCLAP::ValueArg<int> cmdPngCompression("c", "png-compression", "Set PNG compression level (0-9), 9 = Max compression (slowest & smallest)",
-		false, 5, "0-9", cmd);
-		
-	TCLAP::ValueArg<std::string> cmdOutputFormat("f", "output-format", "The format used when running in recursive/folder mode\nSee --list-opencv-formats for a list of supported formats/extensions.",
-		false, "png", "png,jpg,webp,...", cmd);
-	
-	TCLAP::SwitchArg cmdListProcessor("l", "list-processor", "dump processor list", cmd, false);
-	
-	#ifdef HAVE_OPENCV
-	TCLAP::SwitchArg showOpenCVFormats("", "list-opencv-formats", "dump opencv supported format list", cmd, false);
-	#endif
-
-	// definition of command line argument : end
-
-	// parse command line arguments
-	try {
-		cmd.parse(argc, argv);
-	}
-	catch (std::exception &e) {
-		std::cerr << e.what() << std::endl;
-		std::cerr << "Error : cmd.parse() threw exception" << std::endl;
-		std::exit(-1);
-	}
-	
-	//Check Quality/Compression option ranges.
-	if (cmdPngCompression.getValue() < 0 || cmdPngCompression.getValue() > 9)
-	{
-		std::cout << "Error: PNG Compression level range is 0-9, 9 being the slowest and resulting in the smallest file size." << std::endl;
-		std::exit(-1);
-	}
-	if (cmdImgQuality.getValue() < 0 || cmdImgQuality.getValue() > 101)
-	{
-		std::cout << "Error: JPEG & WebP Compression quality range is 0-101! (0 being smallest size and lowest quality), use 101 for lossless WebP" << std::endl;
-		std::exit(-1);
-	}
-	#ifdef HAVE_OPENCV
-	if(validate_format_extension(cmdOutputFormat.getValue())==false){
-		printf("Unsupported output extension: %s\nUse option --list-opencv-formats to see a list of supported formats", cmdOutputFormat.getValue().c_str());
-		std::exit(-1);
-	}
-	#endif
-
-	//We need to do this conversion because using a TCLAP::ValueArg<fs::path> can not handle spaces.
-	fs::path input = cmdInput.getValue();
-	std::string tmpOutput = cmdOutput.getValue();
-	if (fs::is_directory(input) && (tmpOutput.back() != '/') && strcmp(tmpOutput.c_str(), "auto")!=0) {
-		tmpOutput += "/";
-	}
-	fs::path output = tmpOutput;
-	
-	enum W2XConvGPUMode gpu = W2XCONV_GPU_AUTO;
-
-	if (cmdDisableGPU.getValue()) {
-		gpu = W2XCONV_GPU_DISABLE;
-	}
-	else if (cmdForceOpenCL.getValue()) {
-		gpu = W2XCONV_GPU_FORCE_OPENCL;
-	}
-
-	W2XConv *converter;
-	size_t num_proc;
-	w2xconv_get_processor_list(&num_proc);
-	int proc = cmdTargetProcessor.getValue();
-	bool verbose = !cmdQuiet.getValue();
-
-	if (proc != -1 && proc < num_proc) {
-		converter = w2xconv_init_with_processor(proc, cmdNumberOfJobs.getValue(), verbose);
-	}
-	else {
-		converter = w2xconv_init(gpu, cmdNumberOfJobs.getValue(), verbose);
-	}
-	
-	int imwrite_params[6];
-	imwrite_params[0] = cv::IMWRITE_WEBP_QUALITY;
-	imwrite_params[1] = cmdImgQuality.getValue();
-	imwrite_params[2] = cv::IMWRITE_JPEG_QUALITY;
-	imwrite_params[3] = cmdImgQuality.getValue();
-	imwrite_params[4] = cv::IMWRITE_PNG_COMPRESSION;
-	imwrite_params[5] = cmdPngCompression.getValue();
-	
-	ConvInfo convInfo(cmdMode.getValue(), cmdNRLevel.getValue(), cmdScaleRatio.getValue(), cmdBlockSize.getValue(), converter, imwrite_params, cmdOutputFormat.getValue());
-
-	double time_start = getsec();
-
-	switch (converter->target_processor->type) {
-	case W2XCONV_PROC_HOST:
-		printf("CPU: %s\n",
-			converter->target_processor->dev_name);
-		break;
-
-	case W2XCONV_PROC_CUDA:
-		printf("CUDA: %s\n",
-			converter->target_processor->dev_name);
-		break;
-
-	case W2XCONV_PROC_OPENCL:
-		printf("OpenCL: %s\n",
-			converter->target_processor->dev_name);
-		break;
-	}
-
-	bool recursive_directory_iterator = cmdRecursiveDirectoryIterator.getValue();
-	int error = w2xconv_load_models(converter, cmdModelPath.getValue().c_str());
-	check_for_errors(converter, error);
-
-	//This includes errored files.
-	int numFilesProcessed = 0;
-	int numErrors = 0;
-	if (fs::is_directory(input) == true) {
-		//Build files list
-		std::deque<fs::path> files_list;
-		std::cout << "We're going to be operating in a directory. dir:" << fs::absolute(input) << std::endl;
-
-		if (recursive_directory_iterator) {
-			for (auto & inputFile : fs::recursive_directory_iterator(input)) {
-				if (!fs::is_directory(inputFile)) {
-					std::string ext = inputFile.path().extension().string().substr(1);
-					if (validate_format_extension(ext)) {
-						files_list.push_back(inputFile);
-					}
-					else {
-						std::cout << "Skipping file '" << inputFile.path().filename().string() <<
-								"' for having an unsupported file extension (" << ext << ")" << std::endl;
-						continue;
-					}
-				}
-			}
-		}
-		else{
-			for (auto & inputFile : fs::directory_iterator(input)) {
-				if (!fs::is_directory(inputFile)) {
-					std::string ext = inputFile.path().extension().string().substr(1);
-					if (validate_format_extension(ext)) {
-						files_list.push_back(inputFile);
-					}
-					else {
-						std::cout << "Skipping file '" << inputFile.path().filename().string() <<
-								"' for having an unsupported file extension (" << ext << ")" << std::endl;
-						continue;
-					}
-				}
-			}
-		}
-
-		//Proceed by list
-		double timeAvg = 0.0;
-		int files_count = static_cast<int>(files_list.size());
-		for (auto &fn : files_list) {
-			++numFilesProcessed;
-			double time_file_start = getsec();
-
-			std::cout << "[" << numFilesProcessed << "/" << files_count << "] " << fn.filename() << (verbose ? "\n" : " Ok. ");
-
-			try {
-				convert_file(convInfo, fn, output);
-			}
-			catch (const std::exception& e) {
-				numErrors++;
-				std::cout << e.what() << std::endl;
-			}
-
-			//Calculate and out elapsed time
-			double time_end = getsec();
-			double time_file = time_end - time_file_start;
-			double time_all = time_end - time_start;
-			if (timeAvg > 0.0)
-				timeAvg = time_all / numFilesProcessed;
-			else
-				timeAvg = time_all;
-			double elapsed = files_count * timeAvg - time_all;
-			int el_h = (int) elapsed / (60 * 60);
-			int el_m = (int) (elapsed - el_h * 60 * 60) / 60;
-			int el_s = (int) (elapsed - el_h * 60 * 60 - el_m * 60);
-			std::cout << "Elapsed: ";
-			if (el_h)
-				std::cout << el_h << "h";
-			if (el_m)
-				std::cout << el_m << "m";
-			std::cout << el_s << "s file: " << time_file << "s avg: " << timeAvg << "s" << std::endl;
-		}
-
-
-	}
-	else {
-		numFilesProcessed++;
-		try {
-			convert_file(convInfo, input, output);
-		}
-		catch (const std::exception& e) {
-			numErrors++;
-			std::cout << e.what() << std::endl;
-		}
-	}
-
-
-	{
-		double time_end = getsec();
-
-		double gflops_proc = (converter->flops.flop / (1000.0*1000.0*1000.0)) / converter->flops.filter_sec;
-		double gflops_all = (converter->flops.flop / (1000.0*1000.0*1000.0)) / (time_end - time_start);
-
-		std::cout << "process successfully done! (all:"
-			<< (time_end - time_start) << "[sec], "
-			<< numFilesProcessed << " [files processed], "
-			<< numErrors << " [files errored], "
-			<< gflops_all << "[GFLOPS], filter:"
-			<< converter->flops.filter_sec
-			<< "[sec], " << gflops_proc << "[GFLOPS])" << std::endl;
-	}
-
-	w2xconv_fini(converter);
+#endif
 
 	return 0;
 }
 #endif
-
