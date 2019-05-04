@@ -84,7 +84,7 @@ https://github.com/DeadSix27/waifu2x-converter-cpp/releases
 - GCC 5+
 - CMake
 - OpenCL
-- OpenCV 4+ (optional, but recommended)
+- OpenCV 3+ (optional, but recommended)
 	- On Arch you probably also need: `gtk3 hdf5 vtk glew` because something seems broken in their CV package.
 
 #### Packages:
