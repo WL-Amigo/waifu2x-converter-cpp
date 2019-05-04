@@ -1524,13 +1524,13 @@ int w2xconv_convert_file(
 
 #if defined(WIN32) && defined(UNICODE)
 
-cv::Mat read_imageW(const WCHAR* filepath, int flags=cv::IMREAD_COLOR) {
+void read_imageW(cv::Mat* image, const WCHAR* filepath, int flags=cv::IMREAD_COLOR) {
 	long lSize;
 	char* imgBuffer;
     FILE* pFile = _wfopen(filepath, L"rb");
 	
     if (!pFile) {
-        return cv::Mat::zeros(1, 1, CV_8U);
+        *image = cv::Mat::zeros(1, 1, CV_8U);
     }
 	
     fseek(pFile, 0, SEEK_END);
@@ -1540,7 +1540,7 @@ cv::Mat read_imageW(const WCHAR* filepath, int flags=cv::IMREAD_COLOR) {
     imgBuffer = new char[lSize];
 	
 	if(!imgBuffer) {
-        return cv::Mat::zeros(1, 1, CV_8U);
+        *image = cv::Mat::zeros(1, 1, CV_8U);
 	}
 	
     fread(imgBuffer, 1, lSize, pFile);
@@ -1548,10 +1548,9 @@ cv::Mat read_imageW(const WCHAR* filepath, int flags=cv::IMREAD_COLOR) {
     fclose(pFile);
 	
     cv::_InputArray arr(imgBuffer, lSize);
-    cv::Mat img = cv::imdecode(arr, flags);
+    *image = cv::imdecode(arr, flags);
 	
     delete[] imgBuffer;
-    return img;
 }
 
 bool write_imageW(const WCHAR* filepath, cv::Mat& img, int* param)
@@ -1618,9 +1617,9 @@ int w2xconv_convert_fileW(
 	 * IMREAD_UNCHANGED + otherwise : ???
 	 */
 	if (png_rgb) {
-		image_src = read_imageW(src_path, cv::IMREAD_UNCHANGED);
+		read_imageW(&image_src, src_path, cv::IMREAD_UNCHANGED);
 	} else {
-		image_src = read_imageW(src_path, cv::IMREAD_COLOR);
+		read_imageW(&image_src, src_path, cv::IMREAD_COLOR);
 	}
 
 	bool dst_png = false;
