@@ -217,6 +217,10 @@ bool validate_format_extension(std::wstring ext_w) {
 //check for opencv formats
 void check_opencv_formats()
 {
+	#ifndef HAVE_OPENCV
+		// Only default formats are supported
+		return;
+	#endif
 	// Portable Network Graphics
 	if (!w2xHaveImageWriter(".png"))
 	{
@@ -368,11 +372,9 @@ std::string generate_output_location(std::string inputFileName, std::string outp
 	else if (lastSlashPos == std::string::npos || lastDotPos > lastSlashPos) {
 		//We may have a regular output file here or something went wrong.
 		//outputFileName is already what it should be thus nothing needs to be done.
-		#ifdef HAVE_OPENCV
 		if(validate_format_extension(outputFileName.substr(lastDotPos))==false){
 			throw std::runtime_error("Unsupported output extension. outputFileName:" + outputFileName + " extension:" +outputFileName.substr(lastDotPos));
 		}
-		#endif
 	}
 	else {
 		throw std::runtime_error("An unknown 'outputFileName' has been inserted into generate_output_location. outputFileName: " + outputFileName);
@@ -437,11 +439,9 @@ std::wstring generate_output_location(std::wstring inputFileName, std::wstring o
 	else if (lastSlashPos == std::wstring::npos || lastDotPos > lastSlashPos) {
 		//We may have a regular output file here or something went wrong.
 		//outputFileName is already what it should be thus nothing needs to be done.
-		#ifdef HAVE_OPENCV
 		if(validate_format_extension(outputFileName.substr(lastDotPos))==false){
 			throw std::runtime_error("Unsupported output extension.");
 		}
-		#endif
 	}
 	else {
 		throw std::runtime_error("An unknown 'outputFileName' has been inserted into generate_output_location.");
@@ -640,9 +640,8 @@ int main(int argc, char** argv)
 	}
 #endif	
 	
-#ifdef HAVE_OPENCV
 	check_opencv_formats();
-#endif
+
 	
 	// definition of command line arguments
 	TCLAP::CmdLine cmd("waifu2x OpenCV Fork - https://github.com/DeadSix27/waifu2x-converter-cpp", ' ', std::string(GIT_TAG) + " (" + GIT_BRANCH + "-" + GIT_COMMIT_HASH + ")", true);
@@ -742,12 +741,10 @@ int main(int argc, char** argv)
 		std::cout << "Error: JPEG & WebP Compression quality range is 0-101! (0 being smallest size and lowest quality), use 101 for lossless WebP" << std::endl;
 		std::exit(-1);
 	}
-	#ifdef HAVE_OPENCV
 	if(validate_format_extension(cmdOutputFormat.getValue())==false){
 		printf("Unsupported output extension: %s\nUse option --list-opencv-formats to see a list of supported formats", cmdOutputFormat.getValue().c_str());
 		std::exit(-1);
 	}
-	#endif
 	
 	//We need to do this conversion because using a TCLAP::ValueArg<fs::path> can not handle spaces.
 #if defined(WIN32) && defined(UNICODE)
