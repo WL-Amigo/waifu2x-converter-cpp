@@ -7,7 +7,6 @@
 
 #if defined(WIN32) && defined(UNICODE)
 #include <Windows.h>
-#include "wcsfunc.hpp"
 #endif
 
 #ifdef __cplusplus

@@ -34,7 +34,6 @@
 
 
 #include "w2xconv.h"
-#include "wcsfunc.hpp"
 
 #ifndef DEFAULT_MODELS_DIRECTORY
 #define DEFAULT_MODELS_DIRECTORY "models_rgb"
@@ -180,16 +179,33 @@ std::map<std::string,bool> opencv_formats = {
 	{"PIC",  true}
 };
 
-bool validate_format_extension(std::string extension) {
-	for(std::string::iterator it = extension.begin(); it != extension.end(); ++it){
-		*it = std::toupper(*it);
-	}
-	auto index = opencv_formats.find(extension);
+bool validate_format_extension(std::string ext) {
+	if(ext.length() == 0)
+		return false;
+	
+	if(ext.at(0) == '.')
+		ext=ext.substr(1);
+	
+	std::transform(ext.begin(), ext.end(), ext.begin(), toupper);
+	
+	auto index = opencv_formats.find(ext);
 	if (index != opencv_formats.end()) {
 		return index->second;
 	}
 	return false;
 }
+
+#if defined(WIN32) && defined(UNICODE)
+bool validate_format_extension(std::wstring ext_w) {
+	std::string ext;
+	
+	if(ext_w.at(0) == L'.')
+		ext_w=ext_w.substr(1);
+	
+	ext.assign(ext_w.begin(), ext_w.end());
+	return validate_format_extension(ext);
+}
+#endif
 
 
 #ifdef HAVE_OPENCV_3_X
@@ -312,7 +328,10 @@ std::string generate_output_location(std::string inputFileName, std::string outp
 		size_t tailDot = outputFileName.find_last_of('.');
 		if (tailDot != std::string::npos)
 			outputFileName.erase(tailDot, outputFileName.length());
-		outputFileName = outputFileName + "_[" + ReplaceString(mode, "noise-scale", "NS");
+		outputFileName = outputFileName + "_[";
+		
+		if(mode.find("noise-scale") != mode.npos)
+			outputFileName = outputFileName + "NS";
 		
 		if (mode.find("noise") != mode.npos) {
 			outputFileName = outputFileName + "-L" + std::to_string(NRLevel) + "]";
@@ -337,10 +356,10 @@ std::string generate_output_location(std::string inputFileName, std::string outp
 		//tmp = full formatted output file path
 		size_t lastSlash = tmp.find_last_of("/\\");
 		if (lastSlash != std::string::npos){
-			tmp.erase(0, lastSlash);
+			tmp.erase(0, lastSlash+1);
 		}
 
-		outputFileName += basename(tmp);
+		outputFileName += tmp;
 	}
 	else if (lastDotPos == std::string::npos || (lastSlashPos != std::string::npos && lastDotPos < lastSlashPos)) {
 		//e.g. ./test.d/out needs to be changed to ./test.d/out.png
@@ -350,8 +369,8 @@ std::string generate_output_location(std::string inputFileName, std::string outp
 		//We may have a regular output file here or something went wrong.
 		//outputFileName is already what it should be thus nothing needs to be done.
 		#ifdef HAVE_OPENCV
-		if(validate_format_extension(outputFileName.substr(lastDotPos+1))==false){
-			throw std::runtime_error("Unsupported output extension. outputFileName:" + outputFileName + " extension:" +outputFileName.substr(lastDotPos+1));
+		if(validate_format_extension(outputFileName.substr(lastDotPos))==false){
+			throw std::runtime_error("Unsupported output extension. outputFileName:" + outputFileName + " extension:" +outputFileName.substr(lastDotPos));
 		}
 		#endif
 	}
@@ -372,7 +391,10 @@ std::wstring generate_output_location(std::wstring inputFileName, std::wstring o
 		size_t tailDot = outputFileName.find_last_of(L'.');
 		if (tailDot != std::wstring::npos)
 			outputFileName.erase(tailDot, outputFileName.length());
-		outputFileName = outputFileName + L"_[" + to_wcs(ReplaceString(mode, "noise-scale", "NS"));
+		outputFileName = outputFileName + L"_[";
+		
+		if(mode.find("noise-scale") != mode.npos)
+			outputFileName = outputFileName + L"NS";
 		
 		if (mode.find("noise") != mode.npos) {
 			outputFileName = outputFileName + L"-L" + std::to_wstring(NRLevel) + L"]";
@@ -400,10 +422,10 @@ std::wstring generate_output_location(std::wstring inputFileName, std::wstring o
 		//tmp = full formatted output file path
 		size_t lastSlash = tmp.find_last_of(L"/\\");
 		if (lastSlash != std::wstring::npos){
-			tmp.erase(0, lastSlash);
+			tmp.erase(0, lastSlash+1);
 		}
 
-		outputFileName += basename(tmp);
+		outputFileName += tmp;
 	}
 	else if (lastDotPos == std::wstring::npos || lastSlashPos != std::wstring::npos && lastDotPos < lastSlashPos) {
 		//e.g. ./test.d/out needs to be changed to ./test.d/out.png
@@ -416,7 +438,7 @@ std::wstring generate_output_location(std::wstring inputFileName, std::wstring o
 		//We may have a regular output file here or something went wrong.
 		//outputFileName is already what it should be thus nothing needs to be done.
 		#ifdef HAVE_OPENCV
-		if(validate_format_extension(to_mbs(outputFileName.substr(lastDotPos+1)))==false){
+		if(validate_format_extension(outputFileName.substr(lastDotPos))==false){
 			throw std::runtime_error("Unsupported output extension.");
 		}
 		#endif
@@ -811,7 +833,7 @@ int main(int argc, char** argv)
 		if (recursive_directory_iterator) {
 			for (auto & inputFile : fs::recursive_directory_iterator(input)) {
 				if (!fs::is_directory(inputFile)) {
-					std::string ext = inputFile.path().extension().string().substr(1);
+					std::string ext = inputFile.path().extension().string();
 					if (validate_format_extension(ext)) {
 						files_list.push_back(inputFile);
 					}
@@ -826,7 +848,7 @@ int main(int argc, char** argv)
 		else {
 			for (auto & inputFile : fs::directory_iterator(input)) {
 				if (!fs::is_directory(inputFile)) {
-					std::string ext = inputFile.path().extension().string().substr(1);
+					std::string ext = inputFile.path().extension().string();
 					if (validate_format_extension(ext)) {
 						files_list.push_back(inputFile);
 					}
