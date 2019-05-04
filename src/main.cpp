@@ -137,7 +137,7 @@ void check_for_errors(W2XConv* converter, int error) {
 
 
 
-std::map<std::string,bool> opencv_formats = {
+std::map<std::string,bool> supported_formats = {
 	// Windows Bitmaps
 	{"BMP",  true},
 	{"DIB",  true},
@@ -224,15 +224,15 @@ void check_opencv_formats()
 	// Portable Network Graphics
 	if (!w2xHaveImageWriter(".png"))
 	{
-		opencv_formats["PNG"] = false;
+		supported_formats["PNG"] = false;
 	}
 	
 	// JPEG Files
 	if (!w2xHaveImageWriter(".jpg"))
 	{
-		opencv_formats["JPEG"] = false;
-		opencv_formats["JPG"] = false;
-		opencv_formats["JPE"] = false;
+		supported_formats["JPEG"] = false;
+		supported_formats["JPG"] = false;
+		supported_formats["JPE"] = false;
 	}
 	
 	/* 
@@ -240,48 +240,48 @@ void check_opencv_formats()
 	// JPEG 2000 Files
 	if (!w2xHaveImageWriter(".jp2"))
 	{
-		opencv_formats["JP2"] = false;
+		supported_formats["JP2"] = false;
 	}
 	*/
 	
 	// WebP Files
 	if (!w2xHaveImageWriter(".webp"))
 	{
-		opencv_formats["WEBP"] = false;
+		supported_formats["WEBP"] = false;
 	}
 	
 	// TIFF Files
 	if (!w2xHaveImageWriter(".tif"))
 	{
-		opencv_formats["TIF"] = false;
-		opencv_formats["TIFF"] = false;
+		supported_formats["TIF"] = false;
+		supported_formats["TIFF"] = false;
 	}
 	
 	// OpenEXR Image Files
 	if (!w2xHaveImageWriter(".exr"))
 	{
-		opencv_formats["EXR"] = false;
+		supported_formats["EXR"] = false;
 	}
 
 	/* These formats are always available.
 	// Windows Bitmaps (Always Supported)
-	opencv_formats["BMP"] = true;
-	opencv_formats["DIB"] = true;
+	supported_formats["BMP"] = true;
+	supported_formats["DIB"] = true;
 	
 	// Portable Image Format (Always Supported)
-	opencv_formats["PBM"] = true;
-	opencv_formats["PGM"] = true;
-	opencv_formats["PPM"] = true;
-	opencv_formats["PXM"] = true;
-	opencv_formats["PNM"] = true;
+	supported_formats["PBM"] = true;
+	supported_formats["PGM"] = true;
+	supported_formats["PPM"] = true;
+	supported_formats["PXM"] = true;
+	supported_formats["PNM"] = true;
 	
 	// Sun Rasters (Always Supported)
-	opencv_formats["SR"] = true;
-	opencv_formats["RAS"] = true;
+	supported_formats["SR"] = true;
+	supported_formats["RAS"] = true;
 	
 	// Radiance HDR (Always Supported)
-	opencv_formats["HDR"] = true;
-	opencv_formats["PIC"] = true;
+	supported_formats["HDR"] = true;
+	supported_formats["PIC"] = true;
 	*/
 }
 
@@ -295,7 +295,7 @@ void display_supported_formats()
 			" OpenCV is disabled (recompile to enable), so only the default formats can be used"
 	#endif
 			 << std::endl ;
-	for (auto const& x : opencv_formats)
+	for (auto const& x : supported_formats)
 	{
 		std::cout << "\t" << std::setw(4) << x.first << " -> " << (x.second ? "Yes" : "No") << std::endl ;
 	}
