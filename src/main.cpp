@@ -285,9 +285,16 @@ void check_opencv_formats()
 	*/
 }
 
-void debug_show_opencv_formats()
+void display_supported_formats()
 {
-	std::cout << "This is a list of supported formats, it depends on which formats opencv has been built with." << std::endl ;
+
+	std::cout << "This is a list of supported formats."
+	#ifdef HAVE_OPENCV
+			" This list depends on which formats opencv has been built with."
+	#else
+			" OpenCV is disabled (recompile to enable), so only the default formats can be used"
+	#endif
+			 << std::endl ;
 	for (auto const& x : opencv_formats)
 	{
 		std::cout << "\t" << std::setw(4) << x.first << " -> " << (x.second ? "Yes" : "No") << std::endl ;
@@ -616,13 +623,11 @@ int main(int argc, char** argv)
 			dump_procs();
 			return 0;
 		}
-		#ifdef HAVE_OPENCV
-		else if ((wcscmp(argv_w[ai], L"--list-opencv-formats") == 0)) {
+		else if ((wcscmp(argv_w[ai], L"--list-opencv-formats") == 0) || (wcscmp(argv_w[ai], L"--list-supported-formats") == 0)) {
 			check_opencv_formats();
-			debug_show_opencv_formats();
+			display_supported_formats();
 			return 0;
 		}
-		#endif
 	}
 #else
 	for (int ai = 1; ai < argc; ai++) {
@@ -631,9 +636,9 @@ int main(int argc, char** argv)
 			return 0;
 		}
 		#ifdef HAVE_OPENCV
-		if (strcmp(argv[ai], "--list-opencv-formats") == 0) {
+		if (strcmp(argv[ai], "--list-opencv-formats") == 0 || strcmp(argv[ai], "--list-supported-formats") == 0) {
 			check_opencv_formats();
-			debug_show_opencv_formats();
+			display_supported_formats();
 			return 0;
 		}
 		#endif
@@ -709,14 +714,13 @@ int main(int argc, char** argv)
 	TCLAP::ValueArg<int> cmdPngCompression("c", "png-compression", "Set PNG compression level (0-9), 9 = Max compression (slowest & smallest)",
 		false, 5, "0-9", cmd);
 		
-	TCLAP::ValueArg<std::string> cmdOutputFormat("f", "output-format", "The format used when running in recursive/folder mode\nSee --list-opencv-formats for a list of supported formats/extensions.",
+	TCLAP::ValueArg<std::string> cmdOutputFormat("f", "output-format", "The format used when running in recursive/folder mode\nSee --list-supported-formats for a list of supported formats/extensions.",
 		false, "png", "png,jpg,webp,...", cmd);
 		
 	TCLAP::SwitchArg cmdListProcessor("l", "list-processor", "dump processor list", cmd, false);
 	
-	#ifdef HAVE_OPENCV
-	TCLAP::SwitchArg showOpenCVFormats("", "list-opencv-formats", "dump opencv supported format list", cmd, false);
-	#endif
+	TCLAP::SwitchArg showOpenCVFormats_deprecated("", "list-opencv-formats", " (deprecated. Use --list-supported-formats) dump opencv supported format list", cmd, false);
+	TCLAP::SwitchArg showOpenCVFormats("", "list-supported-formats", "dump currently supported format list", cmd, false);
 
 	// definition of command line argument : end
 
@@ -742,7 +746,7 @@ int main(int argc, char** argv)
 		std::exit(-1);
 	}
 	if(validate_format_extension(cmdOutputFormat.getValue())==false){
-		printf("Unsupported output extension: %s\nUse option --list-opencv-formats to see a list of supported formats", cmdOutputFormat.getValue().c_str());
+		printf("Unsupported output extension: %s\nUse option --list-supported-formats to see a list of supported formats", cmdOutputFormat.getValue().c_str());
 		std::exit(-1);
 	}
 	
