@@ -1557,15 +1557,17 @@ bool write_imageW(const WCHAR* filepath, cv::Mat& img, int* param)
 {
 	FILE* pFile;
 	std::vector<uchar> imageBuffer;
-	std::wstring ext = std::wstring(filepath);
-	ext = ext.substr(ext.find_last_of(L'.'));
+	std::string ext;
+	std::wstring ext_w = std::wstring(filepath);
+	ext_w = ext_w.substr(ext_w.find_last_of(L'.'));
+	ext.assign(ext_w.begin(), ext_w.end());
 	
 	std::vector<int> compression_params;	
 	for ( int i = 0; i < sizeof(param); i = i + 1 )
 	{
 		compression_params.push_back(param[i]);
 	}	
-	if(!cv::imencode(to_mbs(ext).c_str(),img, imageBuffer, compression_params) )
+	if(!cv::imencode(ext.c_str(),img, imageBuffer, compression_params) )
 		return false;
 	
     pFile = _wfopen(filepath, L"wb+");
