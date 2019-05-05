@@ -59,7 +59,7 @@ https://github.com/DeadSix27/waifu2x-converter-cpp/releases
 		cd "waifu2x-converter-cpp"
 		mkdir out && cd out
 		cmake .. -DCMAKE_GENERATOR="Visual Studio 16 2019" -A x64 -DOPENCV_PREFIX="K:/w2x/opencv/build/" -DOpenCL_INCLUDE_DIR="K:/w2x/OpenCL-Headers"
-		msbuild waifu2xcpp.sln /p:Configuration=Release /p:Platform=x64
+		msbuild waifu2xcpp.sln /p:Configuration=Release /p:Platform=x64 -m
 		copy K:\w2x\opencv\build\x64\vc15\bin\opencv_world410.dll Release\
 		mkdir Release\models_rgb\ && copy ..\models_rgb Release\models_rgb\
 		cd ..
