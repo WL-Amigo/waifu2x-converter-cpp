@@ -20,6 +20,8 @@ https://github.com/DeadSix27/waifu2x-converter-cpp/releases
 	- Build with CUDA support? (Default: ON)
 - `-INSTALL_MODELS`
 	- Install models? (Default: ON on Linux, OFF on Windows)
+- `-DENABLE_TESTS `
+	- Build test binaries? (Default: OFF)
 
 ---
 
