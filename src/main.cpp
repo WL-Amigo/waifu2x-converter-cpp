@@ -868,7 +868,7 @@ int main(int argc, char** argv)
 			++numFilesProcessed;
 			double time_file_start = getsec();
 
-			std::cout << "[" << numFilesProcessed << "/" << files_count << "] " << fn.filename() << (verbose ? "\n" : " Ok. ");
+			std::cout << "Processing file [" << numFilesProcessed << "/" << files_count << "] \"" << fn.filename() << "\":" << (verbose ? "\n" : " ");
 
 			try {
 #if defined(WIN32) && defined(UNICODE)
@@ -894,18 +894,20 @@ int main(int argc, char** argv)
 			int el_h = (int) elapsed / (60 * 60);
 			int el_m = (int) (elapsed - el_h * 60 * 60) / 60;
 			int el_s = (int) (elapsed - el_h * 60 * 60 - el_m * 60);
-			std::cout << "Elapsed: ";
+			std::cout << "Done, took: ";
 			if (el_h)
 				std::cout << el_h << "h";
 			if (el_m)
 				std::cout << el_m << "m";
-			std::cout << el_s << "s file: " << time_file << "s avg: " << timeAvg << "s" << std::endl;
+			std::cout << el_s << "s total, file: " << time_file << "s avg: " << timeAvg << "s" << std::endl;
 		}
 
 
 	}
 	else {
 		numFilesProcessed++;
+		double time_file_start = getsec();
+		std::cout << "Processing file [1/1] \"" << input << "\":" << (verbose ? "\n" : " ");
 		try {
 #if defined(WIN32) && defined(UNICODE)
 			convert_fileW(convInfo, input, output);
@@ -917,6 +919,9 @@ int main(int argc, char** argv)
 			numErrors++;
 			std::cout << e.what() << std::endl;
 		}
+		double time_end = getsec();
+		double time_file = time_end - time_file_start;
+		std::cout << "Done, took: " << time_file << "s total, file: " << time_file << "s avg: " << time_file << "s" << std::endl;
 	}
 	
 
