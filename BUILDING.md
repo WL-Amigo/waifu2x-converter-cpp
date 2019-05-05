@@ -66,15 +66,13 @@ https://github.com/DeadSix27/waifu2x-converter-cpp/releases
 
 	- If you desire a GUI, try: https://github.com/YukihoAA/waifu2x_snowshell/releases
 		```bat
+		copy /y w32-apps\icon.ico out\Release\
 		copy /y w32-apps\install.bat out\Release\
 		copy /y w32-apps\install.js out\Release\
 		copy /y w32-apps\uninstall.bat out\Release\
 		copy /y w32-apps\uninstall.js out\Release\
-		mkdir out\Release\ExtendedSendTo\ && copy /y w32-apps\ExtendedSendTo\ out\Release\ExtendedSendTo\
 		cd out\Release
 		install.bat
-		cd ExtendedSendTo
-		install.wsf
 		cd .. && cd .. && cd ..
 		```
 
