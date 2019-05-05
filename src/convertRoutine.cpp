@@ -370,8 +370,7 @@ static bool convertWithModelsBlockSplit(W2XConv *conv,
 							    curBlockWidth, curBlockHeight));
 
 			if (enableLog) {
-				std::cout << "start process block (" << c << "," << r << ") ..."
-					  << std::endl;
+				std::cout << "start process block (" << (c+1) << "/" << splitColumns << "," << (r+1) << "/" << splitRows << ") ..." << std::endl;
 			}
 
 			int elemSize = 0;
