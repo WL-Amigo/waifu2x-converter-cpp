@@ -823,6 +823,7 @@ int main(int argc, char** argv)
 	//This includes errored files.
 	int numFilesProcessed = 0;
 	int numErrors = 0;
+	int numSkipped = 0;
 	
 	if (fs::is_directory(input) == true) {
 		
@@ -840,6 +841,7 @@ int main(int argc, char** argv)
 					else {
 						std::cout << "Skipping file '" << inputFile.path().filename().string() <<
 								"' for having an unsupported file extension (" << ext << ")" << std::endl;
+						numSkipped++;
 						continue;
 					}
 				}
@@ -855,6 +857,7 @@ int main(int argc, char** argv)
 					else {
 						std::cout << "Skipping file '" << inputFile.path().filename().string() <<
 								"' for having an unsupported file extension (" << ext << ")" << std::endl;
+						numSkipped++;
 						continue;
 					}
 				}
@@ -867,8 +870,12 @@ int main(int argc, char** argv)
 		for (auto &fn : files_list) {
 			++numFilesProcessed;
 			double time_file_start = getsec();
-
-			std::cout << "[" << numFilesProcessed << "/" << files_count << "] " << fn.filename() << (verbose ? "\n" : " Ok. ");
+			printf("Processing file [%d/%d] \"%s\":%s",
+				numFilesProcessed,
+				files_count,
+				fn.filename().string().c_str(),
+				(verbose ? "\n" : " ")
+			);
 
 			try {
 #if defined(WIN32) && defined(UNICODE)
@@ -894,18 +901,20 @@ int main(int argc, char** argv)
 			int el_h = (int) elapsed / (60 * 60);
 			int el_m = (int) (elapsed - el_h * 60 * 60) / 60;
 			int el_s = (int) (elapsed - el_h * 60 * 60 - el_m * 60);
-			std::cout << "Elapsed: ";
+			printf("Done, took: ");
 			if (el_h)
-				std::cout << el_h << "h";
+				printf("%dh", el_h);
 			if (el_m)
-				std::cout << el_m << "m";
-			std::cout << el_s << "s file: " << time_file << "s avg: " << timeAvg << "s" << std::endl;
+				printf("%dm", el_h);
+			printf("%ds total, file: %.3fs avg: %.3fs\n", el_s, time_file, timeAvg);
 		}
 
 
 	}
 	else {
 		numFilesProcessed++;
+		double time_file_start = getsec();
+		std::cout << "Processing file [1/1] \"" << input << "\":" << (verbose ? "\n" : " ");
 		try {
 #if defined(WIN32) && defined(UNICODE)
 			convert_fileW(convInfo, input, output);
@@ -917,6 +926,9 @@ int main(int argc, char** argv)
 			numErrors++;
 			std::cout << e.what() << std::endl;
 		}
+		double time_end = getsec();
+		double time_file = time_end - time_file_start;
+		printf("Done, took: %.3fs total, file: %.3fs avg: %.3fs\n", time_file, time_file, time_file);
 	}
 	
 
@@ -927,13 +939,16 @@ int main(int argc, char** argv)
 		double gflops_proc = (converter->flops.flop / (1000.0*1000.0*1000.0)) / converter->flops.filter_sec;
 		double gflops_all = (converter->flops.flop / (1000.0*1000.0*1000.0)) / (time_end - time_start);
 
-		std::cout << "process successfully done! (all:"
-			<< (time_end - time_start) << "[sec], "
-			<< numFilesProcessed << " [files processed], "
-			<< numErrors << " [files errored], "
-			<< gflops_all << "[GFLOPS], filter:"
-			<< converter->flops.filter_sec
-			<< "[sec], " << gflops_proc << "[GFLOPS])" << std::endl;
+		printf("Finished processing %d files%s%.3fsecs total, filter: %.3fsecs; %d files skipped, %d files errored. [GFLOPS: %7.2f, GFLOPS-Filter: %7.2f]\n",
+			numFilesProcessed,
+			(verbose ? "\nTook: " : ", took: "),
+			(time_end - time_start),
+			converter->flops.filter_sec,
+			numSkipped,
+			numErrors,
+			gflops_all,
+			gflops_proc
+		);
 	}
 
 	w2xconv_fini(converter);
