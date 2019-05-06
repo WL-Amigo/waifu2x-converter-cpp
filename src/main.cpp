@@ -292,7 +292,7 @@ void display_supported_formats()
 	#ifdef HAVE_OPENCV
 			 << " [With OpenCV] This list depends on which formats opencv has been built with."
 	#else
-			 << " [Without OpenCV] (recompile to enable), Only the default formats can be used."
+			 << " [Without OpenCV] Only the default formats can be used (recompile to use OpenCV)."
 	#endif
 			 << std::endl ;
 			 
