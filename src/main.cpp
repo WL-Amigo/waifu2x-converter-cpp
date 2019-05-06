@@ -188,8 +188,8 @@ bool validate_format_extension(std::string ext) {
 	
 	std::transform(ext.begin(), ext.end(), ext.begin(), toupper);
 	
-	auto index = opencv_formats.find(ext);
-	if (index != opencv_formats.end()) {
+	auto index = supported_formats.find(ext);
+	if (index != supported_formats.end()) {
 		return index->second;
 	}
 	return false;
@@ -208,19 +208,19 @@ bool validate_format_extension(std::wstring ext_w) {
 #endif
 
 
-#ifdef HAVE_OPENCV_3_X
+#if defined(HAVE_OPENCV) && defined(HAVE_OPENCV_3_X)
 	#define w2xHaveImageWriter(x) cvHaveImageWriter(x)
 #else
 	#define w2xHaveImageWriter(x) cv::haveImageWriter(x)
 #endif
 	
-//check for opencv formats
-void check_opencv_formats()
+//check for supported formats
+void check_supported_formats()
 {
 	#ifndef HAVE_OPENCV
 		// Only default formats are supported
 		return;
-	#endif
+	#else
 	// Portable Network Graphics
 	if (!w2xHaveImageWriter(".png"))
 	{
@@ -283,6 +283,7 @@ void check_opencv_formats()
 	supported_formats["HDR"] = true;
 	supported_formats["PIC"] = true;
 	*/
+	#endif
 }
 
 void display_supported_formats()
@@ -624,7 +625,7 @@ int main(int argc, char** argv)
 			return 0;
 		}
 		else if ((wcscmp(argv_w[ai], L"--list-opencv-formats") == 0) || (wcscmp(argv_w[ai], L"--list-supported-formats") == 0)) {
-			check_opencv_formats();
+			check_supported_formats();
 			display_supported_formats();
 			return 0;
 		}
@@ -636,14 +637,14 @@ int main(int argc, char** argv)
 			return 0;
 		}
 		if (strcmp(argv[ai], "--list-opencv-formats") == 0 || strcmp(argv[ai], "--list-supported-formats") == 0) {
-			check_opencv_formats();
+			check_supported_formats();
 			display_supported_formats();
 			return 0;
 		}
 	}
 #endif	
 	
-	check_opencv_formats();
+	check_supported_formats();
 
 	
 	// definition of command line arguments
