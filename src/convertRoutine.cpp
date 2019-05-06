@@ -104,7 +104,7 @@ static bool convertWithModelsBasic(W2XConv *conv,
 		double gigabytesPerSec = (bytes/(1000.0*1000.0*1000.0)) / (t1-t0);
 
 		if (enableLog) {
-			printf("(%.3f[ms], %7.2f[GFLOPS], %8.3f[GB/s])\n", t1-t0, gflops, gigabytesPerSec);
+			printf("(%.5f[ms], %7.2f[GFLOPS], %8.3f[GB/s])\n", t1-t0, gflops, gigabytesPerSec);
 		}
 		ops_sum += ops;
 
