@@ -1376,7 +1376,9 @@ w2xconv_convert_mat(struct W2XConv *conv,
 	}
 	
 	if (denoise_level != -1) {
-		printf("Step %02d/%02d: Denoising\n", w2x_current_step++, ++w2x_total_steps);
+		if (conv->enable_log) {
+			printf("Step %02d/%02d: Denoising\n", w2x_current_step++, ++w2x_total_steps);
+		}
 		apply_denoise(conv, image, denoise_level, blockSize, fmt);
 	}
 
@@ -1680,7 +1682,9 @@ convert_mat(struct W2XConv *conv,
 		w2x_total_steps = w2x_total_steps + iterTimesTwiceScaling;
 	}
 	if (denoise_level != -1) {
-		printf("Step %02d/%02d: Denoising\n", w2x_current_step++, ++w2x_total_steps);
+		if (conv->enable_log) {
+			printf("Step %02d/%02d: Denoising\n", w2x_current_step++, ++w2x_total_steps);
+		}
 		apply_denoise(conv, image, denoise_level, blockSize, fmt);
 	}
 
