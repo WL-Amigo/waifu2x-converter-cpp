@@ -635,13 +635,11 @@ int main(int argc, char** argv)
 			dump_procs();
 			return 0;
 		}
-		#ifdef HAVE_OPENCV
 		if (strcmp(argv[ai], "--list-opencv-formats") == 0 || strcmp(argv[ai], "--list-supported-formats") == 0) {
 			check_opencv_formats();
 			display_supported_formats();
 			return 0;
 		}
-		#endif
 	}
 #endif	
 	
