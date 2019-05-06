@@ -823,6 +823,7 @@ int main(int argc, char** argv)
 	//This includes errored files.
 	int numFilesProcessed = 0;
 	int numErrors = 0;
+	int numSkipped = 0;
 	
 	if (fs::is_directory(input) == true) {
 		
@@ -840,6 +841,7 @@ int main(int argc, char** argv)
 					else {
 						std::cout << "Skipping file '" << inputFile.path().filename().string() <<
 								"' for having an unsupported file extension (" << ext << ")" << std::endl;
+						numSkipped++;
 						continue;
 					}
 				}
@@ -855,6 +857,7 @@ int main(int argc, char** argv)
 					else {
 						std::cout << "Skipping file '" << inputFile.path().filename().string() <<
 								"' for having an unsupported file extension (" << ext << ")" << std::endl;
+						numSkipped++;
 						continue;
 					}
 				}
@@ -932,13 +935,16 @@ int main(int argc, char** argv)
 		double gflops_proc = (converter->flops.flop / (1000.0*1000.0*1000.0)) / converter->flops.filter_sec;
 		double gflops_all = (converter->flops.flop / (1000.0*1000.0*1000.0)) / (time_end - time_start);
 
-		std::cout << "process successfully done! (all:"
-			<< (time_end - time_start) << "[sec], "
-			<< numFilesProcessed << " [files processed], "
-			<< numErrors << " [files errored], "
-			<< gflops_all << "[GFLOPS], filter:"
-			<< converter->flops.filter_sec
-			<< "[sec], " << gflops_proc << "[GFLOPS])" << std::endl;
+		printf("Finished processing %d files%s%fsecs total, filter: %fs. %d files skipped, %d files errored. [GFLOPS: %05f, GFLOPS-Filter: %05f]\n",
+			numFilesProcessed,
+			(verbose ? "\nTook: " : ", took: "),
+			(time_end - time_start),
+			converter->flops.filter_sec,
+			numSkipped,
+			numErrors,
+			gflops_all,
+			gflops_proc
+		);
 	}
 
 	w2xconv_fini(converter);
