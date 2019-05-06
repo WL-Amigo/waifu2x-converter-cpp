@@ -149,12 +149,62 @@ W2Mat::to_cvmat(cv::Mat &target)
 	}
 }
 
+// DO NOT USE IN NORMAL SITUAYION. Return wm is not own their data.
+void extract_view_from_cvmat(W2Mat &wm, cv::Mat &m)
+{		
+	wm.data_owner = false;
+	wm.data = (char*) m.data;
+	wm.data_byte_width = (int) m.step;
+	wm.data_height = m.size().height;
+	
+	wm.view_top = 0;
+	wm.view_left = 0;
+	wm.view_width = m.size().width;
+	wm.view_height = m.size().height;
+	wm.type = m.type();
+
+}
+
+void extract_view_to_cvmat(cv::Mat &m, W2Mat &wm)
+{	
+	int w = wm.view_width;
+	int h = wm.view_height;
+	
+	char *data = (char*) wm.data;
+	
+	int byte_offset = 0;
+	byte_offset += wm.view_top * wm.data_byte_width;
+	byte_offset += wm.view_left * CV_ELEM_SIZE(wm.type);
+	
+	cv::Mat ret(cv::Size(w,h),
+				wm.type,
+				data + byte_offset,
+				wm.data_byte_width);
+	
+	ret.copyTo(m);
+}
+
+// DO NOT USE IN NORMAL SITUAYION. Return wm is not own their data.
+void extract_view_from_cvmat_offset(W2Mat &wm, cv::Mat &m,
+                               int view_left_offset,
+                               int view_top_offset,
+                               int view_width,
+                               int view_height)
+{	
+	extract_view_from_cvmat(wm, m);
+	
+	wm.view_top = view_top_offset;
+	wm.view_left = view_left_offset;
+	wm.view_width = view_width;
+	wm.view_height = view_height;
+}
+
 void
 extract_viewlist_from_cvmat(std::vector<W2Mat> &list, std::vector<cv::Mat> &cvmat)
 {
 	std::for_each(cvmat.begin(), cvmat.end(),
-		[&list](cv::Mat &cvm) {
-		list.push_back(W2Mat(cvm));
+		[&list](cv::Mat &cv) {
+		list.push_back(W2Mat(cv));
 	});
 }
 
@@ -162,21 +212,10 @@ void
 extract_viewlist_to_cvmat(std::vector<cv::Mat> &cvmat, std::vector<W2Mat> &list)
 {
 	std::for_each(list.begin(), list.end(),
-		[&cvmat](W2Mat &w2) {
-		int w = w2.view_width;
-		int h = w2.view_height;
-
-		char *data = (char*)w2.data;
-
-		int byte_offset = 0;
-		byte_offset += w2.view_top * w2.data_byte_width;
-		byte_offset += w2.view_left * CV_ELEM_SIZE(w2.type);
-
-		cv::Mat cvm = cv::Mat(cv::Size(w, h),
-			w2.type,
-			data + byte_offset,
-			w2.data_byte_width);
-		cvmat.push_back(cvm);
+		[&cvmat](W2Mat &wm) {
+		cv::Mat cv;
+		extract_view_to_cvmat(cv, wm);
+		cvmat.push_back(cv);
 	});
 }
 
