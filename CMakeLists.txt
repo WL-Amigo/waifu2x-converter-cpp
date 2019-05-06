@@ -8,6 +8,7 @@ option(ENABLE_OPENCV "Build with OpenCV support? (Default: ON)" ON)
 option(ENABLE_CUDA "Build with CUDA support? (Default: ON)" ON)
 option(ENABLE_UNICODE "Build with Unicode support? (Default: ON)" ON)
 option(ENABLE_TESTS "Build with test binaries? (Default: OFF)" OFF)
+option(ENABLE_GUI "Build with basic GUI? (Default: ON, Windows Only)" ON)
 # Better add support for multiple directories where to find models
 # with paths separated by : (a la PATH) then install unconditionally
 set(INSTALL_MODELS "Install waifu2x RGB models? (Default OFF)" ON)
@@ -311,7 +312,7 @@ if(WIN32) # We build FOR windows.
 	elseif(UNIX) # we build on linux.... on windows.. somehow WSL?/Cygwin? We'll see
 		target_link_libraries(w2xc ${OPENCV_WINDOWS_LIBRARY} user32 ippicvmt)
 	endif()
-	if(ENABLE_TESTS)
+	if(ENABLE_GUI)
 		add_executable(w2xcr WIN32 w32-apps/w2xcr.c w32-apps/w2xcr.rc)
 		target_link_libraries(w2xcr w2xc user32 shlwapi gdi32)
 	endif()
