@@ -34,7 +34,7 @@ This software was originally made by @WL-Amigo and has been improved a lot over 
 ## Build dependencies
 
  - [GCC 5](https://gcc.gnu.org/) (Linux)
- - [Visual Studio 2017](https://visualstudio.microsoft.com/downloads/) (Windows)
+ - [Visual Studio 2019](https://visualstudio.microsoft.com/downloads/) (Windows)
  - [picojson](https://github.com/kazuho/picojson) (included)
  - [TCLAP(Templatized C++ Command Line Parser Library)](http://tclap.sourceforge.net/) (included)
  - [OpenCV 3+](https://opencv.org/releases.html)
