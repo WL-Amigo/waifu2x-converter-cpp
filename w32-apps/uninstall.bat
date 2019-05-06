@@ -1,1 +1,0 @@
-wscript uninstall.js

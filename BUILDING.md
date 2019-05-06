@@ -14,12 +14,16 @@ https://github.com/DeadSix27/waifu2x-converter-cpp/releases
 ##### CMake options:
 - `-DENABLE_OPENCV`
 	- Build with OpenCV support? (Default: ON)
-- `-ENABLE_UNICODE`
+- `-DENABLE_UNICODE`
 	- Build with Unicode support? (Default: ON)
-- `-ENABLE_CUDA`
+- `-DENABLE_CUDA`
 	- Build with CUDA support? (Default: ON)
-- `-INSTALL_MODELS`
+- `-DINSTALL_MODELS`
 	- Install models? (Default: ON on Linux, OFF on Windows)
+- `-DENABLE_TESTS`
+	- Build test binaries? (Default: OFF)
+- `-DENABLE_GUI` _(Windows only)_
+	- Build basic Windows GUI? (Default: ON)	
 
 ---
 
@@ -57,7 +61,7 @@ https://github.com/DeadSix27/waifu2x-converter-cpp/releases
 		cd "waifu2x-converter-cpp"
 		mkdir out && cd out
 		cmake .. -DCMAKE_GENERATOR="Visual Studio 16 2019" -A x64 -DOPENCV_PREFIX="K:/w2x/opencv/build/" -DOpenCL_INCLUDE_DIR="K:/w2x/OpenCL-Headers"
-		msbuild waifu2xcpp.sln /p:Configuration=Release /p:Platform=x64
+		msbuild waifu2xcpp.sln /p:Configuration=Release /p:Platform=x64 -m
 		copy K:\w2x\opencv\build\x64\vc15\bin\opencv_world410.dll Release\
 		mkdir Release\models_rgb\ && copy ..\models_rgb Release\models_rgb\
 		cd ..
@@ -66,15 +70,11 @@ https://github.com/DeadSix27/waifu2x-converter-cpp/releases
 
 	- If you desire a GUI, try: https://github.com/YukihoAA/waifu2x_snowshell/releases
 		```bat
-		copy /y w32-apps\install.bat out\Release\
+		copy /y w32-apps\icon.ico out\Release\
 		copy /y w32-apps\install.js out\Release\
-		copy /y w32-apps\uninstall.bat out\Release\
 		copy /y w32-apps\uninstall.js out\Release\
-		mkdir out\Release\ExtendedSendTo\ && copy /y w32-apps\ExtendedSendTo\ out\Release\ExtendedSendTo\
 		cd out\Release
-		install.bat
-		cd ExtendedSendTo
-		install.wsf
+		wscript install.js
 		cd .. && cd .. && cd ..
 		```
 
