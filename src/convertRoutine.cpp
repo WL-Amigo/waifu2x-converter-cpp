@@ -91,7 +91,7 @@ static bool convertWithModelsBasic(W2XConv *conv,
 		int nInputPlanes = models[index]->getNInputPlanes();
 
 		if (enableLog) {
-			std::cout << "Iteration #" << (index + 1) << "(" << nInputPlanes << "->" << nOutputPlanes << ")..." ;
+			printf("Iteration #%d(%3d->%3d)...", (index + 1), nInputPlanes, nOutputPlanes);
 		}
 		double t0 = getsec();
 		if (!models[index]->filter(conv, env, packed_input_buf, packed_output_buf, filterSize)) {
@@ -101,10 +101,10 @@ static bool convertWithModelsBasic(W2XConv *conv,
 		double ops = filterSize.width * filterSize.height * 9.0 * 2.0 * nOutputPlanes * nInputPlanes;
 		double gflops = (ops/(1000.0*1000.0*1000.0)) / (t1-t0);
 		double bytes = (double) filterSize.width * filterSize.height * sizeof(float) * (nOutputPlanes + nInputPlanes);
-		double GBs = (bytes/(1000.0*1000.0*1000.0)) / (t1-t0);
+		double gigabytesPerSec = (bytes/(1000.0*1000.0*1000.0)) / (t1-t0);
 
 		if (enableLog) {
-			std::cout << "(" << (t1-t0)*1000 << "[ms], " << gflops << "[GFLOPS], " << GBs << "[GB/s])" << std::endl;
+			printf("(%.3f[ms], %7.2f[GFLOPS], %8.3f[GB/s])\n", t1-t0, gflops, gigabytesPerSec);
 		}
 		ops_sum += ops;
 
@@ -142,7 +142,7 @@ static bool convertWithModelsBasic(W2XConv *conv,
 
 	if (enableLog) {
 		double gflops = ops_sum/(1000.0*1000.0*1000.0) / (t01-t00);
-		std::cout << "total : " << (t01-t00) << "[sec], " << gflops << "[GFLOPS]" << std::endl;
+		printf("total : %.3f[sec], %07.2f[GFLOPS]\n", t01-t00, gflops);
 	}
 
 	return true;
