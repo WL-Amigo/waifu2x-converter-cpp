@@ -51,6 +51,8 @@ struct W2XConvImpl {
 };
 
 static std::vector<struct W2XConvProcessor> processor_list;
+static int w2x_total_steps;
+static int w2x_current_step;
 
 static void
 global_init2(void)

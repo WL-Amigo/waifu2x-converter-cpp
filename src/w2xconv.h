@@ -244,9 +244,6 @@ W2XCONV_EXPORT int w2xconv_apply_filter_y(struct W2XConv *conv,
 
 W2XCONV_EXPORT int w2xconv_test(struct W2XConv *conv, int block_size);
 
-W2XCONV_EXPORT int w2x_total_steps;
-W2XCONV_EXPORT int w2x_current_step;
-
 #ifdef __cplusplus
 }
 #endif
