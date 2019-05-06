@@ -51,11 +51,15 @@ struct W2XConvImpl {
 };
 
 static std::vector<struct W2XConvProcessor> processor_list;
+static int w2x_total_steps;
+static int w2x_current_step;
 
 static void
 global_init2(void)
 {
 	{
+		w2x_total_steps = 0;
+		w2x_current_step = 1;
 		W2XConvProcessor host;
 		host.type = W2XCONV_PROC_HOST;
 		host.sub_type = W2XCONV_PROC_HOST_OPENCV;
@@ -712,19 +716,11 @@ apply_scale(struct W2XConv *conv,
 	struct W2XConvImpl *impl = conv->impl;
 	ComputeEnv *env = &impl->env;
 
-	if (conv->enable_log) {
-		std::cout << "start scaling" << std::endl;
-	}
-
 	// 2x scaling
-	for (int nIteration = 0; nIteration < iterTimesTwiceScaling;
-	     nIteration++) {
-
+	for (int nIteration = 0; nIteration < iterTimesTwiceScaling; nIteration++) {
 		if (conv->enable_log) {
-			std::cout << "#" << std::to_string(nIteration + 1)
-				  << " 2x scaling..." << std::endl;
+			printf("Step %02d/%02d, 2x Scaling:\n", w2x_current_step++, w2x_total_steps);
 		}
-
 		cv::Size imageSize = image.size();
 		imageSize.width *= 2;
 		imageSize.height *= 2;
@@ -1371,14 +1367,25 @@ w2xconv_convert_mat(struct W2XConv *conv,
 		fmt = w2xc::IMAGE_Y;
 	}
 	image_src.release();
-
+	
+	w2x_total_steps = 0;
+	w2x_current_step = 1;
+	int iterTimesTwiceScaling;
+	
+	if (scale != 1.0) {
+		iterTimesTwiceScaling = static_cast<int>(std::ceil(std::log2(scale)));
+		w2x_total_steps = w2x_total_steps + iterTimesTwiceScaling;
+	}
+	
 	if (denoise_level != -1) {
+		if (conv->enable_log) {
+			printf("Step %02d/%02d: Denoising\n", w2x_current_step++, ++w2x_total_steps);
+		}
 		apply_denoise(conv, image, denoise_level, blockSize, fmt);
 	}
 
 	if (scale != 1.0) {
 		// calculate iteration times of 2x scaling and shrink ratio which will use at last
-		int iterTimesTwiceScaling = static_cast<int>(std::ceil(std::log2(scale)));
 		double shrinkRatio = 0.0;
 		if (static_cast<int>(scale)
 		    != std::pow(2, iterTimesTwiceScaling))
@@ -1667,20 +1674,29 @@ convert_mat(struct W2XConv *conv,
 	    int blockSize,
 	    enum w2xc::image_format fmt)
 {
+	w2x_total_steps = 0;
+	w2x_current_step = 1;
+	int iterTimesTwiceScaling;
+	
+	if (scale != 1.0) {
+		iterTimesTwiceScaling = static_cast<int>(std::ceil(std::log2(scale)));
+		w2x_total_steps = w2x_total_steps + iterTimesTwiceScaling;
+	}
 	if (denoise_level != -1) {
+		if (conv->enable_log) {
+			printf("Step %02d/%02d: Denoising\n", w2x_current_step++, ++w2x_total_steps);
+		}
 		apply_denoise(conv, image, denoise_level, blockSize, fmt);
 	}
 
 	if (scale != 1.0) {
 		// calculate iteration times of 2x scaling and shrink ratio which will use at last
-		int iterTimesTwiceScaling = static_cast<int>(std::ceil(std::log2(scale)));
 		double shrinkRatio = 0.0;
 		if (static_cast<int>(scale)
 		    != std::pow(2, iterTimesTwiceScaling))
 		{
 			shrinkRatio = scale / std::pow(2.0, static_cast<double>(iterTimesTwiceScaling));
 		}
-
 		apply_scale(conv, image, iterTimesTwiceScaling, blockSize, fmt);
 
 		if (shrinkRatio != 0.0) {
