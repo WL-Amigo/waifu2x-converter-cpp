@@ -137,7 +137,7 @@ void check_for_errors(W2XConv* converter, int error) {
 
 
 
-std::map<std::string,bool> opencv_formats = {
+std::map<std::string,bool> supported_formats = {
 	// Windows Bitmaps
 	{"BMP",  true},
 	{"DIB",  true},
@@ -188,8 +188,8 @@ bool validate_format_extension(std::string ext) {
 	
 	std::transform(ext.begin(), ext.end(), ext.begin(), toupper);
 	
-	auto index = opencv_formats.find(ext);
-	if (index != opencv_formats.end()) {
+	auto index = supported_formats.find(ext);
+	if (index != supported_formats.end()) {
 		return index->second;
 	}
 	return false;
@@ -208,27 +208,31 @@ bool validate_format_extension(std::wstring ext_w) {
 #endif
 
 
-#ifdef HAVE_OPENCV_3_X
+#if defined(HAVE_OPENCV) && defined(HAVE_OPENCV_3_X)
 	#define w2xHaveImageWriter(x) cvHaveImageWriter(x)
 #else
 	#define w2xHaveImageWriter(x) cv::haveImageWriter(x)
 #endif
 	
-//check for opencv formats
-void check_opencv_formats()
+//check for supported formats
+void check_supported_formats()
 {
+	#ifndef HAVE_OPENCV
+		// Only default formats are supported
+		return;
+	#else
 	// Portable Network Graphics
 	if (!w2xHaveImageWriter(".png"))
 	{
-		opencv_formats["PNG"] = false;
+		supported_formats["PNG"] = false;
 	}
 	
 	// JPEG Files
 	if (!w2xHaveImageWriter(".jpg"))
 	{
-		opencv_formats["JPEG"] = false;
-		opencv_formats["JPG"] = false;
-		opencv_formats["JPE"] = false;
+		supported_formats["JPEG"] = false;
+		supported_formats["JPG"] = false;
+		supported_formats["JPE"] = false;
 	}
 	
 	/* 
@@ -236,55 +240,63 @@ void check_opencv_formats()
 	// JPEG 2000 Files
 	if (!w2xHaveImageWriter(".jp2"))
 	{
-		opencv_formats["JP2"] = false;
+		supported_formats["JP2"] = false;
 	}
 	*/
 	
 	// WebP Files
 	if (!w2xHaveImageWriter(".webp"))
 	{
-		opencv_formats["WEBP"] = false;
+		supported_formats["WEBP"] = false;
 	}
 	
 	// TIFF Files
 	if (!w2xHaveImageWriter(".tif"))
 	{
-		opencv_formats["TIF"] = false;
-		opencv_formats["TIFF"] = false;
+		supported_formats["TIF"] = false;
+		supported_formats["TIFF"] = false;
 	}
 	
 	// OpenEXR Image Files
 	if (!w2xHaveImageWriter(".exr"))
 	{
-		opencv_formats["EXR"] = false;
+		supported_formats["EXR"] = false;
 	}
 
 	/* These formats are always available.
 	// Windows Bitmaps (Always Supported)
-	opencv_formats["BMP"] = true;
-	opencv_formats["DIB"] = true;
+	supported_formats["BMP"] = true;
+	supported_formats["DIB"] = true;
 	
 	// Portable Image Format (Always Supported)
-	opencv_formats["PBM"] = true;
-	opencv_formats["PGM"] = true;
-	opencv_formats["PPM"] = true;
-	opencv_formats["PXM"] = true;
-	opencv_formats["PNM"] = true;
+	supported_formats["PBM"] = true;
+	supported_formats["PGM"] = true;
+	supported_formats["PPM"] = true;
+	supported_formats["PXM"] = true;
+	supported_formats["PNM"] = true;
 	
 	// Sun Rasters (Always Supported)
-	opencv_formats["SR"] = true;
-	opencv_formats["RAS"] = true;
+	supported_formats["SR"] = true;
+	supported_formats["RAS"] = true;
 	
 	// Radiance HDR (Always Supported)
-	opencv_formats["HDR"] = true;
-	opencv_formats["PIC"] = true;
+	supported_formats["HDR"] = true;
+	supported_formats["PIC"] = true;
 	*/
+	#endif
 }
 
-void debug_show_opencv_formats()
+void display_supported_formats()
 {
-	std::cout << "This is a list of supported formats, it depends on which formats opencv has been built with." << std::endl ;
-	for (auto const& x : opencv_formats)
+	std::cout
+	#ifdef HAVE_OPENCV
+			 << " [With OpenCV] This list depends on which formats opencv has been built with."
+	#else
+			 << " [Without OpenCV] Only the default formats can be used (recompile to use OpenCV)."
+	#endif
+			 << std::endl ;
+			 
+	for (auto const& x : supported_formats)
 	{
 		std::cout << "\t" << std::setw(4) << x.first << " -> " << (x.second ? "Yes" : "No") << std::endl ;
 	}
@@ -368,11 +380,9 @@ std::string generate_output_location(std::string inputFileName, std::string outp
 	else if (lastSlashPos == std::string::npos || lastDotPos > lastSlashPos) {
 		//We may have a regular output file here or something went wrong.
 		//outputFileName is already what it should be thus nothing needs to be done.
-		#ifdef HAVE_OPENCV
 		if(validate_format_extension(outputFileName.substr(lastDotPos))==false){
 			throw std::runtime_error("Unsupported output extension. outputFileName:" + outputFileName + " extension:" +outputFileName.substr(lastDotPos));
 		}
-		#endif
 	}
 	else {
 		throw std::runtime_error("An unknown 'outputFileName' has been inserted into generate_output_location. outputFileName: " + outputFileName);
@@ -437,11 +447,9 @@ std::wstring generate_output_location(std::wstring inputFileName, std::wstring o
 	else if (lastSlashPos == std::wstring::npos || lastDotPos > lastSlashPos) {
 		//We may have a regular output file here or something went wrong.
 		//outputFileName is already what it should be thus nothing needs to be done.
-		#ifdef HAVE_OPENCV
 		if(validate_format_extension(outputFileName.substr(lastDotPos))==false){
 			throw std::runtime_error("Unsupported output extension.");
 		}
-		#endif
 	}
 	else {
 		throw std::runtime_error("An unknown 'outputFileName' has been inserted into generate_output_location.");
@@ -616,13 +624,11 @@ int main(int argc, char** argv)
 			dump_procs();
 			return 0;
 		}
-		#ifdef HAVE_OPENCV
-		else if ((wcscmp(argv_w[ai], L"--list-opencv-formats") == 0)) {
-			check_opencv_formats();
-			debug_show_opencv_formats();
+		else if ((wcscmp(argv_w[ai], L"--list-opencv-formats") == 0) || (wcscmp(argv_w[ai], L"--list-supported-formats") == 0)) {
+			check_supported_formats();
+			display_supported_formats();
 			return 0;
 		}
-		#endif
 	}
 #else
 	for (int ai = 1; ai < argc; ai++) {
@@ -630,19 +636,16 @@ int main(int argc, char** argv)
 			dump_procs();
 			return 0;
 		}
-		#ifdef HAVE_OPENCV
-		if (strcmp(argv[ai], "--list-opencv-formats") == 0) {
-			check_opencv_formats();
-			debug_show_opencv_formats();
+		if (strcmp(argv[ai], "--list-opencv-formats") == 0 || strcmp(argv[ai], "--list-supported-formats") == 0) {
+			check_supported_formats();
+			display_supported_formats();
 			return 0;
 		}
-		#endif
 	}
 #endif	
 	
-#ifdef HAVE_OPENCV
-	check_opencv_formats();
-#endif
+	check_supported_formats();
+
 	
 	// definition of command line arguments
 	TCLAP::CmdLine cmd("waifu2x OpenCV Fork - https://github.com/DeadSix27/waifu2x-converter-cpp", ' ', std::string(GIT_TAG) + " (" + GIT_BRANCH + "-" + GIT_COMMIT_HASH + ")", true);
@@ -710,14 +713,13 @@ int main(int argc, char** argv)
 	TCLAP::ValueArg<int> cmdPngCompression("c", "png-compression", "Set PNG compression level (0-9), 9 = Max compression (slowest & smallest)",
 		false, 5, "0-9", cmd);
 		
-	TCLAP::ValueArg<std::string> cmdOutputFormat("f", "output-format", "The format used when running in recursive/folder mode\nSee --list-opencv-formats for a list of supported formats/extensions.",
+	TCLAP::ValueArg<std::string> cmdOutputFormat("f", "output-format", "The format used when running in recursive/folder mode\nSee --list-supported-formats for a list of supported formats/extensions.",
 		false, "png", "png,jpg,webp,...", cmd);
 		
 	TCLAP::SwitchArg cmdListProcessor("l", "list-processor", "dump processor list", cmd, false);
 	
-	#ifdef HAVE_OPENCV
-	TCLAP::SwitchArg showOpenCVFormats("", "list-opencv-formats", "dump opencv supported format list", cmd, false);
-	#endif
+	TCLAP::SwitchArg showOpenCVFormats_deprecated("", "list-opencv-formats", " (deprecated. Use --list-supported-formats) dump opencv supported format list", cmd, false);
+	TCLAP::SwitchArg showOpenCVFormats("", "list-supported-formats", "dump currently supported format list", cmd, false);
 
 	// definition of command line argument : end
 
@@ -742,12 +744,10 @@ int main(int argc, char** argv)
 		std::cout << "Error: JPEG & WebP Compression quality range is 0-101! (0 being smallest size and lowest quality), use 101 for lossless WebP" << std::endl;
 		std::exit(-1);
 	}
-	#ifdef HAVE_OPENCV
 	if(validate_format_extension(cmdOutputFormat.getValue())==false){
-		printf("Unsupported output extension: %s\nUse option --list-opencv-formats to see a list of supported formats", cmdOutputFormat.getValue().c_str());
+		printf("Unsupported output extension: %s\nUse option --list-supported-formats to see a list of supported formats", cmdOutputFormat.getValue().c_str());
 		std::exit(-1);
 	}
-	#endif
 	
 	//We need to do this conversion because using a TCLAP::ValueArg<fs::path> can not handle spaces.
 #if defined(WIN32) && defined(UNICODE)
@@ -823,6 +823,7 @@ int main(int argc, char** argv)
 	//This includes errored files.
 	int numFilesProcessed = 0;
 	int numErrors = 0;
+	int numSkipped = 0;
 	
 	if (fs::is_directory(input) == true) {
 		
@@ -840,6 +841,7 @@ int main(int argc, char** argv)
 					else {
 						std::cout << "Skipping file '" << inputFile.path().filename().string() <<
 								"' for having an unsupported file extension (" << ext << ")" << std::endl;
+						numSkipped++;
 						continue;
 					}
 				}
@@ -855,6 +857,7 @@ int main(int argc, char** argv)
 					else {
 						std::cout << "Skipping file '" << inputFile.path().filename().string() <<
 								"' for having an unsupported file extension (" << ext << ")" << std::endl;
+						numSkipped++;
 						continue;
 					}
 				}
@@ -867,8 +870,12 @@ int main(int argc, char** argv)
 		for (auto &fn : files_list) {
 			++numFilesProcessed;
 			double time_file_start = getsec();
-
-			std::cout << "[" << numFilesProcessed << "/" << files_count << "] " << fn.filename() << (verbose ? "\n" : " Ok. ");
+			printf("Processing file [%d/%d] \"%s\":%s",
+				numFilesProcessed,
+				files_count,
+				fn.filename().string().c_str(),
+				(verbose ? "\n" : " ")
+			);
 
 			try {
 #if defined(WIN32) && defined(UNICODE)
@@ -894,18 +901,20 @@ int main(int argc, char** argv)
 			int el_h = (int) elapsed / (60 * 60);
 			int el_m = (int) (elapsed - el_h * 60 * 60) / 60;
 			int el_s = (int) (elapsed - el_h * 60 * 60 - el_m * 60);
-			std::cout << "Elapsed: ";
+			printf("Done, took: ");
 			if (el_h)
-				std::cout << el_h << "h";
+				printf("%dh", el_h);
 			if (el_m)
-				std::cout << el_m << "m";
-			std::cout << el_s << "s file: " << time_file << "s avg: " << timeAvg << "s" << std::endl;
+				printf("%dm", el_h);
+			printf("%ds total, file: %.3fs avg: %.3fs\n", el_s, time_file, timeAvg);
 		}
 
 
 	}
 	else {
 		numFilesProcessed++;
+		double time_file_start = getsec();
+		std::cout << "Processing file [1/1] \"" << input << "\":" << (verbose ? "\n" : " ");
 		try {
 #if defined(WIN32) && defined(UNICODE)
 			convert_fileW(convInfo, input, output);
@@ -917,6 +926,9 @@ int main(int argc, char** argv)
 			numErrors++;
 			std::cout << e.what() << std::endl;
 		}
+		double time_end = getsec();
+		double time_file = time_end - time_file_start;
+		printf("Done, took: %.3fs total, file: %.3fs avg: %.3fs\n", time_file, time_file, time_file);
 	}
 	
 
@@ -927,13 +939,16 @@ int main(int argc, char** argv)
 		double gflops_proc = (converter->flops.flop / (1000.0*1000.0*1000.0)) / converter->flops.filter_sec;
 		double gflops_all = (converter->flops.flop / (1000.0*1000.0*1000.0)) / (time_end - time_start);
 
-		std::cout << "process successfully done! (all:"
-			<< (time_end - time_start) << "[sec], "
-			<< numFilesProcessed << " [files processed], "
-			<< numErrors << " [files errored], "
-			<< gflops_all << "[GFLOPS], filter:"
-			<< converter->flops.filter_sec
-			<< "[sec], " << gflops_proc << "[GFLOPS])" << std::endl;
+		printf("Finished processing %d files%s%.3fsecs total, filter: %.3fsecs; %d files skipped, %d files errored. [GFLOPS: %7.2f, GFLOPS-Filter: %7.2f]\n",
+			numFilesProcessed,
+			(verbose ? "\nTook: " : ", took: "),
+			(time_end - time_start),
+			converter->flops.filter_sec,
+			numSkipped,
+			numErrors,
+			gflops_all,
+			gflops_proc
+		);
 	}
 
 	w2xconv_fini(converter);

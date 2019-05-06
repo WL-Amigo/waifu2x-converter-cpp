@@ -8,21 +8,20 @@ You can use this as command-line tool of image noise reduction or/and scaling.
 
 This software was originally made by @WL-Amigo and has been improved a lot over the years, see [FORK_CHANGES.md](FORK_CHANGES.md) for more info on that.
 
-## I also have a Discord at:
-https://discord.gg/gAvufS2 It's often easier to chat in real time, so if you want feel free to join.
-
 ## Obtain it here:
 
-- **Windows downloads**
+- #### Windows downloads
   - https://github.com/DeadSix27/waifu2x-converter-cpp/releases
+  - Officially supported GUI:
+	  - https://github.com/YukihoAA/waifu2x_snowshell/releases
 
-- **AUR (Arch)**
+- #### AUR (Arch)
   - [waifu2x-converter-cpp-git](https://aur.archlinux.org/packages/waifu2x-converter-cpp-git/) (git master)
   - [waifu2x-converter-cpp](https://aur.archlinux.org/packages/waifu2x-converter-cpp/) (releaes)
   - These are maintained by [nfnty](https://aur.archlinux.org/account/nfnty). If you have issues with the AUR packages, please contact him.
 
-- **Other Linux** 
-  - Please build from source. See [BUILDING.md](BUILDING.md) for help.
+- ####  Other Linux
+	 - Please build from source. See [BUILDING.md](BUILDING.md) for help.
 
 ## Supported platforms
 
@@ -35,7 +34,7 @@ https://discord.gg/gAvufS2 It's often easier to chat in real time, so if you wan
 ## Build dependencies
 
  - [GCC 5](https://gcc.gnu.org/) (Linux)
- - [Visual Studio 2017](https://visualstudio.microsoft.com/downloads/) (Windows)
+ - [Visual Studio 2019](https://visualstudio.microsoft.com/downloads/) (Windows)
  - [picojson](https://github.com/kazuho/picojson) (included)
  - [TCLAP(Templatized C++ Command Line Parser Library)](http://tclap.sourceforge.net/) (included)
  - [OpenCV 3+](https://opencv.org/releases.html)
@@ -47,6 +46,7 @@ See [BUILDING.md](BUILDING.md) for more information.
 ## Usage
 
 Usage of this program can be seen by executing `waifu2x-converter-cpp --help`
+If you are on Windows and prefer GUIs, see [here](#windows-downloads).
 
 ## Notes:
 
@@ -56,4 +56,4 @@ I'd appreciate any help on this project, I do not want yet another fork... so if
 
 - @YukihoAA
 - @iame6162013
-- https://github.com/DeadSix27/waifu2x-converter-cpp/graphs/contributors
+- And more: https://github.com/DeadSix27/waifu2x-converter-cpp/graphs/contributors

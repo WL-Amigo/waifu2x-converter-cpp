@@ -109,8 +109,8 @@ enum app_state {
 struct path_pair {
     int denoise;
 
-    char *src_path;
-    char *dst_path;
+    wchar_t *src_path;
+    wchar_t *dst_path;
 };
 
 struct app {
@@ -136,18 +136,18 @@ struct app {
 };
 
 static int
-add_file(struct app *app, const char *src_path)
+add_file(struct app *app, const wchar_t *src_path)
 {
     int r;
-    char *dst_path;
+    wchar_t *dst_path;
     size_t path_len;
 
-    char drive[_MAX_DRIVE];
-    char dir[_MAX_DIR];
-    char fname[_MAX_FNAME];
-    char ext[_MAX_EXT];
+    wchar_t drive[_MAX_DRIVE];
+    wchar_t dir[_MAX_DIR];
+    wchar_t fname[_MAX_FNAME];
+    wchar_t ext[_MAX_EXT];
 
-    WIN32_FIND_DATAA orig_st, mai_st;
+    WIN32_FIND_DATAW orig_st, mai_st;
     HANDLE finder;
     int denoise = -1;
 
@@ -186,7 +186,7 @@ add_file(struct app *app, const char *src_path)
         break;
     }
 
-    _splitpath(src_path,
+    _wsplitpath(src_path,
                drive,
                dir,
                fname,
@@ -194,7 +194,7 @@ add_file(struct app *app, const char *src_path)
 
      {
         char header[8];
-        FILE *fp = fopen(src_path, "rb");
+        FILE *fp = _wfopen(src_path, L"rb");
         if (fp == NULL) {
             return 0;
         }
@@ -219,30 +219,30 @@ add_file(struct app *app, const char *src_path)
         }
      }
 
-    if (strncmp(fname, "mai_", 4) == 0) {
+    if (wcsncmp(fname, L"mai_", 4) == 0) {
         return 0;
     }
 
-    path_len = strlen(src_path);
+    path_len = wcslen(src_path);
     size_t dst_path_len = path_len + 5 + 4;
-    dst_path = malloc(dst_path_len);
+    dst_path = malloc(dst_path_len * sizeof(wchar_t));
 
-    r = _snprintf(dst_path, dst_path_len,
-                  "%s%smai_%s.png",
+    r = _snwprintf(dst_path, dst_path_len,
+                  L"%s%smai_%s.png",
                   drive, dir, fname);
     if (r > dst_path_len) {
         free(dst_path);
         return 0;
     }
 
-    finder = FindFirstFileA(src_path, &orig_st);
+    finder = FindFirstFileW(src_path, &orig_st);
     if (finder == INVALID_HANDLE_VALUE) {
         free(dst_path);
         return 0;
     }
     FindClose(finder);
 
-    finder = FindFirstFileA(dst_path, &mai_st);
+    finder = FindFirstFileW(dst_path, &mai_st);
     FindClose(finder);
 
     if (finder != INVALID_HANDLE_VALUE) {
@@ -264,7 +264,7 @@ add_file(struct app *app, const char *src_path)
     }
 
     app->path_list[app->path_list_nelem].denoise = denoise;
-    app->path_list[app->path_list_nelem].src_path = strdup(src_path);
+    app->path_list[app->path_list_nelem].src_path = wcsdup(src_path);
     app->path_list[app->path_list_nelem].dst_path = dst_path;
 
     app->path_list_nelem++;
@@ -273,26 +273,26 @@ add_file(struct app *app, const char *src_path)
 }
 
 static int
-traverse_dir(struct app *app, const char *src_path)
+traverse_dir(struct app *app, const wchar_t *src_path)
 {
-    WIN32_FIND_DATAA fd;
+    WIN32_FIND_DATAW fd;
     HANDLE finder;
 
-    char pattern[MAX_PATH] = "";
-    char sub[MAX_PATH] = "";
+    wchar_t pattern[MAX_PATH] = L"";
+    wchar_t sub[MAX_PATH] = L"";
     int r = 0;
 
-    PathCombineA(pattern, src_path, "*");
+    PathCombineW(pattern, src_path, L"*");
 
-    finder = FindFirstFileA(pattern, &fd);
+    finder = FindFirstFileW(pattern, &fd);
     if (finder != INVALID_HANDLE_VALUE) {
         do {
-            if ((strcmp(fd.cFileName,".") == 0) ||
-                (strcmp(fd.cFileName,"..") == 0))
+            if ((wcscmp(fd.cFileName,L".") == 0) ||
+                (wcscmp(fd.cFileName,L"..") == 0))
             {
                 /* ignore */
             } else {
-                PathCombineA(sub, src_path, fd.cFileName);
+                PathCombineW(sub, src_path, fd.cFileName);
 
                 if (fd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) {
                     r = traverse_dir(app, sub);
@@ -304,7 +304,7 @@ traverse_dir(struct app *app, const char *src_path)
                     break;
                 }
             }
-        } while(FindNextFileA(finder, &fd));
+        } while(FindNextFileW(finder, &fd));
 
         FindClose(finder);
     }
@@ -317,7 +317,7 @@ struct thread_arg {
     struct app *app;
     HANDLE thread_handle;
 
-    char *cur_path;
+    wchar_t *cur_path;
     double cur_flops;
 };
 
@@ -331,7 +331,7 @@ proc_thread(void *ap)
     int r;
     int ret = 1;
     size_t path_len = 4;
-    char *self_path = (char*)malloc(path_len+1);
+    char *self_path = (char*)malloc((path_len+1) * sizeof(char));
     DWORD len;
 
     c = w2xconv_init_with_processor(ta->dev_id, 0, 0);
@@ -342,7 +342,7 @@ proc_thread(void *ap)
         }
 
         path_len *= 2;
-        self_path = (char*)realloc(self_path, path_len+1);
+        self_path = (char*)realloc(self_path, (path_len+1) * sizeof(char));
     }
 
     {
@@ -354,9 +354,10 @@ proc_thread(void *ap)
             }
         }
 
-        char *models_path = malloc(strlen(self_path) + 11 + 1);
+        char *models_path = malloc((strlen(self_path) + 11 + 1) * sizeof(char));
 
         sprintf(models_path, "%s\\models_rgb", self_path);
+		// You should not have Unicode char in path where model files located.
         r = w2xconv_load_models(c, models_path);
         free(self_path);
         free(models_path);
@@ -399,7 +400,7 @@ proc_thread(void *ap)
 		imwrite_params[5] = 5;
 
         p = &app->path_list[li];
-        r = w2xconv_convert_file(c,
+        r = w2xconv_convert_fileW(c,
                                  p->dst_path,
                                  p->src_path,
                                  p->denoise,
@@ -558,57 +559,57 @@ update_display(struct app *app)
     FillRect(dc, &r, GetStockBrush(WHITE_BRUSH));
 
     if ((app->processed == 0) && app->state == STATE_FINI) {
-        static const char msg[] = "nop";
-        TextOutA(dc, 10, 10, msg, sizeof(msg)-1);
+        static const wchar_t msg[] = L"nop";
+        TextOutW(dc, 10, 10, msg, sizeof(msg)-1);
     } else {
-        char line[4096];
-        char path[128];
+        wchar_t line[4096];
+        wchar_t path[128];
         int i;
 
         if (app->processed != 0) {
-            _snprintf(line, sizeof(line),
-                      "progress : %d/%d",
+            _snwprintf(line, sizeof(line),
+                      L"progress : %d/%d",
                       app->processed,
                       app->path_list_nelem);
         }
 
-        TextOutA(dc, 10, 10, line, (int) strlen(line));
+        TextOutW(dc, 10, 10, line, (int) wcslen(line));
 
         for (i=0; i<app->num_thread; i++) {
-            char *cur_path = app->threads[i].cur_path;
+            wchar_t *cur_path = app->threads[i].cur_path;
             double cur_flops = app->threads[i].cur_flops;
 
 
             if (cur_path) {
-                size_t len = strlen(cur_path), line_len;
+                size_t len = wcslen(cur_path), line_len;
                 //HGDIOBJ old_brush;
                 const struct W2XConvProcessor *proc;
 
                 if (len > 30) {
                     size_t rem = len - 30;
-                    _snprintf(path, 128, "...%s", cur_path + rem);
+                    _snwprintf(path, 128, L"...%s", cur_path + rem);
                 } else {
-                    strcpy(path, cur_path);
+                    wcscpy(path, cur_path);
                 }
 
                 if (app->state == STATE_FINI) {
-                    _snprintf(line, sizeof(line),
-                              "%.2f[GFLOPS] %s [Complete!!]",
+                    _snwprintf(line, sizeof(line),
+                              L"%.2f[GFLOPS] %s [Complete!!]",
                               cur_flops/(1000.0*1000.0*1000.0),
                               path);
                 } else {
-                    _snprintf(line, sizeof(line),
-                              "%.2f[GFLOPS] %s",
+                    _snwprintf(line, sizeof(line),
+                              L"%.2f[GFLOPS] %s",
                               cur_flops/(1000*1000*1000.0),
                               path);
                 }
 
-                line_len = strlen(line);
+                line_len = wcslen(line);
 
                 proc = &app->proc_list[app->dev_list[i]];
 
                 TextOutA(dc, 10, DISP_HEIGHT*(i+1) + 10, proc->dev_name, (int) strlen(proc->dev_name));
-                TextOutA(dc, 10, DISP_HEIGHT*(i+1) + 28, line, (int) line_len);
+                TextOutW(dc, 10, DISP_HEIGHT*(i+1) + 28, line, (int) line_len);
             }
         }
     }
@@ -618,7 +619,8 @@ update_display(struct app *app)
 static INT_PTR CALLBACK
 initdlg_callback(HWND wnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
-    char buf[256];
+    wchar_t buf[256];
+	wchar_t* end;
     switch (message) {
     case WM_CLOSE:
         EndDialog(wnd, -1);
@@ -627,13 +629,13 @@ initdlg_callback(HWND wnd, UINT message, WPARAM wParam, LPARAM lParam)
     case WM_COMMAND:
         switch (LOWORD(wParam)) {
         case IDC_OK:
-            param_denoise = (int) SendDlgItemMessage(wnd, IDC_DENOISE, CB_GETCURSEL, 0, 0);
-            GetDlgItemTextA(wnd, IDC_SCALE, buf, 256);
-            param_scale = atof(buf);
+            param_denoise = (int) SendDlgItemMessageW(wnd, IDC_DENOISE, CB_GETCURSEL, 0, 0);
+            GetDlgItemTextW(wnd, IDC_SCALE, buf, 256);
+            param_scale = wcstof(buf, &end);
             if (param_scale != 0) {
                 EndDialog(wnd, 0);
             } else {
-                MessageBoxA(NULL, "invalid scale value", "w2xcr", MB_OK);
+                MessageBoxW(NULL, L"invalid scale value", L"w2xcr", MB_OK);
             }
             return (INT_PTR)TRUE;
 
@@ -644,15 +646,15 @@ initdlg_callback(HWND wnd, UINT message, WPARAM wParam, LPARAM lParam)
         break;
 
     case WM_INITDIALOG:
-        SetDlgItemTextA(wnd, IDC_SCALE, "2.0");
-        SendDlgItemMessageA(wnd, IDC_DENOISE, CB_ADDSTRING, 0, (LPARAM)"none");
-        SendDlgItemMessageA(wnd, IDC_DENOISE, CB_ADDSTRING, 0, (LPARAM)"0");
-        SendDlgItemMessageA(wnd, IDC_DENOISE, CB_ADDSTRING, 0, (LPARAM)"1");
-        SendDlgItemMessageA(wnd, IDC_DENOISE, CB_ADDSTRING, 0, (LPARAM)"2");
-        SendDlgItemMessageA(wnd, IDC_DENOISE, CB_ADDSTRING, 0, (LPARAM)"0(jpeg only)");
-        SendDlgItemMessageA(wnd, IDC_DENOISE, CB_ADDSTRING, 0, (LPARAM)"1(jpeg only)");
-        SendDlgItemMessageA(wnd, IDC_DENOISE, CB_ADDSTRING, 0, (LPARAM)"2(jpeg only)");
-        SendDlgItemMessageA(wnd, IDC_DENOISE, CB_SETCURSEL, 1, 0);
+        SetDlgItemTextW(wnd, IDC_SCALE, L"2.0");
+        SendDlgItemMessageW(wnd, IDC_DENOISE, CB_ADDSTRING, 0, (LPARAM)L"none");
+        SendDlgItemMessageW(wnd, IDC_DENOISE, CB_ADDSTRING, 0, (LPARAM)L"0");
+        SendDlgItemMessageW(wnd, IDC_DENOISE, CB_ADDSTRING, 0, (LPARAM)L"1");
+        SendDlgItemMessageW(wnd, IDC_DENOISE, CB_ADDSTRING, 0, (LPARAM)L"2");
+        SendDlgItemMessageW(wnd, IDC_DENOISE, CB_ADDSTRING, 0, (LPARAM)L"0(jpeg only)");
+        SendDlgItemMessageW(wnd, IDC_DENOISE, CB_ADDSTRING, 0, (LPARAM)L"1(jpeg only)");
+        SendDlgItemMessageW(wnd, IDC_DENOISE, CB_ADDSTRING, 0, (LPARAM)L"2(jpeg only)");
+        SendDlgItemMessageW(wnd, IDC_DENOISE, CB_SETCURSEL, 1, 0);
         break;
     }
 
@@ -662,37 +664,39 @@ initdlg_callback(HWND wnd, UINT message, WPARAM wParam, LPARAM lParam)
 #define WINMAIN
 
 #ifdef WINMAIN
+#pragma comment ( linker, "/entry:\"wWinMainCRTStartup\"" )
 int WINAPI
-WinMain(HINSTANCE hInst,
+wWinMain(HINSTANCE hInst,
         HINSTANCE hPrev,
-        LPSTR lpCmdLine,
+        LPWSTR lpCmdLine,
         int nCmdShow)
 #else
-int main(int argc, char **argv)
+#pragma comment ( linker, "/entry:\"wmainCRTStartup\"" )
+int wmain(int argc, wchar_t **argv)
 #endif
 {
 #ifdef WINMAIN
-    int argc = __argc;
-    char **argv = __argv;
+    int argc = 0;
+    wchar_t **argv = CommandLineToArgvW(GetCommandLineW(), &argc);
 #else
     HINSTANCE hInst = GetModuleHandle(NULL);
 #endif
 
-    WNDCLASSEXA cls={0};
+    WNDCLASSEXW cls={0};
     struct app app;
     HWND win;
     int run = 1, fini_count;
     int argi, i;
     DWORD pathlen, attr;
-    char *fullpath, *filepart;
-    char *src_path;
+    wchar_t *fullpath, *filepart;
+    wchar_t *src_path;
     int interactive = 0;
 
     for (argi=1; argi < argc; argi++) {
-        if (strcmp(argv[argi],"--block_size") == 0) {
-            block_size = atoi(argv[argi+1]);
+        if (wcscmp(argv[argi],L"--block_size") == 0) {
+            block_size = wcstol(argv[argi+1], NULL, 10);
             argi++;
-        } else if (strcmp(argv[argi],"--interactive") == 0) {
+        } else if (wcscmp(argv[argi], L"--interactive") == 0) {
             interactive = 1;
         } else {
             break;
@@ -708,7 +712,7 @@ int main(int argc, char **argv)
 
     int rem = argc - argi;
     if (rem == 0) {
-        MessageBoxA(NULL, "usage : w2xcr [--block_size <size>] <in>", "w2xcr", MB_OK);
+        MessageBoxW(NULL, L"usage : w2xcr [--block_size <size>] <in>", L"w2xcr", MB_OK);
         return 1;
     }
 
@@ -720,18 +724,18 @@ int main(int argc, char **argv)
     for (; argi<argc; argi++) {
         src_path = argv[argi];
 
-        pathlen = GetFullPathNameA(src_path, 0, NULL, NULL);
+        pathlen = GetFullPathNameW(src_path, 0, NULL, NULL);
         if (pathlen == 0) {
-            MessageBoxA(NULL, "open failed", src_path, MB_OK);
+            MessageBoxW(NULL, L"open failed", src_path, MB_OK);
             return 1;
         }
 
-        fullpath = malloc(pathlen);
-        GetFullPathNameA(src_path, pathlen, fullpath, &filepart);
+        fullpath = malloc(pathlen * sizeof(wchar_t));
+        GetFullPathNameW(src_path, pathlen, fullpath, &filepart);
 
-        attr = GetFileAttributesA(fullpath);
+        attr = GetFileAttributesW(fullpath);
         if (attr < 0) {
-            MessageBoxA(NULL, "open failed", fullpath, MB_OK);
+            MessageBoxW(NULL, L"open failed", fullpath, MB_OK);
             return 1;
         }
 
@@ -749,19 +753,19 @@ int main(int argc, char **argv)
     cls.lpfnWndProc = wnd_proc;
     cls.hInstance = hInst;
     cls.hIcon = NULL;
-    cls.hCursor = LoadCursorA(NULL, (LPCSTR)IDC_ARROW);
+    cls.hCursor = LoadCursorW(NULL, (LPCWSTR)IDC_ARROW);
     cls.hbrBackground = NULL;
     cls.lpszMenuName = NULL;
-    cls.lpszClassName = "w2xcr";
+    cls.lpszClassName = L"w2xcr";
     cls.hIconSm = NULL;
 
-    RegisterClassExA(&cls);
+    RegisterClassExW(&cls);
 
     queue_init(&app.from_worker);
 
-    win = CreateWindowExA(0,
-                         "w2xcr",
-                         "w2xcr",
+    win = CreateWindowExW(0,
+                         L"w2xcr",
+                         L"w2xcr",
                          WS_OVERLAPPEDWINDOW,
                          CW_USEDEFAULT,
                          CW_USEDEFAULT,
