@@ -1633,7 +1633,7 @@ int w2xconv_convert_file(
 	
 	// combine images
 	if (conv->enable_log) {
-		printf("Merging slices in to one image...\n");
+		printf("Merging slices back to one image...\n");
 	}
 	while (converted.size() > 1)
 	{
