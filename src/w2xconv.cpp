@@ -1446,89 +1446,6 @@ w2xconv_convert_mat(struct W2XConv *conv,
 	}
 }
 
-int w2xconv_convert_file(
-	struct W2XConv *conv,
-	const char *dst_path,
-	const char *src_path,
-	int denoise_level,
-	double scale,
-	int blockSize,
-	int* imwrite_params) 
-{
-	double time_start = getsec();
-
-	FILE *png_fp = nullptr;
-	png_fp = fopen(src_path, "rb");
-
-	if (png_fp == nullptr) {
-		setPathError(conv, W2XCONV_ERROR_IMREAD_FAILED, src_path);
-		return -1;
-	}
-
-	bool png_rgb;
-	//Background colour
-	//float3 background(1.0f, 1.0f, 1.0f);
-	w2xconv_rgb_float3 background;
-	background.r = background.g = background.b = 1.0f;
-	get_png_background_colour(png_fp, &png_rgb, &background);
-
-	if (png_fp) {
-		fclose(png_fp);
-		png_fp = nullptr;
-	}
-
-	cv::Mat image_src, image_dst;
-
-	/*
-	 * IMREAD_COLOR                 : always BGR
-	 * IMREAD_UNCHANGED + png       : BGR or BGRA
-	 * IMREAD_UNCHANGED + otherwise : ???
-	 */
-	if (png_rgb) {
-		image_src = cv::imread(src_path, cv::IMREAD_UNCHANGED);
-	} else {
-		image_src = cv::imread(src_path, cv::IMREAD_COLOR);
-	}
-
-	bool dst_png = false;
-	{
-		size_t len = strlen(dst_path);
-		if (len >= 4) {
-			if (tolower(dst_path[len-4]) == '.' &&
-			    tolower(dst_path[len-3]) == 'p' &&
-			    tolower(dst_path[len-2]) == 'n' &&
-			    tolower(dst_path[len-1]) == 'g')
-			{
-				dst_png = true;
-			}
-		}
-	}
-	
-	w2xconv_convert_mat(conv, image_dst, image_src, denoise_level, scale, blockSize, background, png_rgb, dst_png);
-	
-	std::vector<int> compression_params;	
-	for ( int i = 0; i < sizeof(imwrite_params); i = i + 1 )
-	{
-		compression_params.push_back(imwrite_params[i]);
-	}	
-
-	if (!cv::imwrite(dst_path, image_dst, compression_params)) {
-		setPathError(conv,
-			     W2XCONV_ERROR_IMWRITE_FAILED,
-			     dst_path);
-		return -1;
-	}
-
-	double time_end = getsec();
-
-	conv->flops.process_sec += time_end - time_start;
-
-	//printf("== %f == \n", conv->impl->env.transfer_wait);
-
-	return 0;
-}
-
-
 #if defined(WIN32) && defined(UNICODE)
 
 void read_imageW(cv::Mat* image, const WCHAR* filepath, int flags=cv::IMREAD_COLOR) {
@@ -1705,7 +1622,7 @@ int w2xconv_convert_file(
 	for( int i=0; i<pieces.size(); i++ )
 	{
 		cv::Mat res;
-		printf("Proccessing [%d/%llu] slices\n", i, pieces.size());
+		printf("Proccessing [%d/%zu] slices\n", i, pieces.size());
 		w2xconv_convert_mat(conv, res, pieces.at(i), denoise_level, scale, blockSize, background, png_rgb, dst_png);
 		converted.push_back(res);
 	}
