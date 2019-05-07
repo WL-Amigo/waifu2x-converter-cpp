@@ -1622,7 +1622,9 @@ int w2xconv_convert_file(
 	for( int i=0; i<pieces.size(); i++ )
 	{
 		cv::Mat res;
-		printf("Proccessing [%d/%zu] slices\n", i, pieces.size());
+		if (conv->enable_log) {
+			printf("Proccessing [%d/%zu] slices\n", i, pieces.size());
+		}
 		w2xconv_convert_mat(conv, res, pieces.at(i), denoise_level, scale, blockSize, background, png_rgb, dst_png);
 		converted.push_back(res);
 	}
@@ -1630,7 +1632,9 @@ int w2xconv_convert_file(
 	// int j=0;	// for test_merge
 	
 	// combine images
-	printf("Merging slices in to one image...\n");
+	if (conv->enable_log) {
+		printf("Merging slices in to one image...\n");
+	}
 	while (converted.size() > 1)
 	{
 		int i=0;
