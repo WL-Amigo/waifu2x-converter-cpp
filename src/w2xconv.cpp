@@ -1644,8 +1644,82 @@ int w2xconv_convert_fileW(
 			}
 		}
 	}
+	
+	// divide images in to 4^n pieces when width is 6000/12000/18000....
+	std::vector<cv::Mat> pieces, converted;
+	
+	pieces.push_back(image_src);
+	
+	while(pieces.front().rows * pieces.front().cols > 6000 * 6000)
+	{
+		cv::Mat front = pieces.front();
+		pieces.erase(pieces.begin());
+		int r=front.rows, c=front.cols;
+		int h_r=r/2, h_c=c/2;
+		pieces.push_back(front(cv::Range(0,h_r), cv::Range(0,h_c)));
+		pieces.push_back(front(cv::Range(0,h_r), cv::Range(h_c,c)));
+		pieces.push_back(front(cv::Range(h_r,r), cv::Range(0,h_c)));
+		pieces.push_back(front(cv::Range(h_r,r), cv::Range(h_c,c)));
+	}
+	
 
-	w2xconv_convert_mat(conv, image_dst, image_src, denoise_level, scale, blockSize, background, png_rgb, dst_png);
+	/*
+	for (int i=0; i<pieces.size(); i++)
+	{
+		char name[20]="";
+		sprintf(name, "test_slices_%d.png", i);
+		cv::imwrite(name, pieces.at(i));
+	}
+	*/
+	
+	for( int i=0; i<pieces.size(); i++ )
+	{
+		cv::Mat res;
+		printf("Proccessing [%d/%llu] slices\n", i, pieces.size());
+		w2xconv_convert_mat(conv, res, pieces.at(i), denoise_level, scale, blockSize, background, png_rgb, dst_png);
+		converted.push_back(res);
+	}
+	
+	// int j=0;	// for test_merge
+	
+	// combine images
+	printf("Merging slices in to one image...\n");
+	while (converted.size() > 1)
+	{
+		int i=0;
+		cv::Mat quarter[4], merged;
+		/*		
+		char name[20]="";
+		sprintf(name, "test_merge%d.png", j++);
+		*/
+		
+		for (i=0; i<4 && i<converted.size(); i++){
+			//printf("copy.. %d/%llu\n", i+1, converted.size()); 
+			quarter[i] = converted.at(i);
+		}
+		//printf("erase.. from %d / %llu\n", i, converted.size()); 
+		converted.erase(converted.begin(), converted.begin()+i);
+		
+		//printf("vec size: %llu\n", converted.size()); 
+		
+		//printf("merge horizon\n"); 
+		hconcat(quarter[0], quarter[1], quarter[0]);
+		hconcat(quarter[2], quarter[3], quarter[2]);
+		
+		//printf("merge vertical\n"); 
+		vconcat(quarter[0], quarter[2], merged);
+		
+		//printf("push merged mat\n"); 
+		converted.push_back(merged);
+		
+		//printf("imwrite\n"); 
+		//cv::imwrite(name, merged);
+	}
+	
+	image_dst = converted.front();
+	
+	//cv::imwrite("test_out.png", converted.front());
+	
 
 	if (!write_imageW(dst_path, image_dst, imwrite_params)) {
 		setPathError(conv,
