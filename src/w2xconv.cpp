@@ -1,6 +1,9 @@
 #define W2XCONV_IMPL
 #define _WIN32_WINNT 0x0600
 
+#pragma comment(linker, "/STACK:200000000")
+#pragma comment(linker, "/HEAP:200000000")
+
 #define ENABLE_AVX 1
 
 #include <thread>
