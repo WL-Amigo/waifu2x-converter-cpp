@@ -1597,7 +1597,7 @@ int w2xconv_convert_file(
 	
 	pieces.push_back(image_src);
 	
-	while(pieces.front().rows * pieces.front().cols * scale * scale > 10000 * 10000)
+	while(pieces.front().rows * pieces.front().cols * scale * scale > 8000 * 8000)
 	{
 		cv::Mat front = pieces.front();
 		pieces.erase(pieces.begin());
