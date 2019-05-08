@@ -1597,7 +1597,9 @@ int w2xconv_convert_file(
 	
 	pieces.push_back(image_src);
 	
-	while(pieces.front().rows * pieces.front().cols * scale * scale > 8000 * 8000)
+	int max_scale_ratio = 2 * ((int)(scale/2+1));
+	
+	while(pieces.front().rows * pieces.front().cols * max_scale_ratio * max_scale_ratio > 8000 * 8000)
 	{
 		cv::Mat front = pieces.front();
 		pieces.erase(pieces.begin());
