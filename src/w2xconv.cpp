@@ -1615,7 +1615,7 @@ int w2xconv_convert_file(
 	
 	for (int i=0; i<pieces.size(); i++)
 	{
-		char name[20]="";
+		char name[40]="";
 		sprintf(name, "test_input_slices_%d.png", i);
 		cv::imwrite(name, pieces.at(i));
 	}
@@ -1630,13 +1630,13 @@ int w2xconv_convert_file(
 		// }
 		w2xconv_convert_mat(conv, res, pieces.at(i), denoise_level, scale, blockSize, background, png_rgb, dst_png);
 		converted.push_back(res);
-		
-		char name[20]="";
+		/*
+		char name[40]="";
 		sprintf(name, "test_converted_slices_%d.png", i);
-		cv::imwrite(name, res);
+		cv::imwrite(name, res);*/
 	}
 	
-	 int j=0;	// for test_merge
+	// int j=0;	// for test_merge
 	
 	// combine images
 	//#DEBUG, UNCOMMENT MERGE
@@ -1658,10 +1658,12 @@ int w2xconv_convert_file(
 		tmp=converted.at(3)(cv::Range(cut, converted.at(3).rows), cv::Range(cut, converted.at(3).cols));
 		tmp.copyTo(quarter[3]);
 		
+		/*
  		cv::imwrite("quarter[0].png", quarter[0]);
  		cv::imwrite("quarter[1].png", quarter[1]);
  		cv::imwrite("quarter[2].png", quarter[2]);
- 		cv::imwrite("quarter[3].png", quarter[3]);
+ 		cv::imwrite("quarter[3].png", quarter[3]);*/
+		
 		converted.erase(converted.begin(), converted.begin()+4);
 		
 		printf("vec size: %llu\n", converted.size()); 
@@ -1669,9 +1671,7 @@ int w2xconv_convert_file(
 		printf("merge horizon\n"); 
 		double time_a = getsec();
 		hconcat(quarter[0], quarter[1], quarter[0]);
- 		cv::imwrite("m_h1.png", quarter[0]);
 		hconcat(quarter[2], quarter[3], quarter[2]);
- 		cv::imwrite("m_h2.png", quarter[2]);
 		double time_b = getsec();
 		printf("took %f\n", time_b - time_a); 
 		
@@ -1687,14 +1687,15 @@ int w2xconv_convert_file(
 		time_b = getsec();
 		printf("took %f\n", time_b - time_a); 
 		
+		/*
 		time_a = getsec();
 		printf("imwriting merged image\n"); 
-		char name[20]="";
+		char name[40]="";
 		sprintf(name, "test_merged%d.png", j++);
  		cv::imwrite(name, merged);
 		time_b = getsec();
 		
-		printf("took %f\n", time_b - time_a); 
+		printf("took %f\n", time_b - time_a); */
 	}
 	
 	if (conv->enable_log) {
