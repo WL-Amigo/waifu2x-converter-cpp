@@ -1592,12 +1592,12 @@ int w2xconv_convert_file(
 	}
 #endif
 	
-	// divide images in to 4^n pieces when output width is bigger then 13000....
+	// divide images in to 4^n pieces when output width is bigger then 10000^2....
 	std::vector<cv::Mat> pieces, converted;
 	
 	pieces.push_back(image_src);
 	
-	while(pieces.front().rows * pieces.front().cols * scale * scale > 13000 * 13000)
+	while(pieces.front().rows * pieces.front().cols * scale * scale > 10000 * 10000)
 	{
 		cv::Mat front = pieces.front();
 		pieces.erase(pieces.begin());
