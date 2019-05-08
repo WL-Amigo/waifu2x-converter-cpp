@@ -1614,7 +1614,7 @@ int w2xconv_convert_file(
 	for (int i=0; i<pieces.size(); i++)
 	{
 		char name[20]="";
-		sprintf(name, "test_slices_%d.png", i);
+		sprintf(name, "test_input_slices_%d.png", i);
 		cv::imwrite(name, pieces.at(i));
 	}
 	
@@ -1627,6 +1627,10 @@ int w2xconv_convert_file(
 		}
 		w2xconv_convert_mat(conv, res, pieces.at(i), denoise_level, scale, blockSize, background, png_rgb, dst_png);
 		converted.push_back(res);
+		
+		char name[20]="";
+		sprintf(name, "test_converted_slices_%d.png", i);
+		cv::imwrite(name, res);
 	}
 	
 	 int j=0;	// for test_merge
@@ -1641,7 +1645,7 @@ int w2xconv_convert_file(
 		cv::Mat quarter[4], merged;
 				
 		char name[20]="";
-		sprintf(name, "test_merge%d.png", j++);
+		sprintf(name, "test_merged%d.png", j++);
 		
 		
 		for (i=0; i<4 && i<converted.size(); i++){
@@ -1663,7 +1667,7 @@ int w2xconv_convert_file(
 		printf("push merged mat\n"); 
 		converted.push_back(merged);
 		
-		printf("imwrite\n"); 
+		printf("imwrite merged\n"); 
 		cv::imwrite(name, merged);
 	}
 	
