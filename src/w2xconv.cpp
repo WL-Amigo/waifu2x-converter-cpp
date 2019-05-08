@@ -1610,14 +1610,14 @@ int w2xconv_convert_file(
 	}
 	
 
-	/*
+	
 	for (int i=0; i<pieces.size(); i++)
 	{
 		char name[20]="";
 		sprintf(name, "test_slices_%d.png", i);
 		cv::imwrite(name, pieces.at(i));
 	}
-	*/
+	
 	
 	for( int i=0; i<pieces.size(); i++ )
 	{
@@ -1629,7 +1629,7 @@ int w2xconv_convert_file(
 		converted.push_back(res);
 	}
 	
-	// int j=0;	// for test_merge
+	 int j=0;	// for test_merge
 	
 	// combine images
 	if (conv->enable_log) {
@@ -1639,32 +1639,32 @@ int w2xconv_convert_file(
 	{
 		int i=0;
 		cv::Mat quarter[4], merged;
-		/*		
+				
 		char name[20]="";
 		sprintf(name, "test_merge%d.png", j++);
-		*/
+		
 		
 		for (i=0; i<4 && i<converted.size(); i++){
-			//printf("copy.. %d/%llu\n", i+1, converted.size()); 
+			printf("copy.. %d/%llu\n", i+1, converted.size()); 
 			quarter[i] = converted.at(i);
 		}
-		//printf("erase.. from %d / %llu\n", i, converted.size()); 
+		printf("erase.. from %d / %llu\n", i, converted.size()); 
 		converted.erase(converted.begin(), converted.begin()+i);
 		
-		//printf("vec size: %llu\n", converted.size()); 
+		("vec size: %llu\n", converted.size()); 
 		
-		//printf("merge horizon\n"); 
+		printf("merge horizon\n"); 
 		hconcat(quarter[0], quarter[1], quarter[0]);
 		hconcat(quarter[2], quarter[3], quarter[2]);
 		
-		//printf("merge vertical\n"); 
+		printf("merge vertical\n"); 
 		vconcat(quarter[0], quarter[2], merged);
 		
-		//printf("push merged mat\n"); 
+		printf("push merged mat\n"); 
 		converted.push_back(merged);
 		
-		//printf("imwrite\n"); 
-		//cv::imwrite(name, merged);
+		printf("imwrite\n"); 
+		cv::imwrite(name, merged);
 	}
 	
 	if (conv->enable_log) {
