@@ -1667,6 +1667,10 @@ int w2xconv_convert_file(
 		//cv::imwrite(name, merged);
 	}
 	
+	if (conv->enable_log) {
+		printf("Writing image to file...\n");
+	}
+	
 	image_dst = converted.front();
 	
 	//cv::imwrite("test_out.png", converted.front());
