@@ -1660,17 +1660,30 @@ int w2xconv_convert_file(
 		("vec size: %llu\n", converted.size()); 
 		
 		printf("merge horizon\n"); 
+		double time_a = getsec();
 		hconcat(quarter[0], quarter[1], quarter[0]);
 		hconcat(quarter[2], quarter[3], quarter[2]);
+		double time_b = getsec();
+		printf("took %f\n", time_b - time_a); 
 		
 		printf("merge vertical\n"); 
+		time_a = getsec();
 		vconcat(quarter[0], quarter[2], merged);
+		time_b = getsec();
+		printf("took %f\n", time_b - time_a); 
 		
 		printf("push merged mat\n"); 
+		time_a = getsec();
 		converted.push_back(merged);
+		time_b = getsec();
+		printf("took %f\n", time_b - time_a); 
 		
 		printf("imwrite merged\n"); 
-		cv::imwrite(name, merged);
+		time_a = getsec();
+		printf("imwriting merged image\n"); 
+ 		cv::imwrite(name, merged);
+		time_b = getsec();
+		printf("took %f\n", time_b - time_a); 
 	}
 	
 	if (conv->enable_log) {
@@ -1686,6 +1699,8 @@ int w2xconv_convert_file(
 	{
 		compression_params.push_back(imwrite_params[i]);
 	}	
+	double time_a = getsec();
+	printf("imwriting final image\n");
 	
 #if defined(WIN32) && defined(UNICODE)
 	if (!write_imageW(dst_path, image_dst, compression_params)) {
@@ -1697,6 +1712,9 @@ int w2xconv_convert_file(
 			     dst_path);
 		return -1;
 	}
+	
+	double time_b = getsec();
+	printf("took %f\n", time_b - time_a); 
 
 	double time_end = getsec();
 
