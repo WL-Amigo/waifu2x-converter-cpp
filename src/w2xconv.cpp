@@ -1603,10 +1603,10 @@ int w2xconv_convert_file(
 		pieces.erase(pieces.begin());
 		int r=front.rows, c=front.cols;
 		int h_r=r/2, h_c=c/2;
-		pieces.push_back(front(cv::Range(0,h_r), cv::Range(0,h_c)));
-		pieces.push_back(front(cv::Range(0,h_r), cv::Range(h_c,c)));
-		pieces.push_back(front(cv::Range(h_r,r), cv::Range(0,h_c)));
-		pieces.push_back(front(cv::Range(h_r,r), cv::Range(h_c,c)));
+		pieces.push_back(front(cv::Range(0,h_r+20), cv::Range(0,h_c+20)));
+		pieces.push_back(front(cv::Range(0,h_r+20), cv::Range(h_c-20,c)));
+		pieces.push_back(front(cv::Range(h_r-20,r), cv::Range(0,h_c+20)));
+		pieces.push_back(front(cv::Range(h_r-20,r), cv::Range(h_c-20,c)));
 	}
 	
 
@@ -1643,26 +1643,33 @@ int w2xconv_convert_file(
 	// }
 	while (converted.size() > 1)
 	{
-		int i=0;
-		cv::Mat quarter[4], merged;
-				
-		char name[20]="";
-		sprintf(name, "test_merged%d.png", j++);
+		cv::Mat quarter[4], tmp, merged;
 		
+		int cut = (int) (20.00 * scale);
 		
-		for (i=0; i<4 && i<converted.size(); i++){
-			printf("copy.. %d/%llu\n", i+1, converted.size()); 
-			quarter[i] = converted.at(i);
-		}
-		printf("erase.. from %d / %llu\n", i, converted.size()); 
-		converted.erase(converted.begin(), converted.begin()+i);
+		tmp=converted.at(0)(cv::Range(0, converted.at(0).rows - cut), cv::Range(0, converted.at(0).cols - cut));
+		tmp.copyTo(quarter[0]);
+		tmp=converted.at(1)(cv::Range(0, converted.at(1).rows - cut), cv::Range(cut, converted.at(1).cols));
+		tmp.copyTo(quarter[1]);
+		tmp=converted.at(2)(cv::Range(cut, converted.at(2).rows), cv::Range(0, converted.at(2).cols - cut));
+		tmp.copyTo(quarter[2]);
+		tmp=converted.at(3)(cv::Range(cut, converted.at(3).rows), cv::Range(cut, converted.at(3).cols));
+		tmp.copyTo(quarter[3]);
 		
-		("vec size: %llu\n", converted.size()); 
+ 		cv::imwrite("quarter[0].png", quarter[0]);
+ 		cv::imwrite("quarter[1].png", quarter[1]);
+ 		cv::imwrite("quarter[2].png", quarter[2]);
+ 		cv::imwrite("quarter[3].png", quarter[3]);
+		converted.erase(converted.begin(), converted.begin()+4);
+		
+		printf("vec size: %llu\n", converted.size()); 
 		
 		printf("merge horizon\n"); 
 		double time_a = getsec();
 		hconcat(quarter[0], quarter[1], quarter[0]);
+ 		cv::imwrite("m_h1.png", quarter[0]);
 		hconcat(quarter[2], quarter[3], quarter[2]);
+ 		cv::imwrite("m_h2.png", quarter[2]);
 		double time_b = getsec();
 		printf("took %f\n", time_b - time_a); 
 		
@@ -1678,11 +1685,13 @@ int w2xconv_convert_file(
 		time_b = getsec();
 		printf("took %f\n", time_b - time_a); 
 		
-		printf("imwrite merged\n"); 
 		time_a = getsec();
 		printf("imwriting merged image\n"); 
+		char name[20]="";
+		sprintf(name, "test_merged%d.png", j++);
  		cv::imwrite(name, merged);
 		time_b = getsec();
+		
 		printf("took %f\n", time_b - time_a); 
 	}
 	

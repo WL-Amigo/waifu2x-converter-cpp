@@ -374,7 +374,7 @@ static bool convertWithModelsBlockSplit(W2XConv *conv,
 							    curBlockWidth, curBlockHeight);
 
 			if (enableLog) {
-				//printf("Processing block, column (%02d/%02d), row (%02d/%02d) ...\n", (c+1), splitColumns, (r+1), splitRows);
+				printf("Processing block, column (%02d/%02d), row (%02d/%02d) ...\n", (c+1), splitColumns, (r+1), splitRows);
 			}
 
 			int elemSize = 0;
@@ -397,7 +397,7 @@ static bool convertWithModelsBlockSplit(W2XConv *conv,
 			if (!convertWithModelsBasic(conv, env,
 						    processBlock, processBlockOutput,
 						    input_buf, output_buf,
-						    models, flops, fmt, /*enableLog*/ false)) {
+						    models, flops, fmt, enableLog)) {
 				std::cerr << "w2xc::convertWithModelsBasic()\n"
 					"in w2xc::convertWithModelsBlockSplit() : \n"
 					"something error has occured. stop." << std::endl;
