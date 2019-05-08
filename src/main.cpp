@@ -33,8 +33,8 @@
 #endif
 
 
-#pragma comment(linker, "/STACK:2000000000")
-#pragma comment(linker, "/HEAP:2000000000")
+#pragma comment(linker, "/STACK:200000000")
+#pragma comment(linker, "/HEAP:200000000")
 
 #include "w2xconv.h"
 
