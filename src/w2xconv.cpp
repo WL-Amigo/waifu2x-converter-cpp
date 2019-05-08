@@ -1592,10 +1592,13 @@ int w2xconv_convert_file(
 	}
 #endif
 	
+	w2xconv_convert_mat(conv, image_dst, image_src, denoise_level, scale, blockSize, background, png_rgb, dst_png);
+	
+	
 	// divide images in to 4^n pieces when output width is bigger then 10000^2....
 	std::vector<cv::Mat> pieces, converted;
-	
-	pieces.push_back(image_src);
+		
+	/*pieces.push_back(image_src);
 	
 	int max_scale_ratio = 2 * ((int)(scale/2+1));
 	
@@ -1701,7 +1704,7 @@ int w2xconv_convert_file(
 		printf("Writing image to file...\n");
 	}
 	
-	image_dst = converted.front();
+	image_dst = converted.front();*/
 	
 	//cv::imwrite("test_out.png", converted.front());
 	
