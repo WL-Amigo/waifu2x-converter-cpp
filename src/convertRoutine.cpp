@@ -91,7 +91,7 @@ static bool convertWithModelsBasic(W2XConv *conv,
 		int nInputPlanes = models[index]->getNInputPlanes();
 
 		if (enableLog) {
-			printf("Iteration #%d(%3d->%3d)...", (index + 1), nInputPlanes, nOutputPlanes);
+			//printf("Iteration #%d(%3d->%3d)...", (index + 1), nInputPlanes, nOutputPlanes);
 		}
 		double t0 = getsec();
 		if (!models[index]->filter(conv, env, packed_input_buf, packed_output_buf, filterSize)) {
@@ -104,7 +104,7 @@ static bool convertWithModelsBasic(W2XConv *conv,
 		double gigabytesPerSec = (bytes/(1000.0*1000.0*1000.0)) / (t1-t0);
 
 		if (enableLog) {
-			printf("(%.5f[ms], %7.2f[GFLOPS], %8.3f[GB/s])\n", t1-t0, gflops, gigabytesPerSec);
+			//printf("(%.5f[ms], %7.2f[GFLOPS], %8.3f[GB/s])\n", t1-t0, gflops, gigabytesPerSec);
 		}
 		ops_sum += ops;
 
