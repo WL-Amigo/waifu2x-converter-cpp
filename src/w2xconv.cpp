@@ -1623,7 +1623,7 @@ int w2xconv_convert_file(
 	{
 		cv::Mat res;
 		if (conv->enable_log) {
-			printf("Proccessing [%d/%zu] slices\n", i, pieces.size());
+			printf("Proccessing [%d/%zu] slices\n", i+1, pieces.size());
 		}
 		w2xconv_convert_mat(conv, res, pieces.at(i), denoise_level, scale, blockSize, background, png_rgb, dst_png);
 		converted.push_back(res);
