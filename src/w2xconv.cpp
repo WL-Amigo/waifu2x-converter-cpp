@@ -1643,13 +1643,13 @@ int w2xconv_convert_file(
 		
 		// pieces.erase(pieces.begin()); // not needed. w2xconv_convert_mat will automatically release memory of input mat.
 		
-		
+		/*
 		char name[40]="";
 		sprintf(name, "test_converted_slices_%d.png", i);
-		cv::imwrite(name, res);
+		cv::imwrite(name, res);*/
 	}
 	
-	int j=0;	// for test_merge
+	// int j=0;	// for test_merge
 	
 	// combine images
 	while (converted.size() > 1)
@@ -1660,7 +1660,7 @@ int w2xconv_convert_file(
 		// if (conv->enable_log) {
 			printf("\nMerging slices back to one image... in queue: %zd slices\n", converted.size());
 		// }
-		double time_a = getsec(), time_b = 0;
+		double time_a = getsec();
 		
 		int cut = (int) (pad * scale);
 		
@@ -1675,25 +1675,25 @@ int w2xconv_convert_file(
 		
 		converted.erase(converted.begin(), converted.begin()+4);
 		
-		printf("merge horizon\n"); 
-		time_a = getsec();
+		//printf("merge horizon\n"); 
+		//double time_a = getsec();
 		hconcat(quarter[0], quarter[1], quarter[0]);
 		hconcat(quarter[2], quarter[3], quarter[2]);
-		time_b = getsec();
-		printf("took %f\n", time_b - time_a); 
-		
-		printf("merge vertical\n"); 
-		time_a = getsec();
-		vconcat(quarter[0], quarter[2], merged);
-		time_b = getsec();
-		printf("took %f\n", time_b - time_a); 
-		
 		//double time_b = getsec();
 		//printf("took %f\n", time_b - time_a); 
 		
+		//printf("merge vertical\n"); 
+		//time_a = getsec();
+		vconcat(quarter[0], quarter[2], merged);
+		//time_b = getsec();
+		//printf("took %f\n", time_b - time_a); 
+		
+		double time_b = getsec();
+		printf("took %f\n", time_b - time_a); 
+		
 		converted.push_back(merged);
 		
-		
+		/*
 		time_a = getsec();
 		printf("imwriting merged image\n"); 
 		char name[40]="";
@@ -1701,7 +1701,7 @@ int w2xconv_convert_file(
  		cv::imwrite(name, merged);
 		time_b = getsec();
 		
-		printf("took %f\n", time_b - time_a); 
+		printf("took %f\n", time_b - time_a); */
 	}
 	
 	image_dst = converted.front();
