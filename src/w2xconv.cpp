@@ -1597,6 +1597,8 @@ int w2xconv_convert_file(
 	
 	pieces.push_back(image_src);
 	
+	image_src.release();	// push_back will do deep copy of src image
+	
 	int max_scale_ratio = 2 * ((int)(scale/2+1));
 	const static int pad = 20;
 	
@@ -1625,6 +1627,9 @@ int w2xconv_convert_file(
 		// }
 		w2xconv_convert_mat(conv, res, pieces.at(i), denoise_level, scale, blockSize, background, png_rgb, dst_png);
 		converted.push_back(res);
+		
+		// pieces.erase(pieces.begin()); // not needed. w2xconv_convert_mat will automatically release memory of input mat.
+		
 		/*
 		char name[40]="";
 		sprintf(name, "test_converted_slices_%d.png", i);
