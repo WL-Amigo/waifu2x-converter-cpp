@@ -1596,16 +1596,15 @@ int w2xconv_convert_file(
 	std::vector<cv::Mat> pieces, converted;
 	
 	pieces.push_back(image_src);
-	
-	image_src.release();	// push_back will do deep copy of src image
+	image_src.release();	// push_back does deep copy
 	
 	const static int pad = 20;	// give pad to avoid distortions in edge
 	
 	// w2x converts 2x and down scales when scale_ratio is not power of 2 (ex: 2.28 -> scale x4 - > down scale)
-	int max_scale_ratio = static_cast<int>(std::pow(2, std::ceil(std::log2(scale))));
+	int max_scale_time = static_cast<int>(std::ceil(std::log2(scale)));
 	
 	// 8000 = sqr(INT_MAX / 32) - 191, leave 191px for safe conversion. (64000000 = 8000 * 8000)
-	while(pieces.front().rows * pieces.front().cols * max_scale_ratio * max_scale_ratio > 64000000)
+	while(pieces.front().rows * pieces.front().cols << (max_scale_time << 1) > 64000000)
 	{
 		cv::Mat front = pieces.front();
 		int r=front.rows, c=front.cols;
