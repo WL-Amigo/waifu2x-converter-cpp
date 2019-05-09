@@ -1261,7 +1261,7 @@ void get_png_background_colour(FILE *png_fp, bool *png_rgb, struct w2xconv_rgb_f
 	/* use IMREAD_UNCHANGED
 	 * if png && type == RGBA || depth == 16
 	 */
-	if (type == 6) {
+	if (type == 6 || type == 3 || type == 4) { // type == 3 is indexed color 
 		if (depth == 8 || // RGBA 8bit
 		    depth == 16	  // RGBA 16bit
 			)
@@ -1271,6 +1271,8 @@ void get_png_background_colour(FILE *png_fp, bool *png_rgb, struct w2xconv_rgb_f
 	} else if (depth == 16) { // RGB 16bit
 		*png_rgb = true;
 	}
+	
+	 std::cout << "type:" << type << std::endl;
 
 	if (*png_rgb) {
 		while (1) {
