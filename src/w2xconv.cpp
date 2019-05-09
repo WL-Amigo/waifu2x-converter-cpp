@@ -500,6 +500,18 @@ w2xconv_strerror(W2XConvError *e)
 		break;
 		
 	case W2XCONV_ERROR_SCALE_LIMIT:
+		oss << "waifu2x does not supports over x1024.0 scale."; 
+		break;
+		
+	case W2XCONV_ERROR_SCALE_LIMIT_512:
+		oss << "this image cannot converted over x512.0 scale."; 
+		break;
+		
+	case W2XCONV_ERROR_SCALE_LIMIT_256:
+		oss << "this image cannot converted over x256.0 scale."; 
+		break;
+		
+	case W2XCONV_ERROR_SCALE_LIMIT_128:
 		oss << "this image cannot converted over x128.0 scale."; 
 		break;
 	}
@@ -1610,10 +1622,20 @@ int w2xconv_convert_file(
 	// 8000 = sqr(INT_MAX / 32) - 191, leave 191px for safe conversion. (64000000 = 8000 * 8000)
 	// if max_scale is 64, input limits to 125x125, if max_scale is 128, input limits to 62*62
 	// max_scale over 128 cannot handled by this slicing fucntion.
-	// with scale > 1024, it only can converts less then w x h = 14px, it has no meaning to run w2x.
+	// with scale > 1024, it only can converts less then w x h = 15px, which is no meaning to run w2x.
 	// with scale > 2048, you cannot convert it at all.
-	if(scale > 1024 || max_scale_time > 7 && pieces.front().rows * pieces.front().cols << (max_scale_time << 1) > 64000000){
-		setError(conv, W2XCONV_ERROR_SCALE_LIMIT); 
+	if(scale > 1024){
+		setError(conv, W2XCONV_ERROR_SCALE_LIMIT);
+		return -1;
+	}
+	else if(max_scale_time > 7 && pieces.front().rows * pieces.front().cols << (max_scale_time << 1) > 64000000){
+		
+		if( pieces.front().rows * pieces.front().cols > 976 )
+			setError(conv, W2XCONV_ERROR_SCALE_LIMIT_128);
+		else if( pieces.front().rows * pieces.front().cols > 244 )
+			setError(conv, W2XCONV_ERROR_SCALE_LIMIT_256);
+		else if( pieces.front().rows * pieces.front().cols > 61 )
+			setError(conv, W2XCONV_ERROR_SCALE_LIMIT_512);
 		return -1;
 	}
 	

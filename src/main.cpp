@@ -712,6 +712,13 @@ int main(int argc, char** argv)
 		std::exit(-1);
 	}
 	
+	//Check scale-ratio is vaild.
+	if (cmdScaleRatio.getValue() < 0 || cmdScaleRatio.getValue() > 1024)
+	{
+		std::cout << "Error: Scale Ratio range is 0-1024" << std::endl;
+		std::exit(-1);
+	}
+	
 	//Check Quality/Compression option ranges.
 	if (cmdPngCompression.getValue() < 0 || cmdPngCompression.getValue() > 9)
 	{
