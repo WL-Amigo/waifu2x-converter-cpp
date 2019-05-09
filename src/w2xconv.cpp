@@ -1669,13 +1669,13 @@ int w2xconv_convert_file(
 		
 		// pieces.erase(pieces.begin()); // not needed. w2xconv_convert_mat will automatically release memory of input mat.
 		
-		/*
+		
 		char name[40]="";
 		sprintf(name, "test_converted_slices_%d.png", i);
-		cv::imwrite(name, res);*/
+		cv::imwrite(name, res);
 	}
 	
-	// int j=0;	// for test_merge
+	 int j=0;	// for test_merge
 	
 	// combine images
 	while (converted.size() > 1)
@@ -1700,11 +1700,11 @@ int w2xconv_convert_file(
 		
 		converted.erase(converted.begin(), converted.begin()+4);
 		
-		//printf("merge horizon\n"); 
+		printf("merge horizon\n"); 
 		hconcat(quarter[0], quarter[1], quarter[0]);
 		hconcat(quarter[2], quarter[3], quarter[2]);
 		
-		//printf("merge vertical\n"); 
+		printf("merge vertical\n"); 
 		vconcat(quarter[0], quarter[2], merged);
 		
 		//time_b = getsec();
@@ -1712,12 +1712,12 @@ int w2xconv_convert_file(
 		
 		converted.push_back(merged);
 		
-		/*
+		
 		printf("imwriting merged image\n"); 
 		char name[40]="";
 		sprintf(name, "test_merged%d.png", j++);
  		cv::imwrite(name, merged);
-		*/
+		
 	}
 	
 	image_dst = converted.front();
