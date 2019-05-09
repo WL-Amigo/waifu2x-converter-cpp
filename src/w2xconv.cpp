@@ -1661,6 +1661,10 @@ int w2xconv_convert_file(
 	{
 		cv::Mat res;
 		
+		char name[40]="";
+		sprintf(name, "test_padded_slices_%d.png", i);
+		cv::imwrite(name, res);
+		
 		if (conv->enable_log) {
 			printf("\nProccessing [%d/%zu] slices\n", i+1, pieces.size());
 		}
