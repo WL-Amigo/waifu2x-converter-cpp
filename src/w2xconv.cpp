@@ -1598,28 +1598,23 @@ int w2xconv_convert_file(
 	pieces.push_back(image_src);
 	
 	int max_scale_ratio = 2 * ((int)(scale/2+1));
+	const static int pad = 20;
 	
 	while(pieces.front().rows * pieces.front().cols * max_scale_ratio * max_scale_ratio > 8000 * 8000)
 	{
 		cv::Mat front = pieces.front();
-		pieces.erase(pieces.begin());
 		int r=front.rows, c=front.cols;
 		int h_r=r/2, h_c=c/2;
-		pieces.push_back(front(cv::Range(0,h_r+20), cv::Range(0,h_c+20)));
-		pieces.push_back(front(cv::Range(0,h_r+20), cv::Range(h_c-20,c)));
-		pieces.push_back(front(cv::Range(h_r-20,r), cv::Range(0,h_c+20)));
-		pieces.push_back(front(cv::Range(h_r-20,r), cv::Range(h_c-20,c)));
+		
+		// div in 4 and add padding to input.
+		pieces.push_back(front(cv::Range(0,h_r+pad), cv::Range(0,h_c+pad)));
+		pieces.push_back(front(cv::Range(0,h_r+pad), cv::Range(h_c-pad,c)));
+		pieces.push_back(front(cv::Range(h_r-pad,r), cv::Range(0,h_c+pad)));
+		pieces.push_back(front(cv::Range(h_r-pad,r), cv::Range(h_c-pad,c)));
+		
+		// delete piece
+		pieces.erase(pieces.begin());
 	}
-	
-
-	
-	for (int i=0; i<pieces.size(); i++)
-	{
-		char name[40]="";
-		sprintf(name, "test_input_slices_%d.png", i);
-		cv::imwrite(name, pieces.at(i));
-	}
-	
 	
 	for( int i=0; i<pieces.size(); i++ )
 	{
@@ -1647,7 +1642,7 @@ int w2xconv_convert_file(
 	{
 		cv::Mat quarter[4], tmp, merged;
 		
-		int cut = (int) (20.00 * scale);
+		int cut = (int) (pad * scale);
 		
 		tmp=converted.at(0)(cv::Range(0, converted.at(0).rows - cut), cv::Range(0, converted.at(0).cols - cut));
 		tmp.copyTo(quarter[0]);
@@ -1658,15 +1653,7 @@ int w2xconv_convert_file(
 		tmp=converted.at(3)(cv::Range(cut, converted.at(3).rows), cv::Range(cut, converted.at(3).cols));
 		tmp.copyTo(quarter[3]);
 		
-		/*
- 		cv::imwrite("quarter[0].png", quarter[0]);
- 		cv::imwrite("quarter[1].png", quarter[1]);
- 		cv::imwrite("quarter[2].png", quarter[2]);
- 		cv::imwrite("quarter[3].png", quarter[3]);*/
-		
 		converted.erase(converted.begin(), converted.begin()+4);
-		
-		printf("vec size: %llu\n", converted.size()); 
 		
 		printf("merge horizon\n"); 
 		double time_a = getsec();
@@ -1681,11 +1668,7 @@ int w2xconv_convert_file(
 		time_b = getsec();
 		printf("took %f\n", time_b - time_a); 
 		
-		printf("push merged mat\n"); 
-		time_a = getsec();
 		converted.push_back(merged);
-		time_b = getsec();
-		printf("took %f\n", time_b - time_a); 
 		
 		/*
 		time_a = getsec();
