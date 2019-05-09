@@ -1272,7 +1272,7 @@ void get_png_background_colour(FILE *png_fp, bool *png_rgb, struct w2xconv_rgb_f
 		*png_rgb = true;
 	}
 	
-	 std::cout << "type:" << type << std::endl;
+	// std::cout << "type:" << type << std::endl;
 
 	if (*png_rgb) {
 		while (1) {
