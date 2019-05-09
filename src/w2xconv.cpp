@@ -1592,7 +1592,7 @@ int w2xconv_convert_file(
 	}
 #endif
 	
-	// divide images in to 4^n pieces when output width is bigger then 10000^2....
+	// divide images in to 4^n pieces when output width is bigger then 8000^2....
 	std::vector<cv::Mat> pieces, converted;
 	
 	pieces.push_back(image_src);
@@ -1600,7 +1600,9 @@ int w2xconv_convert_file(
 	image_src.release();	// push_back will do deep copy of src image
 	
 	const static int pad = 20;	// give pad to avoid distortions in edge
-	int max_scale_ratio = 2 * ((int)(scale/2+1));
+	
+	// w2x converts 2x and down scales when scale_ratio is not power of 2 (ex: 2.28 -> scale x4 - > down scale)
+	int max_scale_ratio = 2 * ((int)(scale/2+1));	
 	
 	// 8000 = sqr(INT_MAX / 32) - 191, leave 191px for safe conversion. (64000000 = 8000 * 8000)
 	while(pieces.front().rows * pieces.front().cols * max_scale_ratio * max_scale_ratio > 64000000)
