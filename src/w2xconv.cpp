@@ -1602,7 +1602,8 @@ int w2xconv_convert_file(
 	int max_scale_ratio = 2 * ((int)(scale/2+1));
 	const static int pad = 20;
 	
-	while(pieces.front().rows * pieces.front().cols * max_scale_ratio * max_scale_ratio > 8000 * 8000)
+	// 8000 = sqr(INT_MAX / 32) - 191, leave 191px for safe conversion. (64000000 = 8000 * 8000)
+	while(pieces.front().rows * pieces.front().cols * max_scale_ratio * max_scale_ratio > 64000000)
 	{
 		cv::Mat front = pieces.front();
 		int r=front.rows, c=front.cols;
@@ -1639,13 +1640,14 @@ int w2xconv_convert_file(
 	// int j=0;	// for test_merge
 	
 	// combine images
-	//#DEBUG, UNCOMMENT MERGE
-	// if (conv->enable_log) {
-		printf("\nMerging slices back to one image...\n");
-	// }
 	while (converted.size() > 1)
 	{
 		cv::Mat quarter[4], tmp, merged;
+		
+		//#DEBUG, UNCOMMENT MERGE
+		// if (conv->enable_log) {
+			printf("\nMerging slices back to one image... in queue: %zd slices\n", converted.size());
+		// }
 		
 		int cut = (int) (pad * scale);
 		
@@ -1686,21 +1688,20 @@ int w2xconv_convert_file(
 		printf("took %f\n", time_b - time_a); */
 	}
 	
-	if (conv->enable_log) {
-		printf("Writing image to file...\n");
-	}
-	
 	image_dst = converted.front();
 	
-	//cv::imwrite("test_out.png", converted.front());
+	//#DEBUG, UNCOMMENT MERGE
+	//if (conv->enable_log) {
+		printf("Writing image to file...\n");
+	//}
 	
 	std::vector<int> compression_params;	
 	for ( int i = 0; i < sizeof(imwrite_params); i = i + 1 )
 	{
 		compression_params.push_back(imwrite_params[i]);
 	}	
+	
 	double time_a = getsec();
-	printf("imwriting final image\n");
 	
 #if defined(WIN32) && defined(UNICODE)
 	if (!write_imageW(dst_path, image_dst, compression_params)) {
