@@ -53,6 +53,8 @@ enum W2XConvErrorCode {
 	W2XCONV_ERROR_Y_MODEL_MISMATCH_TO_RGB_F32,
 
 	W2XCONV_ERROR_OPENCL,	/* u.cl_error */
+	
+	W2XCONV_ERROR_SCALE_LIMIT,
 };
 
 struct W2XConvError {

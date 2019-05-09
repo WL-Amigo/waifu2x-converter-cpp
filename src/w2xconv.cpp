@@ -498,6 +498,10 @@ w2xconv_strerror(W2XConvError *e)
 	case W2XCONV_ERROR_Y_MODEL_MISMATCH_TO_RGB_F32:
 		oss << "cannot apply y model to rgb_f32.";
 		break;
+		
+	case W2XCONV_ERROR_SCALE_LIMIT:
+		oss << "this image cannot converted over x128.0 scale."; 
+		break;
 	}
 
 	return strdup(oss.str().c_str());
@@ -1604,6 +1608,13 @@ int w2xconv_convert_file(
 	int max_scale_time = static_cast<int>(std::ceil(std::log2(scale)));
 	
 	// 8000 = sqr(INT_MAX / 32) - 191, leave 191px for safe conversion. (64000000 = 8000 * 8000)
+	// if max_scale is 64, input limits to 125x125, if max_scale is 128, input limits to 62*62
+	// max_scale over 128 cannot handled by this slicing fucntion.
+	if(max_scale_time > 7 && pieces.front().rows * pieces.front().cols << (max_scale_time << 1) > 64000000){
+		setError(conv, W2XCONV_ERROR_SCALE_LIMIT); 
+		return -1;
+	}
+	
 	while(pieces.front().rows * pieces.front().cols << (max_scale_time << 1) > 64000000)
 	{
 		cv::Mat front = pieces.front();
