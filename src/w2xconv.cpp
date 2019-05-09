@@ -1272,7 +1272,7 @@ void get_png_background_colour(FILE *png_fp, bool *png_rgb, struct w2xconv_rgb_f
 		*png_rgb = true;
 	}
 
-	if (png_rgb) {
+	if (*png_rgb) {
 		while (1) {
 			int chunk_size = read_int4(png_fp);
 			rdsz = fread(sig, 1, 4, png_fp);
