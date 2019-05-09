@@ -1599,8 +1599,8 @@ int w2xconv_convert_file(
 	
 	image_src.release();	// push_back will do deep copy of src image
 	
+	const static int pad = 20;	// give pad to avoid distortions in edge
 	int max_scale_ratio = 2 * ((int)(scale/2+1));
-	const static int pad = 20;
 	
 	// 8000 = sqr(INT_MAX / 32) - 191, leave 191px for safe conversion. (64000000 = 8000 * 8000)
 	while(pieces.front().rows * pieces.front().cols * max_scale_ratio * max_scale_ratio > 64000000)
