@@ -1610,7 +1610,9 @@ int w2xconv_convert_file(
 	// 8000 = sqr(INT_MAX / 32) - 191, leave 191px for safe conversion. (64000000 = 8000 * 8000)
 	// if max_scale is 64, input limits to 125x125, if max_scale is 128, input limits to 62*62
 	// max_scale over 128 cannot handled by this slicing fucntion.
-	if(max_scale_time > 7 && pieces.front().rows * pieces.front().cols << (max_scale_time << 1) > 64000000){
+	// with scale > 1024, it only can converts less then w x h = 14px, it has no meaning to run w2x.
+	// with scale > 2048, you cannot convert it at all.
+	if(scale > 1024 || max_scale_time > 7 && pieces.front().rows * pieces.front().cols << (max_scale_time << 1) > 64000000){
 		setError(conv, W2XCONV_ERROR_SCALE_LIMIT); 
 		return -1;
 	}
