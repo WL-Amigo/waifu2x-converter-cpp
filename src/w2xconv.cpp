@@ -1601,7 +1601,7 @@ int w2xconv_convert_file(
 	
 	// give pad to avoid distortions in edge
 	const static int pad = 20;
-	int cut = (int)(pad * scale);
+	const static int cut = (int)(pad * scale);
 	
 	// w2x converts 2x and down scales when scale_ratio is not power of 2 (ex: 2.28 -> scale x4 - > down scale)
 	int max_scale_ratio = static_cast<int>(std::pow(2, std::ceil(std::log2(scale))));
