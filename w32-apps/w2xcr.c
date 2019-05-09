@@ -400,7 +400,7 @@ proc_thread(void *ap)
 		imwrite_params[5] = 5;
 
         p = &app->path_list[li];
-        r = w2xconv_convert_fileW(c,
+        r = w2xconv_convert_file(c,
                                  p->dst_path,
                                  p->src_path,
                                  p->denoise,
