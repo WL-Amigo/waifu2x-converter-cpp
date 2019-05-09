@@ -1634,10 +1634,10 @@ int w2xconv_convert_file(
 	for( int i=0; i<pieces.size(); i++ )
 	{
 		cv::Mat res;
-		//#DEBUG, UNCOMMENT MERGE
-		// if (conv->enable_log) {
-		printf("\nProccessing [%d/%zu] slices\n", i+1, pieces.size());
-		// }
+		
+		if (conv->enable_log) {
+			printf("\nProccessing [%d/%zu] slices\n", i+1, pieces.size());
+		}
 		w2xconv_convert_mat(conv, res, pieces.at(i), denoise_level, scale, blockSize, background, png_rgb, dst_png);
 		converted.push_back(res);
 		
@@ -1655,14 +1655,13 @@ int w2xconv_convert_file(
 	while (converted.size() > 1)
 	{
 		cv::Mat quarter[4], tmp, merged;
-		
-		//#DEBUG, UNCOMMENT MERGE
-		// if (conv->enable_log) {
-			printf("\nMerging slices back to one image... in queue: %zd slices\n", converted.size());
-		// }
-		double time_a = getsec();
-		
 		int cut = (int) (pad * scale);
+		
+		if (conv->enable_log) {
+			printf("\nMerging slices back to one image... in queue: %zd slices\n", converted.size());
+		}
+		
+		//double time_a = getsec(), time_b = 0;
 		
 		tmp=converted.at(0)(cv::Range(0, converted.at(0).rows - cut), cv::Range(0, converted.at(0).cols - cut));
 		tmp.copyTo(quarter[0]);
@@ -1676,48 +1675,36 @@ int w2xconv_convert_file(
 		converted.erase(converted.begin(), converted.begin()+4);
 		
 		//printf("merge horizon\n"); 
-		//double time_a = getsec();
 		hconcat(quarter[0], quarter[1], quarter[0]);
 		hconcat(quarter[2], quarter[3], quarter[2]);
-		//double time_b = getsec();
-		//printf("took %f\n", time_b - time_a); 
 		
 		//printf("merge vertical\n"); 
-		//time_a = getsec();
 		vconcat(quarter[0], quarter[2], merged);
+		
 		//time_b = getsec();
 		//printf("took %f\n", time_b - time_a); 
-		
-		double time_b = getsec();
-		printf("took %f\n", time_b - time_a); 
 		
 		converted.push_back(merged);
 		
 		/*
-		time_a = getsec();
 		printf("imwriting merged image\n"); 
 		char name[40]="";
 		sprintf(name, "test_merged%d.png", j++);
  		cv::imwrite(name, merged);
-		time_b = getsec();
-		
-		printf("took %f\n", time_b - time_a); */
+		*/
 	}
 	
 	image_dst = converted.front();
 	
-	//#DEBUG, UNCOMMENT MERGE
-	//if (conv->enable_log) {
+	if (conv->enable_log) {
 		printf("Writing image to file...\n");
-	//}
+	}
 	
 	std::vector<int> compression_params;	
 	for ( int i = 0; i < sizeof(imwrite_params); i = i + 1 )
 	{
 		compression_params.push_back(imwrite_params[i]);
 	}	
-	
-	double time_a = getsec();
 	
 #if defined(WIN32) && defined(UNICODE)
 	if (!write_imageW(dst_path, image_dst, compression_params)) {
@@ -1729,9 +1716,6 @@ int w2xconv_convert_file(
 			     dst_path);
 		return -1;
 	}
-	
-	double time_b = getsec();
-	printf("took %f\n", time_b - time_a); 
 
 	double time_end = getsec();
 
