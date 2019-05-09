@@ -1261,7 +1261,7 @@ void get_png_background_colour(FILE *png_fp, bool *png_rgb, struct w2xconv_rgb_f
 	/* use IMREAD_UNCHANGED
 	 * if png && type == RGBA || depth == 16
 	 */
-	if (type == 6 || type == 3 || type == 4) { // type == 3 is indexed color 
+	if (type == 6) {
 		if (depth == 8 || // RGBA 8bit
 		    depth == 16	  // RGBA 16bit
 			)
@@ -1271,10 +1271,8 @@ void get_png_background_colour(FILE *png_fp, bool *png_rgb, struct w2xconv_rgb_f
 	} else if (depth == 16) { // RGB 16bit
 		*png_rgb = true;
 	}
-	
-	// std::cout << "type:" << type << std::endl;
 
-	if (*png_rgb) {
+	if (png_rgb) {
 		while (1) {
 			int chunk_size = read_int4(png_fp);
 			rdsz = fread(sig, 1, 4, png_fp);
@@ -1448,6 +1446,89 @@ w2xconv_convert_mat(struct W2XConv *conv,
 	}
 }
 
+int w2xconv_convert_file(
+	struct W2XConv *conv,
+	const char *dst_path,
+	const char *src_path,
+	int denoise_level,
+	double scale,
+	int blockSize,
+	int* imwrite_params) 
+{
+	double time_start = getsec();
+
+	FILE *png_fp = nullptr;
+	png_fp = fopen(src_path, "rb");
+
+	if (png_fp == nullptr) {
+		setPathError(conv, W2XCONV_ERROR_IMREAD_FAILED, src_path);
+		return -1;
+	}
+
+	bool png_rgb;
+	//Background colour
+	//float3 background(1.0f, 1.0f, 1.0f);
+	w2xconv_rgb_float3 background;
+	background.r = background.g = background.b = 1.0f;
+	get_png_background_colour(png_fp, &png_rgb, &background);
+
+	if (png_fp) {
+		fclose(png_fp);
+		png_fp = nullptr;
+	}
+
+	cv::Mat image_src, image_dst;
+
+	/*
+	 * IMREAD_COLOR                 : always BGR
+	 * IMREAD_UNCHANGED + png       : BGR or BGRA
+	 * IMREAD_UNCHANGED + otherwise : ???
+	 */
+	if (png_rgb) {
+		image_src = cv::imread(src_path, cv::IMREAD_UNCHANGED);
+	} else {
+		image_src = cv::imread(src_path, cv::IMREAD_COLOR);
+	}
+
+	bool dst_png = false;
+	{
+		size_t len = strlen(dst_path);
+		if (len >= 4) {
+			if (tolower(dst_path[len-4]) == '.' &&
+			    tolower(dst_path[len-3]) == 'p' &&
+			    tolower(dst_path[len-2]) == 'n' &&
+			    tolower(dst_path[len-1]) == 'g')
+			{
+				dst_png = true;
+			}
+		}
+	}
+	
+	w2xconv_convert_mat(conv, image_dst, image_src, denoise_level, scale, blockSize, background, png_rgb, dst_png);
+	
+	std::vector<int> compression_params;	
+	for ( int i = 0; i < sizeof(imwrite_params); i = i + 1 )
+	{
+		compression_params.push_back(imwrite_params[i]);
+	}	
+
+	if (!cv::imwrite(dst_path, image_dst, compression_params)) {
+		setPathError(conv,
+			     W2XCONV_ERROR_IMWRITE_FAILED,
+			     dst_path);
+		return -1;
+	}
+
+	double time_end = getsec();
+
+	conv->flops.process_sec += time_end - time_start;
+
+	//printf("== %f == \n", conv->impl->env.transfer_wait);
+
+	return 0;
+}
+
+
 #if defined(WIN32) && defined(UNICODE)
 
 void read_imageW(cv::Mat* image, const WCHAR* filepath, int flags=cv::IMREAD_COLOR) {
@@ -1479,7 +1560,7 @@ void read_imageW(cv::Mat* image, const WCHAR* filepath, int flags=cv::IMREAD_COL
     delete[] imgBuffer;
 }
 
-bool write_imageW(const WCHAR* filepath, cv::Mat& img, 	std::vector<int>& param)
+bool write_imageW(const WCHAR* filepath, cv::Mat& img, int* param)
 {
 	FILE* pFile;
 	std::vector<uchar> imageBuffer;
@@ -1488,7 +1569,12 @@ bool write_imageW(const WCHAR* filepath, cv::Mat& img, 	std::vector<int>& param)
 	ext_w = ext_w.substr(ext_w.find_last_of(L'.'));
 	ext.assign(ext_w.begin(), ext_w.end());
 	
-	if(!cv::imencode(ext.c_str(),img, imageBuffer, param) )
+	std::vector<int> compression_params;	
+	for ( int i = 0; i < sizeof(param); i = i + 1 )
+	{
+		compression_params.push_back(param[i]);
+	}	
+	if(!cv::imencode(ext.c_str(),img, imageBuffer, compression_params) )
 		return false;
 	
     pFile = _wfopen(filepath, L"wb+");
@@ -1501,17 +1587,10 @@ bool write_imageW(const WCHAR* filepath, cv::Mat& img, 	std::vector<int>& param)
     return true;
 }
 
-#endif
-
-int w2xconv_convert_file(
+int w2xconv_convert_fileW(
 	struct W2XConv *conv,
-#if defined(WIN32) && defined(UNICODE)
 	const WCHAR *dst_path,
 	const WCHAR *src_path,
-#else
-	const char *dst_path,
-	const char *src_path,
-#endif
 	int denoise_level,
 	double scale,
 	int blockSize,
@@ -1520,12 +1599,7 @@ int w2xconv_convert_file(
 	double time_start = getsec();
 
 	FILE *png_fp = nullptr;
-	
-#if defined(WIN32) && defined(UNICODE)
 	png_fp = _wfopen(src_path, L"rb");
-#else
-	png_fp = fopen(src_path, "rb");
-#endif
 
 	if (png_fp == nullptr) {
 		setPathError(conv, W2XCONV_ERROR_IMREAD_FAILED, src_path);
@@ -1551,8 +1625,6 @@ int w2xconv_convert_file(
 	 * IMREAD_UNCHANGED + png       : BGR or BGRA
 	 * IMREAD_UNCHANGED + otherwise : ???
 	 */
-	 
-#if defined(WIN32) && defined(UNICODE)
 	if (png_rgb) {
 		read_imageW(&image_src, src_path, cv::IMREAD_UNCHANGED);
 	} else {
@@ -1572,114 +1644,10 @@ int w2xconv_convert_file(
 			}
 		}
 	}
-#else
-	if (png_rgb) {
-		image_src = cv::imread(src_path, cv::IMREAD_UNCHANGED);
-	} else {
-		image_src = cv::imread(src_path, cv::IMREAD_COLOR);
-	}
 
-	bool dst_png = false;
-	{
-		size_t len = strlen(dst_path);
-		if (len >= 4) {
-			if (tolower(dst_path[len-4]) == '.' &&
-			    tolower(dst_path[len-3]) == 'p' &&
-			    tolower(dst_path[len-2]) == 'n' &&
-			    tolower(dst_path[len-1]) == 'g')
-			{
-				dst_png = true;
-			}
-		}
-	}
-#endif
-	
-	// divide images in to 4^n pieces when width is 6000/12000/18000....
-	std::vector<cv::Mat> pieces, converted;
-	
-	pieces.push_back(image_src);
-	
-	while(pieces.front().rows * pieces.front().cols > 6000 * 6000)
-	{
-		cv::Mat front = pieces.front();
-		pieces.erase(pieces.begin());
-		int r=front.rows, c=front.cols;
-		int h_r=r/2, h_c=c/2;
-		pieces.push_back(front(cv::Range(0,h_r), cv::Range(0,h_c)));
-		pieces.push_back(front(cv::Range(0,h_r), cv::Range(h_c,c)));
-		pieces.push_back(front(cv::Range(h_r,r), cv::Range(0,h_c)));
-		pieces.push_back(front(cv::Range(h_r,r), cv::Range(h_c,c)));
-	}
-	
+	w2xconv_convert_mat(conv, image_dst, image_src, denoise_level, scale, blockSize, background, png_rgb, dst_png);
 
-	/*
-	for (int i=0; i<pieces.size(); i++)
-	{
-		char name[20]="";
-		sprintf(name, "test_slices_%d.png", i);
-		cv::imwrite(name, pieces.at(i));
-	}
-	*/
-	
-	for( int i=0; i<pieces.size(); i++ )
-	{
-		cv::Mat res;
-		printf("Proccessing [%d/%zu] slices\n", i, pieces.size());
-		w2xconv_convert_mat(conv, res, pieces.at(i), denoise_level, scale, blockSize, background, png_rgb, dst_png);
-		converted.push_back(res);
-	}
-	
-	// int j=0;	// for test_merge
-	
-	// combine images
-	printf("Merging slices in to one image...\n");
-	while (converted.size() > 1)
-	{
-		int i=0;
-		cv::Mat quarter[4], merged;
-		/*		
-		char name[20]="";
-		sprintf(name, "test_merge%d.png", j++);
-		*/
-		
-		for (i=0; i<4 && i<converted.size(); i++){
-			//printf("copy.. %d/%llu\n", i+1, converted.size()); 
-			quarter[i] = converted.at(i);
-		}
-		//printf("erase.. from %d / %llu\n", i, converted.size()); 
-		converted.erase(converted.begin(), converted.begin()+i);
-		
-		//printf("vec size: %llu\n", converted.size()); 
-		
-		//printf("merge horizon\n"); 
-		hconcat(quarter[0], quarter[1], quarter[0]);
-		hconcat(quarter[2], quarter[3], quarter[2]);
-		
-		//printf("merge vertical\n"); 
-		vconcat(quarter[0], quarter[2], merged);
-		
-		//printf("push merged mat\n"); 
-		converted.push_back(merged);
-		
-		//printf("imwrite\n"); 
-		//cv::imwrite(name, merged);
-	}
-	
-	image_dst = converted.front();
-	
-	//cv::imwrite("test_out.png", converted.front());
-	
-	std::vector<int> compression_params;	
-	for ( int i = 0; i < sizeof(imwrite_params); i = i + 1 )
-	{
-		compression_params.push_back(imwrite_params[i]);
-	}	
-	
-#if defined(WIN32) && defined(UNICODE)
-	if (!write_imageW(dst_path, image_dst, compression_params)) {
-#else
-	if (!cv::imwrite(dst_path, image_dst, compression_params)) {
-#endif
+	if (!write_imageW(dst_path, image_dst, imwrite_params)) {
 		setPathError(conv,
 			     W2XCONV_ERROR_IMWRITE_FAILED,
 			     dst_path);
@@ -1694,6 +1662,7 @@ int w2xconv_convert_file(
 
 	return 0;
 }
+#endif
 
 
 static void

@@ -458,14 +458,10 @@ std::wstring generate_output_location(std::wstring inputFileName, std::wstring o
 }
 #endif
 
+
 void convert_file(ConvInfo info, fs::path inputName, fs::path output) {
 	//std::cout << "Operating on: " << fs::absolute(inputName).string() << std::endl;
-	
-#if defined(WIN32) && defined(UNICODE)
-	std::wstring outputName = generate_output_location(fs::absolute(inputName).wstring(), output.wstring(), info.mode, info.NRLevel, info.scaleRatio, info.outputFormat);
-#else
 	std::string outputName = generate_output_location(fs::absolute(inputName).string(), output.string(), info.mode, info.NRLevel, info.scaleRatio, info.outputFormat);
-#endif
 
 	int _nrLevel = -1;
 
@@ -480,11 +476,7 @@ void convert_file(ConvInfo info, fs::path inputName, fs::path output) {
 
 	int error = w2xconv_convert_file(info.converter,
 			outputName.c_str(),
-#if defined(WIN32) && defined(UNICODE)
-			fs::absolute(inputName).wstring().c_str(),
-#else
 			fs::absolute(inputName).string().c_str(),
-#endif
 			_nrLevel,
 			_scaleRatio,
 			info.blockSize,
@@ -493,6 +485,35 @@ void convert_file(ConvInfo info, fs::path inputName, fs::path output) {
 
 	check_for_errors(info.converter, error);
 }
+
+#if defined(WIN32) && defined(UNICODE)
+void convert_fileW(ConvInfo info, fs::path inputName, fs::path output) {
+	//std::cout << "Operating on: " << fs::absolute(inputName).string() << std::endl;
+	std::wstring outputName = generate_output_location(fs::absolute(inputName).wstring(), output.wstring(), info.mode, info.NRLevel, info.scaleRatio, info.outputFormat);
+
+	int _nrLevel = -1;
+
+	if (strcmp(info.mode.c_str(), "noise")==0 || strcmp(info.mode.c_str(), "noise-scale")==0) {
+		_nrLevel = info.NRLevel;
+	}
+
+	double _scaleRatio = 1;
+	if (strcmp(info.mode.c_str(), "scale")==0 || strcmp(info.mode.c_str(), "noise-scale")==0) {
+		_scaleRatio = info.scaleRatio;
+	}
+
+	int error = w2xconv_convert_fileW(info.converter,
+			outputName.c_str(),
+			fs::absolute(inputName).wstring().c_str(),
+			_nrLevel,
+			_scaleRatio,
+			info.blockSize,
+			info.imwrite_params
+		);
+
+	check_for_errors(info.converter, error);
+}
+#endif
 
 
 
@@ -857,7 +878,11 @@ int main(int argc, char** argv)
 			);
 
 			try {
+#if defined(WIN32) && defined(UNICODE)
+				convert_fileW(convInfo, fn, output);
+#else
 				convert_file(convInfo, fn, output);
+#endif
 			}
 			catch (const std::exception& e) {
 				numErrors++;
@@ -891,7 +916,11 @@ int main(int argc, char** argv)
 		double time_file_start = getsec();
 		std::cout << "Processing file [1/1] \"" << input << "\":" << (verbose ? "\n" : " ");
 		try {
+#if defined(WIN32) && defined(UNICODE)
+			convert_fileW(convInfo, input, output);
+#else
 			convert_file(convInfo, input, output);
+#endif
 		}
 		catch (const std::exception& e) {
 			numErrors++;
