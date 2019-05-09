@@ -1608,16 +1608,14 @@ int w2xconv_convert_file(
 	while(pieces.front().rows * pieces.front().cols * max_scale_ratio * max_scale_ratio > 64000000)
 	{
 		cv::Mat front = pieces.front();
-		int r = front.rows, c = front.cols;
-		int h_r = (int)(r/2), h_c = (int)(c/2);
-		int pad_r = (int)(pad > h_r ? r * 0.2 : pad);
-		int pad_c = (int)(pad > h_c ? c * 0.2 : pad);
+		int r=front.rows, c=front.cols;
+		int h_r=r/2, h_c=c/2;
 		
 		// div in 4 and add padding to input.
-		pieces.push_back(front(cv::Range(0, h_r + pad_r), cv::Range(0, h_c + pad_c)));
-		pieces.push_back(front(cv::Range(0, h_r + pad_r), cv::Range(h_c - pad_c, c)));
-		pieces.push_back(front(cv::Range(h_r - pad_r, r), cv::Range(0, h_c + pad_c)));
-		pieces.push_back(front(cv::Range(h_r - pad_r, r), cv::Range(h_c - pad_c, c)));
+		pieces.push_back(front(cv::Range(0,h_r+pad), cv::Range(0,h_c+pad)));
+		pieces.push_back(front(cv::Range(0,h_r+pad), cv::Range(h_c-pad,c)));
+		pieces.push_back(front(cv::Range(h_r-pad,r), cv::Range(0,h_c+pad)));
+		pieces.push_back(front(cv::Range(h_r-pad,r), cv::Range(h_c-pad,c)));
 		
 		// delete piece
 		pieces.erase(pieces.begin());
@@ -1654,20 +1652,15 @@ int w2xconv_convert_file(
 		// }
 		double time_a = getsec(), time_b = 0;
 		
-		int r = converted.at(0).rows, c = converted.at(0).cols;
-		int h_r = (int)(r/2), h_c = (int)(c/2);
+		int cut = (int) (pad * scale);
 		
-		int cut = (int)(pad * scale);
-		int cut_r = (int)(cut > h_r ? r * 0.2 : cut);
-		int cut_c = (int)(cut > h_c ? c * 0.2 : cut);
-		
-		tmp=converted.at(0)(cv::Range(0, converted.at(0).rows - cut_r), cv::Range(0, converted.at(0).cols - cut_c));
+		tmp=converted.at(0)(cv::Range(0, converted.at(0).rows - cut), cv::Range(0, converted.at(0).cols - cut));
 		tmp.copyTo(quarter[0]);
-		tmp=converted.at(1)(cv::Range(0, converted.at(1).rows - cut_r), cv::Range(cut_c, converted.at(1).cols));
+		tmp=converted.at(1)(cv::Range(0, converted.at(1).rows - cut), cv::Range(cut, converted.at(1).cols));
 		tmp.copyTo(quarter[1]);
-		tmp=converted.at(2)(cv::Range(cut_r, converted.at(2).rows), cv::Range(0, converted.at(2).cols - cut_c));
+		tmp=converted.at(2)(cv::Range(cut, converted.at(2).rows), cv::Range(0, converted.at(2).cols - cut));
 		tmp.copyTo(quarter[2]);
-		tmp=converted.at(3)(cv::Range(cut_r, converted.at(3).rows), cv::Range(cut_c, converted.at(3).cols));
+		tmp=converted.at(3)(cv::Range(cut, converted.at(3).rows), cv::Range(cut, converted.at(3).cols));
 		tmp.copyTo(quarter[3]);
 		
 		converted.erase(converted.begin(), converted.begin()+4);
