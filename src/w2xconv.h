@@ -200,13 +200,13 @@ W2XCONV_EXPORT void w2xconv_fini(struct W2XConv *conv);
 
 
 W2XCONV_EXPORT int w2xconv_convert_file(struct W2XConv *conv,
-#if defined(WIN32) && defined(UNICODE)	
+#if defined(WIN32) && defined(UNICODE)		
 					const WCHAR *dst_path,
 					const WCHAR *src_path,
 #else
 					const char *dst_path,
 					const char *src_path,
-#endif
+#endif			
 					int denoise_level, /* -1:none, 0:L0 denoise, 1:L1 denoise, 2:L2 denoise, 3:L3 denoise  */
 					double scale,
 					int block_size,

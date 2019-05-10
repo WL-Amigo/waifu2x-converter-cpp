@@ -1495,7 +1495,7 @@ void read_imageW(cv::Mat* image, const WCHAR* filepath, int flags=cv::IMREAD_COL
     delete[] imgBuffer;
 }
 
-bool write_imageW(const WCHAR* filepath, cv::Mat& img, 	std::vector<int>& param)
+bool write_imageW(const WCHAR* filepath, cv::Mat& img, std::vector<int>& param)
 {
 	FILE* pFile;
 	std::vector<uchar> imageBuffer;
@@ -1516,12 +1516,11 @@ bool write_imageW(const WCHAR* filepath, cv::Mat& img, 	std::vector<int>& param)
     fclose(pFile);
     return true;
 }
-
 #endif
 
 int w2xconv_convert_file(
 	struct W2XConv *conv,
-#if defined(WIN32) && defined(UNICODE)
+#if defined(WIN32) && defined(UNICODE)	
 	const WCHAR *dst_path,
 	const WCHAR *src_path,
 #else
@@ -1567,14 +1566,13 @@ int w2xconv_convert_file(
 	 * IMREAD_UNCHANGED + png       : BGR or BGRA
 	 * IMREAD_UNCHANGED + otherwise : ???
 	 */
-	 
 #if defined(WIN32) && defined(UNICODE)
 	if (png_rgb) {
 		read_imageW(&image_src, src_path, cv::IMREAD_UNCHANGED);
 	} else {
 		read_imageW(&image_src, src_path, cv::IMREAD_COLOR);
 	}
-
+	
 	bool dst_png = false;
 	{
 		size_t len = wcslen(dst_path);
@@ -1588,7 +1586,7 @@ int w2xconv_convert_file(
 			}
 		}
 	}
-#else
+#else	
 	if (png_rgb) {
 		image_src = cv::imread(src_path, cv::IMREAD_UNCHANGED);
 	} else {
@@ -1734,7 +1732,7 @@ int w2xconv_convert_file(
 	for ( int i = 0; i < sizeof(imwrite_params); i = i + 1 )
 	{
 		compression_params.push_back(imwrite_params[i]);
-	}	
+	}
 	
 #if defined(WIN32) && defined(UNICODE)
 	if (!write_imageW(dst_path, image_dst, compression_params)) {
