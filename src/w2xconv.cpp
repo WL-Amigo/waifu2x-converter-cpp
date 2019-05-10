@@ -1618,7 +1618,8 @@ int w2xconv_convert_file(
 	const static int pad = 20;	// give pad to avoid distortions in edge
 	
 	// w2x converts 2x and down scales when scale_ratio is not power of 2 (ex: 2.28 -> scale x4 - > down scale)
-	int max_scale_time = static_cast<int>(std::ceil(std::log2(scale)));
+	int max_scale = static_cast<int>(std::pow(2, std::ceil(std::log2(scale))));
+	
 	
 	// 8000 = sqr(INT_MAX / 32) - 191, leave 191px for safe conversion. (64000000 = 8000 * 8000)
 	// if max_scale is 64, input limits to 125x125, if max_scale is 128, input limits to 62*62
@@ -1629,7 +1630,7 @@ int w2xconv_convert_file(
 		setError(conv, W2XCONV_ERROR_SCALE_LIMIT);
 		return -1;
 	}
-	else if(max_scale_time > 7 && pieces.front().rows * pieces.front().cols << (max_scale_time << 1) > 64000000){
+	else if(max_scale > 128 && pieces.front().rows * pieces.front().cols > 178700000 / max_scale / max_scale){
 		
 		if( pieces.front().rows * pieces.front().cols > 976 )
 			setError(conv, W2XCONV_ERROR_SCALE_LIMIT_128);
@@ -1640,7 +1641,7 @@ int w2xconv_convert_file(
 		return -1;
 	}
 	
-	while(pieces.front().rows * pieces.front().cols << (max_scale_time << 1) > 64000000)
+	while(pieces.front().rows * pieces.front().cols > 178700000 / max_scale / max_scale)
 	{
 		cv::Mat front = pieces.front();
 		int r=front.rows, c=front.cols;
