@@ -1520,7 +1520,7 @@ bool write_imageW(const WCHAR* filepath, cv::Mat& img, std::vector<int>& param)
 
 int w2xconv_convert_file(
 	struct W2XConv *conv,
-#if defined(WIN32) && defined(UNICODE)	
+#if defined(WIN32) && defined(UNICODE)
 	const WCHAR *dst_path,
 	const WCHAR *src_path,
 #else
@@ -1566,6 +1566,7 @@ int w2xconv_convert_file(
 	 * IMREAD_UNCHANGED + png       : BGR or BGRA
 	 * IMREAD_UNCHANGED + otherwise : ???
 	 */
+	 
 #if defined(WIN32) && defined(UNICODE)
 	if (png_rgb) {
 		read_imageW(&image_src, src_path, cv::IMREAD_UNCHANGED);
@@ -1586,7 +1587,7 @@ int w2xconv_convert_file(
 			}
 		}
 	}
-#else	
+#else
 	if (png_rgb) {
 		image_src = cv::imread(src_path, cv::IMREAD_UNCHANGED);
 	} else {
