@@ -1592,14 +1592,14 @@ int w2xconv_convert_file(
 	}
 #endif
 
+	w2xconv_convert_mat(conv, image_dst, image_src, denoise_level, scale, blockSize, background, png_rgb, dst_png);
+
 	std::vector<int> compression_params;	
 	for ( int i = 0; i < sizeof(imwrite_params); i = i + 1 )
 	{
 		compression_params.push_back(imwrite_params[i]);
 	}
-
-	w2xconv_convert_mat(conv, image_dst, image_src, denoise_level, scale, blockSize, background, png_rgb, dst_png);
-
+	
 #if defined(WIN32) && defined(UNICODE)
 	if (!write_imageW(dst_path, image_dst, compression_params)) {
 #else
