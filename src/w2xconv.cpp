@@ -500,19 +500,11 @@ w2xconv_strerror(W2XConvError *e)
 		break;
 		
 	case W2XCONV_ERROR_SCALE_LIMIT:
-		oss << "waifu2x does not supports over x1024.0 scale."; 
+		oss << "image scale is too big to convert.";
 		break;
 		
-	case W2XCONV_ERROR_SCALE_LIMIT_512:
-		oss << "this image cannot converted over x512.0 scale."; 
-		break;
-		
-	case W2XCONV_ERROR_SCALE_LIMIT_256:
-		oss << "this image cannot converted over x256.0 scale."; 
-		break;
-		
-	case W2XCONV_ERROR_SCALE_LIMIT_128:
-		oss << "this image cannot converted over x128.0 scale."; 
+	case W2XCONV_ERROR_SIZE_LIMIT:
+		oss << "image width (or height) under 40px cannot converted in this scale."; 
 		break;
 	}
 
@@ -1623,24 +1615,31 @@ int w2xconv_convert_file(
 	printf("max_scale: %d\n", max_scale);
 	char name[60]="";	// for imwrite test
 	
-	// 8000 = sqr(INT_MAX / 32) - 191, leave 191px for safe conversion. (64000000 = 8000 * 8000)
-	// if max_scale is 64, input limits to 125x125, if max_scale is 128, input limits to 62*62
-	// max_scale over 128 cannot handled by this slicing fucntion.
-	// with scale > 1024, it only can converts less then w x h = 15px, which is no meaning to run w2x.
-	// with scale > 2048, you cannot convert it at all.
-	if(scale > 1024){
-		setError(conv, W2XCONV_ERROR_SCALE_LIMIT);
-		return -1;
-	}
-	else if(max_scale > 128 && pieces.front().rows * pieces.front().cols > 178700000 / max_scale / max_scale){
-		
-		if( pieces.front().rows * pieces.front().cols > 976 )
-			setError(conv, W2XCONV_ERROR_SCALE_LIMIT_128);
-		else if( pieces.front().rows * pieces.front().cols > 244 )
-			setError(conv, W2XCONV_ERROR_SCALE_LIMIT_256);
-		else if( pieces.front().rows * pieces.front().cols > 61 )
-			setError(conv, W2XCONV_ERROR_SCALE_LIMIT_512);
-		return -1;
+	// comment is for slicer function
+	// output file pixel above 178,756,920px is limit. leave 56,920px for safe conversion. see issue #156
+	// all images that needs slices, it will require 20 px padding to 2 edges (input should w > 40, h > 40).
+	// with max_scale is 2, it only can converts less then (w+20) x (h+20) = 44,675,000 px.
+	// with max_scale is 4, it only can converts less then (w+20) x (h+20) = 11,168,750 px.
+	// with max_scale is 8, it only can converts less then (w+20) x (h+20) = 2,792,187 px.
+	// with max_scale is 16, it only can converts less then (w+20) x (h+20) = 698,046 px.
+	// with max_scale is 32, it only can converts less then (w+20) x (h+20) = 174,511 px.
+	// with max_scale is 64, it only can converts less then (w+20) x (h+20) = 3,627 px.
+	// with max_scale is 128, it only can converts less then (w+20) x (h+20) = 10,906 px.
+	// with max_scale is 256, it only can converts less then (w+20) x (h+20) = 2,726 px.
+	// with max_scale is 512, it only can converts less then (w+20) x (h+20) = 681 px.
+	// with max_scale is 1024, it only can converts less then (w+20) x (h+20) = 170 px, padding exceed limit (20 x 20 = 400).
+	// with max_scale is 2048, it only can converts less then (w+20) x (h+20) = 42 px, which is no meaning to run w2x.
+	// with max_scale is 4096, you cannot convert it at all.
+	
+	if( pieces.front().rows * pieces.front().cols > 178700000 / max_scale / max_scale ){
+		if( max_scale == 1024 ){
+			setError(conv, W2XCONV_ERROR_SCALE_LIMIT);
+			return -1;
+		}
+		else if( pieces.front().rows < 40 || pieces.front().cols < 40 ){
+			setError(conv, W2XCONV_ERROR_SIZE_LIMIT);
+			return -1;
+		}
 	}
 	
 	while(pieces.front().rows * pieces.front().cols > 178700000 / max_scale / max_scale)
@@ -1648,6 +1647,11 @@ int w2xconv_convert_file(
 		cv::Mat front = pieces.front();
 		int r=front.rows, c=front.cols;
 		int h_r=r/2, h_c=c/2;
+		
+		if ( pad >= h_r || pad >= h_c ){
+			setError(conv, W2XCONV_ERROR_SCALE_LIMIT);
+			return -1;
+		}
 		
 		// div in 4 and add padding to input.
 		pieces.push_back(front(cv::Range(0,h_r+pad), cv::Range(0,h_c+pad)));
