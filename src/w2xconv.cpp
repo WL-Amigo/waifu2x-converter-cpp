@@ -1621,6 +1621,7 @@ int w2xconv_convert_file(
 	int max_scale = static_cast<int>(std::pow(2, std::ceil(std::log2(scale))));
 	
 	printf("max_scale: %d\n", max_scale);
+	char name[60]="";	// for imwrite test
 	
 	// 8000 = sqr(INT_MAX / 32) - 191, leave 191px for safe conversion. (64000000 = 8000 * 8000)
 	// if max_scale is 64, input limits to 125x125, if max_scale is 128, input limits to 62*62
@@ -1662,8 +1663,7 @@ int w2xconv_convert_file(
 	{
 		cv::Mat res;
 		
-		char name[40]="";
-		sprintf(name, "test_padded_slices_%d.png", i);
+		sprintf(name, "[test] slice%d_padded.png", i);
 		cv::imwrite(name, pieces.at(i));
 		
 		//if (conv->enable_log) {
@@ -1674,8 +1674,7 @@ int w2xconv_convert_file(
 		
 		// pieces.erase(pieces.begin()); // not needed. w2xconv_convert_mat will automatically release memory of input mat.
 		
-		//char name[40]="";
-		sprintf(name, "test_converted_slices_%d.png", i);
+		sprintf(name, "[test] slice%d_converted.png", i);
 		cv::imwrite(name, res);
 	}
 	
@@ -1718,8 +1717,7 @@ int w2xconv_convert_file(
 		
 		
 		printf("imwriting merged image\n"); 
-		char name[40]="";
-		sprintf(name, "test_merged%d.png", j++);
+		sprintf(name, "[test] merge_step%d.png", j++);
  		cv::imwrite(name, merged);
 		
 	}
