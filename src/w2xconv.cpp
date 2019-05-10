@@ -1620,6 +1620,7 @@ int w2xconv_convert_file(
 	// w2x converts 2x and down scales when scale_ratio is not power of 2 (ex: 2.28 -> scale x4 - > down scale)
 	int max_scale = static_cast<int>(std::pow(2, std::ceil(std::log2(scale))));
 	
+	printf("max_scale: %d\n", max_scale);
 	
 	// 8000 = sqr(INT_MAX / 32) - 191, leave 191px for safe conversion. (64000000 = 8000 * 8000)
 	// if max_scale is 64, input limits to 125x125, if max_scale is 128, input limits to 62*62
@@ -1663,11 +1664,11 @@ int w2xconv_convert_file(
 		
 		char name[40]="";
 		sprintf(name, "test_padded_slices_%d.png", i);
-		cv::imwrite(name, res);
+		cv::imwrite(name, pieces.at(i));
 		
-		if (conv->enable_log) {
+		//if (conv->enable_log) {
 			printf("\nProccessing [%d/%zu] slices\n", i+1, pieces.size());
-		}
+		//}
 		w2xconv_convert_mat(conv, res, pieces.at(i), denoise_level, scale, blockSize, background, png_rgb, dst_png);
 		converted.push_back(res);
 		
@@ -1686,9 +1687,9 @@ int w2xconv_convert_file(
 		cv::Mat quarter[4], tmp, merged;
 		int cut = (int) (pad * scale);
 		
-		if (conv->enable_log) {
+		//if (conv->enable_log) {
 			printf("\nMerging slices back to one image... in queue: %zd slices\n", converted.size());
-		}
+		//}
 		
 		//double time_a = getsec(), time_b = 0;
 		
@@ -1725,9 +1726,9 @@ int w2xconv_convert_file(
 	
 	image_dst = converted.front();
 	
-	if (conv->enable_log) {
+	//if (conv->enable_log) {
 		printf("Writing image to file...\n");
-	}
+	//}
 	
 	std::vector<int> compression_params;	
 	for ( int i = 0; i < sizeof(imwrite_params); i = i + 1 )
