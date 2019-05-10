@@ -1672,8 +1672,7 @@ int w2xconv_convert_file(
 		
 		// pieces.erase(pieces.begin()); // not needed. w2xconv_convert_mat will automatically release memory of input mat.
 		
-		
-		char name[40]="";
+		//char name[40]="";
 		sprintf(name, "test_converted_slices_%d.png", i);
 		cv::imwrite(name, res);
 	}
