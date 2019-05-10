@@ -1607,7 +1607,7 @@ int w2xconv_convert_file(
 	pieces.push_back(image_src);
 	image_src.release();	// push_back does deep copy
 	
-	const static int pad = 20;	// give pad to avoid distortions in edge
+	const static int pad = 15;	// give pad to avoid distortions in edge
 	
 	// w2x converts 2x and down scales when scale_ratio is not power of 2 (ex: 2.28 -> scale x4 - > down scale)
 	int max_scale = static_cast<int>(std::pow(2, std::ceil(std::log2(scale))));
@@ -1648,7 +1648,9 @@ int w2xconv_convert_file(
 		int r=front.rows, c=front.cols;
 		int h_r=r/2, h_c=c/2;
 		
-		if ( pad >= h_r || pad >= h_c ){
+		// std::cout << "r: " << r << ", c: " << c << std::endl;
+		
+		if ( pad >= r/3 || pad >= c/3 ){
 			setError(conv, W2XCONV_ERROR_SCALE_LIMIT);
 			return -1;
 		}
