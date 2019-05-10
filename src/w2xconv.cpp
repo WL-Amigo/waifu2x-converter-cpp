@@ -1566,7 +1566,7 @@ int w2xconv_convert_file(
 	 * IMREAD_UNCHANGED + png       : BGR or BGRA
 	 * IMREAD_UNCHANGED + otherwise : ???
 	 */
-	 
+	
 #if defined(WIN32) && defined(UNICODE)
 	if (png_rgb) {
 		read_imageW(&image_src, src_path, cv::IMREAD_UNCHANGED);
