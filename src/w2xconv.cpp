@@ -1610,7 +1610,7 @@ int w2xconv_convert_file(
 	int max_scale = static_cast<int>(std::pow(2, std::ceil(std::log2(scale))));
 	
 	printf("max_scale: %d\n", max_scale);
-	char name[60]="";	// for imwrite test
+	char name[70]="";	// for imwrite test
 	
 	// comment is for slicer function
 	// output file pixel above 178,756,920px is limit. leave 56,920px for safe conversion. see issue #156
@@ -1641,12 +1641,14 @@ int w2xconv_convert_file(
 	
 	if(denoise_level != -1)
 	{
-		printf("\nDenoise before Proccessing...\n");
+		//if (conv->enable_log) {
+			printf("\nDenoise before Proccessing...\n");
+		//}
 		w2xconv_convert_mat(conv, image_src, image_src, denoise_level, 1, blockSize, background, png_rgb, dst_png);
 	}
 	
-	double target_scale = scale;
 	int iteration_2x = static_cast<int>(std::ceil(std::log2(scale))) ;
+	double shrinkRatio = scale / std::pow(2.0, static_cast<double>(iteration_2x));
 	
 	image_src.copyTo(image_dst);
 	image_src.release();
@@ -1655,7 +1657,6 @@ int w2xconv_convert_file(
 	{
 		// divide images in to 4^n pieces when output width is bigger then 8000^2....
 		std::vector<cv::Mat> pieces, converted;
-		double step_scale = ld >= iteration_2x - 1 ? scale / std::pow(2, iteration_2x - 1) : 2;
 			
 		//if (conv->enable_log) {
 			printf("\nProccessing [%d/%d] steps...\n", ld+1, iteration_2x);
@@ -1683,20 +1684,20 @@ int w2xconv_convert_file(
 		{
 			cv::Mat res;
 			
-			sprintf(name, "[test] slice%d_padded.png", i);
+			sprintf(name, "[test] step%d_slice%d_padded.png", ld, i);
 			cv::imwrite(name, pieces.at(i));
 			
 			//if (conv->enable_log) {
-				printf("\nProccessing [%d/%zu] slices x%lf\n", i+1, pieces.size(), step_scale);
+				printf("\nProccessing [%d/%zu] slices\n", i+1, pieces.size());
 			//}
 			
-			w2xconv_convert_mat(conv, res, pieces.at(i), -1, step_scale, blockSize, background, png_rgb, dst_png);
+			w2xconv_convert_mat(conv, res, pieces.at(i), -1, 2, blockSize, background, png_rgb, dst_png);
 				
 			converted.push_back(res);
 			
 			// pieces.erase(pieces.begin()); // not needed. w2xconv_convert_mat will automatically release memory of input mat.
 			
-			sprintf(name, "[test] slice%d_converted.png", i);
+			sprintf(name, "[test] step%d_slice%d_converted.png", ld, i);
 			cv::imwrite(name, res);
 		}
 		
@@ -1706,7 +1707,7 @@ int w2xconv_convert_file(
 		while (converted.size() > 1)
 		{
 			cv::Mat quarter[4], tmp, merged;
-			int cut = (int) (pad * step_scale);
+			int cut = (int) (pad * 2);
 			
 			//if (conv->enable_log) {
 				printf("\nMerging slices back to one image... in queue: %zd slices\n", converted.size());
@@ -1725,11 +1726,11 @@ int w2xconv_convert_file(
 			
 			converted.erase(converted.begin(), converted.begin()+4);
 			
-			printf("merge horizon\n"); 
+			//printf("merge horizon\n"); 
 			hconcat(quarter[0], quarter[1], quarter[0]);
 			hconcat(quarter[2], quarter[3], quarter[2]);
 			
-			printf("merge vertical\n"); 
+			//printf("merge vertical\n"); 
 			vconcat(quarter[0], quarter[2], merged);
 			
 			//time_b = getsec();
@@ -1745,8 +1746,22 @@ int w2xconv_convert_file(
 		image_dst = converted.front();
 	}
 	
+	if (shrinkRatio != 0.0) {
+		//if (conv->enable_log) {
+			printf("\nResizing image to input scale...\n");
+		//}
+		cv::Size lastImageSize = image_dst.size();
+		lastImageSize.width =
+			static_cast<int>(static_cast<double>(lastImageSize.width
+							     * shrinkRatio));
+		lastImageSize.height =
+			static_cast<int>(static_cast<double>(lastImageSize.height
+							     * shrinkRatio));
+		cv::resize(image_dst, image_dst, lastImageSize, 0, 0, cv::INTER_LINEAR);
+	}
+	
 	//if (conv->enable_log) {
-		printf("Writing image to file...\n");
+		printf("\nWriting image to file...\n");
 	//}
 	
 	std::vector<int> compression_params;	
