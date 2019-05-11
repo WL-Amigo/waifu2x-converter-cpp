@@ -726,9 +726,9 @@ apply_scale(struct W2XConv *conv,
 
 	// 2x scaling
 	for (int nIteration = 0; nIteration < iterTimesTwiceScaling; nIteration++) {
-		if (conv->enable_log) {
+		//if (conv->enable_log) {
 			printf("Step %02d/%02d, 2x Scaling:\n", w2x_current_step++, w2x_total_steps);
-		}
+		//}
 		cv::Size imageSize = image.size();
 		imageSize.width *= 2;
 		imageSize.height *= 2;
@@ -1388,9 +1388,9 @@ w2xconv_convert_mat(struct W2XConv *conv,
 	}
 	
 	if (denoise_level != -1) {
-		if (conv->enable_log) {
+		//if (conv->enable_log) {
 			printf("Step %02d/%02d: Denoising\n", w2x_current_step++, ++w2x_total_steps);
-		}
+		//}
 		apply_denoise(conv, image, denoise_level, blockSize, fmt);
 	}
 
@@ -1601,11 +1601,8 @@ int w2xconv_convert_file(
 	}
 #endif
 	
-	// divide images in to 4^n pieces when output width is bigger then 8000^2....
-	std::vector<cv::Mat> pieces, converted;
-	
-	pieces.push_back(image_src);
-	image_src.release();	// push_back does deep copy
+	//pieces.push_back(image_src);
+	//image_src.release();	// push_back does deep copy
 	
 	const static int pad = 12;	// give pad to avoid distortions in edge
 	
@@ -1626,109 +1623,121 @@ int w2xconv_convert_file(
 	// with max_scale is 64, it only can converts less then (w+20) x (h+20) = 3,627 px.
 	// with max_scale is 128, it only can converts less then (w+20) x (h+20) = 10,906 px.
 	// with max_scale is 256, it only can converts less then (w+20) x (h+20) = 2,726 px.
-	// with max_scale is 512, it only can converts less then (w+20) x (h+20) = 681 px.
+	// with max_scale is 512, it only can converts less then (w+20) x (h+20) = 681 px. padding is all most eat everything (pieces are under 6px)
 	// with max_scale is 1024, it only can converts less then (w+20) x (h+20) = 170 px, padding exceed limit (20 x 20 = 400).
 	// with max_scale is 2048, it only can converts less then (w+20) x (h+20) = 42 px, which is no meaning to run w2x.
 	// with max_scale is 4096, you cannot convert it at all.
 	
-	if( pieces.front().rows * pieces.front().cols > 178700000 / max_scale / max_scale ){
-		if( max_scale == 1024 ){
+	if( image_src.rows * image_src.cols > 178700000 / 4 ){
+		if( max_scale >= 512 ){
 			setError(conv, W2XCONV_ERROR_SCALE_LIMIT);
 			return -1;
 		}
-		else if( pieces.front().rows < 40 || pieces.front().cols < 40 ){
+		else if( ( image_src.rows < 40 || image_src.cols < 40 ) && image_src.rows * image_src.cols > 178700000 / 4){
 			setError(conv, W2XCONV_ERROR_SIZE_LIMIT);
 			return -1;
 		}
 	}
 	
-	while(pieces.front().rows * pieces.front().cols > 178700000 / max_scale / max_scale)
+	double target_scale = scale;
+	int iteration_2x = static_cast<int>(std::ceil(std::log2(scale))) ;
+	
+	image_src.copyTo(image_dst);
+	image_src.release();
+	
+	for( int ld = 0; ld < iteration_2x ; ld++)
 	{
-		cv::Mat front = pieces.front();
-		int r=front.rows, c=front.cols;
-		int h_r=r/2, h_c=c/2;
+		// divide images in to 4^n pieces when output width is bigger then 8000^2....
+		std::vector<cv::Mat> pieces, converted;
+		double step_scale = ld >= iteration_2x - 1 ? scale / std::pow(2, iteration_2x - 1) : 2;
+			
+		//if (conv->enable_log) {
+			printf("\nProccessing [%d/%d] steps...\n", ld+1, iteration_2x);
+		//}
 		
-		// std::cout << "r: " << r << ", c: " << c << std::endl;
+		pieces.push_back(image_dst);
 		
-		if ( pad >= r/3 || pad >= c/3 ){
-			setError(conv, W2XCONV_ERROR_SCALE_LIMIT);
-			return -1;
+		while( pieces.front().rows * pieces.front().cols > 178700000 / 4 )
+		{
+			cv::Mat front = pieces.front();
+			int r=front.rows, c=front.cols;
+			int h_r=r/2, h_c=c/2;
+			
+			// div in 4 and add padding to input.
+			pieces.push_back(front(cv::Range(0,h_r+pad), cv::Range(0,h_c+pad)));
+			pieces.push_back(front(cv::Range(0,h_r+pad), cv::Range(h_c-pad,c)));
+			pieces.push_back(front(cv::Range(h_r-pad,r), cv::Range(0,h_c+pad)));
+			pieces.push_back(front(cv::Range(h_r-pad,r), cv::Range(h_c-pad,c)));
+			
+			// delete piece
+			pieces.erase(pieces.begin());
 		}
 		
-		// div in 4 and add padding to input.
-		pieces.push_back(front(cv::Range(0,h_r+pad), cv::Range(0,h_c+pad)));
-		pieces.push_back(front(cv::Range(0,h_r+pad), cv::Range(h_c-pad,c)));
-		pieces.push_back(front(cv::Range(h_r-pad,r), cv::Range(0,h_c+pad)));
-		pieces.push_back(front(cv::Range(h_r-pad,r), cv::Range(h_c-pad,c)));
+		for( int i=0; i<pieces.size(); i++ )
+		{
+			cv::Mat res;
+			
+			sprintf(name, "[test] slice%d_padded.png", i);
+			cv::imwrite(name, pieces.at(i));
+			
+			//if (conv->enable_log) {
+				printf("\nProccessing [%d/%zu] slices x%lf\n", i+1, pieces.size(), step_scale);
+			//}
+			
+			w2xconv_convert_mat(conv, res, pieces.at(i), denoise_level, step_scale, blockSize, background, png_rgb, dst_png);
+				
+			converted.push_back(res);
+			
+			// pieces.erase(pieces.begin()); // not needed. w2xconv_convert_mat will automatically release memory of input mat.
+			
+			sprintf(name, "[test] slice%d_converted.png", i);
+			cv::imwrite(name, res);
+		}
 		
-		// delete piece
-		pieces.erase(pieces.begin());
+		 int j=0;	// for test_merge
+		
+		// combine images
+		while (converted.size() > 1)
+		{
+			cv::Mat quarter[4], tmp, merged;
+			int cut = (int) (pad * step_scale);
+			
+			//if (conv->enable_log) {
+				printf("\nMerging slices back to one image... in queue: %zd slices\n", converted.size());
+			//}
+			
+			//double time_a = getsec(), time_b = 0;
+			
+			tmp=converted.at(0)(cv::Range(0, converted.at(0).rows - cut), cv::Range(0, converted.at(0).cols - cut));
+			tmp.copyTo(quarter[0]);
+			tmp=converted.at(1)(cv::Range(0, converted.at(1).rows - cut), cv::Range(cut, converted.at(1).cols));
+			tmp.copyTo(quarter[1]);
+			tmp=converted.at(2)(cv::Range(cut, converted.at(2).rows), cv::Range(0, converted.at(2).cols - cut));
+			tmp.copyTo(quarter[2]);
+			tmp=converted.at(3)(cv::Range(cut, converted.at(3).rows), cv::Range(cut, converted.at(3).cols));
+			tmp.copyTo(quarter[3]);
+			
+			converted.erase(converted.begin(), converted.begin()+4);
+			
+			printf("merge horizon\n"); 
+			hconcat(quarter[0], quarter[1], quarter[0]);
+			hconcat(quarter[2], quarter[3], quarter[2]);
+			
+			printf("merge vertical\n"); 
+			vconcat(quarter[0], quarter[2], merged);
+			
+			//time_b = getsec();
+			//printf("took %f\n", time_b - time_a); 
+			
+			converted.push_back(merged);
+			
+			
+			printf("imwriting merged image\n"); 
+			sprintf(name, "[test] merge_step%d_block%d.png", ld, j++);
+			cv::imwrite(name, merged);
+		}
+		image_dst = converted.front();
 	}
-	
-	for( int i=0; i<pieces.size(); i++ )
-	{
-		cv::Mat res;
-		
-		sprintf(name, "[test] slice%d_padded.png", i);
-		cv::imwrite(name, pieces.at(i));
-		
-		//if (conv->enable_log) {
-			printf("\nProccessing [%d/%zu] slices\n", i+1, pieces.size());
-		//}
-		w2xconv_convert_mat(conv, res, pieces.at(i), denoise_level, scale, blockSize, background, png_rgb, dst_png);
-		converted.push_back(res);
-		
-		// pieces.erase(pieces.begin()); // not needed. w2xconv_convert_mat will automatically release memory of input mat.
-		
-		sprintf(name, "[test] slice%d_converted.png", i);
-		cv::imwrite(name, res);
-	}
-	
-	 int j=0;	// for test_merge
-	
-	// combine images
-	while (converted.size() > 1)
-	{
-		cv::Mat quarter[4], tmp, merged;
-		int cut = (int) (pad * scale);
-		
-		//if (conv->enable_log) {
-			printf("\nMerging slices back to one image... in queue: %zd slices\n", converted.size());
-		//}
-		
-		//double time_a = getsec(), time_b = 0;
-		
-		tmp=converted.at(0)(cv::Range(0, converted.at(0).rows - cut), cv::Range(0, converted.at(0).cols - cut));
-		tmp.copyTo(quarter[0]);
-		tmp=converted.at(1)(cv::Range(0, converted.at(1).rows - cut), cv::Range(cut, converted.at(1).cols));
-		tmp.copyTo(quarter[1]);
-		tmp=converted.at(2)(cv::Range(cut, converted.at(2).rows), cv::Range(0, converted.at(2).cols - cut));
-		tmp.copyTo(quarter[2]);
-		tmp=converted.at(3)(cv::Range(cut, converted.at(3).rows), cv::Range(cut, converted.at(3).cols));
-		tmp.copyTo(quarter[3]);
-		
-		converted.erase(converted.begin(), converted.begin()+4);
-		
-		printf("merge horizon\n"); 
-		hconcat(quarter[0], quarter[1], quarter[0]);
-		hconcat(quarter[2], quarter[3], quarter[2]);
-		
-		printf("merge vertical\n"); 
-		vconcat(quarter[0], quarter[2], merged);
-		
-		//time_b = getsec();
-		//printf("took %f\n", time_b - time_a); 
-		
-		converted.push_back(merged);
-		
-		
-		printf("imwriting merged image\n"); 
-		sprintf(name, "[test] merge_step%d.png", j++);
- 		cv::imwrite(name, merged);
-		
-	}
-	
-	image_dst = converted.front();
 	
 	//if (conv->enable_log) {
 		printf("Writing image to file...\n");
@@ -1779,9 +1788,9 @@ convert_mat(struct W2XConv *conv,
 		w2x_total_steps = w2x_total_steps + iterTimesTwiceScaling;
 	}
 	if (denoise_level != -1) {
-		if (conv->enable_log) {
+		//if (conv->enable_log) {
 			printf("Step %02d/%02d: Denoising\n", w2x_current_step++, ++w2x_total_steps);
-		}
+		//}
 		apply_denoise(conv, image, denoise_level, blockSize, fmt);
 	}
 
