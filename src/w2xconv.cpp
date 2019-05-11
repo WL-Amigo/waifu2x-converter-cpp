@@ -1639,6 +1639,12 @@ int w2xconv_convert_file(
 		}
 	}
 	
+	if(denoise_level != -1)
+	{
+		printf("\nDenoise before Proccessing...\n");
+		w2xconv_convert_mat(conv, image_src, image_src, denoise_level, 1, blockSize, background, png_rgb, dst_png);
+	}
+	
 	double target_scale = scale;
 	int iteration_2x = static_cast<int>(std::ceil(std::log2(scale))) ;
 	
@@ -1684,7 +1690,7 @@ int w2xconv_convert_file(
 				printf("\nProccessing [%d/%zu] slices x%lf\n", i+1, pieces.size(), step_scale);
 			//}
 			
-			w2xconv_convert_mat(conv, res, pieces.at(i), denoise_level, step_scale, blockSize, background, png_rgb, dst_png);
+			w2xconv_convert_mat(conv, res, pieces.at(i), -1, step_scale, blockSize, background, png_rgb, dst_png);
 				
 			converted.push_back(res);
 			
