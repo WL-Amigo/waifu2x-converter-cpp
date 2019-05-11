@@ -726,9 +726,9 @@ apply_scale(struct W2XConv *conv,
 
 	// 2x scaling
 	for (int nIteration = 0; nIteration < iterTimesTwiceScaling; nIteration++) {
-		//if (conv->enable_log) {
+		if (conv->enable_log) {
 			printf("Step %02d/%02d, 2x Scaling:\n", w2x_current_step++, w2x_total_steps);
-		//}
+		}
 		cv::Size imageSize = image.size();
 		imageSize.width *= 2;
 		imageSize.height *= 2;
@@ -1388,9 +1388,9 @@ w2xconv_convert_mat(struct W2XConv *conv,
 	}
 	
 	if (denoise_level != -1) {
-		//if (conv->enable_log) {
+		if (conv->enable_log) {
 			printf("Step %02d/%02d: Denoising\n", w2x_current_step++, ++w2x_total_steps);
-		//}
+		}
 		apply_denoise(conv, image, denoise_level, blockSize, fmt);
 	}
 
@@ -1609,8 +1609,8 @@ int w2xconv_convert_file(
 	// w2x converts 2x and down scales when scale_ratio is not power of 2 (ex: 2.28 -> scale x4 - > down scale)
 	int max_scale = static_cast<int>(std::pow(2, std::ceil(std::log2(scale))));
 	
-	printf("max_scale: %d\n", max_scale);
-	char name[70]="";	// for imwrite test
+	//printf("max_scale: %d\n", max_scale);
+	//char name[70]="";	// for imwrite test
 	
 	// comment is for slicer function
 	// output file pixel above 178,756,920px is limit. leave 56,920px for safe conversion. see issue #156
@@ -1641,9 +1641,9 @@ int w2xconv_convert_file(
 	
 	if(denoise_level != -1)
 	{
-		//if (conv->enable_log) {
+		if (conv->enable_log) {
 			printf("\nDenoise before Proccessing...\n");
-		//}
+		}
 		w2xconv_convert_mat(conv, image_src, image_src, denoise_level, 1, blockSize, background, png_rgb, dst_png);
 	}
 	
@@ -1658,9 +1658,9 @@ int w2xconv_convert_file(
 		// divide images in to 4^n pieces when output width is bigger then 8000^2....
 		std::vector<cv::Mat> pieces, converted;
 			
-		//if (conv->enable_log) {
+		if (conv->enable_log) {
 			printf("\nProccessing [%d/%d] steps...\n", ld+1, iteration_2x);
-		//}
+		}
 		
 		pieces.push_back(image_dst);
 		
@@ -1683,13 +1683,14 @@ int w2xconv_convert_file(
 		for( int i=0; i<pieces.size(); i++ )
 		{
 			cv::Mat res;
-			
+			/*
 			sprintf(name, "[test] step%d_slice%d_padded.png", ld, i);
 			cv::imwrite(name, pieces.at(i));
+			*/
 			
-			//if (conv->enable_log) {
+			if (conv->enable_log) {
 				printf("\nProccessing [%d/%zu] slices\n", i+1, pieces.size());
-			//}
+			}
 			
 			w2xconv_convert_mat(conv, res, pieces.at(i), -1, 2, blockSize, background, png_rgb, dst_png);
 				
@@ -1697,8 +1698,10 @@ int w2xconv_convert_file(
 			
 			// pieces.erase(pieces.begin()); // not needed. w2xconv_convert_mat will automatically release memory of input mat.
 			
+			/*
 			sprintf(name, "[test] step%d_slice%d_converted.png", ld, i);
 			cv::imwrite(name, res);
+			*/
 		}
 		
 		 int j=0;	// for test_merge
@@ -1709,9 +1712,9 @@ int w2xconv_convert_file(
 			cv::Mat quarter[4], tmp, merged;
 			int cut = (int) (pad * 2);
 			
-			//if (conv->enable_log) {
+			if (conv->enable_log) {
 				printf("\nMerging slices back to one image... in queue: %zd slices\n", converted.size());
-			//}
+			}
 			
 			//double time_a = getsec(), time_b = 0;
 			
@@ -1738,18 +1741,18 @@ int w2xconv_convert_file(
 			
 			converted.push_back(merged);
 			
-			
+			/*
 			printf("imwriting merged image\n"); 
 			sprintf(name, "[test] merge_step%d_block%d.png", ld, j++);
-			cv::imwrite(name, merged);
+			cv::imwrite(name, merged);*/
 		}
 		image_dst = converted.front();
 	}
 	
 	if (shrinkRatio != 0.0) {
-		//if (conv->enable_log) {
+		if (conv->enable_log) {
 			printf("\nResizing image to input scale...\n");
-		//}
+		}
 		cv::Size lastImageSize = image_dst.size();
 		lastImageSize.width =
 			static_cast<int>(static_cast<double>(lastImageSize.width
@@ -1760,9 +1763,9 @@ int w2xconv_convert_file(
 		cv::resize(image_dst, image_dst, lastImageSize, 0, 0, cv::INTER_LINEAR);
 	}
 	
-	//if (conv->enable_log) {
-		printf("\nWriting image to file...\n");
-	//}
+	if (conv->enable_log) {
+		printf("Writing image to file...\n\n");
+	}
 	
 	std::vector<int> compression_params;	
 	for ( int i = 0; i < sizeof(imwrite_params); i = i + 1 )
@@ -1809,9 +1812,9 @@ convert_mat(struct W2XConv *conv,
 		w2x_total_steps = w2x_total_steps + iterTimesTwiceScaling;
 	}
 	if (denoise_level != -1) {
-		//if (conv->enable_log) {
+		if (conv->enable_log) {
 			printf("Step %02d/%02d: Denoising\n", w2x_current_step++, ++w2x_total_steps);
-		//}
+		}
 		apply_denoise(conv, image, denoise_level, blockSize, fmt);
 	}
 
