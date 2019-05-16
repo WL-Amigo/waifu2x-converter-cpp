@@ -55,6 +55,10 @@ W2Mat::W2Mat(int width, int height, int type, void *data, int data_step)
 W2Mat &
 W2Mat::operator=(W2Mat &&rhs)
 {
+	if(this->data_owner){
+		free(data);
+	}
+	
     this->data_owner = rhs.data_owner;
     this->data = rhs.data;
     this->data_byte_width = rhs.data_byte_width;
@@ -66,7 +70,7 @@ W2Mat::operator=(W2Mat &&rhs)
     this->type = rhs.type;
 
     rhs.data_owner = false;
-    rhs.data = NULL;
+    rhs.data = nullptr;
 
     return *this;
 }
