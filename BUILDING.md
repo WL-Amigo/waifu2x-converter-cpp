@@ -38,7 +38,7 @@ https://github.com/DeadSix27/waifu2x-converter-cpp/releases
 - CMake (latest version) [ [cmake-*.*.*-win64-x64.msi](https://cmake.org/download/) ]
   - Select: Add CMake to the system PATH for the current user
 - [Git for Windows](https://git-scm.com/download/win)
-	- (Optional, for the git clones (you'll have to download the zip otherwise)
+	- (Optional, for the git clones, you'll have to download it as zip otherwise)
 - Khronos OpenCL Headers: https://github.com/KhronosGroup/OpenCL-Headers
 	- Git clone it anywhere, example: `K:\w2x\OpenCL-Headers`
 - OpenCV 4.1.0 [ [opencv-4.1.0-vc14_vc15.exe](https://opencv.org/releases.html) ] (optional, but recommended)
