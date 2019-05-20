@@ -126,7 +126,11 @@ private:
 	;
 
 public:
+#if defined(WIN32) && defined(UNICODE)
+	static bool generateModelFromJSON(const std::wstring &fileName,
+#else
 	static bool generateModelFromJSON(const std::string &fileName,
+#endif
 					  std::vector<std::unique_ptr<Model> > &models);
 	static void generateModelFromMEM(int layer_depth,
 					 int num_input_plane,

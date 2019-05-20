@@ -37,6 +37,7 @@
 
 #ifndef DEFAULT_MODELS_DIRECTORY
 #define DEFAULT_MODELS_DIRECTORY "models_rgb"
+#define DEFAULT_MODELS_DIRECTORYW L"models_rgb"
 #endif
 
 #ifdef HAVE_OPENCV
@@ -585,7 +586,7 @@ int main(int argc, char** argv)
 	int argc = 0;
 	char **argv = CommandLineToArgvA(GetCommandLineA(), &argc);
 	int argc_w = 0;
-	std::wstring inputFileName, outputFileName=L"auto";
+	std::wstring inputFileName, outputFileName=L"auto", modelDir = DEFAULT_MODELS_DIRECTORYW;
 	LPWSTR *argv_w = CommandLineToArgvW(GetCommandLineW(), &argc_w);
 	
 	for (int ai = 1; ai < argc_w; ai++) {
@@ -597,6 +598,11 @@ int main(int argc, char** argv)
 		else if ((wcscmp(argv_w[ai], L"-o") == 0) || (wcscmp(argv_w[ai], L"--output") == 0)) {
 			if( ai+1 < argc_w )
 				outputFileName = std::wstring(argv_w[ai+1]);
+			continue;
+		}
+		else if (wcscmp(argv_w[ai], L"--model-dir") == 0) {
+			if( ai+1 < argc_w )
+				modelDir = std::wstring(argv_w[ai+1]);
 			continue;
 		}
 		else if ((wcscmp(argv_w[ai], L"-l") == 0) || (wcscmp(argv_w[ai], L"--list-processor") == 0)) {
@@ -803,7 +809,11 @@ int main(int argc, char** argv)
 	}
 
 	bool recursive_directory_iterator = cmdRecursiveDirectoryIterator.getValue();
+#if defined(WIN32) && defined(UNICODE)
+	int error = w2xconv_load_models(converter, modelDir.c_str());
+#else
 	int error = w2xconv_load_models(converter, cmdModelPath.getValue().c_str());
+#endif
 	check_for_errors(converter, error);
 
 	//This includes errored files.

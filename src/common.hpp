@@ -43,7 +43,14 @@ void unpack_mat_bgr(W2Mat &outputMat,
  * src is exist && dst is exist && dst is older than src  : true
  * otherwise                                              : false
  */
+#if defined(WIN32) && defined(UNICODE)
+#include <Windows.h>
+
+bool update_test(const WCHAR *dst_path,
+                 const WCHAR *src_path);
+#else
 bool update_test(const char *dst_path,
                  const char *src_path);
+#endif
 
 #endif

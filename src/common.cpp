@@ -166,21 +166,35 @@ void unpack_mat_rgb_f32(W2Mat &outputMat,
 }
 
 /* return true if A is newer than B */
-bool
-update_test(const char *dst_path,
-	    const char *src_path)
+#if defined(WIN32) && defined(UNICODE)
+bool update_test(const WCHAR *dst_path,
+                 const WCHAR *src_path)
+#else
+bool update_test(const char *dst_path,
+                 const char *src_path)
+#endif
 {
 #if (defined _WIN32)
+#if defined(UNICODE)
+	WIN32_FIND_DATAW dst_st;
+	HANDLE finder = FindFirstFileW(dst_path, &dst_st);
+#else
 	WIN32_FIND_DATAA dst_st;
 	HANDLE finder = FindFirstFileA(dst_path, &dst_st);
+#endif
 	if (finder == INVALID_HANDLE_VALUE) {
 		return true;
 	}
 
 	FindClose(finder);
 
+#if defined(UNICODE)
+	WIN32_FIND_DATAW src_st;
+	finder = FindFirstFileW(src_path, &src_st);
+#else
 	WIN32_FIND_DATAA src_st;
 	finder = FindFirstFileA(src_path, &src_st);
+#endif
 	FindClose(finder);
 
 	bool old = false;

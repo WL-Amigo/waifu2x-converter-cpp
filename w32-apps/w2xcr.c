@@ -331,32 +331,32 @@ proc_thread(void *ap)
     int r;
     int ret = 1;
     size_t path_len = 4;
-    char *self_path = (char*)malloc((path_len+1) * sizeof(char));
+    WCHAR *self_path = (WCHAR*)malloc((path_len+1) * sizeof(WCHAR));
     DWORD len;
 
     c = w2xconv_init_with_processor(ta->dev_id, 0, 0);
     while (1) {
-        len = GetModuleFileNameA(NULL, self_path, (DWORD) path_len);
+        len = GetModuleFileNameW(NULL, self_path, (DWORD) path_len);
         if (len > 0 && len != path_len) {
             break;
         }
 
         path_len *= 2;
-        self_path = (char*)realloc(self_path, (path_len+1) * sizeof(char));
+        self_path = (WCHAR*)realloc(self_path, (path_len+1) * sizeof(WCHAR));
     }
 
     {
         size_t cur;
-        for (cur=strlen(self_path); cur>=0; cur--) {
-            if (self_path[cur] == '\\') {
-                self_path[cur] = '\0';
+        for (cur=wcslen(self_path); cur>=0; cur--) {
+            if (self_path[cur] == L'\\') {
+                self_path[cur] = L'\0';
                 break;
             }
         }
 
-        char *models_path = malloc((strlen(self_path) + 11 + 1) * sizeof(char));
+        WCHAR *models_path = malloc((wcslen(self_path) + 11 + 1) * sizeof(WCHAR));
 
-        sprintf(models_path, "%s\\models_rgb", self_path);
+        wsprintf(models_path, L"%s\\models_rgb", self_path);
 		// You should not have Unicode char in path where model files located.
         r = w2xconv_load_models(c, models_path);
         free(self_path);
