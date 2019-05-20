@@ -1251,10 +1251,9 @@ postproc_yuv2rgb(cv::Mat *dst,
 	}
 }
 
-
-
-static int
-read_int4(FILE *fp) {
+//reads the 4 bytes containing the size of a png chunk and returns it as int
+static int read_int4(FILE *fp)
+{
     unsigned int c0 = fgetc(fp);
     unsigned int c1 = fgetc(fp);
     unsigned int c2 = fgetc(fp);
@@ -1262,8 +1261,8 @@ read_int4(FILE *fp) {
 
     return (c0<<24) | (c1<<16) | (c2<<8) | (c3);
 }
-static int
-read_int2(FILE *fp) {
+static int read_int2(FILE *fp)
+{
     unsigned int c0 = fgetc(fp);
     unsigned int c1 = fgetc(fp);
 
@@ -1273,14 +1272,16 @@ read_int2(FILE *fp) {
 
 //This checks if the file type is png, it defalts to the user inputted bkgd_colour otherwise.
 //The returning bool is whether the function excecuted successfully or not.
-void get_png_background_colour(FILE *png_fp, bool *png_rgb, struct w2xconv_rgb_float3 *bkgd_colour){
-	*png_rgb = false;
+void get_png_background_colour(FILE *png_fp, bool *has_alpha, struct w2xconv_rgb_float3 *bkgd_colour)
+{
+	*has_alpha = false;
 	//png file signature
-	const static unsigned char png[] = {0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A};
+	const static unsigned char sig_png[] = {0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A};
 	//byte signature of sub components
-	const static unsigned char ihdr[] = {'I','H','D','R'};
-	const static unsigned char iend[] = {'I','E','N','D'};
-	const static unsigned char bkgd[] = {'b','K','G','D'};
+	const static unsigned char sig_ihdr[] = {'I','H','D','R'};
+	const static unsigned char sig_iend[] = {'I','E','N','D'};
+	const static unsigned char sig_bkgd[] = {'b','K','G','D'};
+	const static unsigned char sig_trns[] = {'t','R','N','S'};
 
 	char sig[8];
 
@@ -1289,13 +1290,23 @@ void get_png_background_colour(FILE *png_fp, bool *png_rgb, struct w2xconv_rgb_f
 	if (rdsz != 8) {
 		return;
 	}
+	
 	//check if file signatures match
-	if (memcmp(png,sig,8) != 0) {
+	if (memcmp(sig_png, sig,8) != 0) {
 		return;
 	}
-
-
-
+	
+	/*
+	check if ihdr is 13 bytes long, because
+	Width:              4 bytes
+	Height:             4 bytes
+	Bit depth:          1 byte
+	Color type:         1 byte
+	Compression method: 1 byte
+	Filter method:      1 byte
+	Interlace method:   1 byte
+	= 13 bytes
+	*/
 	int ihdr_size = read_int4(png_fp);
 	if (ihdr_size != 13) {
 		return;
@@ -1305,10 +1316,13 @@ void get_png_background_colour(FILE *png_fp, bool *png_rgb, struct w2xconv_rgb_f
 	if (rdsz != 4) {
 		return;
 	}
-	if (memcmp(ihdr,sig,4) != 0) {
+	
+	//start of iheader?
+	if (memcmp(sig_ihdr, sig,4) != 0) {
 		return;
 	}
-
+	
+	//start of iheader reading
 	int width = read_int4(png_fp);
 	int height = read_int4(png_fp);
 	int depth = fgetc(png_fp);
@@ -1325,27 +1339,50 @@ void get_png_background_colour(FILE *png_fp, bool *png_rgb, struct w2xconv_rgb_f
 		    depth == 16	  // RGBA 16bit
 			)
 		{
-			*png_rgb = true;
+			*has_alpha = true;
 		}
 	} else if (depth == 16) { // RGB 16bit
-		*png_rgb = true;
+		*has_alpha = true;
 	}
 	
-	// std::cout << "type:" << type << std::endl;
+	std::cout << "type:" << type << std::endl;
+	
+	//end of iheader reading
 
-	if (*png_rgb) {
+	if (*has_alpha) {
+		if (type == 3) // indexed/type 3 png require the tRNS chunk for alpha this will be checked later on.
+		{
+			*has_alpha = false;
+		}
+		//read rest of png
 		while (1) {
-			int chunk_size = read_int4(png_fp);
 			rdsz = fread(sig, 1, 4, png_fp);
 			if (rdsz != 4) {
+				//printf("rdsz is not 4\n");
 				break;
 			}
-
-			if (memcmp(sig,iend,4) == 0) {
+			
+			if (memcmp(sig, sig_iend,4) == 0) //end of PNG
+			{
+				//printf("iEND\n");
 				break;
 			}
-
-			if (memcmp(sig,bkgd,4) == 0) {
+			
+			if (memcmp(sig, sig_trns,4) == 0) //alpha/tRNS chunk
+			{ 
+				//printf("tRNS\n");
+				*has_alpha = true; // indexed/type 3 png with tRNS alpha chunk
+				fseek(png_fp, -8L, SEEK_CUR); //skip back 8bytes(chunk_length + signature)
+				int trns_size = read_int4(png_fp); //read chunk_length (4bytes) 
+				fseek(png_fp, 4L, SEEK_CUR); // skip over the signature (4bytes)
+				fseek(png_fp, trns_size + 4, SEEK_CUR); // skip ahead by tRNS chunk size + 4 bytes (CRC size (which we do not use as of now))
+				
+				// tRNS chunks (must/should) always appear before bKGD chunks, so we do not break out here as we still need the bKGD chunk.
+			}
+			
+			if (memcmp(sig, sig_bkgd,4) == 0) //background color chunk
+			{
+				//printf("bKGD\n");
 				float r = (float) read_int2(png_fp);
 				float g = (float) read_int2(png_fp);
 				float b = (float) read_int2(png_fp);
