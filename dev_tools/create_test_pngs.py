@@ -98,7 +98,7 @@ for name in names:
 			# name_extra = " -trim +repage -colors 256 -type palette"
 			# name_extra = " -trim -colors 16 -type palette"
 			name_extra = " -trim -colors 256 -type palettematte GIF:- "
-			pipe_cmd = 'convert - PNG8:"{output_image}"'
+			pipe_cmd = 'convert - -depth {depth} "{output_image}"'
 			alpha = 2
 		print("Creating {name} PNG#{current_image}/{total_images} @ {depth},{depth2}bits, Alpha: {alpha}".format(
 			depth=bit_depth,
