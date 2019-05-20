@@ -1345,7 +1345,7 @@ void get_png_background_colour(FILE *png_fp, bool *has_alpha, struct w2xconv_rgb
 		*has_alpha = true;
 	}
 	
-	std::cout << "type:" << type << std::endl;
+	//std::cout << "type:" << type << std::endl;
 	
 	//end of iheader reading
 
