@@ -1251,7 +1251,7 @@ postproc_yuv2rgb(cv::Mat *dst,
 	}
 }
 
-//reads the 4 bytes containing the size of a png chunk and returns it as int
+/*
 static int read_int4(FILE *fp)
 {
     unsigned int c0 = fgetc(fp);
@@ -1261,6 +1261,7 @@ static int read_int4(FILE *fp)
 
     return (c0<<24) | (c1<<16) | (c2<<8) | (c3);
 }
+*/
 static int read_int2(FILE *fp)
 {
     unsigned int c0 = fgetc(fp);
@@ -1269,6 +1270,45 @@ static int read_int2(FILE *fp)
     return (c0<<8) | (c1);
 }
 
+static unsigned int read_uint4(FILE *fi)
+{
+	unsigned int val = 0;
+	unsigned char oneBytes[4];
+	if (fread(&oneBytes[0], 1, 4, fi) == 4)
+	{
+		val += oneBytes[0] * (1 << 24);
+		val += oneBytes[1] * (1 << 16);
+		val += oneBytes[2] * (1 << 8);
+		val += oneBytes[3] * (1 << 0);
+	}
+	return val;
+}
+
+static int read_int4(FILE *fi)
+{
+	int val = 0;
+	unsigned char oneBytes[4];
+	if (fread(&oneBytes[0], 1, 4, fi) == 4)
+	{
+		val += oneBytes[0] * (1 << 24);
+		val += oneBytes[1] * (1 << 16);
+		val += oneBytes[2] * (1 << 8);
+		val += oneBytes[3] * (1 << 0);
+	}
+	return val;
+}
+
+void skip_sig(FILE *png_fp, char *sig4)
+{
+	//DEBUG printf("sig(%s)\n", sig4);
+	fseek(png_fp, -8L, SEEK_CUR);
+	unsigned int chunk_size = read_uint4(png_fp);
+	//DEBUG printf("chunk_size: %d\n", chunk_size);
+	read_int4(png_fp);
+	fseek(png_fp, chunk_size, SEEK_CUR);
+	unsigned int crc = read_int4(png_fp);
+	//DEBUG printf("crc: %08X\n",crc);
+}
 
 //This checks if the file type is png, it defalts to the user inputted bkgd_colour otherwise.
 //The returning bool is whether the function excecuted successfully or not.
@@ -1276,28 +1316,47 @@ void get_png_background_colour(FILE *png_fp, bool *has_alpha, struct w2xconv_rgb
 {
 	*has_alpha = false;
 	//png file signature
-	const static unsigned char sig_png[] = {0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A};
+	const static unsigned char sig_png[8] = {0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A};
 	//byte signature of sub components
-	const static unsigned char sig_ihdr[] = {'I','H','D','R'};
-	const static unsigned char sig_iend[] = {'I','E','N','D'};
-	const static unsigned char sig_bkgd[] = {'b','K','G','D'};
-	const static unsigned char sig_trns[] = {'t','R','N','S'};
-	const static unsigned char sig_gama[] = {'g','A','M','A'};
-	const static unsigned char sig_chrm[] = {'c','H','R','M'};
-	const static unsigned char sig_plte[] = {'P','L','T','E'};
+	const static unsigned char sig_ihdr[4] = {'I','H','D','R'};
+	const static unsigned char sig_iend[4] = {'I','E','N','D'};
+	const static unsigned char sig_bkgd[4] = {'b','K','G','D'};
+	const static unsigned char sig_trns[4] = {'t','R','N','S'};
+	const static unsigned char sig_gama[4] = {'g','A','M','A'};
+	const static unsigned char sig_chrm[4] = {'c','H','R','M'};
+	const static unsigned char sig_plte[4] = {'P','L','T','E'};
+	const static unsigned char sig_phys[4] = {'p','H','Y','s'};
+	const static unsigned char sig_time[4] = {'t','I','M','E'};
+	const static unsigned char sig_text[4] = {'t','E','X','t'};
+	const static unsigned char sig_ztxt[4] = {'z','T','X','t'};
+	const static unsigned char sig_itxt[4] = {'i','T','X','t'};
+	const static unsigned char sig_hist[4] = {'h','I','S','T'};
+	const static unsigned char sig_splt[4] = {'s','P','L','T'};
+	const static unsigned char sig_sbit[4] = {'s','B','I','T'};
+	const static unsigned char sig_scal[4] = {'s','C','A','L'};
+	const static unsigned char sig_offs[4] = {'o','F','F','s'};
+	const static unsigned char sig_pcal[4] = {'p','C','A','L'};
+	const static unsigned char sig_frac[4] = {'f','R','A','c'};
+	const static unsigned char sig_gifg[4] = {'g','I','F','g'};
+	const static unsigned char sig_gifx[4] = {'g','I','F','x'};
+	const static unsigned char sig_gift[4] = {'g','I','F','t'};
+	const static unsigned char sig_idat[4] = {'I','D','A','T'};
+	const static unsigned char sig_srgb[4] = {'s','R','G','B'};
+	
 	
 	const static size_t crc_size = 4;
 
-	char sig[8];
+	char sig8[8];
+	char sig4[8];
 
 	//checks if the file is atleast 8 bytes long(?)
-	size_t rdsz = fread(sig, 1, 8, png_fp);
+	size_t rdsz = fread(sig8, 1, 8, png_fp);
 	if (rdsz != 8) {
 		return;
 	}
 	
 	//check if file signatures match
-	if (memcmp(sig_png, sig,8) != 0) {
+	if (memcmp(sig_png, sig8,8) != 0) {
 		return;
 	}
 	
@@ -1317,13 +1376,13 @@ void get_png_background_colour(FILE *png_fp, bool *has_alpha, struct w2xconv_rgb
 		return;
 	}
 
-	rdsz = fread(sig, 1, 4, png_fp);
+	rdsz = fread(sig4, 1, 4, png_fp);
 	if (rdsz != 4) {
 		return;
 	}
 	
 	//start of iheader?
-	if (memcmp(sig_ihdr, sig,4) != 0) {
+	if (memcmp(sig_ihdr, sig4,4) != 0) {
 		return;
 	}
 	
@@ -1361,165 +1420,46 @@ void get_png_background_colour(FILE *png_fp, bool *has_alpha, struct w2xconv_rgb
 		}
 		//read rest of png
 		while (1) {
-			rdsz = fread(sig, 1, 4, png_fp);
+			rdsz = fread(sig4, 1, 4, png_fp);
+			
 			if (rdsz != 4) {
-				//DEBUG printf("rdsz is not 4 rdsz: %d, sig: %s\n" , rdsz, sig);
+				/*/ DEBUG*/ printf("rdsz is not 4 rdsz: %d, sig: %s\n" , rdsz, sig4);
 				break;
 			}
 			
-			if (memcmp(sig, sig_iend,4) == 0) //end of PNG
+			// fseek(png_fp, -8L, SEEK_CUR);
+			// unsigned int chunk_size = read_uint4(png_fp);
+			// read_int4(png_fp);
+			
+			if (memcmp(sig4, sig_iend,4) == 0) //end of PNG
 			{
-				//DEBUG printf("iEND\n");
-				break;
+				//DEBUG printf("sig(%s)\n", sig4);
+				break; //end of png
 			}
-			
-			if (memcmp(sig, sig_chrm,4) == 0) //cHRM/chroma chunk  (unimplemented) Possibly related to: https://github.com/DeadSix27/waifu2x-converter-cpp/issues/24
+			else if (memcmp(sig4, sig_trns,4) == 0) //alpha/tRNS chunk (unimplemented)
 			{ 
-				//DEBUG printf("cHRM\n");
-				fseek(png_fp, -8L, SEEK_CUR); //skip back 8bytes(chunk_length + signature)
-				int chrm_size = read_int4(png_fp); //read chunk_length (4bytes) 
-				//DEBUG printf("chrm_size: %d\n", chrm_size);
-				fseek(png_fp, 4L, SEEK_CUR); // skip over the signature (4bytes)
-				fseek(png_fp, chrm_size + crc_size, SEEK_CUR); // skip ahead by tRNS chunk size + crc_size (4bytes) (CRC size (which we do not use as of now))
-			}
-			
-			if (memcmp(sig, sig_plte,4) == 0) //PLTE/palette chunk (unimplemented)
-			{
-				/*
-					The PLTE chunk contains from 1 to 256 palette entries, each a three-byte series of the form:
-
-						   Red:   1 byte (0 = black, 255 = red)
-						   Green: 1 byte (0 = black, 255 = green)
-						   Blue:  1 byte (0 = black, 255 = blue)
-
-					The number of entries is determined from the chunk length. A chunk length not divisible by 3 is an error.
-
-					This chunk must appear for color type 3, and can appear for color types 2 and 6; it must not appear for color types 0 and 4.
-					If this chunk does appear, it must precede the first IDAT chunk. There must not be more than one PLTE chunk.
-
-					For color type 3 (indexed color), the PLTE chunk is required. The first entry in PLTE is referenced by pixel value 0,
-					the second by pixel value 1, etc. The number of palette entries must not exceed the range that can be represented in the image bit depth
-					(for example, 24 = 16 for a bit depth of 4). It is permissible to have fewer entries than the bit depth would allow. In that case,
-					any out-of-range pixel value found in the image data is an error.
-
-					For color types 2 and 6 (truecolor and truecolor with alpha), the PLTE chunk is optional.
-					If present, it provides a suggested set of from 1 to 256 colors to which the truecolor image can be quantized if the viewer cannot display truecolor directly.
-					If neither PLTE nor sPLT is present, such a viewer will need to select colors on its own, but it is often preferable for this to be done once by the encoder.
-					(See Recommendations for Encoders: Suggested palettes.)
-
-					Note that the palette uses 8 bits (1 byte) per sample regardless of the image bit depth specification.
-					In particular, the palette is 8 bits deep even when it is a suggested quantization of a 16-bit truecolor image.
-
-					There is no requirement that the palette entries all be used by the image, nor that they all be different. 
-				*/
-				//DEBUG printf("PLTE\n");
-				fseek(png_fp, -8L, SEEK_CUR);
-				int plte_size = read_int4(png_fp);
-				//DEBUG printf("plte_size: %d\n", plte_size);
-				fseek(png_fp, 4L, SEEK_CUR);
-				
-				
-				if (type == PNG_TYPE::Indexed)
-				{					
-					//get first palette entry:
-					unsigned int r = fgetc(png_fp);
-					unsigned int g = fgetc(png_fp);
-					unsigned int b = fgetc(png_fp);
-					
-					if (depth == 8) {
-						bkgd_colour->r = r / 255.0f;
-						bkgd_colour->g = g / 255.0f;
-						bkgd_colour->b = b / 255.0f;
-					}
-					else {
-						bkgd_colour->r = r / 65535.0f;
-						bkgd_colour->g = g / 65535.0f;
-						bkgd_colour->b = b / 65535.0f;
-					}
-					fseek(png_fp, (plte_size - 3) + crc_size, SEEK_CUR); 
-				}
-				else
-				{
-					fseek(png_fp, plte_size + crc_size, SEEK_CUR); 
-				}
-			}
-						
-			if (memcmp(sig, sig_gama,4) == 0) //gAMA/gamma chunk (unimplemented) Possibly related to: https://github.com/DeadSix27/waifu2x-converter-cpp/issues/24
-			{ 
-				//DEBUG printf("gAMA\n");
-				fseek(png_fp, -8L, SEEK_CUR);
-				int gama_size = read_int4(png_fp);
-				//DEBUG printf("gama_size: %d\n", gama_size);
-				fseek(png_fp, 4L, SEEK_CUR);
-				fseek(png_fp, gama_size + crc_size, SEEK_CUR);
-			}
-			
-			if (memcmp(sig, sig_trns,4) == 0) //alpha/tRNS chunk (unimplemented)
-			{ 
-				//DEBUG printf("tRNS\n");
-				if (type == PNG_TYPE::Indexed)
-				{
-					/*PNG_SPEC INFO
-					
-						For color type 3 (indexed color), the tRNS chunk contains a series of one-byte alpha values, corresponding to entries in the PLTE chunk:
-
-							   Alpha for palette index 0:  1 byte
-							   Alpha for palette index 1:  1 byte
-							   ...etc...
-
-						Each entry indicates that pixels of the corresponding palette index must be treated as having the specified alpha value.
-						Alpha values have the same interpretation as in an 8-bit full alpha channel: 0 is fully transparent, 255 is fully opaque,
-						regardless of image bit depth. The tRNS chunk must not contain more alpha values than there are palette entries,
-						but tRNS can contain fewer values than there are palette entries. In this case, the alpha value for all remaining palette entries is assumed to be 255.
-						In the common case in which only palette index 0 need be made transparent, only a one-byte tRNS chunk is needed.
-					*/
-				}
-				else if (type == PNG_TYPE::Grayscale)
-				{
-					/*PNG_SPEC INFO
-					
-						For color type 0 (grayscale), the tRNS chunk contains a single gray level value, stored in the format:
-								
-								Gray:  2 bytes, range 0 .. (2^bitdepth)-1
-						
-						(If the image bit depth is less than 16, the least significant bits are used and the others are 0.)
-						Pixels of the specified gray level are to be treated as transparent (equivalent to alpha value 0);
-						all other pixels are to be treated as fully opaque (alpha value 2^bitdepth). 
-					*/
-				}
-				else if (type == PNG_TYPE::Truecolor)
-				{
-					/*PNG_SPEC INFO
-					
-						For color type 2 (truecolor), the tRNS chunk contains a single RGB color value, stored in the format:
-
-							   Red:   2 bytes, range 0 .. (2^bitdepth)-1
-							   Green: 2 bytes, range 0 .. (2^bitdepth)-1
-							   Blue:  2 bytes, range 0 .. (2^bitdepth)-1
-
-						(If the image bit depth is less than 16, the least significant bits are used and the others are 0.)
-						Pixels of the specified color value are to be treated as transparent (equivalent to alpha value 0);
-						all other pixels are to be treated as fully opaque (alpha value 2^bitdepth). 
-					*/
-				}
-				
 				*has_alpha = true; // indexed/type 3 png with tRNS alpha chunk
+				
+				//DEBUG printf("sig(%s)\n", sig4);
 				fseek(png_fp, -8L, SEEK_CUR);
-				int trns_size = read_int4(png_fp);
-				//DEBUG printf("trns_size: %d\n", trns_size);
-				fseek(png_fp, 4L, SEEK_CUR);
-				fseek(png_fp, trns_size + crc_size, SEEK_CUR);
-				// tRNS chunks (must/should) always appear before bKGD chunks, so we do not break out here as we still need the bKGD chunk.
+				unsigned int chunk_size = read_uint4(png_fp);
+				//DEBUG printf("chunk_size: %d\n", chunk_size);
+				read_int4(png_fp);
+				
+				fseek(png_fp, chunk_size, SEEK_CUR);
+				
+				unsigned int crc = read_int4(png_fp);
+				//DEBUG printf("crc: %08X\n",crc);
 			}
-			
-			if (memcmp(sig, sig_bkgd,4) == 0) //background color chunk
+			else if (memcmp(sig4, sig_bkgd,4) == 0) //background color chunk
 			{
-				//DEBUG printf("bKGD\n");
+				//DEBUG printf("sig(%s)\n", sig4);
 				fseek(png_fp, -8L, SEEK_CUR);
-				int bkgd_size = read_int4(png_fp);
-				//DEBUG printf("bkgd_size: %d\n", bkgd_size);
-				fseek(png_fp, 4L, SEEK_CUR);
-				if (type == PNG_TYPE::Truecolor || type == PNG_TYPE::TruecolorAlpha)
+				unsigned int chunk_size = read_uint4(png_fp);
+				//DEBUG printf("chunk_size: %d\n", chunk_size);
+				read_int4(png_fp);
+				
+				if (type == PNG_TYPE::Truecolor || type == PNG_TYPE::TruecolorAlpha) 
 				{
 					float r = (float) read_int2(png_fp);
 					float g = (float) read_int2(png_fp);
@@ -1533,6 +1473,13 @@ void get_png_background_colour(FILE *png_fp, bool *has_alpha, struct w2xconv_rgb
 						bkgd_colour->g = g / 65535.0f;
 						bkgd_colour->b = b / 65535.0f;
 					}
+					//DEBUG printf("bkgd rgb: %d,%d,%d\n", bkgd_colour->r, bkgd_colour->g, bkgd_colour->b);
+					if (chunk_size != 6)
+					{
+						//DEBUG printf("bkgd chunk is larger than 6: %d\n", chunk_size);
+						//possible crash/issue/invalid png maybe check?
+					}
+					break;
 				}
 				/* unused
 				else if (type == PNG_TYPE::Grayscale || type == PNG_TYPE::GrayscaleAlpha)
@@ -1540,17 +1487,103 @@ void get_png_background_colour(FILE *png_fp, bool *has_alpha, struct w2xconv_rgb
 					// unsigned int c0 = fgetc(png_fp);
 					// unsigned int c1 = fgetc(png_fp);
 					// printf("gray: %d, %d\n", c0, c1);
-					fseek(png_fp, 2L, SEEK_CUR);
 				}
 				else if (type == PNG_TYPE::Indexed)
 				{
 					// palette_index = fgetc(png_fp);
 					// printf("palette_index: %d\n", palette_index);
-					fseek(png_fp, 1L, SEEK_CUR);
 				}
 				*/
-				break;
+				else // keep looking for tRNS?
+				{
+					fseek(png_fp, chunk_size, SEEK_CUR);
+					unsigned int crc = read_int4(png_fp);
+					//DEBUG printf("crc: %08X\n",crc);
+				}
 			}
+			else if (memcmp(sig4, sig_phys,4) == 0)
+			{
+				skip_sig(png_fp, sig4);
+			}
+			else if (memcmp(sig4, sig_srgb,4) == 0)
+			{
+				skip_sig(png_fp, sig4);
+			}
+			else if (memcmp(sig4, sig_chrm,4) == 0) //cHRM/chroma chunk  (unimplemented) Possibly related to: https://github.com/DeadSix27/waifu2x-converter-cpp/issues/24
+			{
+				skip_sig(png_fp, sig4);
+			}
+			else if (memcmp(sig4, sig_plte, 4) == 0) //PLTE/palette chunk (unimplemented)
+			{
+				skip_sig(png_fp, sig4);
+			}	
+			else if (memcmp(sig4, sig_gama,4) == 0) //gAMA/gamma chunk (unimplemented) Possibly related to: https://github.com/DeadSix27/waifu2x-converter-cpp/issues/24
+			{
+				skip_sig(png_fp, sig4);
+			}
+			else if (memcmp(sig4, sig_time,4) == 0)
+			{
+				skip_sig(png_fp, sig4);
+			}
+			else if (memcmp(sig4, sig_text,4) == 0)
+			{
+				skip_sig(png_fp, sig4);
+			}
+			else if (memcmp(sig4, sig_ztxt,4) == 0)
+			{
+				skip_sig(png_fp, sig4);
+			}
+			else if (memcmp(sig4, sig_itxt,4) == 0)
+			{
+				skip_sig(png_fp, sig4);
+			}
+			else if (memcmp(sig4, sig_hist,4) == 0)
+			{
+				skip_sig(png_fp, sig4);
+			}
+			else if (memcmp(sig4, sig_splt,4) == 0)
+			{
+				skip_sig(png_fp, sig4);
+			}
+			else if (memcmp(sig4, sig_sbit,4) == 0)
+			{
+				skip_sig(png_fp, sig4);
+			}
+			else if (memcmp(sig4, sig_scal,4) == 0)
+			{
+				skip_sig(png_fp, sig4);
+			}
+			else if (memcmp(sig4, sig_offs,4) == 0)
+			{
+				skip_sig(png_fp, sig4);
+			}
+			else if (memcmp(sig4, sig_pcal,4) == 0)
+			{
+				skip_sig(png_fp, sig4);
+			}
+			else if (memcmp(sig4, sig_frac,4) == 0)
+			{
+				skip_sig(png_fp, sig4);
+			}
+			else if (memcmp(sig4, sig_gifg,4) == 0)
+			{
+				skip_sig(png_fp, sig4);
+			}
+			else if (memcmp(sig4, sig_gifx,4) == 0)
+			{
+				skip_sig(png_fp, sig4);
+			}
+			else if (memcmp(sig4, sig_gift,4) == 0)
+			{
+				skip_sig(png_fp, sig4);
+			}
+			else if (memcmp(sig4, sig_idat,4) == 0)
+			{ 
+				skip_sig(png_fp, sig4);
+			}
+			// fseek(png_fp, chunk_size, SEEK_CUR);
+			// unsigned int crc = read_int4(png_fp);
+			//DEBUG printf("crc: %08X\n",crc);
 		}
 	}
 
