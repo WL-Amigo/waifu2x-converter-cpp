@@ -1298,6 +1298,15 @@ static int read_int4(FILE *fi)
 	return val;
 }
 
+
+/*
+	Skip one PNG chunk.
+	
+	Seeks 8Bytes back, reads the chunk length,
+	then skips over the already read signature.
+	With the aquired chunk_size it skips over chunk_size,
+	then over the final part, the crc sum.
+*/
 void skip_sig(FILE *png_fp, char *sig4)
 {
 	//DEBUG printf("sig(%s)\n", sig4);
@@ -1343,15 +1352,13 @@ void get_png_background_colour(FILE *png_fp, bool *has_alpha, struct w2xconv_rgb
 	const static unsigned char sig_idat[4] = {'I','D','A','T'};
 	const static unsigned char sig_srgb[4] = {'s','R','G','B'};
 
-	const static unsigned char *sig_ignores[20] =
+	const static unsigned char *sig_ignores[20] = // array of unused PNG chunks and their signature.
 	{
 		sig_gama, sig_chrm, sig_plte, sig_phys, sig_time,
 		sig_text, sig_ztxt, sig_itxt, sig_hist, sig_splt,
 		sig_sbit, sig_scal, sig_offs, sig_pcal, sig_frac,
 		sig_gifg, sig_gifx, sig_gift, sig_idat, sig_srgb, 
-	};	
-	
-	const static size_t crc_size = 4;
+	};
 
 	char sig8[8];
 	char sig4[8];
@@ -1367,17 +1374,7 @@ void get_png_background_colour(FILE *png_fp, bool *has_alpha, struct w2xconv_rgb
 		return;
 	}
 	
-	/*
-	check if ihdr is 13 bytes long, because
-	Width:              4 bytes
-	Height:             4 bytes
-	Bit depth:          1 byte
-	Color type:         1 byte
-	Compression method: 1 byte
-	Filter method:      1 byte
-	Interlace method:   1 byte
-	= 13 bytes
-	*/
+	//check if ihdr is the required 13 bytes long
 	int ihdr_size = read_int4(png_fp);
 	if (ihdr_size != 13) {
 		return;
@@ -1388,7 +1385,7 @@ void get_png_background_colour(FILE *png_fp, bool *has_alpha, struct w2xconv_rgb
 		return;
 	}
 	
-	//start of iheader?
+	//missing ihdr/invalid png
 	if (memcmp(sig_ihdr, sig4,4) != 0) {
 		return;
 	}
@@ -1405,7 +1402,7 @@ void get_png_background_colour(FILE *png_fp, bool *has_alpha, struct w2xconv_rgb
 	/* use IMREAD_UNCHANGED
 	 * if png && type == RGBA || depth == 16
 	 */
-	if (type == PNG_TYPE::TruecolorAlpha || type == PNG_TYPE::Indexed || type == PNG_TYPE::GrayscaleAlpha) { // type == 3 is indexed color 
+	if (type == PNG_TYPE::TruecolorAlpha || type == PNG_TYPE::Indexed || type == PNG_TYPE::GrayscaleAlpha) {
 		if (depth == 8 || // RGBA 8bit
 		    depth == 16	  // RGBA 16bit
 			)
