@@ -1342,7 +1342,14 @@ void get_png_background_colour(FILE *png_fp, bool *has_alpha, struct w2xconv_rgb
 	const static unsigned char sig_gift[4] = {'g','I','F','t'};
 	const static unsigned char sig_idat[4] = {'I','D','A','T'};
 	const static unsigned char sig_srgb[4] = {'s','R','G','B'};
-	
+
+	const static unsigned char *sig_ignores[20] =
+	{
+		sig_gama, sig_chrm, sig_plte, sig_phys, sig_time,
+		sig_text, sig_ztxt, sig_itxt, sig_hist, sig_splt,
+		sig_sbit, sig_scal, sig_offs, sig_pcal, sig_frac,
+		sig_gifg, sig_gifx, sig_gift, sig_idat, sig_srgb, 
+	};	
 	
 	const static size_t crc_size = 4;
 
@@ -1501,89 +1508,18 @@ void get_png_background_colour(FILE *png_fp, bool *has_alpha, struct w2xconv_rgb
 					//DEBUG printf("crc: %08X\n",crc);
 				}
 			}
-			else if (memcmp(sig4, sig_phys,4) == 0)
-			{
-				skip_sig(png_fp, sig4);
-			}
-			else if (memcmp(sig4, sig_srgb,4) == 0)
-			{
-				skip_sig(png_fp, sig4);
-			}
-			else if (memcmp(sig4, sig_chrm,4) == 0) //cHRM/chroma chunk  (unimplemented) Possibly related to: https://github.com/DeadSix27/waifu2x-converter-cpp/issues/24
-			{
-				skip_sig(png_fp, sig4);
-			}
-			else if (memcmp(sig4, sig_plte, 4) == 0) //PLTE/palette chunk (unimplemented)
-			{
-				skip_sig(png_fp, sig4);
-			}	
-			else if (memcmp(sig4, sig_gama,4) == 0) //gAMA/gamma chunk (unimplemented) Possibly related to: https://github.com/DeadSix27/waifu2x-converter-cpp/issues/24
-			{
-				skip_sig(png_fp, sig4);
-			}
-			else if (memcmp(sig4, sig_time,4) == 0)
-			{
-				skip_sig(png_fp, sig4);
-			}
-			else if (memcmp(sig4, sig_text,4) == 0)
-			{
-				skip_sig(png_fp, sig4);
-			}
-			else if (memcmp(sig4, sig_ztxt,4) == 0)
-			{
-				skip_sig(png_fp, sig4);
-			}
-			else if (memcmp(sig4, sig_itxt,4) == 0)
-			{
-				skip_sig(png_fp, sig4);
-			}
-			else if (memcmp(sig4, sig_hist,4) == 0)
-			{
-				skip_sig(png_fp, sig4);
-			}
-			else if (memcmp(sig4, sig_splt,4) == 0)
-			{
-				skip_sig(png_fp, sig4);
-			}
-			else if (memcmp(sig4, sig_sbit,4) == 0)
-			{
-				skip_sig(png_fp, sig4);
-			}
-			else if (memcmp(sig4, sig_scal,4) == 0)
-			{
-				skip_sig(png_fp, sig4);
-			}
-			else if (memcmp(sig4, sig_offs,4) == 0)
-			{
-				skip_sig(png_fp, sig4);
-			}
-			else if (memcmp(sig4, sig_pcal,4) == 0)
-			{
-				skip_sig(png_fp, sig4);
-			}
-			else if (memcmp(sig4, sig_frac,4) == 0)
-			{
-				skip_sig(png_fp, sig4);
-			}
-			else if (memcmp(sig4, sig_gifg,4) == 0)
-			{
-				skip_sig(png_fp, sig4);
-			}
-			else if (memcmp(sig4, sig_gifx,4) == 0)
-			{
-				skip_sig(png_fp, sig4);
-			}
-			else if (memcmp(sig4, sig_gift,4) == 0)
-			{
-				skip_sig(png_fp, sig4);
-			}
-			else if (memcmp(sig4, sig_idat,4) == 0)
-			{ 
-				skip_sig(png_fp, sig4);
+			else {
+				for(int i = 0; sig_ignores[i] != 0; i++)				
+				{
+				if (memcmp(sig4, sig_ignores[i],4) == 0)
+					{
+						skip_sig(png_fp, sig4);
+					}
+				}
 			}
 			// fseek(png_fp, chunk_size, SEEK_CUR);
 			// unsigned int crc = read_int4(png_fp);
-			//DEBUG printf("crc: %08X\n",crc);
+			// printf("crc: %08X\n",crc);
 		}
 	}
 
