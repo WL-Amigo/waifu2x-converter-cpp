@@ -1427,7 +1427,7 @@ void get_png_background_colour(FILE *png_fp, bool *has_alpha, struct w2xconv_rgb
 			rdsz = fread(sig4, 1, 4, png_fp);
 			
 			if (rdsz != 4) {
-				/*/ DEBUG*/ printf("rdsz is not 4 rdsz: %d, sig: %s\n" , rdsz, sig4);
+				/*/ DEBUG*/ printf("rdsz is not 4 rdsz: %zu, sig: %s\n" , rdsz, sig4);
 				break;
 			}
 			
@@ -1447,7 +1447,7 @@ void get_png_background_colour(FILE *png_fp, bool *has_alpha, struct w2xconv_rgb
 				//DEBUG printf("sig(%s)\n", sig4);
 				fseek(png_fp, -8L, SEEK_CUR);
 				unsigned int chunk_size = read_uint4(png_fp);
-				//DEBUG printf("chunk_size: %d\n", chunk_size);
+				//DEBUG printf("chunk_size: %u\n", chunk_size);
 				read_int4(png_fp);
 				
 				fseek(png_fp, chunk_size, SEEK_CUR);
@@ -1460,7 +1460,7 @@ void get_png_background_colour(FILE *png_fp, bool *has_alpha, struct w2xconv_rgb
 				//DEBUG printf("sig(%s)\n", sig4);
 				fseek(png_fp, -8L, SEEK_CUR);
 				unsigned int chunk_size = read_uint4(png_fp);
-				//DEBUG printf("chunk_size: %d\n", chunk_size);
+				//DEBUG printf("chunk_size: %u\n", chunk_size);
 				read_int4(png_fp);
 				
 				if (type == PNG_TYPE::Truecolor || type == PNG_TYPE::TruecolorAlpha) 
@@ -1477,10 +1477,10 @@ void get_png_background_colour(FILE *png_fp, bool *has_alpha, struct w2xconv_rgb
 						bkgd_colour->g = g / 65535.0f;
 						bkgd_colour->b = b / 65535.0f;
 					}
-					//DEBUG printf("bkgd rgb: %d,%d,%d\n", bkgd_colour->r, bkgd_colour->g, bkgd_colour->b);
+					//DEBUG printf("bkgd rgb: %f,%f,%f\n", bkgd_colour->r, bkgd_colour->g, bkgd_colour->b);
 					if (chunk_size != 6)
 					{
-						//DEBUG printf("bkgd chunk is larger than 6: %d\n", chunk_size);
+						//DEBUG printf("bkgd chunk is larger than 6: %u\n", chunk_size);
 						//possible crash/issue/invalid png maybe check?
 					}
 					break;
@@ -1490,7 +1490,7 @@ void get_png_background_colour(FILE *png_fp, bool *has_alpha, struct w2xconv_rgb
 				{
 					// unsigned int c0 = fgetc(png_fp);
 					// unsigned int c1 = fgetc(png_fp);
-					// printf("gray: %d, %d\n", c0, c1);
+					// printf("gray: %u, %u\n", c0, c1);
 				}
 				else if (type == PNG_TYPE::Indexed)
 				{
