@@ -1339,7 +1339,7 @@ void get_png_background_colour(FILE *png_fp, bool *has_alpha, struct w2xconv_rgb
 	/* use IMREAD_UNCHANGED
 	 * if png && type == RGBA || depth == 16
 	 */
-	if (type == 6 || type == 3 || type == 4) { // type == 3 is indexed color 
+	if (type == PNG_TYPE::TruecolorAlpha || type == PNG_TYPE::Indexed || type == PNG_TYPE::GrayscaleAlpha) { // type == 3 is indexed color 
 		if (depth == 8 || // RGBA 8bit
 		    depth == 16	  // RGBA 16bit
 			)
@@ -1350,12 +1350,12 @@ void get_png_background_colour(FILE *png_fp, bool *has_alpha, struct w2xconv_rgb
 		*has_alpha = true;
 	}
 	
-	//DEBUG printf("png type: %d\n", type);
-	
+	//DEBUG printf("png type: %d, depth: %d\n", type, depth);
+
 	//end of iheader reading
 
 	if (*has_alpha) {
-		if (type == 3) // indexed/type 3 png require the tRNS chunk for alpha this will be checked later on.
+		if (type == PNG_TYPE::Indexed) // indexed/type 3 png require the tRNS chunk for alpha this will be checked later on.
 		{
 			*has_alpha = false;
 		}
@@ -1419,7 +1419,7 @@ void get_png_background_colour(FILE *png_fp, bool *has_alpha, struct w2xconv_rgb
 				fseek(png_fp, 4L, SEEK_CUR);
 				
 				
-				if (type == 3)
+				if (type == PNG_TYPE::Indexed)
 				{					
 					//get first palette entry:
 					unsigned int r = fgetc(png_fp);
@@ -1457,7 +1457,7 @@ void get_png_background_colour(FILE *png_fp, bool *has_alpha, struct w2xconv_rgb
 			if (memcmp(sig, sig_trns,4) == 0) //alpha/tRNS chunk (unimplemented)
 			{ 
 				//DEBUG printf("tRNS\n");
-				if (type == 3)
+				if (type == PNG_TYPE::Indexed)
 				{
 					/*PNG_SPEC INFO
 					
@@ -1474,7 +1474,7 @@ void get_png_background_colour(FILE *png_fp, bool *has_alpha, struct w2xconv_rgb
 						In the common case in which only palette index 0 need be made transparent, only a one-byte tRNS chunk is needed.
 					*/
 				}
-				else if (type == 0)
+				else if (type == PNG_TYPE::Grayscale)
 				{
 					/*PNG_SPEC INFO
 					
@@ -1487,7 +1487,7 @@ void get_png_background_colour(FILE *png_fp, bool *has_alpha, struct w2xconv_rgb
 						all other pixels are to be treated as fully opaque (alpha value 2^bitdepth). 
 					*/
 				}
-				else if (type == 2)
+				else if (type == PNG_TYPE::Truecolor)
 				{
 					/*PNG_SPEC INFO
 					
@@ -1515,8 +1515,12 @@ void get_png_background_colour(FILE *png_fp, bool *has_alpha, struct w2xconv_rgb
 			if (memcmp(sig, sig_bkgd,4) == 0) //background color chunk
 			{
 				//DEBUG printf("bKGD\n");
-				if (type == 2 || type == 6)
-				{					
+				fseek(png_fp, -8L, SEEK_CUR);
+				int bkgd_size = read_int4(png_fp);
+				//DEBUG printf("bkgd_size: %d\n", bkgd_size);
+				fseek(png_fp, 4L, SEEK_CUR);
+				if (type == PNG_TYPE::Truecolor || type == PNG_TYPE::TruecolorAlpha)
+				{
 					float r = (float) read_int2(png_fp);
 					float g = (float) read_int2(png_fp);
 					float b = (float) read_int2(png_fp);
@@ -1531,14 +1535,14 @@ void get_png_background_colour(FILE *png_fp, bool *has_alpha, struct w2xconv_rgb
 					}
 				}
 				/* unused
-				else if (type == 0 || type == 4)
+				else if (type == PNG_TYPE::Grayscale || type == PNG_TYPE::GrayscaleAlpha)
 				{
 					// unsigned int c0 = fgetc(png_fp);
 					// unsigned int c1 = fgetc(png_fp);
 					// printf("gray: %d, %d\n", c0, c1);
 					fseek(png_fp, 2L, SEEK_CUR);
 				}
-				else if (type == 3)
+				else if (type == PNG_TYPE::Indexed)
 				{
 					// palette_index = fgetc(png_fp);
 					// printf("palette_index: %d\n", palette_index);
