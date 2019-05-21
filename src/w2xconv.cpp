@@ -1298,7 +1298,6 @@ static int read_int4(FILE *fi)
 	return val;
 }
 
-
 /*
 	Skip one PNG chunk.
 	
@@ -1307,12 +1306,12 @@ static int read_int4(FILE *fi)
 	With the aquired chunk_size it skips over chunk_size,
 	then over the final part, the crc sum.
 */
-void skip_sig(FILE *png_fp, char *sig4)
+void skip_sig(FILE *png_fp, char *sig)
 {
-	//DEBUG printf("sig(%s)\n", sig4);
+	//DEBUG printf("sig(%s)\n", sig);
 	fseek(png_fp, -8L, SEEK_CUR);
 	unsigned int chunk_size = read_uint4(png_fp);
-	//DEBUG printf("chunk_size: %d\n", chunk_size);
+	//DEBUG printf("chunk_size: %u\n", chunk_size);
 	read_int4(png_fp);
 	fseek(png_fp, chunk_size, SEEK_CUR);
 	unsigned int crc = read_int4(png_fp);
@@ -1359,34 +1358,40 @@ void get_png_background_colour(FILE *png_fp, bool *has_alpha, struct w2xconv_rgb
 		sig_sbit, sig_scal, sig_offs, sig_pcal, sig_frac,
 		sig_gifg, sig_gifx, sig_gift, sig_idat, sig_srgb, 
 	};
+	
+	size_t sig_ignore_size = sizeof(sig_ignores)/sizeof(*sig_ignores);
+	
+	char sig[8];
 
-	char sig8[8];
-	char sig4[8];
-
-	//checks if the file is atleast 8 bytes long(?)
-	size_t rdsz = fread(sig8, 1, 8, png_fp);
+	//checks if the file is at least 8 bytes long (png signature)
+	size_t rdsz = fread(sig, 1, 8, png_fp);
 	if (rdsz != 8) {
+		//DEBUG printf("png_sig rdsz is not 8, rdsz: %zu, sig: %s\n", rdsz, sig);
 		return;
 	}
 	
 	//check if file signatures match
-	if (memcmp(sig_png, sig8,8) != 0) {
+	if (memcmp(sig_png, sig, 8) != 0) {
+		//DEBUG printf("png_sig does not match, sig: %s\n", sig);
 		return;
 	}
 	
 	//check if ihdr is the required 13 bytes long
 	int ihdr_size = read_int4(png_fp);
 	if (ihdr_size != 13) {
+		//DEBUG printf("ihdr_size is not 13, ihdr_size: %d, sig: %s\n", ihdr_size, sig);
 		return;
 	}
 
-	rdsz = fread(sig4, 1, 4, png_fp);
+	rdsz = fread(sig, 1, 4, png_fp);
 	if (rdsz != 4) {
+		//DEBUG printf("first rdsz is not 4, rdsz: %zu, sig: %s\n", rdsz, sig);
 		return;
 	}
 	
 	//missing ihdr/invalid png
-	if (memcmp(sig_ihdr, sig4,4) != 0) {
+	if (memcmp(sig_ihdr, sig, 4) != 0) {
+		//DEBUG printf("missing ihdr/invalid png: %s\n", sig);
 		return;
 	}
 	
@@ -1424,10 +1429,10 @@ void get_png_background_colour(FILE *png_fp, bool *has_alpha, struct w2xconv_rgb
 		}
 		//read rest of png
 		while (1) {
-			rdsz = fread(sig4, 1, 4, png_fp);
+			rdsz = fread(sig, 1, 4, png_fp);
 			
 			if (rdsz != 4) {
-				/*/ DEBUG*/ printf("rdsz is not 4 rdsz: %zu, sig: %s\n" , rdsz, sig4);
+				//DEBUG printf("rdsz is not 4 rdsz: %zu, sig: %s\n", rdsz, sig);
 				break;
 			}
 			
@@ -1435,16 +1440,16 @@ void get_png_background_colour(FILE *png_fp, bool *has_alpha, struct w2xconv_rgb
 			// unsigned int chunk_size = read_uint4(png_fp);
 			// read_int4(png_fp);
 			
-			if (memcmp(sig4, sig_iend,4) == 0) //end of PNG
+			if (memcmp(sig, sig_iend,4) == 0) //end of PNG
 			{
-				//DEBUG printf("sig(%s)\n", sig4);
+				//DEBUG printf("sig(%s)\n", sig);
 				break; //end of png
 			}
-			else if (memcmp(sig4, sig_trns,4) == 0) //alpha/tRNS chunk (unimplemented)
+			else if (memcmp(sig, sig_trns,4) == 0) //alpha/tRNS chunk (unimplemented)
 			{ 
 				*has_alpha = true; // indexed/type 3 png with tRNS alpha chunk
 				
-				//DEBUG printf("sig(%s)\n", sig4);
+				//DEBUG printf("sig(%s)\n", sig);
 				fseek(png_fp, -8L, SEEK_CUR);
 				unsigned int chunk_size = read_uint4(png_fp);
 				//DEBUG printf("chunk_size: %u\n", chunk_size);
@@ -1455,9 +1460,9 @@ void get_png_background_colour(FILE *png_fp, bool *has_alpha, struct w2xconv_rgb
 				unsigned int crc = read_int4(png_fp);
 				//DEBUG printf("crc: %08X\n",crc);
 			}
-			else if (memcmp(sig4, sig_bkgd,4) == 0) //background color chunk
+			else if (memcmp(sig, sig_bkgd,4) == 0) //background color chunk
 			{
-				//DEBUG printf("sig(%s)\n", sig4);
+				//DEBUG printf("sig(%s)\n", sig);
 				fseek(png_fp, -8L, SEEK_CUR);
 				unsigned int chunk_size = read_uint4(png_fp);
 				//DEBUG printf("chunk_size: %u\n", chunk_size);
@@ -1506,11 +1511,11 @@ void get_png_background_colour(FILE *png_fp, bool *has_alpha, struct w2xconv_rgb
 				}
 			}
 			else {
-				for(int i = 0; sig_ignores[i] != 0; i++)				
+				for(int i = 0; i < sig_ignore_size; i++)
 				{
-				if (memcmp(sig4, sig_ignores[i],4) == 0)
+					if (memcmp(sig, sig_ignores[i], 4) == 0)
 					{
-						skip_sig(png_fp, sig4);
+						skip_sig(png_fp, sig);
 					}
 				}
 			}
