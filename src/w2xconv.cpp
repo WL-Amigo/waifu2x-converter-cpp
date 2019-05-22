@@ -1251,17 +1251,6 @@ postproc_yuv2rgb(cv::Mat *dst,
 	}
 }
 
-/*
-static int read_int4(FILE *fp)
-{
-    unsigned int c0 = fgetc(fp);
-    unsigned int c1 = fgetc(fp);
-    unsigned int c2 = fgetc(fp);
-    unsigned int c3 = fgetc(fp);
-
-    return (c0<<24) | (c1<<16) | (c2<<8) | (c3);
-}
-*/
 static int read_int2(FILE *fp)
 {
     unsigned int c0 = fgetc(fp);
@@ -1272,30 +1261,15 @@ static int read_int2(FILE *fp)
 
 static unsigned int read_uint4(FILE *fi)
 {
-	unsigned int val = 0;
 	unsigned char oneBytes[4];
-	if (fread(&oneBytes[0], 1, 4, fi) == 4)
-	{
-		val += oneBytes[0] * (1 << 24);
-		val += oneBytes[1] * (1 << 16);
-		val += oneBytes[2] * (1 << 8);
-		val += oneBytes[3] * (1 << 0);
-	}
-	return val;
+	if (fread(oneBytes, 1, 4, fi) == 4)
+		return (oneBytes[0]<<24) | (oneBytes[1]<<16) | (oneBytes[2]<<8) | (oneBytes[3]); // unsinged char will be automatically promoted to unsinged int
+	return 0;
 }
 
 static int read_int4(FILE *fi)
 {
-	int val = 0;
-	unsigned char oneBytes[4];
-	if (fread(&oneBytes[0], 1, 4, fi) == 4)
-	{
-		val += oneBytes[0] * (1 << 24);
-		val += oneBytes[1] * (1 << 16);
-		val += oneBytes[2] * (1 << 8);
-		val += oneBytes[3] * (1 << 0);
-	}
-	return val;
+	return (int) read_uint4(fi);
 }
 
 /*
