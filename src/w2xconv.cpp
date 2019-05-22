@@ -1286,7 +1286,7 @@ void skip_sig(FILE *png_fp, char *sig)
 	fseek(png_fp, -8L, SEEK_CUR);
 	unsigned int chunk_size = read_uint4(png_fp);
 	//DEBUG printf("chunk_size: %u\n", chunk_size);
-	read_int4(png_fp);
+	fseek(png_fp, 4L, SEEK_CUR);
 	fseek(png_fp, chunk_size, SEEK_CUR);
 	unsigned int crc = read_int4(png_fp);
 	//DEBUG printf("crc: %08X\n",crc);
@@ -1412,7 +1412,7 @@ void get_png_background_colour(FILE *png_fp, bool *has_alpha, struct w2xconv_rgb
 			
 			// fseek(png_fp, -8L, SEEK_CUR);
 			// unsigned int chunk_size = read_uint4(png_fp);
-			// read_int4(png_fp);
+			// fseek(png_fp, 4L, SEEK_CUR);
 			
 			if (memcmp(sig, sig_iend,4) == 0) //end of PNG
 			{
@@ -1427,7 +1427,7 @@ void get_png_background_colour(FILE *png_fp, bool *has_alpha, struct w2xconv_rgb
 				fseek(png_fp, -8L, SEEK_CUR);
 				unsigned int chunk_size = read_uint4(png_fp);
 				//DEBUG printf("chunk_size: %u\n", chunk_size);
-				read_int4(png_fp);
+				fseek(png_fp, 4L, SEEK_CUR);
 				
 				fseek(png_fp, chunk_size, SEEK_CUR);
 				
@@ -1440,7 +1440,7 @@ void get_png_background_colour(FILE *png_fp, bool *has_alpha, struct w2xconv_rgb
 				fseek(png_fp, -8L, SEEK_CUR);
 				unsigned int chunk_size = read_uint4(png_fp);
 				//DEBUG printf("chunk_size: %u\n", chunk_size);
-				read_int4(png_fp);
+				fseek(png_fp, 4L, SEEK_CUR);
 				
 				if (type == PNG_TYPE::Truecolor || type == PNG_TYPE::TruecolorAlpha) 
 				{
