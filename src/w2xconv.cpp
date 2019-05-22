@@ -1325,15 +1325,15 @@ void get_png_background_colour(FILE *png_fp, bool *has_alpha, struct w2xconv_rgb
 	const static unsigned char sig_idat[4] = {'I','D','A','T'};
 	const static unsigned char sig_srgb[4] = {'s','R','G','B'};
 
-	const static unsigned char *sig_ignores[20] = // array of unused PNG chunks and their signature.
+	const static unsigned char *sig_ignores[] = // array of unused PNG chunks and their signature.
 	{
 		sig_gama, sig_chrm, sig_plte, sig_phys, sig_time,
 		sig_text, sig_ztxt, sig_itxt, sig_hist, sig_splt,
 		sig_sbit, sig_scal, sig_offs, sig_pcal, sig_frac,
-		sig_gifg, sig_gifx, sig_gift, sig_idat, sig_srgb, 
+		sig_gifg, sig_gifx, sig_gift, sig_idat, sig_srgb
 	};
 	
-	size_t sig_ignore_size = sizeof(sig_ignores)/sizeof(*sig_ignores);
+	const static size_t sig_ignore_size = sizeof(sig_ignores)/sizeof(*sig_ignores);
 	
 	char sig[8];
 
