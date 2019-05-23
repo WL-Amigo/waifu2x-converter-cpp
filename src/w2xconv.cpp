@@ -498,6 +498,14 @@ w2xconv_strerror(W2XConvError *e)
 	case W2XCONV_ERROR_Y_MODEL_MISMATCH_TO_RGB_F32:
 		oss << "cannot apply y model to rgb_f32.";
 		break;
+		
+	case W2XCONV_ERROR_SCALE_LIMIT:
+		oss << "image scale is too big to convert.";
+		break;
+		
+	case W2XCONV_ERROR_SIZE_LIMIT:
+		oss << "image width (or height) under 40px cannot converted in this scale."; 
+		break;
 	}
 
 	return strdup(oss.str().c_str());
@@ -1592,9 +1600,173 @@ int w2xconv_convert_file(
 		}
 	}
 #endif
-
-	w2xconv_convert_mat(conv, image_dst, image_src, denoise_level, scale, blockSize, background, png_rgb, dst_png);
-
+	
+	//pieces.push_back(image_src);
+	//image_src.release();	// push_back does deep copy
+	
+	const static int pad = 12;	// give pad to avoid distortions in edge
+	
+	// w2x converts 2x and down scales when scale_ratio is not power of 2 (ex: 2.28 -> scale x4 - > down scale)
+	int max_scale = static_cast<int>(std::pow(2, std::ceil(std::log2(scale))));
+	
+	//printf("max_scale: %d\n", max_scale);
+	//char name[70]="";	// for imwrite test
+	
+	// comment is for slicer function
+	// output file pixel above 178,756,920px is limit. leave 56,920px for safe conversion. see issue #156
+	// all images that needs slices, it will require 20 px padding to 2 edges (input should w > 40, h > 40).
+	// with max_scale is 2, it only can converts less then (w+20) x (h+20) = 44,675,000 px.
+	// with max_scale is 4, it only can converts less then (w+20) x (h+20) = 11,168,750 px.
+	// with max_scale is 8, it only can converts less then (w+20) x (h+20) = 2,792,187 px.
+	// with max_scale is 16, it only can converts less then (w+20) x (h+20) = 698,046 px.
+	// with max_scale is 32, it only can converts less then (w+20) x (h+20) = 174,511 px.
+	// with max_scale is 64, it only can converts less then (w+20) x (h+20) = 3,627 px.
+	// with max_scale is 128, it only can converts less then (w+20) x (h+20) = 10,906 px.
+	// with max_scale is 256, it only can converts less then (w+20) x (h+20) = 2,726 px.
+	// with max_scale is 512, it only can converts less then (w+20) x (h+20) = 681 px. padding is all most eat everything (pieces are under 6px)
+	// with max_scale is 1024, it only can converts less then (w+20) x (h+20) = 170 px, padding exceed limit (20 x 20 = 400).
+	// with max_scale is 2048, it only can converts less then (w+20) x (h+20) = 42 px, which is no meaning to run w2x.
+	// with max_scale is 4096, you cannot convert it at all.
+	
+	if( image_src.rows * image_src.cols > 178700000 / 4 ){
+		if( max_scale >= 512 ){
+			setError(conv, W2XCONV_ERROR_SCALE_LIMIT);
+			return -1;
+		}
+		else if( ( image_src.rows < 40 || image_src.cols < 40 ) && image_src.rows * image_src.cols > 178700000 / 4){
+			setError(conv, W2XCONV_ERROR_SIZE_LIMIT);
+			return -1;
+		}
+	}
+	
+	if(denoise_level != -1)
+	{
+		if (conv->enable_log) {
+			printf("\nDenoise before Proccessing...\n");
+		}
+		w2xconv_convert_mat(conv, image_src, image_src, denoise_level, 1, blockSize, background, png_rgb, dst_png);
+	}
+	
+	int iteration_2x = static_cast<int>(std::ceil(std::log2(scale))) ;
+	double shrinkRatio = scale / std::pow(2.0, static_cast<double>(iteration_2x));
+	
+	image_src.copyTo(image_dst);
+	image_src.release();
+	
+	for( int ld = 0; ld < iteration_2x ; ld++)
+	{
+		// divide images in to 4^n pieces when output width is bigger then 8000^2....
+		std::vector<cv::Mat> pieces, converted;
+			
+		if (conv->enable_log) {
+			printf("\nProccessing [%d/%d] steps...\n", ld+1, iteration_2x);
+		}
+		
+		pieces.push_back(image_dst);
+		
+		while( pieces.front().rows * pieces.front().cols > 178700000 / 4 )
+		{
+			cv::Mat front = pieces.front();
+			int r=front.rows, c=front.cols;
+			int h_r=r/2, h_c=c/2;
+			
+			// div in 4 and add padding to input.
+			pieces.push_back(front(cv::Range(0,h_r+pad), cv::Range(0,h_c+pad)));
+			pieces.push_back(front(cv::Range(0,h_r+pad), cv::Range(h_c-pad,c)));
+			pieces.push_back(front(cv::Range(h_r-pad,r), cv::Range(0,h_c+pad)));
+			pieces.push_back(front(cv::Range(h_r-pad,r), cv::Range(h_c-pad,c)));
+			
+			// delete piece
+			pieces.erase(pieces.begin());
+		}
+		
+		for( int i=0; i<pieces.size(); i++ )
+		{
+			cv::Mat res;
+			/*
+			sprintf(name, "[test] step%d_slice%d_padded.png", ld, i);
+			cv::imwrite(name, pieces.at(i));
+			*/
+			
+			if (conv->enable_log) {
+				printf("\nProccessing [%d/%zu] slices\n", i+1, pieces.size());
+			}
+			
+			w2xconv_convert_mat(conv, res, pieces.at(i), -1, 2, blockSize, background, png_rgb, dst_png);
+				
+			converted.push_back(res);
+			
+			// pieces.erase(pieces.begin()); // not needed. w2xconv_convert_mat will automatically release memory of input mat.
+			
+			/*
+			sprintf(name, "[test] step%d_slice%d_converted.png", ld, i);
+			cv::imwrite(name, res);
+			*/
+		}
+		
+		 int j=0;	// for test_merge
+		
+		// combine images
+		while (converted.size() > 1)
+		{
+			cv::Mat quarter[4], tmp, merged;
+			int cut = (int) (pad * 2);
+			
+			if (conv->enable_log) {
+				printf("\nMerging slices back to one image... in queue: %zd slices\n", converted.size());
+			}
+			
+			//double time_a = getsec(), time_b = 0;
+			
+			tmp=converted.at(0)(cv::Range(0, converted.at(0).rows - cut), cv::Range(0, converted.at(0).cols - cut));
+			tmp.copyTo(quarter[0]);
+			tmp=converted.at(1)(cv::Range(0, converted.at(1).rows - cut), cv::Range(cut, converted.at(1).cols));
+			tmp.copyTo(quarter[1]);
+			tmp=converted.at(2)(cv::Range(cut, converted.at(2).rows), cv::Range(0, converted.at(2).cols - cut));
+			tmp.copyTo(quarter[2]);
+			tmp=converted.at(3)(cv::Range(cut, converted.at(3).rows), cv::Range(cut, converted.at(3).cols));
+			tmp.copyTo(quarter[3]);
+			
+			converted.erase(converted.begin(), converted.begin()+4);
+			
+			//printf("merge horizon\n"); 
+			hconcat(quarter[0], quarter[1], quarter[0]);
+			hconcat(quarter[2], quarter[3], quarter[2]);
+			
+			//printf("merge vertical\n"); 
+			vconcat(quarter[0], quarter[2], merged);
+			
+			//time_b = getsec();
+			//printf("took %f\n", time_b - time_a); 
+			
+			converted.push_back(merged);
+			
+			/*
+			printf("imwriting merged image\n"); 
+			sprintf(name, "[test] merge_step%d_block%d.png", ld, j++);
+			cv::imwrite(name, merged);*/
+		}
+		image_dst = converted.front();
+	}
+	
+	if (shrinkRatio != 0.0) {
+		if (conv->enable_log) {
+			printf("\nResizing image to input scale...\n");
+		}
+		cv::Size lastImageSize = image_dst.size();
+		lastImageSize.width =
+			static_cast<int>(static_cast<double>(lastImageSize.width
+							     * shrinkRatio));
+		lastImageSize.height =
+			static_cast<int>(static_cast<double>(lastImageSize.height
+							     * shrinkRatio));
+		cv::resize(image_dst, image_dst, lastImageSize, 0, 0, cv::INTER_LINEAR);
+	}
+	
+	if (conv->enable_log) {
+		printf("Writing image to file...\n\n");
+	}
+	
 	std::vector<int> compression_params;	
 	for ( int i = 0; i < sizeof(imwrite_params); i = i + 1 )
 	{
