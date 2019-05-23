@@ -37,6 +37,15 @@ enum W2XConvGPUMode {
 	W2XCONV_GPU_FORCE_OPENCL = 2
 };
 
+enum PNG_TYPE
+{
+	Grayscale = 0,
+	GrayscaleAlpha = 4,
+	Indexed = 3,
+	Truecolor = 2,
+	TruecolorAlpha = 6,
+};
+
 enum W2XConvErrorCode {
 	W2XCONV_NOERROR,
 	W2XCONV_ERROR_WIN32_ERROR,	/* errno_ = GetLastError() */

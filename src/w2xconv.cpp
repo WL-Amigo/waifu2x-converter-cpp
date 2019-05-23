@@ -1251,64 +1251,125 @@ postproc_yuv2rgb(cv::Mat *dst,
 	}
 }
 
-
-
-static int
-read_int4(FILE *fp) {
-    unsigned int c0 = fgetc(fp);
-    unsigned int c1 = fgetc(fp);
-    unsigned int c2 = fgetc(fp);
-    unsigned int c3 = fgetc(fp);
-
-    return (c0<<24) | (c1<<16) | (c2<<8) | (c3);
-}
-static int
-read_int2(FILE *fp) {
+static int read_int2(FILE *fp)
+{
     unsigned int c0 = fgetc(fp);
     unsigned int c1 = fgetc(fp);
 
     return (c0<<8) | (c1);
 }
 
+static unsigned int read_uint4(FILE *fi)
+{
+	unsigned char oneBytes[4];
+	if (fread(oneBytes, 1, 4, fi) == 4)
+		return (oneBytes[0]<<24) | (oneBytes[1]<<16) | (oneBytes[2]<<8) | (oneBytes[3]); // unsinged char will be automatically promoted to unsinged int
+	return 0;
+}
+
+static int read_int4(FILE *fi)
+{
+	return (int) read_uint4(fi);
+}
+
+/*
+	Skip one PNG chunk.
+	
+	Seeks 8Bytes back, reads the chunk length,
+	then skips over the already read signature.
+	With the aquired chunk_size it skips over chunk_size,
+	then over the final part, the crc sum.
+*/
+void skip_sig(FILE *png_fp, char *sig)
+{
+	//DEBUG printf("sig(%.4s)\n", sig);
+	fseek(png_fp, -8L, SEEK_CUR);
+	unsigned int chunk_size = read_uint4(png_fp);
+	//DEBUG printf("chunk_size: %u\n", chunk_size);
+	fseek(png_fp, 4L, SEEK_CUR);
+	fseek(png_fp, chunk_size, SEEK_CUR);
+	unsigned int crc = read_int4(png_fp);
+	//DEBUG printf("crc: %08X\n",crc);
+}
 
 //This checks if the file type is png, it defalts to the user inputted bkgd_colour otherwise.
 //The returning bool is whether the function excecuted successfully or not.
-void get_png_background_colour(FILE *png_fp, bool *png_rgb, struct w2xconv_rgb_float3 *bkgd_colour){
-	*png_rgb = false;
+void get_png_background_colour(FILE *png_fp, bool *has_alpha, struct w2xconv_rgb_float3 *bkgd_colour)
+{
+	*has_alpha = false;
 	//png file signature
-	const static unsigned char png[] = {0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A};
+	const static unsigned char sig_png[8] = {0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A};
 	//byte signature of sub components
-	const static unsigned char ihdr[] = {'I','H','D','R'};
-	const static unsigned char iend[] = {'I','E','N','D'};
-	const static unsigned char bkgd[] = {'b','K','G','D'};
+	const static unsigned char sig_ihdr[4] = {'I','H','D','R'};
+	const static unsigned char sig_iend[4] = {'I','E','N','D'};
+	const static unsigned char sig_bkgd[4] = {'b','K','G','D'};
+	const static unsigned char sig_trns[4] = {'t','R','N','S'};
+	const static unsigned char sig_gama[4] = {'g','A','M','A'};
+	const static unsigned char sig_chrm[4] = {'c','H','R','M'};
+	const static unsigned char sig_plte[4] = {'P','L','T','E'};
+	const static unsigned char sig_phys[4] = {'p','H','Y','s'};
+	const static unsigned char sig_time[4] = {'t','I','M','E'};
+	const static unsigned char sig_text[4] = {'t','E','X','t'};
+	const static unsigned char sig_ztxt[4] = {'z','T','X','t'};
+	const static unsigned char sig_itxt[4] = {'i','T','X','t'};
+	const static unsigned char sig_hist[4] = {'h','I','S','T'};
+	const static unsigned char sig_splt[4] = {'s','P','L','T'};
+	const static unsigned char sig_sbit[4] = {'s','B','I','T'};
+	const static unsigned char sig_scal[4] = {'s','C','A','L'};
+	const static unsigned char sig_offs[4] = {'o','F','F','s'};
+	const static unsigned char sig_pcal[4] = {'p','C','A','L'};
+	const static unsigned char sig_frac[4] = {'f','R','A','c'};
+	const static unsigned char sig_gifg[4] = {'g','I','F','g'};
+	const static unsigned char sig_gifx[4] = {'g','I','F','x'};
+	const static unsigned char sig_gift[4] = {'g','I','F','t'};
+	const static unsigned char sig_idat[4] = {'I','D','A','T'};
+	const static unsigned char sig_srgb[4] = {'s','R','G','B'};
 
+	const static unsigned char *sig_ignores[] = // array of unused PNG chunks and their signature.
+	{
+		sig_gama, sig_chrm, sig_plte, sig_phys, sig_time,
+		sig_text, sig_ztxt, sig_itxt, sig_hist, sig_splt,
+		sig_sbit, sig_scal, sig_offs, sig_pcal, sig_frac,
+		sig_gifg, sig_gifx, sig_gift, sig_idat, sig_srgb
+	};
+	
+	const static size_t sig_ignore_size = sizeof(sig_ignores)/sizeof(*sig_ignores);
+	
 	char sig[8];
 
-	//checks if the file is atleast 8 bytes long(?)
+	//checks if the file is at least 8 bytes long (png signature)
 	size_t rdsz = fread(sig, 1, 8, png_fp);
 	if (rdsz != 8) {
+		//DEBUG printf("png_sig rdsz is not 8, rdsz: %zu, sig: %.8s\n", rdsz, sig);
 		return;
 	}
+	
 	//check if file signatures match
-	if (memcmp(png,sig,8) != 0) {
+	if (memcmp(sig_png, sig, 8) != 0) {
+		//DEBUG printf("png_sig does not match, sig: %.8s\n", sig);
 		return;
 	}
-
-
-
+	
+	//check if ihdr is the required 13 bytes long
 	int ihdr_size = read_int4(png_fp);
 	if (ihdr_size != 13) {
+		//DEBUG printf("ihdr_size is not 13, ihdr_size: %d, sig: %.8s\n", ihdr_size, sig);
 		return;
 	}
 
 	rdsz = fread(sig, 1, 4, png_fp);
 	if (rdsz != 4) {
+		//DEBUG printf("first rdsz is not 4, rdsz: %zu, sig: %.4s\n", rdsz, sig);
 		return;
 	}
-	if (memcmp(ihdr,sig,4) != 0) {
+	
+	//missing ihdr/invalid png
+	if (memcmp(sig_ihdr, sig, 4) != 0) {
+		//DEBUG printf("missing ihdr/invalid png: %s\n", sig);
 		return;
 	}
-
+	
+	//start of iheader reading
 	int width = read_int4(png_fp);
 	int height = read_int4(png_fp);
 	int depth = fgetc(png_fp);
@@ -1320,48 +1381,121 @@ void get_png_background_colour(FILE *png_fp, bool *png_rgb, struct w2xconv_rgb_f
 	/* use IMREAD_UNCHANGED
 	 * if png && type == RGBA || depth == 16
 	 */
-	if (type == 6 || type == 3 || type == 4) { // type == 3 is indexed color 
+	if (type == PNG_TYPE::TruecolorAlpha || type == PNG_TYPE::Indexed || type == PNG_TYPE::GrayscaleAlpha) {
 		if (depth == 8 || // RGBA 8bit
 		    depth == 16	  // RGBA 16bit
 			)
 		{
-			*png_rgb = true;
+			*has_alpha = true;
 		}
 	} else if (depth == 16) { // RGB 16bit
-		*png_rgb = true;
+		*has_alpha = true;
 	}
 	
-	// std::cout << "type:" << type << std::endl;
+	//DEBUG printf("png type: %d, depth: %d\n", type, depth);
 
-	if (*png_rgb) {
+	//end of iheader reading
+
+	if (*has_alpha) {
+		if (type == PNG_TYPE::Indexed) // indexed/type 3 png require the tRNS chunk for alpha this will be checked later on.
+		{
+			*has_alpha = false;
+		}
+		//read rest of png
 		while (1) {
-			int chunk_size = read_int4(png_fp);
 			rdsz = fread(sig, 1, 4, png_fp);
+			
 			if (rdsz != 4) {
+				//DEBUG printf("rdsz is not 4 rdsz: %zu, sig: %.4s\n", rdsz, sig);
 				break;
 			}
-
-			if (memcmp(sig,iend,4) == 0) {
-				break;
+			
+			// fseek(png_fp, -8L, SEEK_CUR);
+			// unsigned int chunk_size = read_uint4(png_fp);
+			// fseek(png_fp, 4L, SEEK_CUR);
+			
+			if (memcmp(sig, sig_iend,4) == 0) //end of PNG
+			{
+				//DEBUG printf("sig(%.4s)\n", sig);
+				break; //end of png
 			}
-
-			if (memcmp(sig,bkgd,4) == 0) {
-				float r = (float) read_int2(png_fp);
-				float g = (float) read_int2(png_fp);
-				float b = (float) read_int2(png_fp);
-
-				if (depth == 8) {
-					bkgd_colour->r = r / 255.0f;
-					bkgd_colour->g = g / 255.0f;
-					bkgd_colour->b = b / 255.0f;
-				} else {
-					bkgd_colour->r = r / 65535.0f;
-					bkgd_colour->g = g / 65535.0f;
-					bkgd_colour->b = b / 65535.0f;
+			else if (memcmp(sig, sig_trns,4) == 0) //alpha/tRNS chunk (unimplemented)
+			{ 
+				*has_alpha = true; // indexed/type 3 png with tRNS alpha chunk
+				
+				//DEBUG printf("sig(%.4s)\n", sig);
+				fseek(png_fp, -8L, SEEK_CUR);
+				unsigned int chunk_size = read_uint4(png_fp);
+				//DEBUG printf("chunk_size: %u\n", chunk_size);
+				fseek(png_fp, 4L, SEEK_CUR);
+				
+				fseek(png_fp, chunk_size, SEEK_CUR);
+				
+				unsigned int crc = read_int4(png_fp);
+				//DEBUG printf("crc: %08X\n",crc);
+			}
+			else if (memcmp(sig, sig_bkgd,4) == 0) //background color chunk
+			{
+				//DEBUG printf("sig(%.4s)\n", sig);
+				fseek(png_fp, -8L, SEEK_CUR);
+				unsigned int chunk_size = read_uint4(png_fp);
+				//DEBUG printf("chunk_size: %u\n", chunk_size);
+				fseek(png_fp, 4L, SEEK_CUR);
+				
+				if (type == PNG_TYPE::Truecolor || type == PNG_TYPE::TruecolorAlpha) 
+				{
+					float r = (float) read_int2(png_fp);
+					float g = (float) read_int2(png_fp);
+					float b = (float) read_int2(png_fp);
+					if (depth == 8) {
+						bkgd_colour->r = r / 255.0f;
+						bkgd_colour->g = g / 255.0f;
+						bkgd_colour->b = b / 255.0f;
+					} else {
+						bkgd_colour->r = r / 65535.0f;
+						bkgd_colour->g = g / 65535.0f;
+						bkgd_colour->b = b / 65535.0f;
+					}
+					//DEBUG printf("bkgd rgb: %f,%f,%f\n", bkgd_colour->r, bkgd_colour->g, bkgd_colour->b);
+					if (chunk_size != 6)
+					{
+						//DEBUG printf("bkgd chunk is larger than 6: %u\n", chunk_size);
+						//possible crash/issue/invalid png maybe check?
+					}
+					break;
 				}
-
-				break;
+				/* unused
+				else if (type == PNG_TYPE::Grayscale || type == PNG_TYPE::GrayscaleAlpha)
+				{
+					// unsigned int c0 = fgetc(png_fp);
+					// unsigned int c1 = fgetc(png_fp);
+					// printf("gray: %u, %u\n", c0, c1);
+				}
+				else if (type == PNG_TYPE::Indexed)
+				{
+					// palette_index = fgetc(png_fp);
+					// printf("palette_index: %d\n", palette_index);
+				}
+				*/
+				else // keep looking for tRNS?
+				{
+					fseek(png_fp, chunk_size, SEEK_CUR);
+					unsigned int crc = read_int4(png_fp);
+					//DEBUG printf("crc: %08X\n",crc);
+				}
 			}
+			else {
+				for(int i = 0; i < sig_ignore_size; i++)
+				{
+					if (memcmp(sig, sig_ignores[i], 4) == 0)
+					{
+						skip_sig(png_fp, sig);
+					}
+				}
+			}
+			// fseek(png_fp, chunk_size, SEEK_CUR);
+			// unsigned int crc = read_int4(png_fp);
+			// printf("crc: %08X\n",crc);
 		}
 	}
 
