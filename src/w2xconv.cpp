@@ -1448,89 +1448,6 @@ w2xconv_convert_mat(struct W2XConv *conv,
 	}
 }
 
-int w2xconv_convert_file(
-	struct W2XConv *conv,
-	const char *dst_path,
-	const char *src_path,
-	int denoise_level,
-	double scale,
-	int blockSize,
-	int* imwrite_params) 
-{
-	double time_start = getsec();
-
-	FILE *png_fp = nullptr;
-	png_fp = fopen(src_path, "rb");
-
-	if (png_fp == nullptr) {
-		setPathError(conv, W2XCONV_ERROR_IMREAD_FAILED, src_path);
-		return -1;
-	}
-
-	bool png_rgb;
-	//Background colour
-	//float3 background(1.0f, 1.0f, 1.0f);
-	w2xconv_rgb_float3 background;
-	background.r = background.g = background.b = 1.0f;
-	get_png_background_colour(png_fp, &png_rgb, &background);
-
-	if (png_fp) {
-		fclose(png_fp);
-		png_fp = nullptr;
-	}
-
-	cv::Mat image_src, image_dst;
-
-	/*
-	 * IMREAD_COLOR                 : always BGR
-	 * IMREAD_UNCHANGED + png       : BGR or BGRA
-	 * IMREAD_UNCHANGED + otherwise : ???
-	 */
-	if (png_rgb) {
-		image_src = cv::imread(src_path, cv::IMREAD_UNCHANGED);
-	} else {
-		image_src = cv::imread(src_path, cv::IMREAD_COLOR);
-	}
-
-	bool dst_png = false;
-	{
-		size_t len = strlen(dst_path);
-		if (len >= 4) {
-			if (tolower(dst_path[len-4]) == '.' &&
-			    tolower(dst_path[len-3]) == 'p' &&
-			    tolower(dst_path[len-2]) == 'n' &&
-			    tolower(dst_path[len-1]) == 'g')
-			{
-				dst_png = true;
-			}
-		}
-	}
-	
-	w2xconv_convert_mat(conv, image_dst, image_src, denoise_level, scale, blockSize, background, png_rgb, dst_png);
-	
-	std::vector<int> compression_params;	
-	for ( int i = 0; i < sizeof(imwrite_params); i = i + 1 )
-	{
-		compression_params.push_back(imwrite_params[i]);
-	}	
-
-	if (!cv::imwrite(dst_path, image_dst, compression_params)) {
-		setPathError(conv,
-			     W2XCONV_ERROR_IMWRITE_FAILED,
-			     dst_path);
-		return -1;
-	}
-
-	double time_end = getsec();
-
-	conv->flops.process_sec += time_end - time_start;
-
-	//printf("== %f == \n", conv->impl->env.transfer_wait);
-
-	return 0;
-}
-
-
 #if defined(WIN32) && defined(UNICODE)
 
 void read_imageW(cv::Mat* image, const WCHAR* filepath, int flags=cv::IMREAD_COLOR) {
@@ -1562,7 +1479,7 @@ void read_imageW(cv::Mat* image, const WCHAR* filepath, int flags=cv::IMREAD_COL
     delete[] imgBuffer;
 }
 
-bool write_imageW(const WCHAR* filepath, cv::Mat& img, int* param)
+bool write_imageW(const WCHAR* filepath, cv::Mat& img, std::vector<int>& param)
 {
 	FILE* pFile;
 	std::vector<uchar> imageBuffer;
@@ -1571,12 +1488,7 @@ bool write_imageW(const WCHAR* filepath, cv::Mat& img, int* param)
 	ext_w = ext_w.substr(ext_w.find_last_of(L'.'));
 	ext.assign(ext_w.begin(), ext_w.end());
 	
-	std::vector<int> compression_params;	
-	for ( int i = 0; i < sizeof(param); i = i + 1 )
-	{
-		compression_params.push_back(param[i]);
-	}	
-	if(!cv::imencode(ext.c_str(),img, imageBuffer, compression_params) )
+	if(!cv::imencode(ext.c_str(),img, imageBuffer, param) )
 		return false;
 	
     pFile = _wfopen(filepath, L"wb+");
@@ -1588,11 +1500,17 @@ bool write_imageW(const WCHAR* filepath, cv::Mat& img, int* param)
     fclose(pFile);
     return true;
 }
+#endif
 
-int w2xconv_convert_fileW(
+int w2xconv_convert_file(
 	struct W2XConv *conv,
+#if defined(WIN32) && defined(UNICODE)
 	const WCHAR *dst_path,
 	const WCHAR *src_path,
+#else
+	const char *dst_path,
+	const char *src_path,
+#endif
 	int denoise_level,
 	double scale,
 	int blockSize,
@@ -1601,7 +1519,12 @@ int w2xconv_convert_fileW(
 	double time_start = getsec();
 
 	FILE *png_fp = nullptr;
+	
+#if defined(WIN32) && defined(UNICODE)
 	png_fp = _wfopen(src_path, L"rb");
+#else
+	png_fp = fopen(src_path, "rb");
+#endif
 
 	if (png_fp == nullptr) {
 		setPathError(conv, W2XCONV_ERROR_IMREAD_FAILED, src_path);
@@ -1627,12 +1550,14 @@ int w2xconv_convert_fileW(
 	 * IMREAD_UNCHANGED + png       : BGR or BGRA
 	 * IMREAD_UNCHANGED + otherwise : ???
 	 */
+	
+#if defined(WIN32) && defined(UNICODE)
 	if (png_rgb) {
 		read_imageW(&image_src, src_path, cv::IMREAD_UNCHANGED);
 	} else {
 		read_imageW(&image_src, src_path, cv::IMREAD_COLOR);
 	}
-
+	
 	bool dst_png = false;
 	{
 		size_t len = wcslen(dst_path);
@@ -1646,10 +1571,41 @@ int w2xconv_convert_fileW(
 			}
 		}
 	}
+#else
+	if (png_rgb) {
+		image_src = cv::imread(src_path, cv::IMREAD_UNCHANGED);
+	} else {
+		image_src = cv::imread(src_path, cv::IMREAD_COLOR);
+	}
+
+	bool dst_png = false;
+	{
+		size_t len = strlen(dst_path);
+		if (len >= 4) {
+			if (tolower(dst_path[len-4]) == '.' &&
+			    tolower(dst_path[len-3]) == 'p' &&
+			    tolower(dst_path[len-2]) == 'n' &&
+			    tolower(dst_path[len-1]) == 'g')
+			{
+				dst_png = true;
+			}
+		}
+	}
+#endif
 
 	w2xconv_convert_mat(conv, image_dst, image_src, denoise_level, scale, blockSize, background, png_rgb, dst_png);
 
-	if (!write_imageW(dst_path, image_dst, imwrite_params)) {
+	std::vector<int> compression_params;	
+	for ( int i = 0; i < sizeof(imwrite_params); i = i + 1 )
+	{
+		compression_params.push_back(imwrite_params[i]);
+	}
+	
+#if defined(WIN32) && defined(UNICODE)
+	if (!write_imageW(dst_path, image_dst, compression_params)) {
+#else
+	if (!cv::imwrite(dst_path, image_dst, compression_params)) {
+#endif
 		setPathError(conv,
 			     W2XCONV_ERROR_IMWRITE_FAILED,
 			     dst_path);
@@ -1664,7 +1620,6 @@ int w2xconv_convert_fileW(
 
 	return 0;
 }
-#endif
 
 
 static void
