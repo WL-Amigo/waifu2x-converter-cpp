@@ -551,7 +551,57 @@ setError(W2XConv *conv,
 	conv->last_error.code = code;
 }
 
+#if defined(WIN32) && defined(UNICODE)
+int
+w2xconv_load_models(W2XConv *conv, const WCHAR *model_dir)
+{
+	struct W2XConvImpl *impl = conv->impl;
 
+	std::wstring modelFileName(model_dir);
+
+	impl->noise0_models.clear();
+	impl->noise1_models.clear();
+	impl->noise2_models.clear();
+	impl->noise3_models.clear();
+	impl->scale2_models.clear();
+
+	if (!w2xc::modelUtility::generateModelFromJSON(modelFileName + L"/noise0_model.json", impl->noise0_models)) {
+		setPathError(conv,
+			     W2XCONV_ERROR_MODEL_LOAD_FAILED,
+			     modelFileName + L"/noise0_model.json");
+		return -1;
+	}
+
+	if (!w2xc::modelUtility::generateModelFromJSON(modelFileName + L"/noise1_model.json", impl->noise1_models)) {
+		setPathError(conv,
+			     W2XCONV_ERROR_MODEL_LOAD_FAILED,
+			     modelFileName + L"/noise1_model.json");
+		return -1;
+	}
+	if (!w2xc::modelUtility::generateModelFromJSON(modelFileName + L"/noise2_model.json", impl->noise2_models)) {
+		setPathError(conv,
+			     W2XCONV_ERROR_MODEL_LOAD_FAILED,
+			     modelFileName + L"/noise2_model.json");
+		return -1;
+	}
+	if (!w2xc::modelUtility::generateModelFromJSON(modelFileName + L"/noise3_model.json", impl->noise3_models)) {
+		setPathError(conv,
+			     W2XCONV_ERROR_MODEL_LOAD_FAILED,
+			     modelFileName + L"/noise3_model.json");
+		return -1;
+	}
+	if (!w2xc::modelUtility::generateModelFromJSON(modelFileName + L"/scale2.0x_model.json", impl->scale2_models)) {
+		setPathError(conv,
+			     W2XCONV_ERROR_MODEL_LOAD_FAILED,
+			     modelFileName + L"/scale2.0x_model.json");
+		return -1;
+
+	}
+
+	return 0;
+}
+
+#else
 int
 w2xconv_load_models(W2XConv *conv, const char *model_dir)
 {
@@ -600,6 +650,7 @@ w2xconv_load_models(W2XConv *conv, const char *model_dir)
 
 	return 0;
 }
+#endif
 
 void
 w2xconv_set_model_3x3(struct W2XConv *conv,

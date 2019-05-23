@@ -866,12 +866,20 @@ Model::Model(int nInputPlane,
 }
 
 
-
+#if defined(WIN32) && defined(UNICODE)
+bool modelUtility::generateModelFromJSON(const std::wstring &fileName,
+#else
 bool modelUtility::generateModelFromJSON(const std::string &fileName,
+#endif
 		std::vector<std::unique_ptr<Model> > &models) {
 
+#if defined(WIN32) && defined(UNICODE)
+	std::wstring binpath = fileName + L".bin";
+	FILE *binfp = _wfopen(binpath.c_str(), L"rb");
+#else
 	std::string binpath = fileName + ".bin";
 	FILE *binfp = fopen(binpath.c_str(), "rb");
+#endif
 
 	if (binfp) {
 		bool need_update = update_test(binpath.c_str(), fileName.c_str());
@@ -899,7 +907,9 @@ bool modelUtility::generateModelFromJSON(const std::string &fileName,
 
 		jsonFile.open(fileName);
 		if (!jsonFile.is_open()) {
-			std::cerr << "Error : couldn't open " << fileName << std::endl;
+			std::string fname;
+			fname.assign(fileName.begin(), fileName.end());
+			std::cerr << "Error : couldn't open " << fname << std::endl;
 			return false;
 		}
 
@@ -919,7 +929,11 @@ bool modelUtility::generateModelFromJSON(const std::string &fileName,
 			models.push_back(std::move(m));
 		}
 
+#if defined(WIN32) && defined(UNICODE)
+		binfp = _wfopen(binpath.c_str(), L"wb");
+#else
 		binfp = fopen(binpath.c_str(), "wb");
+#endif
 		if (binfp) {
 			size_t nModel = objectArray.size();
 
