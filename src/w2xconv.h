@@ -1,3 +1,26 @@
+/*
+* The MIT License (MIT)
+* Copyright (c) 2015 amigo(white luckers), tanakamura, DeadSix27, YukihoAA and contributors
+* 
+* Permission is hereby granted, free of charge, to any person obtaining a copy
+* of this software and associated documentation files (the "Software"), to deal
+* in the Software without restriction, including without limitation the rights
+* to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+* copies of the Software, and to permit persons to whom the Software is
+* furnished to do so, subject to the following conditions:
+* 
+* The above copyright notice and this permission notice shall be included in all
+* copies or substantial portions of the Software.
+* 
+* THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+* IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+* FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+* AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+* LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+* OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+* SOFTWARE.
+*/
+
 #ifndef W2XCONV_H
 #define W2XCONV_H
 
@@ -31,7 +54,8 @@ extern "C" {
 
 #endif
 
-enum W2XConvGPUMode {
+enum W2XConvGPUMode
+{
 	W2XCONV_GPU_DISABLE = 0,
 	W2XCONV_GPU_AUTO = 1,
 	W2XCONV_GPU_FORCE_OPENCL = 2
@@ -46,7 +70,8 @@ enum PNG_TYPE
 	TruecolorAlpha = 6,
 };
 
-enum W2XConvErrorCode {
+enum W2XConvErrorCode
+{
 	W2XCONV_NOERROR,
 	W2XCONV_ERROR_WIN32_ERROR,	/* errno_ = GetLastError() */
 	W2XCONV_ERROR_WIN32_ERROR_PATH, /* u.win32_path */
@@ -67,46 +92,54 @@ enum W2XConvErrorCode {
 	W2XCONV_ERROR_SIZE_LIMIT,
 };
 
-struct W2XConvError {
+struct W2XConvError
+{
 	enum W2XConvErrorCode code;
 
-	union {
+	union
+	{
 		char *path;
 		unsigned int errno_;
 
-		struct {
+		struct
+		{
 			unsigned int errno_;
 			char *path;
 		} win32_path;
 
-		struct {
+		struct
+		{
 			int errno_;
 			char *path;
 		} libc_path;
 
-		struct {
+		struct
+		{
 			int error_code;
 			int dev_id;
 		} cl_error;
-	}u;
+	} u;
 };
 
 W2XCONV_EXPORT char *w2xconv_strerror(struct W2XConvError *e); /* should be free by w2xcvonv_free() */
 W2XCONV_EXPORT void w2xconv_free(void *p);
 
-struct W2XConvFlopsCounter {
+struct W2XConvFlopsCounter
+{
 	double flop;
 	double filter_sec;
 	double process_sec;
 };
 
-enum W2XConvProcessorType {
+enum W2XConvProcessorType
+{
 	W2XCONV_PROC_HOST,
 	W2XCONV_PROC_CUDA,
 	W2XCONV_PROC_OPENCL
 };
 
-enum W2XConvFilterType {
+enum W2XConvFilterType
+{
 	W2XCONV_FILTER_DENOISE0,
 	W2XCONV_FILTER_DENOISE1,
 	W2XCONV_FILTER_DENOISE2,
@@ -147,7 +180,8 @@ enum W2XConvFilterType {
 
 #define W2XCONV_PROC_OPENCL_UNKNOWN (W2XCONV_PROC_OPENCL_PLATFORM_UNKNOWN | W2XCONV_PROC_OPENCL_DEVICE_UNKNOWN)
 
-struct W2XConvProcessor {
+struct W2XConvProcessor
+{
 	enum W2XConvProcessorType type;
 	int sub_type;
 	int dev_id;
@@ -157,7 +191,8 @@ struct W2XConvProcessor {
 
 struct W2XConvThreadPool;
 
-struct W2XConv {
+struct W2XConv
+{
 	/* public */
 	struct W2XConvError last_error;
 	struct W2XConvFlopsCounter flops;
@@ -168,7 +203,8 @@ struct W2XConv {
 	struct W2XConvImpl *impl;
 };
 
-struct w2xconv_rgb_float3 {
+struct w2xconv_rgb_float3
+{
 	float r;
 	float g;
 	float b;
@@ -181,77 +217,93 @@ W2XCONV_EXPORT	void get_png_background_colour(FILE *png_fp, bool *png_rgb, struc
 
 W2XCONV_EXPORT const struct W2XConvProcessor *w2xconv_get_processor_list(size_t *ret_num);
 
-W2XCONV_EXPORT struct W2XConv *w2xconv_init(enum W2XConvGPUMode gpu,
-					    int njob /* 0 = auto */,
-					    int enable_log);
+W2XCONV_EXPORT struct W2XConv *w2xconv_init(enum W2XConvGPUMode gpu, int njob /* 0 = auto */, int enable_log);
 
-W2XCONV_EXPORT struct W2XConv *w2xconv_init_with_processor(int processor_idx,
-							   int njob,
-							   int enable_log);
+W2XCONV_EXPORT struct W2XConv *w2xconv_init_with_processor(int processor_idx, int njob, int enable_log);
 
 /* return negative if failed */
-W2XCONV_EXPORT int w2xconv_load_models(struct W2XConv *conv,
+W2XCONV_EXPORT int w2xconv_load_models
+(
+	struct W2XConv *conv,
 #if defined(WIN32) && defined(UNICODE)
-				       const WCHAR *model_dir);
+	const WCHAR *model_dir //FutureNote, possible to use #define W2X_CHAR WCHAR & #define W2X_CHAR char?
 #else
-				       const char *model_dir);
+	const char *model_dir
 #endif
+);
 
-W2XCONV_EXPORT void w2xconv_set_model_3x3(struct W2XConv *conv,
-					  enum W2XConvFilterType m,
-					  int layer_depth,
-					  int num_input_plane,
-					  const int *num_map, // num_map[layer_depth]
-					  const float *coef_list, // coef_list[layer_depth][num_map][3x3]
-					  const float *bias // bias[layer_depth][num_map]
-	);
+W2XCONV_EXPORT void w2xconv_set_model_3x3
+(
+	struct W2XConv *conv,
+	enum W2XConvFilterType m,
+	int layer_depth,
+	int num_input_plane,
+	const int *num_map, // num_map[layer_depth]
+	const float *coef_list, // coef_list[layer_depth][num_map][3x3]
+	const float *bias // bias[layer_depth][num_map]
+);
 
 
 W2XCONV_EXPORT void w2xconv_fini(struct W2XConv *conv);
 
 
-W2XCONV_EXPORT int w2xconv_convert_file(struct W2XConv *conv,
-#if defined(WIN32) && defined(UNICODE)		
-					const WCHAR *dst_path,
-					const WCHAR *src_path,
+W2XCONV_EXPORT int w2xconv_convert_file
+(
+	struct W2XConv *conv,
+#if defined(WIN32) && defined(UNICODE)	
+	const WCHAR *dst_path, //FutureNote: see #229
+	const WCHAR *src_path,
 #else
-					const char *dst_path,
-					const char *src_path,
+	const char *dst_path,
+	const char *src_path,
 #endif			
-					int denoise_level, /* -1:none, 0:L0 denoise, 1:L1 denoise, 2:L2 denoise, 3:L3 denoise  */
-					double scale,
-					int block_size,
-					int* imwrite_params);
+	int denoise_level, /* -1:none, 0:L0 denoise, 1:L1 denoise, 2:L2 denoise, 3:L3 denoise  */
+	double scale,
+	int block_size,
+	int* imwrite_params
+);
 
-W2XCONV_EXPORT int w2xconv_convert_rgb(struct W2XConv *conv,
-				       unsigned char *dst, size_t dst_step_byte, /* rgb24 (src_w*ratio, src_h*ratio) */
-				       unsigned char *src, size_t src_step_byte, /* rgb24 (src_w, src_h) */
-				       int src_w, int src_h,
-				       int denoise_level, /* -1:none, 0:L0 denoise, 1:L1 denoise, 2:L2 denoise, 3:L3 denoise  */
-				       double scale,
-				       int block_size);
+W2XCONV_EXPORT int w2xconv_convert_rgb
+(
+	struct W2XConv *conv,
+	unsigned char *dst, size_t dst_step_byte, /* rgb24 (src_w*ratio, src_h*ratio) */
+	unsigned char *src, size_t src_step_byte, /* rgb24 (src_w, src_h) */
+	int src_w, int src_h,
+	int denoise_level, /* -1:none, 0:L0 denoise, 1:L1 denoise, 2:L2 denoise, 3:L3 denoise  */
+	double scale,
+	int block_size
+);
 
-W2XCONV_EXPORT int w2xconv_convert_rgb_f32(struct W2XConv *conv,
-					   unsigned char *dst, size_t dst_step_byte, /* rgb float32x3 normalized[0-1] (src_w*ratio, src_h*ratio) */
-					   unsigned char *src, size_t src_step_byte, /* rgb float32x3 normalized[0-1] (src_w, src_h) */
-					   int src_w, int src_h,
-					   int denoise_level, /* -1:none, 0:L0 denoise, 1:L1 denoise, 2:L2 denoise, 3:L3 denoise  */
-					   double scale,
-					   int block_size);
+W2XCONV_EXPORT int w2xconv_convert_rgb_f32
+(
+	struct W2XConv *conv,
+	unsigned char *dst, size_t dst_step_byte, /* rgb float32x3 normalized[0-1] (src_w*ratio, src_h*ratio) */
+	unsigned char *src, size_t src_step_byte, /* rgb float32x3 normalized[0-1] (src_w, src_h) */
+	int src_w, int src_h,
+	int denoise_level, /* -1:none, 0:L0 denoise, 1:L1 denoise, 2:L2 denoise, 3:L3 denoise  */
+	double scale,
+	int block_size
+);
 
-W2XCONV_EXPORT int w2xconv_convert_yuv(struct W2XConv *conv,
-				       unsigned char *dst, size_t dst_step_byte, /* float32x3 normalized[0-1] (src_w*ratio, src_h*ratio) */
-				       unsigned char *src, size_t src_step_byte, /* float32x3 normalized[0-1] (src_w, src_h) */
-				       int denoise_level, /* -1:none, 0:L0 denoise, 1:L1 denoise, 2:L2 denoise, 3:L3 denoise  */
-				       double scale,
-				       int block_size);
+W2XCONV_EXPORT int w2xconv_convert_yuv
+(
+	struct W2XConv *conv,
+	unsigned char *dst, size_t dst_step_byte, /* float32x3 normalized[0-1] (src_w*ratio, src_h*ratio) */
+	unsigned char *src, size_t src_step_byte, /* float32x3 normalized[0-1] (src_w, src_h) */
+	int denoise_level, /* -1:none, 0:L0 denoise, 1:L1 denoise, 2:L2 denoise, 3:L3 denoise  */
+	double scale,
+	int block_size
+);
 
-W2XCONV_EXPORT int w2xconv_apply_filter_y(struct W2XConv *conv,
-					  enum W2XConvFilterType type,
-					  unsigned char *dst, size_t dst_step_byte, /* float32x1 normalized[0-1] (src_w, src_h) */
-					  unsigned char *src, size_t src_step_byte, /* float32x1 normalized[0-1] (src_w, src_h) */
-					  int src_w, int src_h,
-					  int block_size);
+W2XCONV_EXPORT int w2xconv_apply_filter_y
+(
+	struct W2XConv *conv,
+	enum W2XConvFilterType type,
+	unsigned char *dst, size_t dst_step_byte, /* float32x1 normalized[0-1] (src_w, src_h) */
+	unsigned char *src, size_t src_step_byte, /* float32x1 normalized[0-1] (src_w, src_h) */
+	int src_w, int src_h,
+	int block_size
+);
 
 W2XCONV_EXPORT int w2xconv_test(struct W2XConv *conv, int block_size);
 

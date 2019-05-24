@@ -1,10 +1,34 @@
+/*
+* The MIT License (MIT)
+* Copyright (c) 2015 amigo(white luckers), tanakamura, DeadSix27, YukihoAA and contributors
+* 
+* Permission is hereby granted, free of charge, to any person obtaining a copy
+* of this software and associated documentation files (the "Software"), to deal
+* in the Software without restriction, including without limitation the rights
+* to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+* copies of the Software, and to permit persons to whom the Software is
+* furnished to do so, subject to the following conditions:
+* 
+* The above copyright notice and this permission notice shall be included in all
+* copies or substantial portions of the Software.
+* 
+* THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+* IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+* FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+* AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+* LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+* OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+* SOFTWARE.
+*/
+
 #include <stdlib.h>
 #include <string.h>
 #include "cvwrap.hpp"
 
 W2Mat::~W2Mat()
 {
-	if (data_owner) {
+	if (data_owner)
+	{
 		data_owner=false;
 		free(data);
 		data = nullptr;
@@ -13,7 +37,7 @@ W2Mat::~W2Mat()
 
 
 W2Mat::W2Mat()
-	:data_owner(false),
+	: data_owner(false),
 	data(nullptr),
 	data_byte_width(0),
 	data_height(0),
@@ -25,7 +49,7 @@ W2Mat::W2Mat()
 }
 
 W2Mat::W2Mat(int width, int height, int type)
-	:data_owner(true),
+	: data_owner(true),
 	data_byte_width(width*CV_ELEM_SIZE(type)),
 	data_height(height),
 	view_top(0),
@@ -38,22 +62,21 @@ W2Mat::W2Mat(int width, int height, int type)
 }
 
 W2Mat::W2Mat(int width, int height, int type, void *data, int data_step)
-    :data_owner(true),
-     data_byte_width(data_step),
-     data_height(height),
-     view_top(0),
-     view_left(0),
-     view_width(width),
-     view_height(height),
-     type(type)
+	: data_owner(true),
+	data_byte_width(data_step),
+	data_height(height),
+	view_top(0),
+	view_left(0),
+	view_width(width),
+	view_height(height),
+	type(type)
 {
 	this->data = (char*)calloc(height, data_byte_width);
 	memcpy(this->data, data, height * data_byte_width);
 }
 
 
-W2Mat &
-W2Mat::operator=(W2Mat &&rhs)
+W2Mat & W2Mat::operator=(W2Mat &&rhs)
 {
     this->data_owner = rhs.data_owner;
     this->data = rhs.data;
@@ -71,9 +94,7 @@ W2Mat::operator=(W2Mat &&rhs)
     return *this;
 }
 
-W2Mat::W2Mat(const W2Mat & rhs,
-                 int view_left_offset, int view_top_offset,
-                 int view_width, int view_height)
+W2Mat::W2Mat(const W2Mat & rhs, int view_left_offset, int view_top_offset, int view_width, int view_height)
 {	
     this->data_owner = false;
     this->data = rhs.data;
@@ -88,18 +109,16 @@ W2Mat::W2Mat(const W2Mat & rhs,
     this->type = rhs.type;
 }
 
-void
-W2Mat::copy_full(W2Mat & target, W2Mat & rhs)
+void W2Mat::copy_full(W2Mat & target, W2Mat & rhs)
 {
-	target = W2Mat(rhs.view_width,
-		rhs.view_height,
-		rhs.type);
+	target = W2Mat(rhs.view_width, rhs.view_height,	rhs.type);
 
 	int elem_size = CV_ELEM_SIZE(rhs.type);
 	int w = rhs.view_width;
 	int h = rhs.view_height;
 
-	for (int yi = 0; yi < h; yi++) {
+	for (int yi = 0; yi < h; yi++)
+	{
 		char *out = target.ptr<char>(yi);
 		char *in = rhs.ptr<char>(yi);
 
@@ -108,10 +127,7 @@ W2Mat::copy_full(W2Mat & target, W2Mat & rhs)
 }
 
 #ifdef HAVE_OPENCV
-W2Mat::W2Mat(cv::Mat &m)
-    :data_owner(true),
-     view_top(0),
-     view_left(0)
+W2Mat::W2Mat(cv::Mat &m) : data_owner(true), view_top(0), view_left(0)
 {
 	int w = m.size().width;
 	int h = m.size().height;
@@ -124,7 +140,8 @@ W2Mat::W2Mat(cv::Mat &m)
 	this->data = (char*)calloc(h, this->data_byte_width);
 
 
-	for (int yi = 0; yi < h; yi++) {
+	for (int yi = 0; yi < h; yi++)
+	{
 		void *in = m.ptr(yi);
 		char *out = this->ptr<char>(yi);
 
@@ -132,8 +149,7 @@ W2Mat::W2Mat(cv::Mat &m)
 	}
 }
 
-void
-W2Mat::to_cvmat(cv::Mat &target)
+void W2Mat::to_cvmat(cv::Mat &target)
 {
 	int w = this->view_width;
 	int h = this->view_height;
@@ -141,7 +157,8 @@ W2Mat::to_cvmat(cv::Mat &target)
 	target = cv::Mat::zeros(cv::Size(w, h), this->type);
 	int elem_size = CV_ELEM_SIZE(this->type);
 
-	for (int yi = 0; yi < h; yi++) {
+	for (int yi = 0; yi < h; yi++)
+	{
 		void *out = target.ptr(yi);
 		void *in = this->ptr<char>(yi);
 
@@ -176,20 +193,21 @@ void extract_view_to_cvmat(cv::Mat &m, W2Mat &wm)
 	byte_offset += wm.view_top * wm.data_byte_width;
 	byte_offset += wm.view_left * CV_ELEM_SIZE(wm.type);
 	
-	cv::Mat ret(cv::Size(w,h),
-				wm.type,
-				data + byte_offset,
-				wm.data_byte_width);
+	cv::Mat ret(cv::Size(w,h), wm.type, data + byte_offset, wm.data_byte_width);
 	
 	ret.copyTo(m);
 }
 
 // DO NOT USE IN NORMAL SITUAYION. Return wm is not own their data.
-void extract_view_from_cvmat_offset(W2Mat &wm, cv::Mat &m,
-                               int view_left_offset,
-                               int view_top_offset,
-                               int view_width,
-                               int view_height)
+void extract_view_from_cvmat_offset
+(
+	W2Mat &wm,
+	cv::Mat &m,
+	int view_left_offset,
+	int view_top_offset,
+	int view_width,
+	int view_height
+)
 {	
 	extract_view_from_cvmat(wm, m);
 	
@@ -199,8 +217,7 @@ void extract_view_from_cvmat_offset(W2Mat &wm, cv::Mat &m,
 	wm.view_height = view_height;
 }
 
-void
-extract_viewlist_from_cvmat(std::vector<W2Mat> &list, std::vector<cv::Mat> &cvmat)
+void extract_viewlist_from_cvmat(std::vector<W2Mat> &list, std::vector<cv::Mat> &cvmat)
 {
 	std::for_each(cvmat.begin(), cvmat.end(),
 		[&list](cv::Mat &cv) {
@@ -208,8 +225,7 @@ extract_viewlist_from_cvmat(std::vector<W2Mat> &list, std::vector<cv::Mat> &cvma
 	});
 }
 
-void
-extract_viewlist_to_cvmat(std::vector<cv::Mat> &cvmat, std::vector<W2Mat> &list)
+void extract_viewlist_to_cvmat(std::vector<cv::Mat> &cvmat, std::vector<W2Mat> &list)
 {
 	std::for_each(list.begin(), list.end(),
 		[&cvmat](W2Mat &wm) {
