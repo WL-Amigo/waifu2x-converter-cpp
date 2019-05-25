@@ -1607,6 +1607,8 @@ void w2xconv_convert_mat
 {				
 	bool is_rgb = (conv->impl->scale2_models[0]->getNInputPlanes() == 3);
 	enum w2xc::image_format fmt;
+	const static int pad = 12;	// give pad to avoid distortions in edge
+	//char name[70]="";	// for imwrite test
 
 	int src_depth = CV_MAT_DEPTH(image_src.type());
 	int src_cn = CV_MAT_CN(image_src.type());
@@ -1700,8 +1702,103 @@ void w2xconv_convert_mat
 		{
 			shrinkRatio = scale / std::pow(2.0, static_cast<double>(iterTimesTwiceScaling));
 		}
+		int max_scale = static_cast<int>(std::pow(2, std::ceil(std::log2(scale))));
+		
+		for(int ld = 0; ld < iterTimesTwiceScaling ; ld++)
+		{
+			// divide images in to 4^n pieces when output width is bigger then 8000^2....
+			std::vector<cv::Mat> pieces, converted;
+				
+			if (conv->enable_log)
+			{
+				printf("\nProccessing [%d/%d] steps...\n", ld+1, iterTimesTwiceScaling);
+			}
+			
+			pieces.push_back(image);
+			
+			while(pieces.front().rows * pieces.front().cols > 178700000 / 4)
+			{
+				cv::Mat front = pieces.front();
+				int r=front.rows, c=front.cols;
+				int h_r=r/2, h_c=c/2;
+				
+				// div in 4 and add padding to input.
+				pieces.push_back(front(cv::Range(0,h_r+pad), cv::Range(0,h_c+pad)));
+				pieces.push_back(front(cv::Range(0,h_r+pad), cv::Range(h_c-pad,c)));
+				pieces.push_back(front(cv::Range(h_r-pad,r), cv::Range(0,h_c+pad)));
+				pieces.push_back(front(cv::Range(h_r-pad,r), cv::Range(h_c-pad,c)));
+				
+				// delete piece
+				pieces.erase(pieces.begin());
+			}
+			
+			for(int i=0; i<pieces.size(); i++)
+			{
+				cv::Mat res;
+				/*
+				sprintf(name, "[test] step%d_slice%d_padded.png", ld, i);
+				cv::imwrite(name, pieces.at(i));
+				*/
+				
+				if (conv->enable_log)
+				{
+					printf("\nProccessing [%d/%zu] slices\n", i+1, pieces.size());
+				}
+				
+				apply_scale(conv, pieces[i], iterTimesTwiceScaling, blockSize, fmt);
+				
+				/*
+				sprintf(name, "[test] step%d_slice%d_converted.png", ld, i);
+				cv::imwrite(name, res);
+				*/
+			}
 
-		apply_scale(conv, image, iterTimesTwiceScaling, blockSize, fmt);
+			//FutureNote: unused/leftover debug ?
+			int j=0; // for test_merge
+			
+			// combine images
+			while (pieces.size() > 1)
+			{
+				cv::Mat quarter[4], tmp, merged;
+				int cut = (int) (pad * 2);
+				
+				if (conv->enable_log)
+				{
+					printf("\nMerging slices back to one image... in queue: %zd slices\n", pieces.size());
+				}
+				
+				//double time_a = getsec(), time_b = 0;
+				
+				tmp=pieces[0](cv::Range(0, pieces[0].rows - cut), cv::Range(0, pieces[0].cols - cut));
+				tmp.copyTo(quarter[0]);
+				tmp=pieces[1](cv::Range(0, pieces[1].rows - cut), cv::Range(cut, pieces[1].cols));
+				tmp.copyTo(quarter[1]);
+				tmp=pieces[2](cv::Range(cut, pieces[2].rows), cv::Range(0, pieces[2].cols - cut));
+				tmp.copyTo(quarter[2]);
+				tmp=pieces[3](cv::Range(cut, pieces[3].rows), cv::Range(cut, pieces[3].cols));
+				tmp.copyTo(quarter[3]);
+				
+				pieces.erase(pieces.begin(), pieces.begin()+4);
+				
+				//printf("merge horizon\n"); 
+				hconcat(quarter[0], quarter[1], quarter[0]);
+				hconcat(quarter[2], quarter[3], quarter[2]);
+				
+				//printf("merge vertical\n"); 
+				vconcat(quarter[0], quarter[2], merged);
+				
+				//time_b = getsec();
+				//printf("took %f\n", time_b - time_a); 
+				
+				pieces.push_back(merged);
+				
+				/*
+				printf("imwriting merged image\n"); 
+				sprintf(name, "[test] merge_step%d_block%d.png", ld, j++);
+				cv::imwrite(name, merged);*/
+			}
+			image = pieces.front();
+		}
 
 		if (shrinkRatio != 0.0)
 		{
@@ -1933,16 +2030,10 @@ int w2xconv_convert_file
 	}
 #endif
 	
-	//pieces.push_back(image_src);
-	//image_src.release();	// push_back does deep copy
-	
-	const static int pad = 12;	// give pad to avoid distortions in edge
-	
 	// w2x converts 2x and down scales when scale_ratio is not power of 2 (ex: 2.28 -> scale x4 - > down scale)
 	int max_scale = static_cast<int>(std::pow(2, std::ceil(std::log2(scale))));
 	
 	//printf("max_scale: %d\n", max_scale);
-	//char name[70]="";	// for imwrite test
 	
 	// comment is for slicer function
 	// output file pixel above 178,756,920px is limit. leave 56,920px for safe conversion. see issue #156
@@ -1974,132 +2065,7 @@ int w2xconv_convert_file
 		}
 	}
 	
-	if(denoise_level != -1)
-	{
-		if (conv->enable_log)
-		{
-			printf("\nDenoise before Proccessing...\n");
-		}
-		w2xconv_convert_mat(conv, image_src, image_src, denoise_level, 1, blockSize, background, png_rgb, dst_png);
-	}
-	
-	int iteration_2x = static_cast<int>(std::ceil(std::log2(scale)));
-	double shrinkRatio = scale / std::pow(2.0, static_cast<double>(iteration_2x));
-	
-	image_src.copyTo(image_dst);
-	image_src.release();
-	
-	for(int ld = 0; ld < iteration_2x ; ld++)
-	{
-		// divide images in to 4^n pieces when output width is bigger then 8000^2....
-		std::vector<cv::Mat> pieces, converted;
-			
-		if (conv->enable_log)
-		{
-			printf("\nProccessing [%d/%d] steps...\n", ld+1, iteration_2x);
-		}
-		
-		pieces.push_back(image_dst);
-		
-		while(pieces.front().rows * pieces.front().cols > 178700000 / 4)
-		{
-			cv::Mat front = pieces.front();
-			int r=front.rows, c=front.cols;
-			int h_r=r/2, h_c=c/2;
-			
-			// div in 4 and add padding to input.
-			pieces.push_back(front(cv::Range(0,h_r+pad), cv::Range(0,h_c+pad)));
-			pieces.push_back(front(cv::Range(0,h_r+pad), cv::Range(h_c-pad,c)));
-			pieces.push_back(front(cv::Range(h_r-pad,r), cv::Range(0,h_c+pad)));
-			pieces.push_back(front(cv::Range(h_r-pad,r), cv::Range(h_c-pad,c)));
-			
-			// delete piece
-			pieces.erase(pieces.begin());
-		}
-		
-		for(int i=0; i<pieces.size(); i++)
-		{
-			cv::Mat res;
-			/*
-			sprintf(name, "[test] step%d_slice%d_padded.png", ld, i);
-			cv::imwrite(name, pieces.at(i));
-			*/
-			
-			if (conv->enable_log)
-			{
-				printf("\nProccessing [%d/%zu] slices\n", i+1, pieces.size());
-			}
-			
-			w2xconv_convert_mat(conv, res, pieces.at(i), -1, 2, blockSize, background, png_rgb, dst_png);
-				
-			converted.push_back(res);
-			
-			// pieces.erase(pieces.begin()); // not needed. w2xconv_convert_mat will automatically release memory of input mat.
-			
-			/*
-			sprintf(name, "[test] step%d_slice%d_converted.png", ld, i);
-			cv::imwrite(name, res);
-			*/
-		}
-
-		//FutureNote: unused/leftover debug ?
-		int j=0; // for test_merge
-		
-		// combine images
-		while (converted.size() > 1)
-		{
-			cv::Mat quarter[4], tmp, merged;
-			int cut = (int) (pad * 2);
-			
-			if (conv->enable_log)
-			{
-				printf("\nMerging slices back to one image... in queue: %zd slices\n", converted.size());
-			}
-			
-			//double time_a = getsec(), time_b = 0;
-			
-			tmp=converted.at(0)(cv::Range(0, converted.at(0).rows - cut), cv::Range(0, converted.at(0).cols - cut));
-			tmp.copyTo(quarter[0]);
-			tmp=converted.at(1)(cv::Range(0, converted.at(1).rows - cut), cv::Range(cut, converted.at(1).cols));
-			tmp.copyTo(quarter[1]);
-			tmp=converted.at(2)(cv::Range(cut, converted.at(2).rows), cv::Range(0, converted.at(2).cols - cut));
-			tmp.copyTo(quarter[2]);
-			tmp=converted.at(3)(cv::Range(cut, converted.at(3).rows), cv::Range(cut, converted.at(3).cols));
-			tmp.copyTo(quarter[3]);
-			
-			converted.erase(converted.begin(), converted.begin()+4);
-			
-			//printf("merge horizon\n"); 
-			hconcat(quarter[0], quarter[1], quarter[0]);
-			hconcat(quarter[2], quarter[3], quarter[2]);
-			
-			//printf("merge vertical\n"); 
-			vconcat(quarter[0], quarter[2], merged);
-			
-			//time_b = getsec();
-			//printf("took %f\n", time_b - time_a); 
-			
-			converted.push_back(merged);
-			
-			/*
-			printf("imwriting merged image\n"); 
-			sprintf(name, "[test] merge_step%d_block%d.png", ld, j++);
-			cv::imwrite(name, merged);*/
-		}
-		image_dst = converted.front();
-	}
-	
-	if (shrinkRatio != 0.0)
-	{
-		if (conv->enable_log)
-		{
-			printf("\nResizing image to input scale...\n");
-		}
-		cv::Size lastImageSize = image_dst.size();
-		lastImageSize.width = static_cast<int>(static_cast<double>(lastImageSize.width * shrinkRatio));
-		lastImageSize.height = static_cast<int>(static_cast<double>(lastImageSize.height * shrinkRatio));
-		cv::resize(image_dst, image_dst, lastImageSize, 0, 0, cv::INTER_LINEAR);
-	}
+	w2xconv_convert_mat(conv, image_dst, image_src, denoise_level, scale, blockSize, background, png_rgb, dst_png);
 	
 	if (conv->enable_log)
 	{
