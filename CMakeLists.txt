@@ -1,8 +1,11 @@
 cmake_minimum_required(VERSION 3.8)
 
 project(waifu2xcpp)
+
 include("CMakeDependentOption")
 include("CheckIncludeFileCXX")
+
+### Options
 
 option(ENABLE_OPENCV "Build with OpenCV support? (Default: ON)" ON)
 option(ENABLE_CUDA "Build with CUDA support? (Default: ON)" ON)
@@ -15,18 +18,22 @@ set(INSTALL_MODELS "Install waifu2x RGB models? (Default OFF)" ON)
 if(WIN32)
 	set(INSTALL_MODELS OFF)
 endif()
+### ########
 
+### We need at least gcc 5
 if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
 	if(CMAKE_CXX_COMPILER_VERSION VERSION_LESS "5.0")
 		message(FATAL_ERROR "This software requires GCC 5 or higher")
 	endif()
 endif()
+### ########
 
+### Get build time
 string(TIMESTAMP TS)
 add_definitions(-DBUILD_TS="${TS}")
 
+### Check for Git and aquire version info
 find_program(FOUND_GIT "git")
-
 if (FOUND_GIT STREQUAL "FOUND_GIT-NOTFOUND")
 	set(GIT_BRANCH "null")
 	set(GIT_COMMIT_HASH "000000")
@@ -42,7 +49,9 @@ endif()
 add_definitions(-DGIT_BRANCH="${GIT_BRANCH}")
 add_definitions(-DGIT_COMMIT_HASH="${GIT_COMMIT_HASH}")
 add_definitions(-DGIT_TAG="${GIT_TAG}")
+### ########
 
+### Make readable system id variable
 set(LOCAL_SYS_TYPE "unknown")
 if (MINGW)
 	set(LOCAL_SYS_TYPE "MinGW")
@@ -57,7 +66,9 @@ if (MSVC)
 	set(LOCAL_SYS_TYPE "MSVC")
 endif()
 message(STATUS "System is: ${CMAKE_SYSTEM_NAME} (${LOCAL_SYS_TYPE})")
+### ########
 
+### Get binary paths for APPLE users
 if(APPLE)
 	set(CMAKE_C_COMPILER "/usr/local/opt/llvm/bin/clang")
 	set(CMAKE_CXX_COMPILER "/usr/local/opt/llvm/bin/clang++")
@@ -67,13 +78,14 @@ if(APPLE)
 elseif(UNIX OR MINGW)
 	set(FILE_SYSTEM_LIB "stdc++fs")
 endif()
+### ########
 
-# Find OpenCL
 
-# The reason behind having it required on linux and not on windows:
-# On Windows cmake fails to find the opencl.lib, as we only use Khronos Headers which doesn't come with the library
-# So we bypass that by not making it required and double check for the header after.
-# On linux typically the library always comes with the package.
+### Find OpenCL
+### The reason behind having it required on linux and not on windows:
+### On Windows cmake fails to find the opencl.lib, as we only use Khronos Headers which doesn't come with the library
+### So we bypass that by not making it required and double check for the header after.
+### On linux typically the library always comes with the package.
 if (WIN32)
 	FIND_PACKAGE(OpenCL)
 else()
@@ -90,7 +102,7 @@ if (WIN32)
 		message(FATAL_ERROR "Could not find /CL/cl.h in ${OpenCL_INCLUDE_DIRS}")
 	else()
 		message(STATUS "Found /CL/cl.h in ${OpenCL_INCLUDE_DIRS}")
-		message(STATUS "Errors about 'missing: OpenCL_LIBRARY' can be ignored, that is not needed.")
+		message(STATUS "On Windows: Errors about 'missing: OpenCL_LIBRARY' can be ignored, that is not needed.")
 		include_directories(${OpenCL_INCLUDE_DIRS})
 	endif()
 endif()
@@ -136,8 +148,6 @@ if (ENABLE_OPENCV)
 				set(HAVE_OPENCV TRUE)
 				message(STATUS "Found OpenCV")
 				set(OPENCV_WINDOWS_LIBRARY "opencv_world410")
-			else()
-				message(FATAL_ERROR "Could not find OpenCV")
 			endif()
 		endif()
 	endif()
@@ -449,3 +459,6 @@ else()
 endif()
 message(STATUS "\tBuilding for: ${CMAKE_GENERATOR}-${CMAKE_SYSTEM_PROCESSOR}")
 message(STATUS "")
+if(NOT HAVE_OPENCV)
+	message(WARNING "Without OpenCV the main 'waifu2x-converter-cpp' binary will NOT be built!")
+endif()
