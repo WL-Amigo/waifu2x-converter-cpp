@@ -2072,8 +2072,8 @@ int w2xconv_convert_file
 		printf("Writing image to file...\n\n");
 	}
 	
-	std::vector<int> compression_params;	
-	for (int i = 0; i < sizeof(imwrite_params); i = i + 1)
+	std::vector<int> compression_params;
+	for (int i = 0; i < 6; i++)
 	{
 		compression_params.push_back(imwrite_params[i]);
 	}
