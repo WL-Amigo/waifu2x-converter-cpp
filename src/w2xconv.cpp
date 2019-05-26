@@ -1745,7 +1745,7 @@ void w2xconv_convert_mat
 					printf("\nProccessing [%d/%zu] slices\n", i+1, pieces.size());
 				}
 				
-				apply_scale(conv, pieces[i], iterTimesTwiceScaling, blockSize, fmt);
+				apply_scale(conv, pieces[i], 1, blockSize, fmt);
 				
 				/*
 				sprintf(name, "[test] step%d_slice%d_converted.png", ld, i);
