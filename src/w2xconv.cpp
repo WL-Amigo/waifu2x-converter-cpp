@@ -1718,15 +1718,14 @@ void w2xconv_convert_mat
 			
 			while(pieces.front().rows * pieces.front().cols > 178700000 / 4)
 			{
-				cv::Mat front = pieces.front();
-				int r=front.rows, c=front.cols;
+				int r=pieces.front().rows, c=pieces.front().cols;
 				int h_r=r/2, h_c=c/2;
 				
 				// div in 4 and add padding to input.
-				pieces.push_back(front(cv::Range(0,h_r+pad), cv::Range(0,h_c+pad)));
-				pieces.push_back(front(cv::Range(0,h_r+pad), cv::Range(h_c-pad,c)));
-				pieces.push_back(front(cv::Range(h_r-pad,r), cv::Range(0,h_c+pad)));
-				pieces.push_back(front(cv::Range(h_r-pad,r), cv::Range(h_c-pad,c)));
+				pieces.push_back(pieces.front()(cv::Range(0,h_r+pad), cv::Range(0,h_c+pad)));
+				pieces.push_back(pieces.front()(cv::Range(0,h_r+pad), cv::Range(h_c-pad,c)));
+				pieces.push_back(pieces.front()(cv::Range(h_r-pad,r), cv::Range(0,h_c+pad)));
+				pieces.push_back(pieces.front()(cv::Range(h_r-pad,r), cv::Range(h_c-pad,c)));
 				
 				// delete piece
 				pieces.erase(pieces.begin());
