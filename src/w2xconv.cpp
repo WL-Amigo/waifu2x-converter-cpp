@@ -1797,7 +1797,7 @@ void w2xconv_convert_mat
 				sprintf(name, "[test] merge_step%d_block%d.png", ld, j++);
 				cv::imwrite(name, merged);*/
 			}
-			image = pieces.front();
+			pieces.front().copyTo(image);
 		}
 
 		if (shrinkRatio != 0.0)
