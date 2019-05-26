@@ -1707,7 +1707,7 @@ void w2xconv_convert_mat
 		for(int ld = 0; ld < iterTimesTwiceScaling ; ld++)
 		{
 			// divide images in to 4^n pieces when output width is bigger then 8000^2....
-			std::vector<cv::Mat> pieces, converted;
+			std::vector<cv::Mat> pieces;
 				
 			if (conv->enable_log)
 			{
