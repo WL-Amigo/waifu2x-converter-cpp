@@ -149,9 +149,9 @@ namespace w2xc
 			int nJob;
 			modelUtility() : nJob(4) {};
 		public:
-#if defined(WIN32) && defined(UNICODE)
 			static bool generateModelFromJSON
 			(
+#if defined(WIN32) && defined(UNICODE)
 				const std::wstring &fileName,
 #else
 				const std::string &fileName,
