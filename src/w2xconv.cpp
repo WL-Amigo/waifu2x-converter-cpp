@@ -1722,10 +1722,10 @@ void w2xconv_convert_mat
 				int h_r=r/2, h_c=c/2;
 				
 				// div in 4 and add padding to input.
-				pieces.push_back(pieces.front()(cv::Range(0,h_r+pad), cv::Range(0,h_c+pad)));
-				pieces.push_back(pieces.front()(cv::Range(0,h_r+pad), cv::Range(h_c-pad,c)));
-				pieces.push_back(pieces.front()(cv::Range(h_r-pad,r), cv::Range(0,h_c+pad)));
-				pieces.push_back(pieces.front()(cv::Range(h_r-pad,r), cv::Range(h_c-pad,c)));
+				pieces.push_back(pieces.front()(cv::Range(0,h_r+pad), cv::Range(0,h_c+pad)).clone());
+				pieces.push_back(pieces.front()(cv::Range(0,h_r+pad), cv::Range(h_c-pad,c)).clone());
+				pieces.push_back(pieces.front()(cv::Range(h_r-pad,r), cv::Range(0,h_c+pad)).clone());
+				pieces.push_back(pieces.front()(cv::Range(h_r-pad,r), cv::Range(h_c-pad,c)).clone());
 				
 				// delete piece
 				pieces.erase(pieces.begin());
@@ -1758,7 +1758,7 @@ void w2xconv_convert_mat
 			// combine images
 			while (pieces.size() > 1)
 			{
-				cv::Mat quarter[4], tmp, merged;
+				cv::Mat quarter[4];
 				int cut = (int) (pad * 2);
 				
 				if (conv->enable_log)
@@ -1768,14 +1768,10 @@ void w2xconv_convert_mat
 				
 				//double time_a = getsec(), time_b = 0;
 				
-				tmp=pieces[0](cv::Range(0, pieces[0].rows - cut), cv::Range(0, pieces[0].cols - cut));
-				tmp.copyTo(quarter[0]);
-				tmp=pieces[1](cv::Range(0, pieces[1].rows - cut), cv::Range(cut, pieces[1].cols));
-				tmp.copyTo(quarter[1]);
-				tmp=pieces[2](cv::Range(cut, pieces[2].rows), cv::Range(0, pieces[2].cols - cut));
-				tmp.copyTo(quarter[2]);
-				tmp=pieces[3](cv::Range(cut, pieces[3].rows), cv::Range(cut, pieces[3].cols));
-				tmp.copyTo(quarter[3]);
+				quarter[0]=pieces[0](cv::Range(0, pieces[0].rows - cut), cv::Range(0, pieces[0].cols - cut)).clone();
+				quarter[1]=pieces[1](cv::Range(0, pieces[1].rows - cut), cv::Range(cut, pieces[1].cols)).clone();
+				quarter[2]=pieces[2](cv::Range(cut, pieces[2].rows), cv::Range(0, pieces[2].cols - cut)).clone();
+				quarter[3]=pieces[3](cv::Range(cut, pieces[3].rows), cv::Range(cut, pieces[3].cols)).clone();
 				
 				pieces.erase(pieces.begin(), pieces.begin()+4);
 				
@@ -1784,19 +1780,19 @@ void w2xconv_convert_mat
 				hconcat(quarter[2], quarter[3], quarter[2]);
 				
 				//printf("merge vertical\n"); 
-				vconcat(quarter[0], quarter[2], merged);
+				vconcat(quarter[0], quarter[2], quarter[0]);
 				
 				//time_b = getsec();
 				//printf("took %f\n", time_b - time_a); 
 				
-				pieces.push_back(merged);
+				pieces.push_back(quarter[0]);
 				
 				/*
 				printf("imwriting merged image\n"); 
 				sprintf(name, "[test] merge_step%d_block%d.png", ld, j++);
-				cv::imwrite(name, merged);*/
+				cv::imwrite(name, quarter[0]);*/
 			}
-			pieces.front().copyTo(image);
+			image = pieces.front().clone();
 		}
 
 		if (shrinkRatio != 0.0)
