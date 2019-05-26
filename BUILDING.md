@@ -99,7 +99,7 @@ https://github.com/DeadSix27/waifu2x-converter-cpp/releases
 
 #### nVidia GPUs:
 - Arch: `opencl-nvidia opencl-headers ocl-icd`
-- Ubuntu: `?`
+- Ubuntu: `ocl-icd-opencl-dev clinfo`
 
 ### nVidia GPUs (CUDA):
 - Arch: `cuda`
