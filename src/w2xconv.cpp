@@ -1723,16 +1723,16 @@ void w2xconv_convert_mat
 			
 			pieces.push_back(image);
 			
-			while(pieces.front().rows * pieces.front().cols > 178700000 / 4)
+			while(pieces[0].rows * pieces[0].cols > 178700000 / 4)
 			{
-				int r=pieces.front().rows, c=pieces.front().cols;
+				int r=pieces[0].rows, c=pieces[0].cols;
 				int h_r=r/2, h_c=c/2;
 				
 				// div in 4 and add padding to input.
-				pieces.push_back(pieces.front()(cv::Range(0,h_r+pad), cv::Range(0,h_c+pad)).clone());
-				pieces.push_back(pieces.front()(cv::Range(0,h_r+pad), cv::Range(h_c-pad,c)).clone());
-				pieces.push_back(pieces.front()(cv::Range(h_r-pad,r), cv::Range(0,h_c+pad)).clone());
-				pieces.push_back(pieces.front()(cv::Range(h_r-pad,r), cv::Range(h_c-pad,c)).clone());
+				pieces.push_back(pieces[0](cv::Range(0,h_r+pad), cv::Range(0,h_c+pad)).clone());
+				pieces.push_back(pieces[0](cv::Range(0,h_r+pad), cv::Range(h_c-pad,c)).clone());
+				pieces.push_back(pieces[0](cv::Range(h_r-pad,r), cv::Range(0,h_c+pad)).clone());
+				pieces.push_back(pieces[0](cv::Range(h_r-pad,r), cv::Range(h_c-pad,c)).clone());
 				
 				// delete piece
 				pieces.erase(pieces.begin());
@@ -1740,7 +1740,7 @@ void w2xconv_convert_mat
 			
 			for(int i=0; i<pieces.size(); i++)
 			{
-				cv::Mat res;
+				//cv::Mat res;
 				/*
 				sprintf(name, "[test] step%d_slice%d_padded.png", ld, i);
 				cv::imwrite(name, pieces.at(i));
@@ -1765,7 +1765,7 @@ void w2xconv_convert_mat
 			// combine images
 			while (pieces.size() > 1)
 			{
-				cv::Mat quarter[4];
+				cv::Mat quarter[4], merged[3];
 				int cut = (int) (pad * 2);
 				
 				if (conv->enable_log)
@@ -1783,23 +1783,23 @@ void w2xconv_convert_mat
 				pieces.erase(pieces.begin(), pieces.begin()+4);
 				
 				//printf("merge horizon\n"); 
-				hconcat(quarter[0], quarter[1], quarter[0]);
-				hconcat(quarter[2], quarter[3], quarter[2]);
+				hconcat(quarter[0], quarter[1], merged[0]);
+				hconcat(quarter[2], quarter[3], merged[1]);
 				
 				//printf("merge vertical\n"); 
-				vconcat(quarter[0], quarter[2], quarter[0]);
+				vconcat(merged[0], merged[1], merged[2]);
 				
 				//time_b = getsec();
 				//printf("took %f\n", time_b - time_a); 
 				
-				pieces.push_back(quarter[0]);
+				pieces.push_back(merged[2].clone());
 				
 				/*
 				printf("imwriting merged image\n"); 
 				sprintf(name, "[test] merge_step%d_block%d.png", ld, j++);
 				cv::imwrite(name, quarter[0]);*/
 			}
-			image = pieces.front().clone();
+			image = pieces[0].clone();
 		}
 
 		if (shrinkRatio != 0.0)

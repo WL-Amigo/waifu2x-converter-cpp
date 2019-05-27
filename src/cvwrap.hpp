@@ -69,11 +69,11 @@ class W2Mat {
 
 		~W2Mat();
 
-		static void copy_full(W2Mat &target, W2Mat &rhs);
+		void copyTo(W2Mat*);
 			
 #ifdef HAVE_OPENCV
-		W2Mat(cv::Mat &cvmat);
-		void to_cvmat(cv::Mat *cvmat);
+		W2Mat(cv::Mat &);
+		void to_cvmat(cv::Mat *);
 #endif
 
 		template<typename T> T *ptr(int yi);
