@@ -792,12 +792,17 @@ static void apply_denoise
 	{
 		w2xc::convertWithModels(conv, env, input_2, output_2, impl->noise3_models, &conv->flops, blockSize, fmt, conv->enable_log);
 	}
+	
+	printf("apply_noise: convertWithModels finished");
 
 	output_2.to_cvmat(*output);
+	
+	printf("apply_noise: convert to cvMat");
 
 	if (! IS_3CHANNEL(fmt))
 	{
 		cv::merge(imageSplit, image);
+		printf("apply_noise: merge");
 	}
 }
 
@@ -1693,6 +1698,8 @@ void w2xconv_convert_mat
 		}
 		apply_denoise(conv, image, denoise_level, blockSize, fmt);
 	}
+	
+	printf("Denise finished");
 
 	if (scale != 1.0)
 	{
@@ -1803,6 +1810,8 @@ void w2xconv_convert_mat
 			cv::resize(image, image, lastImageSize, 0, 0, cv::INTER_LINEAR);
 		}
 	}
+	
+	printf("alpha.empty: %d, dest_png: %d, is_rgb: %d", alpha.empty(), dst_png, is_rgb);
 
 	if (alpha.empty() || !dst_png)
 	{
@@ -1834,10 +1843,13 @@ void w2xconv_convert_mat
 	else
 	{
 		image_dst = cv::Mat(image.size(), CV_MAKETYPE(src_depth,4));
+		
+		printf("img size: %d:%d, alpha size: %d:%d", image.cols, image.rows, alpha.cols, alpha.rows);
 
 		if (image.size() != alpha.size())
 		{
 			cv::resize(alpha, alpha, image.size(), 0, 0, cv::INTER_LINEAR);
+			printf("resize alpha fin");
 		}
 
 		if (is_rgb)
@@ -1845,10 +1857,12 @@ void w2xconv_convert_mat
 			if (src_depth == CV_16U)
 			{
 				postproc_rgb2rgba<unsigned short, 65535, 2, 0>(&image_dst, &image, &alpha, background.r, background.g, background.b);
+				printf("post rgb2rgba fin");
 			}
 			else
 			{
 				postproc_rgb2rgba<unsigned char, 255, 2, 0>(&image_dst, &image, &alpha, background.r, background.g, background.b);
+				printf("post rgb2rgba fin");
 			}
 		}
 		else
@@ -1856,13 +1870,17 @@ void w2xconv_convert_mat
 			if (src_depth == CV_16U)
 			{
 				postproc_yuv2rgba<unsigned short, 65535, 0, 2>(&image_dst, &image, &alpha, background.r, background.g, background.b);
+				printf("post yuv2rgba fin");
 			}
 			else
 			{
 				postproc_yuv2rgba<unsigned char, 255, 0, 2>(&image_dst, &image, &alpha, background.r, background.g, background.b);
+				printf("post yuv2rgba fin");
 			}
 		}
 	}
+	
+	printf("conv mat fin");
 }
 
 #if defined(WIN32) && defined(UNICODE)
