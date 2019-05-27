@@ -149,21 +149,22 @@ W2Mat::W2Mat(cv::Mat &m) : data_owner(true), view_top(0), view_left(0)
 	}
 }
 
-void W2Mat::to_cvmat(cv::Mat &target)
+void W2Mat::to_cvmat(cv::Mat *target)
 {
 	int w = this->view_width;
 	int h = this->view_height;
 
-	target = cv::Mat::zeros(cv::Size(w, h), this->type);
+	cv::Mat ret = cv::Mat::zeros(cv::Size(w, h), this->type);
 	int elem_size = CV_ELEM_SIZE(this->type);
 
 	for (int yi = 0; yi < h; yi++)
 	{
-		void *out = target.ptr(yi);
+		void *out = ret.ptr(yi);
 		void *in = this->ptr<char>(yi);
 
 		memcpy(out, in, w * elem_size);
 	}
+	*target = ret.clone();
 }
 
 // DO NOT USE IN NORMAL SITUAYION. Return wm is not own their data.

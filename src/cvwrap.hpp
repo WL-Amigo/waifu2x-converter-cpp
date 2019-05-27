@@ -73,7 +73,7 @@ class W2Mat {
 			
 #ifdef HAVE_OPENCV
 		W2Mat(cv::Mat &cvmat);
-		void to_cvmat(cv::Mat &cvmat);
+		void to_cvmat(cv::Mat *cvmat);
 #endif
 
 		template<typename T> T *ptr(int yi);

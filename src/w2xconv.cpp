@@ -795,7 +795,7 @@ static void apply_denoise
 	
 	printf("apply_noise: convertWithModels finished");
 
-	output_2.to_cvmat(*output);
+	output_2.to_cvmat(output);
 	
 	printf("apply_noise: convert to cvMat");
 
@@ -871,7 +871,7 @@ static void apply_scale
 			std::exit(1);
 		}
 
-		output_2.to_cvmat(*output);
+		output_2.to_cvmat(output);
 
 		if (!IS_3CHANNEL(fmt))
 		{
