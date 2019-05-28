@@ -537,6 +537,11 @@ char * w2xconv_strerror(W2XConvError *e)
 		{
 			oss << "image width (or height) under 40px cannot converted in this scale."; 
 			break;
+		}	
+		case W2XCONV_ERROR_WEBP_SIZE_LIMIT:
+		{
+			oss << "output size too big for webp format. use png or jpg instead."; 
+			break;
 		}
 	}
 
@@ -1706,7 +1711,7 @@ void w2xconv_convert_mat
 		
 		for(int ld = 0; ld < iterTimesTwiceScaling ; ld++)
 		{
-			// divide images in to 4^n pieces when output width is bigger then 8000^2....
+			// divide images in to 4^n pieces when output size is too big.
 			std::vector<cv::Mat> pieces;
 				
 			if (conv->enable_log)
@@ -2023,10 +2028,7 @@ int w2xconv_convert_file
 	{
 		size_t len = wcslen(dst_path);
 		if (len >= 4) {
-			if (towlower(dst_path[len-4]) == L'.' &&
-			    towlower(dst_path[len-3]) == L'p' &&
-			    towlower(dst_path[len-2]) == L'n' &&
-			    towlower(dst_path[len-1]) == L'g')
+			if (towlower(dst_path[len-4]) == L'.' && towlower(dst_path[len-3]) == L'p' && towlower(dst_path[len-2]) == L'n' && towlower(dst_path[len-1]) == L'g')
 			{
 				dst_png = true;
 			}
@@ -2055,6 +2057,26 @@ int w2xconv_convert_file
 	}
 #endif
 	
+	bool dst_webp=false;
+#if defined(WIN32) && defined(UNICODE)
+	size_t len = wcslen(dst_path);
+	if (len >= 5) {
+		if (towlower(dst_path[len-5]) == L'.' && towlower(dst_path[len-4]) == L'w' && towlower(dst_path[len-3]) == L'e' && towlower(dst_path[len-2]) == L'b' && towlower(dst_path[len-1]) == L'p')
+		{
+			dst_webp=true;
+		}
+	}
+#else
+	size_t len = strlen(dst_path);
+	if (len >= 5)
+	{
+		if (tolower(dst_path[len-5]) == '.' && tolower(dst_path[len-4]) == 'w' && tolower(dst_path[len-3]) == 'e' && tolower(dst_path[len-2]) == 'b' && tolower(dst_path[len-1]) == 'p')
+		{
+			dst_webp=true;
+		}
+	}
+#endif		
+
 	// w2x converts 2x and down scales when scale_ratio is not power of 2 (ex: 2.28 -> scale x4 - > down scale)
 	int max_scale = static_cast<int>(std::pow(2, std::ceil(std::log2(scale))));
 	
@@ -2083,11 +2105,16 @@ int w2xconv_convert_file
 			setError(conv, W2XCONV_ERROR_SCALE_LIMIT);
 			return -1;
 		}
-		else if ((image_src.rows < 40 || image_src.cols < 40 ) && image_src.rows * image_src.cols > 178700000 / 4)
-		{
-			setError(conv, W2XCONV_ERROR_SIZE_LIMIT);
-			return -1;
-		}
+	}
+	
+	// for webp limit
+	if (dst_webp && imwrite_params[2] <= 100 && scale > 1.0 && image_src.rows * image_src.cols > 178700000 / scale / scale){
+		setError(conv, W2XCONV_ERROR_WEBP_SIZE_LIMIT);
+		return -1;
+	}
+	else if(dst_webp && (image_src.rows > 16383 / scale || image_src.cols > 16383 / scale)){
+		setError(conv, W2XCONV_ERROR_WEBP_SIZE_LIMIT);
+		return -1;
 	}
 	
 	w2xconv_convert_mat(conv, &image_dst, &image_src, denoise_level, scale, blockSize, background, png_rgb, dst_png);
