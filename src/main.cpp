@@ -673,39 +673,6 @@ int wmain(void)
 #else
 int main(int argc, char** argv)
 #endif
-//#define DDDDBUG
-#ifdef DDDDBUG
-{
-	/*cv::Mat img1 = cv::imread("tes1.png", cv::IMREAD_UNCHANGED) , img2 = cv::imread("tes2.png", cv::IMREAD_UNCHANGED) ;
-	cv::Mat output;
-	
-	vconcat(img1, img2, output);*/
-	
-	cv::Mat output = imread("testin.png", cv::IMREAD_UNCHANGED);
-	
-	int imwrite_params[] =
-	{
-		cv::IMWRITE_WEBP_QUALITY,
-		90,
-		cv::IMWRITE_JPEG_QUALITY,
-		90,
-		cv::IMWRITE_PNG_COMPRESSION,
-		5
-	};
-	
-	std::vector<int> compression_params;
-	for (int i = 0; i < 6; i++)
-	{
-		compression_params.push_back(imwrite_params[i]);
-	}
-	
-	cv::imwrite("testout.jpg", output, compression_params);
-	
-	return 0;
-}
-
-int vvvvv()
-#endif
 {
 	int ret = 1;
 #if defined(WIN32) && defined(UNICODE)
