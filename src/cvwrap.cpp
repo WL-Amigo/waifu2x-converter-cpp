@@ -235,7 +235,7 @@ void extract_viewlist_to_cvmat(std::vector<cv::Mat> &cvmat, std::vector<W2Mat> &
 		[&cvmat](W2Mat &wm) {
 		cv::Mat cv;
 		extract_view_to_cvmat(cv, wm);
-		cvmat.push_back(std::move(cv));
+		cvmat.push_back(cv.clone());
 	});
 }
 
