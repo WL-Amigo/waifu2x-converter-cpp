@@ -2108,7 +2108,7 @@ int w2xconv_convert_file
 	}
 	
 	// for webp limit
-	if (dst_webp && imwrite_params[2] <= 100 && scale > 1.0 && image_src.rows * image_src.cols > 178700000 / scale / scale){
+	if (dst_webp && imwrite_params[2] <= 100 && scale > 1.0 && image_src.rows * image_src.cols > 196000000 / scale / scale){
 		setError(conv, W2XCONV_ERROR_WEBP_SIZE_LIMIT);
 		return -1;
 	}
