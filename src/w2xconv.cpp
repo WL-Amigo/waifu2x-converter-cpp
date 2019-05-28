@@ -1807,7 +1807,7 @@ void read_imageW(cv::Mat* image, const WCHAR* filepath, int flags=cv::IMREAD_COL
     delete[] imgBuffer;
 }
 
-bool write_imageW(const WCHAR* filepath, cv::Mat& img, std::vector<int>& imwrite_params_vector)
+bool write_imageW(const WCHAR* filepath, cv::Mat& img, std::vector<int>& param)
 {
 	FILE* pFile;
 	std::vector<uchar> imageBuffer;
@@ -1816,7 +1816,7 @@ bool write_imageW(const WCHAR* filepath, cv::Mat& img, std::vector<int>& imwrite
 	ext_w = ext_w.substr(ext_w.find_last_of(L'.'));
 	ext.assign(ext_w.begin(), ext_w.end());
 	
-	if(!cv::imencode(ext.c_str(),img, imageBuffer, imwrite_params_vector))
+	if(!cv::imencode(ext.c_str(),img, imageBuffer, param))
 	{
 		return false;
 	}
@@ -2106,16 +2106,16 @@ int w2xconv_convert_file
 		printf("Writing image to file...\n\n");
 	}
 	
-	std::vector<int> imwrite_params_vector;	
+	std::vector<int> compression_params;	
 	for (int i = 0; i < sizeof(imwrite_params); i = i + 1)
 	{
-		imwrite_params_vector.push_back(imwrite_params[i]);
+		compression_params.push_back(imwrite_params[i]);
 	}
 	
 #if defined(WIN32) && defined(UNICODE)
-	if (!write_imageW(dst_path, image_dst, imwrite_params_vector))
+	if (!write_imageW(dst_path, image_dst, compression_params))
 #else
-	if (!cv::imwrite(dst_path, image_dst, imwrite_params_vector))
+	if (!cv::imwrite(dst_path, image_dst, compression_params))
 #endif
 	{
 		setPathError(conv, W2XCONV_ERROR_IMWRITE_FAILED, dst_path);
