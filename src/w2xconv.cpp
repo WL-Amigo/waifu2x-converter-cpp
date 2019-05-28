@@ -1595,8 +1595,8 @@ void get_png_background_colour(FILE *png_fp, bool *has_alpha, struct w2xconv_rgb
 void w2xconv_convert_mat
 (
 	struct W2XConv *conv,
-	cv::Mat& image_dst, 
-	cv::Mat& image_src, 
+	cv::Mat* image_dst, 
+	cv::Mat* image_src, 
 	int denoise_level, 
 	double scale, 
 	int blockSize,
@@ -1610,9 +1610,9 @@ void w2xconv_convert_mat
 	const static int pad = 12;	// give pad to avoid distortions in edge
 	//char name[70]="";	// for imwrite test
 
-	int src_depth = CV_MAT_DEPTH(image_src.type());
-	int src_cn = CV_MAT_CN(image_src.type());
-	cv::Mat image = cv::Mat(image_src.size(), CV_32FC3);
+	int src_depth = CV_MAT_DEPTH(image_src->type());
+	int src_cn = CV_MAT_CN(image_src->type());
+	cv::Mat image = cv::Mat(image_src->size(), CV_32FC3);
 	cv::Mat alpha;
 
 	if (is_rgb)
@@ -1622,24 +1622,24 @@ void w2xconv_convert_mat
 			if (src_cn == 4)
 			{
 				// save alpha
-				alpha = cv::Mat(image_src.size(), CV_32FC1);
+				alpha = cv::Mat(image_src->size(), CV_32FC1);
 				if (src_depth == CV_16U)
 				{
-					preproc_rgba2rgb<unsigned short, 65535, 2, 0>(&image, &alpha, &image_src, background.r, background.g, background.b);
+					preproc_rgba2rgb<unsigned short, 65535, 2, 0>(&image, &alpha, image_src, background.r, background.g, background.b);
 				}
 				else
 				{
-					preproc_rgba2rgb<unsigned char, 255, 2, 0>(&image, &alpha, &image_src, background.r, background.g, background.b);
+					preproc_rgba2rgb<unsigned char, 255, 2, 0>(&image, &alpha, image_src, background.r, background.g, background.b);
 				}
 			}
 			else
 			{
-				preproc_rgb2rgb<unsigned short, 65535, 2, 0>(&image, &image_src);
+				preproc_rgb2rgb<unsigned short, 65535, 2, 0>(&image, image_src);
 			}
 		}
 		else
 		{
-			preproc_rgb2rgb<unsigned char, 255, 2, 0>(&image, &image_src);
+			preproc_rgb2rgb<unsigned char, 255, 2, 0>(&image, image_src);
 		}
 		fmt = w2xc::IMAGE_RGB_F32;
 	}
@@ -1650,30 +1650,30 @@ void w2xconv_convert_mat
 			if (src_cn == 4)
 			{
 				// save alpha
-				alpha = cv::Mat(image_src.size(), CV_32FC1);
+				alpha = cv::Mat(image_src->size(), CV_32FC1);
 				if (src_depth == CV_16U)
 				{
-					preproc_rgba2yuv<unsigned short, 65535, 2, 0>(&image, &alpha, &image_src, background.r, background.g, background.b);
+					preproc_rgba2yuv<unsigned short, 65535, 2, 0>(&image, &alpha, image_src, background.r, background.g, background.b);
 				}
 				else
 				{
-					preproc_rgba2yuv<unsigned char, 255, 2, 0>(&image, &alpha, &image_src, background.r, background.g, background.b);
+					preproc_rgba2yuv<unsigned char, 255, 2, 0>(&image, &alpha, image_src, background.r, background.g, background.b);
 				}
 			}
 			else
 			{
-				preproc_rgb2yuv<unsigned short, 65535, 2, 0>(&image, &image_src);
+				preproc_rgb2yuv<unsigned short, 65535, 2, 0>(&image, image_src);
 			}
 		}
 		else
 		{
-			preproc_rgb2yuv<unsigned char, 255, 2, 0>(&image, &image_src);
+			preproc_rgb2yuv<unsigned char, 255, 2, 0>(&image, image_src);
 		}
 
 		fmt = w2xc::IMAGE_Y;
 	}
 
-	image_src.release();
+	image_src->release();
 	
 	w2x_total_steps = 0;
 	w2x_current_step = 1;
@@ -1733,11 +1733,14 @@ void w2xconv_convert_mat
 			
 			for(int i=0; i<pieces.size(); i++)
 			{
-				//cv::Mat res;
 				/*
-				sprintf(name, "[test] step%d_slice%d_padded.png", ld, i);
-				cv::imwrite(name, pieces.at(i));
-				*/
+				sprintf(name, "[test] step%d_slice%d_padded.webp", ld, i);
+				
+				cv::Mat test=pieces[i].clone(), testout = cv::Mat(pieces[i].size(), CV_MAKETYPE(src_depth,3));
+				postproc_rgb2rgb<unsigned char, 255, 2, 0>(&testout, &test);
+				
+				cv::imwrite(name, testout);*/
+				
 				
 				if (conv->enable_log)
 				{
@@ -1747,13 +1750,15 @@ void w2xconv_convert_mat
 				apply_scale(conv, pieces[i], 1, blockSize, fmt);
 				
 				/*
-				sprintf(name, "[test] step%d_slice%d_converted.png", ld, i);
-				cv::imwrite(name, res);
-				*/
+				sprintf(name, "[test] step%d_slice%d_converted.webp", ld, i);
+				
+				test=pieces[i].clone(), testout = cv::Mat(pieces[i].size(), CV_MAKETYPE(src_depth,3));
+				postproc_rgb2rgb<unsigned char, 255, 2, 0>(&testout, &test);
+				
+				cv::imwrite(name, testout);*/
 			}
 
-			//FutureNote: unused/leftover debug ?
-			int j=0; // for test_merge
+			//int j=0; // for imwrite test merge
 			
 			// combine images
 			while (pieces.size() > 1)
@@ -1779,6 +1784,22 @@ void w2xconv_convert_mat
 				hconcat(quarter[0], quarter[1], merged[0]);
 				hconcat(quarter[2], quarter[3], merged[1]);
 				
+				/*printf("imwriting merged image - horizon\n"); 
+				sprintf(name, "[test] merge_step%d_block0.webp", ld);
+				
+				cv::Mat test=merged[0].clone(), testout = cv::Mat(merged[0].size(), CV_MAKETYPE(src_depth,3));
+				postproc_rgb2rgb<unsigned char, 255, 2, 0>(&testout, &test);
+				
+				cv::imwrite(name, testout);
+				
+				printf("imwriting merged image - vertical\n"); 
+				sprintf(name, "[test] merge_step%d_block1.webp", ld);
+				
+				test=merged[1].clone(), testout = cv::Mat(merged[1].size(), CV_MAKETYPE(src_depth,3));
+				postproc_rgb2rgb<unsigned char, 255, 2, 0>(&testout, &test);
+				
+				cv::imwrite(name, testout);*/
+				
 				//printf("merge vertical\n"); 
 				vconcat(merged[0], merged[1], merged[2]);
 				
@@ -1789,8 +1810,12 @@ void w2xconv_convert_mat
 				
 				/*
 				printf("imwriting merged image\n"); 
-				sprintf(name, "[test] merge_step%d_block%d.png", ld, j++);
-				cv::imwrite(name, quarter[0]);*/
+				sprintf(name, "[test] merge_step%d_merged.webp", ld);
+				
+				test=merged[2].clone(), testout = cv::Mat(merged[2].size(), CV_MAKETYPE(src_depth,3));
+				postproc_rgb2rgb<unsigned char, 255, 2, 0>(&testout, &test);
+				
+				cv::imwrite(name, testout);*/
 			}
 			image = pieces[0].clone();
 		}
@@ -1806,34 +1831,34 @@ void w2xconv_convert_mat
 
 	if (alpha.empty() || !dst_png)
 	{
-		image_dst = cv::Mat(image.size(), CV_MAKETYPE(src_depth,3));
+		*image_dst = cv::Mat(image.size(), CV_MAKETYPE(src_depth,3));
 
 		if (is_rgb)
 		{
 			if (src_depth == CV_16U)
 			{
-				postproc_rgb2rgb<unsigned short, 65535, 2, 0>(&image_dst, &image);
+				postproc_rgb2rgb<unsigned short, 65535, 2, 0>(image_dst, &image);
 			}
 			else
 			{
-				postproc_rgb2rgb<unsigned char, 255, 2, 0>(&image_dst, &image);
+				postproc_rgb2rgb<unsigned char, 255, 2, 0>(image_dst, &image);
 			}
 		}
 		else
 		{
 			if (src_depth == CV_16U)
 			{
-				postproc_yuv2rgb<unsigned short, 65535, 0, 2>(&image_dst, &image);
+				postproc_yuv2rgb<unsigned short, 65535, 0, 2>(image_dst, &image);
 			}
 			else
 			{
-				postproc_yuv2rgb<unsigned char, 255, 0, 2>(&image_dst, &image);
+				postproc_yuv2rgb<unsigned char, 255, 0, 2>(image_dst, &image);
 			}
 		}
 	}
 	else
 	{
-		image_dst = cv::Mat(image.size(), CV_MAKETYPE(src_depth,4));
+		*image_dst = cv::Mat(image.size(), CV_MAKETYPE(src_depth,4));
 
 		if (image.size() != alpha.size())
 		{
@@ -1844,25 +1869,30 @@ void w2xconv_convert_mat
 		{
 			if (src_depth == CV_16U)
 			{
-				postproc_rgb2rgba<unsigned short, 65535, 2, 0>(&image_dst, &image, &alpha, background.r, background.g, background.b);
+				postproc_rgb2rgba<unsigned short, 65535, 2, 0>(image_dst, &image, &alpha, background.r, background.g, background.b);
 			}
 			else
 			{
-				postproc_rgb2rgba<unsigned char, 255, 2, 0>(&image_dst, &image, &alpha, background.r, background.g, background.b);
+				postproc_rgb2rgba<unsigned char, 255, 2, 0>(image_dst, &image, &alpha, background.r, background.g, background.b);
 			}
 		}
 		else
 		{
 			if (src_depth == CV_16U)
 			{
-				postproc_yuv2rgba<unsigned short, 65535, 0, 2>(&image_dst, &image, &alpha, background.r, background.g, background.b);
+				postproc_yuv2rgba<unsigned short, 65535, 0, 2>(image_dst, &image, &alpha, background.r, background.g, background.b);
 			}
 			else
 			{
-				postproc_yuv2rgba<unsigned char, 255, 0, 2>(&image_dst, &image, &alpha, background.r, background.g, background.b);
+				postproc_yuv2rgba<unsigned char, 255, 0, 2>(image_dst, &image, &alpha, background.r, background.g, background.b);
 			}
 		}
 	}
+	
+	/*printf("imwriting final_conv_mat image\n"); 
+	sprintf(name, "[test] final_conv_mat.webp");
+	
+	cv::imwrite(name, *image_dst);*/
 }
 
 #if defined(WIN32) && defined(UNICODE)
@@ -2060,7 +2090,7 @@ int w2xconv_convert_file
 		}
 	}
 	
-	w2xconv_convert_mat(conv, image_dst, image_src, denoise_level, scale, blockSize, background, png_rgb, dst_png);
+	w2xconv_convert_mat(conv, &image_dst, &image_src, denoise_level, scale, blockSize, background, png_rgb, dst_png);
 	
 	if (conv->enable_log)
 	{
