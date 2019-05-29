@@ -800,7 +800,7 @@ int main(int argc, char** argv)
 		false, 0, "integer", cmd
 	);
 	TCLAP::ValueArg<int> cmdImgQuality("q", "image-quality", "JPEG & WebP Compression quality (0-101, 0 being smallest size and lowest quality), use 101 for lossless WebP",
-		false, 90, "0-101", cmd
+		false, -1, "0-101", cmd
 	);
 	TCLAP::ValueArg<int> cmdPngCompression("c", "png-compression", "Set PNG compression level (0-9), 9 = Max compression (slowest & smallest)",
 		false, 5, "0-9", cmd
@@ -844,7 +844,7 @@ int main(int argc, char** argv)
 		std::cout << "Error: PNG Compression level range is 0-9, 9 being the slowest and resulting in the smallest file size." << std::endl;
 		std::exit(-1);
 	}
-	if (cmdImgQuality.getValue() < 0 || cmdImgQuality.getValue() > 101)
+	if (cmdImgQuality.getValue() < -1 || cmdImgQuality.getValue() > 101)
 	{
 		std::cout << "Error: JPEG & WebP Compression quality range is 0-101! (0 being smallest size and lowest quality), use 101 for lossless WebP" << std::endl;
 		std::exit(-1);
@@ -899,12 +899,20 @@ int main(int argc, char** argv)
 		converter = w2xconv_init(gpu, cmdNumberOfJobs.getValue(), verbose);
 	}
 	
+	int jpeg_quality = 90;
+	int webp_quality = 101;
+	
+	if(cmdImgQuality.getValue() != -1)
+	{
+		jpeg_quality = webp_quality = cmdImgQuality.getValue();
+	}
+	
 	int imwrite_params[] =
 	{
 		cv::IMWRITE_WEBP_QUALITY,
-		cmdImgQuality.getValue(),
+		webp_quality,
 		cv::IMWRITE_JPEG_QUALITY,
-		cmdImgQuality.getValue(),
+		jpeg_quality,
 		cv::IMWRITE_PNG_COMPRESSION,
 		cmdPngCompression.getValue()
 	};
