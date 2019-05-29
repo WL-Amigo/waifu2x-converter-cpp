@@ -756,8 +756,10 @@ int main(int argc, char** argv)
 		0, "bool", cmd);
 
 
-	TCLAP::SwitchArg cmdQuiet("s", "silent", "Enable silent mode.", cmd, false);
-
+	TCLAP::SwitchArg cmdQuiet("s", "silent", "Enable silent mode. (same as --log-level 1)", cmd, false);
+	
+	TCLAP::ValueArg<int> cmdLogLevel("", "log-level", "Set log level (0-5)", false, 4, "integer", cmd);
+	
 	std::vector<std::string> cmdModeConstraintV;
 	cmdModeConstraintV.push_back("noise");
 	cmdModeConstraintV.push_back("scale");
@@ -849,6 +851,11 @@ int main(int argc, char** argv)
 		std::cout << "Error: JPEG & WebP Compression quality range is 0-101! (0 being smallest size and lowest quality), use 101 for lossless WebP" << std::endl;
 		std::exit(-1);
 	}
+	if (cmdLogLevel.getValue() < 0 || cmdLogLevel.getValue() > 5)
+	{
+		std::cout << "Error: Log-level has to be within range (0-5), 5 being the noisiest." << std::endl;
+		std::exit(-1);
+	}
 	if (validate_format_extension(cmdOutputFormat.getValue()) == false)
 	{
 		printf("Unsupported output extension: %s\nUse option --list-supported-formats to see a list of supported formats", cmdOutputFormat.getValue().c_str());
@@ -888,15 +895,20 @@ int main(int argc, char** argv)
 	size_t num_proc;
 	w2xconv_get_processor_list(&num_proc);
 	int proc = cmdTargetProcessor.getValue();
-	bool verbose = !cmdQuiet.getValue();
+	int log_level = 2;
+
+	if (cmdQuiet.getValue())
+	{
+		log_level = 1;
+	}
 
 	if (proc != -1 && proc < num_proc)
 	{
-		converter = w2xconv_init_with_processor(proc, cmdNumberOfJobs.getValue(), verbose);
+		converter = w2xconv_init_with_processor(proc, cmdNumberOfJobs.getValue(), log_level);
 	}
 	else
 	{
-		converter = w2xconv_init(gpu, cmdNumberOfJobs.getValue(), verbose);
+		converter = w2xconv_init(gpu, cmdNumberOfJobs.getValue(), log_level);
 	}
 	
 	int jpeg_quality = 90;
@@ -1016,12 +1028,15 @@ int main(int argc, char** argv)
 		{
 			++numFilesProcessed;
 			double time_file_start = getsec();
-			printf("Processing file [%d/%d] \"%s\":%s",
-				numFilesProcessed,
-				files_count,
-				fn.filename().string().c_str(),
-				(verbose ? "\n" : " ")
-			);
+			
+			if (log_level) {
+				printf("Processing file [%d/%d] \"%s\":%s",
+					numFilesProcessed,
+					files_count,
+					fn.filename().string().c_str(),
+					(log_level>0 ? "\n" : " ")
+				);
+			}
 
 			try {
 				convert_file(convInfo, fn, output);
@@ -1031,32 +1046,35 @@ int main(int argc, char** argv)
 				std::cout << e.what() << std::endl;
 			}
 
-			//Calculate and out elapsed time
-			double time_end = getsec();
-			double time_file = time_end - time_file_start;
-			double time_all = time_end - time_start;
-			if (timeAvg > 0.0)
-			{
-				timeAvg = time_all / numFilesProcessed;
+			if (log_level) {
+				//Calculate and out elapsed time
+				double time_end = getsec();
+				double time_file = time_end - time_file_start;
+				double time_all = time_end - time_start;
+				if (timeAvg > 0.0)
+				{
+					timeAvg = time_all / numFilesProcessed;
+				}
+				else
+				{
+					timeAvg = time_all;
+				}
+			
+				double elapsed = files_count * timeAvg - time_all;
+				int el_h = (int) elapsed / (60 * 60);
+				int el_m = (int) (elapsed - el_h * 60 * 60) / 60;
+				int el_s = (int) (elapsed - el_h * 60 * 60 - el_m * 60);
+				printf("Done, took: ");
+				if (el_h)
+				{
+					printf("%dh", el_h);
+				}
+				if (el_m)
+				{
+					printf("%dm", el_h);
+				}
+				printf("%ds total, file: %.3fs avg: %.3fs\n", el_s, time_file, timeAvg);
 			}
-			else
-			{
-				timeAvg = time_all;
-			}
-			double elapsed = files_count * timeAvg - time_all;
-			int el_h = (int) elapsed / (60 * 60);
-			int el_m = (int) (elapsed - el_h * 60 * 60) / 60;
-			int el_s = (int) (elapsed - el_h * 60 * 60 - el_m * 60);
-			printf("Done, took: ");
-			if (el_h)
-			{
-				printf("%dh", el_h);
-			}
-			if (el_m)
-			{
-				printf("%dm", el_h);
-			}
-			printf("%ds total, file: %.3fs avg: %.3fs\n", el_s, time_file, timeAvg);
 		}
 
 
@@ -1065,7 +1083,7 @@ int main(int argc, char** argv)
 	{
 		numFilesProcessed++;
 		double time_file_start = getsec();
-		std::cout << "Processing file [1/1] \"" << input << "\":" << (verbose ? "\n" : " ");
+		std::cout << "Processing file [1/1] \"" << input << "\":" << (log_level > 0 ? "\n" : " ");
 		try
 		{
 			convert_file(convInfo, input, output);
@@ -1087,7 +1105,7 @@ int main(int argc, char** argv)
 
 		printf("Finished processing %d files%s%.3fsecs total, filter: %.3fsecs; %d files skipped, %d files errored. [GFLOPS: %7.2f, GFLOPS-Filter: %7.2f]\n",
 			numFilesProcessed,
-			(verbose ? "\nTook: " : ", took: "),
+			(log_level > 0 ? "\nTook: " : ", took: "),
 			(time_end - time_start),
 			converter->flops.filter_sec,
 			numSkipped,

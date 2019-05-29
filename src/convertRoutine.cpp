@@ -40,7 +40,7 @@ namespace w2xc
 		std::vector<std::unique_ptr<Model> > &models,
 		W2XConvFlopsCounter *flops,
 		enum image_format fmt,
-		bool enableLog
+		int log_level
 	);
 
 	static bool convertWithModelsBlockSplit
@@ -52,7 +52,7 @@ namespace w2xc
 		W2XConvFlopsCounter *flops,
 		int blockSize,
 		enum image_format fmt,
-		bool enableLog
+		int log_level
 	);
 
 	bool convertWithModels
@@ -64,9 +64,9 @@ namespace w2xc
 		W2XConvFlopsCounter *flops,
 		int blockSize,
 		enum image_format fmt,
-		bool enableLog)
+		int log_level)
 	{
-		return convertWithModelsBlockSplit(conv, env, inputPlane, outputPlane, models, flops, blockSize, fmt, enableLog);
+		return convertWithModelsBlockSplit(conv, env, inputPlane, outputPlane, models, flops, blockSize, fmt, log_level);
 	}
 
 	static bool convertWithModelsBasic
@@ -78,7 +78,7 @@ namespace w2xc
 		Buffer *packed_output_buf,
 		std::vector<std::unique_ptr<Model> > &models, W2XConvFlopsCounter *flops,
 		enum image_format fmt,
-		bool enableLog
+		int log_level
 	)
 	{
 		// padding is require before calling this function
@@ -123,7 +123,7 @@ namespace w2xc
 			int nOutputPlanes = models[index]->getNOutputPlanes();
 			int nInputPlanes = models[index]->getNInputPlanes();
 
-			if (enableLog)
+			if (log_level)
 			{
 				printf("Iteration #%d(%3d->%3d)...", (index + 1), nInputPlanes, nOutputPlanes);
 			}
@@ -141,7 +141,7 @@ namespace w2xc
 			double bytes = (double) filterSize.width * filterSize.height * sizeof(float) * (nOutputPlanes + nInputPlanes);
 			double gigabytesPerSec = (bytes/(1000.0*1000.0*1000.0)) / (t1-t0);
 
-			if (enableLog)
+			if (log_level)
 			{
 				printf("(%.5f[ms], %7.2f[GFLOPS], %8.3f[GB/s])\n", t1-t0, gflops, gigabytesPerSec);
 			}
@@ -191,7 +191,7 @@ namespace w2xc
 			}
 		}
 
-		if (enableLog)
+		if (log_level)
 		{
 			double gflops = ops_sum/(1000.0*1000.0*1000.0) / (t01-t00);
 			printf("total : %.3f[sec], %07.2f[GFLOPS]\n", t01-t00, gflops);
@@ -210,7 +210,7 @@ namespace w2xc
 		W2XConvFlopsCounter *flops,
 		int blockSize,
 		enum image_format fmt,
-		bool enableLog
+		int log_level
 	)
 	{
 		// padding is not required before calling this function
@@ -467,7 +467,7 @@ namespace w2xc
 				
 				W2Mat processBlock(tempMat_2, clipStartX, clipStartY, curBlockWidth, curBlockHeight);
 
-				if (enableLog)
+				if (log_level)
 				{
 					printf("Processing block, column (%02d/%02d), row (%02d/%02d) ...\n", (c+1), splitColumns, (r+1), splitRows);
 				}
@@ -506,7 +506,7 @@ namespace w2xc
 						models,
 						flops,
 						fmt,
-						enableLog
+						log_level
 					)
 				)
 				{

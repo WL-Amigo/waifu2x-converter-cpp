@@ -57,7 +57,7 @@ namespace w2xc
 		W2XConvFlopsCounter *flops,
 		int blockSize,
 		enum image_format fmt,
-		bool enableLog
+		int log_level
 	);
 }
 
