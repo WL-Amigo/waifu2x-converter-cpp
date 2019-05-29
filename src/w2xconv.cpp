@@ -1602,7 +1602,7 @@ void get_png_background_colour(FILE *png_fp, bool *has_alpha, struct w2xconv_rgb
 	return;
 }
 
-void slice_into_pieces(std::vector<cv::Mat> &pieces, cv::Mat &image, const int max_scale=2)
+void slice_into_pieces(std::vector<cv::Mat> &pieces, const cv::Mat &image, const int max_scale=2)
 {
 	//char name[70]="";	// for imwrite test
 	
