@@ -1797,7 +1797,7 @@ void w2xconv_convert_mat
 		
 		if (conv->log_level >= 2)
 		{
-			printf("\nStep %02d/%02d: Denoising", w2x_current_step++, ++w2x_total_steps);
+			printf("\nStep %02d/%02d: Denoising\n", w2x_current_step++, ++w2x_total_steps);
 		}
 			
 		slice_into_pieces(pieces, image, 1);
@@ -1806,7 +1806,7 @@ void w2xconv_convert_mat
 		{
 			if (conv->log_level >= 2)
 			{
-				printf("\nProccessing [%d/%zu] slices\n", i+1, pieces.size());
+				printf("Proccessing [%d/%zu] slices\n", i+1, pieces.size());
 			}
 			
 			apply_denoise(conv, image, denoise_level, blockSize, fmt);
@@ -1814,7 +1814,7 @@ void w2xconv_convert_mat
 		
 		if (pieces.size() > 1 && conv->log_level >= 2)
 		{
-			printf("\nMerging slices back to one image... in queue: %zu slices\n", pieces.size());
+			printf("Merging slices back to one image... in queue: %zu slices\n", pieces.size());
 		}
 		merge_slices(&image, pieces, 1);
 	}
@@ -1836,7 +1836,7 @@ void w2xconv_convert_mat
 			
 			if (conv->log_level >= 2)
 			{
-				printf("\nStep %02d/%02d: 2x Scaling", w2x_current_step++, w2x_total_steps);
+				printf("\nStep %02d/%02d: 2x Scaling\n", w2x_current_step++, w2x_total_steps);
 			}
 			
 			slice_into_pieces(pieces, image);
@@ -1845,7 +1845,7 @@ void w2xconv_convert_mat
 			{
 				if (conv->log_level >= 2)
 				{
-					printf("\nProccessing [%d/%zu] slices\n", i+1, pieces.size());
+					printf("Proccessing [%d/%zu] slices\n", i+1, pieces.size());
 				}
 				
 				apply_scale(conv, pieces[i], 1, blockSize, fmt);
@@ -1861,7 +1861,7 @@ void w2xconv_convert_mat
 
 			if (pieces.size() > 1 && conv->log_level >= 2)
 			{
-				printf("\nMerging slices back to one image... in queue: %zu slices\n", pieces.size());
+				printf("Merging slices back to one image... in queue: %zu slices\n", pieces.size());
 			}
 			merge_slices(&image, pieces);
 		}
@@ -2162,7 +2162,7 @@ int w2xconv_convert_file
 	
 	if (conv->log_level >= 2)
 	{
-		printf("\nWriting image to file...\n\n");
+		printf("Writing image to file...\n\n");
 	}
 	
 	std::vector<int> vec_imwrite_params;
