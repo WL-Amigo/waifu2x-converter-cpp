@@ -543,6 +543,11 @@ char * w2xconv_strerror(W2XConvError *e)
 			oss << "output size too big for webp format. use png or jpg instead."; 
 			break;
 		}
+		case W2XCONV_ERROR_WEBP_LOSSY_SIZE_LIMIT:
+		{
+			oss << "output size too big for lossy webp format. use -q 101 for lossless webp instead."; 
+			break;
+		}
 	}
 
 	return strdup(oss.str().c_str());
@@ -2148,12 +2153,12 @@ int w2xconv_convert_file
 	}
 	
 	// for webp limit
-	if (dst_webp && imwrite_params[2] <= 100 && scale > 1.0 && image_src.rows * image_src.cols > WEBP_LOSSY_OUTPUT_MAX / scale / scale){
+	if(dst_webp && (image_src.rows > WEBP_MAX_WIDTH / scale || image_src.cols > WEBP_MAX_WIDTH / scale)){
 		setError(conv, W2XCONV_ERROR_WEBP_SIZE_LIMIT);
 		return -1;
 	}
-	else if(dst_webp && (image_src.rows > WEBP_MAX_WIDTH / scale || image_src.cols > WEBP_MAX_WIDTH / scale)){
-		setError(conv, W2XCONV_ERROR_WEBP_SIZE_LIMIT);
+	else if (dst_webp && imwrite_params[2] <= 100 && scale > 1.0 && image_src.rows * image_src.cols > WEBP_LOSSY_OUTPUT_MAX / scale / scale){
+		setError(conv, W2XCONV_ERROR_WEBP_LOSSY_SIZE_LIMIT);
 		return -1;
 	}
 	
