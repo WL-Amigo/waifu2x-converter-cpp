@@ -1597,6 +1597,106 @@ void get_png_background_colour(FILE *png_fp, bool *has_alpha, struct w2xconv_rgb
 	return;
 }
 
+void slice_into_pieces(std::vector<cv::Mat> &pieces, cv::Mat &image, const int max_scale=2)
+{
+	//char name[70]="";	// for imwrite test
+	
+	pieces.push_back(image);
+	
+	while(pieces[0].rows * pieces[0].cols > OUTPUT_SIZE_MAX / max_scale / max_scale)
+	{
+		int r=pieces[0].rows, c=pieces[0].cols;
+		int h_r=r/2, h_c=c/2;
+		
+		// div in 4 and add padding to input.
+		pieces.push_back(pieces[0](cv::Range(0,h_r+SLICER_PAD_SIZE), cv::Range(0,h_c+SLICER_PAD_SIZE)).clone());
+		pieces.push_back(pieces[0](cv::Range(0,h_r+SLICER_PAD_SIZE), cv::Range(h_c-SLICER_PAD_SIZE,c)).clone());
+		pieces.push_back(pieces[0](cv::Range(h_r-SLICER_PAD_SIZE,r), cv::Range(0,h_c+SLICER_PAD_SIZE)).clone());
+		pieces.push_back(pieces[0](cv::Range(h_r-SLICER_PAD_SIZE,r), cv::Range(h_c-SLICER_PAD_SIZE,c)).clone());
+		
+		// delete piece
+		pieces.erase(pieces.begin());
+	}
+	/*
+	for(int i=0; i<pieces.size(); i++)
+	{
+		
+		sprintf(name, "[test] step%d_slice%d_padded.webp", ld, i);
+		
+		cv::Mat test=pieces[i].clone(), testout = cv::Mat(pieces[i].size(), CV_MAKETYPE(src_depth,3));
+		postproc_rgb2rgb<unsigned char, 255, 2, 0>(&testout, &test);
+		
+		cv::imwrite(name, testout);
+	}
+	*/
+}
+
+void merge_slices(cv::Mat *image, std::vector<cv::Mat> &pieces, const int max_scale=2)
+{
+	//int j=0; // for imwrite test merge
+	//char name[70]="";	// for imwrite test
+			
+	// combine images
+	while (pieces.size() > 1)
+	{
+		cv::Mat quarter[4], merged[3];
+		int cut = (int) (SLICER_PAD_SIZE * max_scale);
+		
+		//double time_a = getsec(), time_b = 0;
+		
+		quarter[0]=pieces[0](cv::Range(0, pieces[0].rows - cut), cv::Range(0, pieces[0].cols - cut)).clone();
+		quarter[1]=pieces[1](cv::Range(0, pieces[1].rows - cut), cv::Range(cut, pieces[1].cols)).clone();
+		quarter[2]=pieces[2](cv::Range(cut, pieces[2].rows), cv::Range(0, pieces[2].cols - cut)).clone();
+		quarter[3]=pieces[3](cv::Range(cut, pieces[3].rows), cv::Range(cut, pieces[3].cols)).clone();
+		
+		pieces.erase(pieces.begin(), pieces.begin()+4);
+		
+		//printf("merge horizon\n"); 
+		hconcat(quarter[0], quarter[1], merged[0]);
+		hconcat(quarter[2], quarter[3], merged[1]);
+		
+		// free memory
+		quarter[0].release();
+		quarter[1].release();
+		quarter[2].release();
+		quarter[3].release();
+		
+		/*printf("imwriting merged image - horizon\n"); 
+		sprintf(name, "[test] merge_step%d_block0.webp", ld);
+		
+		cv::Mat test=merged[0].clone(), testout = cv::Mat(merged[0].size(), CV_MAKETYPE(src_depth,3));
+		postproc_rgb2rgb<unsigned char, 255, 2, 0>(&testout, &test);
+		
+		cv::imwrite(name, testout);
+		
+		printf("imwriting merged image - vertical\n"); 
+		sprintf(name, "[test] merge_step%d_block1.webp", ld);
+		
+		test=merged[1].clone(), testout = cv::Mat(merged[1].size(), CV_MAKETYPE(src_depth,3));
+		postproc_rgb2rgb<unsigned char, 255, 2, 0>(&testout, &test);
+		
+		cv::imwrite(name, testout);*/
+		
+		//printf("merge vertical\n"); 
+		vconcat(merged[0], merged[1], merged[2]);
+		
+		//time_b = getsec();
+		//printf("took %f\n", time_b - time_a); 
+		
+		pieces.push_back(merged[2].clone());
+		
+		/*
+		printf("imwriting merged image\n"); 
+		sprintf(name, "[test] merge_step%d_merged.webp", ld);
+		
+		test=merged[2].clone(), testout = cv::Mat(merged[2].size(), CV_MAKETYPE(src_depth,3));
+		postproc_rgb2rgb<unsigned char, 255, 2, 0>(&testout, &test);
+		
+		cv::imwrite(name, testout);*/
+	}
+	*image = pieces[0].clone();
+}
+
 void w2xconv_convert_mat
 (
 	struct W2XConv *conv,
@@ -1612,7 +1712,6 @@ void w2xconv_convert_mat
 {				
 	bool is_rgb = (conv->impl->scale2_models[0]->getNInputPlanes() == 3);
 	enum w2xc::image_format fmt;
-	const static int pad = 12;	// give pad to avoid distortions in edge
 	//char name[70]="";	// for imwrite test
 
 	int src_depth = CV_MAT_DEPTH(image_src->type());
@@ -1692,11 +1791,31 @@ void w2xconv_convert_mat
 	
 	if (denoise_level != -1)
 	{
+		// divide images in to 4^n pieces when output size is too big.
+		std::vector<cv::Mat> pieces;
+		
 		if (conv->enable_log)
 		{
 			printf("Step %02d/%02d: Denoising\n", w2x_current_step++, ++w2x_total_steps);
 		}
-		apply_denoise(conv, image, denoise_level, blockSize, fmt);
+			
+		slice_into_pieces(pieces, image, 1);
+		
+		for(int i=0; i<pieces.size(); i++)
+		{
+			if (conv->enable_log)
+			{
+				printf("\nProccessing [%d/%zu] slices\n", i+1, pieces.size());
+			}
+			
+			apply_denoise(conv, image, denoise_level, blockSize, fmt);
+		}
+		
+		if (pieces.size() > 1 && conv->enable_log)
+		{
+			printf("\nMerging slices back to one image... in queue: %zd slices\n", pieces.size());
+		}
+		merge_slices(&image, pieces, 1);
 	}
 
 	if (scale != 1.0)
@@ -1719,34 +1838,10 @@ void w2xconv_convert_mat
 				printf("\nProccessing [%d/%d] steps...\n", ld+1, iterTimesTwiceScaling);
 			}
 			
-			pieces.push_back(image);
-			
-			while(pieces[0].rows * pieces[0].cols > 178700000 / 4)
-			{
-				int r=pieces[0].rows, c=pieces[0].cols;
-				int h_r=r/2, h_c=c/2;
-				
-				// div in 4 and add padding to input.
-				pieces.push_back(pieces[0](cv::Range(0,h_r+pad), cv::Range(0,h_c+pad)).clone());
-				pieces.push_back(pieces[0](cv::Range(0,h_r+pad), cv::Range(h_c-pad,c)).clone());
-				pieces.push_back(pieces[0](cv::Range(h_r-pad,r), cv::Range(0,h_c+pad)).clone());
-				pieces.push_back(pieces[0](cv::Range(h_r-pad,r), cv::Range(h_c-pad,c)).clone());
-				
-				// delete piece
-				pieces.erase(pieces.begin());
-			}
+			slice_into_pieces(pieces, image);
 			
 			for(int i=0; i<pieces.size(); i++)
 			{
-				/*
-				sprintf(name, "[test] step%d_slice%d_padded.webp", ld, i);
-				
-				cv::Mat test=pieces[i].clone(), testout = cv::Mat(pieces[i].size(), CV_MAKETYPE(src_depth,3));
-				postproc_rgb2rgb<unsigned char, 255, 2, 0>(&testout, &test);
-				
-				cv::imwrite(name, testout);*/
-				
-				
 				if (conv->enable_log)
 				{
 					printf("\nProccessing [%d/%zu] slices\n", i+1, pieces.size());
@@ -1763,66 +1858,11 @@ void w2xconv_convert_mat
 				cv::imwrite(name, testout);*/
 			}
 
-			//int j=0; // for imwrite test merge
-			
-			// combine images
-			while (pieces.size() > 1)
+			if (pieces.size() > 1 && conv->enable_log)
 			{
-				cv::Mat quarter[4], merged[3];
-				int cut = (int) (pad * 2);
-				
-				if (conv->enable_log)
-				{
-					printf("\nMerging slices back to one image... in queue: %zd slices\n", pieces.size());
-				}
-				
-				//double time_a = getsec(), time_b = 0;
-				
-				quarter[0]=pieces[0](cv::Range(0, pieces[0].rows - cut), cv::Range(0, pieces[0].cols - cut)).clone();
-				quarter[1]=pieces[1](cv::Range(0, pieces[1].rows - cut), cv::Range(cut, pieces[1].cols)).clone();
-				quarter[2]=pieces[2](cv::Range(cut, pieces[2].rows), cv::Range(0, pieces[2].cols - cut)).clone();
-				quarter[3]=pieces[3](cv::Range(cut, pieces[3].rows), cv::Range(cut, pieces[3].cols)).clone();
-				
-				pieces.erase(pieces.begin(), pieces.begin()+4);
-				
-				//printf("merge horizon\n"); 
-				hconcat(quarter[0], quarter[1], merged[0]);
-				hconcat(quarter[2], quarter[3], merged[1]);
-				
-				/*printf("imwriting merged image - horizon\n"); 
-				sprintf(name, "[test] merge_step%d_block0.webp", ld);
-				
-				cv::Mat test=merged[0].clone(), testout = cv::Mat(merged[0].size(), CV_MAKETYPE(src_depth,3));
-				postproc_rgb2rgb<unsigned char, 255, 2, 0>(&testout, &test);
-				
-				cv::imwrite(name, testout);
-				
-				printf("imwriting merged image - vertical\n"); 
-				sprintf(name, "[test] merge_step%d_block1.webp", ld);
-				
-				test=merged[1].clone(), testout = cv::Mat(merged[1].size(), CV_MAKETYPE(src_depth,3));
-				postproc_rgb2rgb<unsigned char, 255, 2, 0>(&testout, &test);
-				
-				cv::imwrite(name, testout);*/
-				
-				//printf("merge vertical\n"); 
-				vconcat(merged[0], merged[1], merged[2]);
-				
-				//time_b = getsec();
-				//printf("took %f\n", time_b - time_a); 
-				
-				pieces.push_back(merged[2].clone());
-				
-				/*
-				printf("imwriting merged image\n"); 
-				sprintf(name, "[test] merge_step%d_merged.webp", ld);
-				
-				test=merged[2].clone(), testout = cv::Mat(merged[2].size(), CV_MAKETYPE(src_depth,3));
-				postproc_rgb2rgb<unsigned char, 255, 2, 0>(&testout, &test);
-				
-				cv::imwrite(name, testout);*/
+				printf("\nMerging slices back to one image... in queue: %zd slices\n", pieces.size());
 			}
-			image = pieces[0].clone();
+			merge_slices(&image, pieces);
 		}
 
 		if (shrinkRatio != 0.0)
@@ -2098,7 +2138,7 @@ int w2xconv_convert_file
 	// with max_scale is 2048, it only can converts less then (w+20) x (h+20) = 42 px, which is no meaning to run w2x.
 	// with max_scale is 4096, you cannot convert it at all.
 	
-	if (image_src.rows * image_src.cols > 178700000 / 4)
+	if (image_src.rows * image_src.cols > OUTPUT_SIZE_MAX / max_scale / max_scale)
 	{
 		if (max_scale >= 512)
 		{
@@ -2108,11 +2148,11 @@ int w2xconv_convert_file
 	}
 	
 	// for webp limit
-	if (dst_webp && imwrite_params[2] <= 100 && scale > 1.0 && image_src.rows * image_src.cols > 196000000 / scale / scale){
+	if (dst_webp && imwrite_params[2] <= 100 && scale > 1.0 && image_src.rows * image_src.cols > WEBP_LOSSY_OUTPUT_MAX / scale / scale){
 		setError(conv, W2XCONV_ERROR_WEBP_SIZE_LIMIT);
 		return -1;
 	}
-	else if(dst_webp && (image_src.rows > 16383 / scale || image_src.cols > 16383 / scale)){
+	else if(dst_webp && (image_src.rows > WEBP_MAX_WIDTH / scale || image_src.cols > WEBP_MAX_WIDTH / scale)){
 		setError(conv, W2XCONV_ERROR_WEBP_SIZE_LIMIT);
 		return -1;
 	}

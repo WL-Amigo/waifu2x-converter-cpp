@@ -70,6 +70,11 @@ enum PNG_TYPE
 	TruecolorAlpha = 6,
 };
 
+#define SLICER_PAD_SIZE 12
+#define OUTPUT_SIZE_MAX /*178700000*/ 4000000
+#define WEBP_LOSSY_OUTPUT_MAX 196000000
+#define WEBP_MAX_WIDTH 16383
+
 enum W2XConvErrorCode
 {
 	W2XCONV_NOERROR,
@@ -213,7 +218,6 @@ struct w2xconv_rgb_float3
 	//float3(float r, float g, float b):r(r), g(g), b(b){}
 };
 
-//TODO: what does W2XCONV_EXPORT do?
 W2XCONV_EXPORT	void get_png_background_colour(FILE *png_fp, bool *png_rgb, struct w2xconv_rgb_float3 *bkgd_colour);
 
 W2XCONV_EXPORT const struct W2XConvProcessor *w2xconv_get_processor_list(size_t *ret_num);
