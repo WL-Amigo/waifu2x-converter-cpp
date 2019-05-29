@@ -822,7 +822,7 @@ static void apply_scale
 	// 2x scaling
 	for (int nIteration = 0; nIteration < iterTimesTwiceScaling; nIteration++)
 	{
-		if (conv->log_level)
+		if (conv->log_level >= 3)
 		{
 			printf("2x Scaling:\n");
 		}
@@ -1795,7 +1795,7 @@ void w2xconv_convert_mat
 		// divide images in to 4^n pieces when output size is too big.
 		std::vector<cv::Mat> pieces;
 		
-		if (conv->log_level)
+		if (conv->log_level >= 2)
 		{
 			printf("\nStep %02d/%02d: Denoising", w2x_current_step++, ++w2x_total_steps);
 		}
@@ -1804,7 +1804,7 @@ void w2xconv_convert_mat
 		
 		for(int i=0; i<pieces.size(); i++)
 		{
-			if (conv->log_level)
+			if (conv->log_level >= 2)
 			{
 				printf("\nProccessing [%d/%zu] slices\n", i+1, pieces.size());
 			}
@@ -1812,7 +1812,7 @@ void w2xconv_convert_mat
 			apply_denoise(conv, image, denoise_level, blockSize, fmt);
 		}
 		
-		if (pieces.size() > 1 && conv->log_level)
+		if (pieces.size() > 1 && conv->log_level >= 2)
 		{
 			printf("\nMerging slices back to one image... in queue: %zu slices\n", pieces.size());
 		}
@@ -1834,7 +1834,7 @@ void w2xconv_convert_mat
 			// divide images in to 4^n pieces when output size is too big.
 			std::vector<cv::Mat> pieces;
 			
-			if (conv->log_level)
+			if (conv->log_level >= 2)
 			{
 				printf("\nStep %02d/%02d: 2x Scaling", w2x_current_step++, w2x_total_steps);
 			}
@@ -1843,7 +1843,7 @@ void w2xconv_convert_mat
 			
 			for(int i=0; i<pieces.size(); i++)
 			{
-				if (conv->log_level)
+				if (conv->log_level >= 2)
 				{
 					printf("\nProccessing [%d/%zu] slices\n", i+1, pieces.size());
 				}
@@ -1859,7 +1859,7 @@ void w2xconv_convert_mat
 				cv::imwrite(name, testout);*/
 			}
 
-			if (pieces.size() > 1 && conv->log_level)
+			if (pieces.size() > 1 && conv->log_level >= 2)
 			{
 				printf("\nMerging slices back to one image... in queue: %zu slices\n", pieces.size());
 			}
@@ -2068,7 +2068,7 @@ int w2xconv_convert_file
 	bool dst_png = false;
 	{
 		size_t len = wcslen(dst_path);
-		if (len >= 4) {
+		if (len >= 3) {
 			if (towlower(dst_path[len-4]) == L'.' && towlower(dst_path[len-3]) == L'p' && towlower(dst_path[len-2]) == L'n' && towlower(dst_path[len-1]) == L'g')
 			{
 				dst_png = true;
@@ -2088,7 +2088,7 @@ int w2xconv_convert_file
 	bool dst_png = false;
 	{
 		size_t len = strlen(dst_path);
-		if (len >= 4)
+		if (len >= 3)
 		{
 			if (tolower(dst_path[len-4]) == '.' && tolower(dst_path[len-3]) == 'p' && tolower(dst_path[len-2]) == 'n' && tolower(dst_path[len-1]) == 'g')
 			{
@@ -2160,9 +2160,9 @@ int w2xconv_convert_file
 	
 	w2xconv_convert_mat(conv, &image_dst, &image_src, denoise_level, scale, blockSize, background, png_rgb, dst_png);
 	
-	if (conv->log_level)
+	if (conv->log_level >= 2)
 	{
-		printf("Writing image to file...\n\n");
+		printf("\nWriting image to file...\n\n");
 	}
 	
 	std::vector<int> vec_imwrite_params;
@@ -2213,7 +2213,7 @@ static void convert_mat
 	}
 	if (denoise_level != -1)
 	{
-		if (conv->log_level)
+		if (conv->log_level >= 2)
 		{
 			printf("Step %02d/%02d: Denoising\n", w2x_current_step++, ++w2x_total_steps);
 		}

@@ -758,7 +758,7 @@ int main(int argc, char** argv)
 
 	TCLAP::SwitchArg cmdQuiet("s", "silent", "Enable silent mode. (same as --log-level 1)", cmd, false);
 	
-	TCLAP::ValueArg<int> cmdLogLevel("", "log-level", "Set log level (0-5)", false, 4, "integer", cmd);
+	TCLAP::ValueArg<int> cmdLogLevel("", "log-level", "Set log level (0-4)", false, 3, "integer", cmd);
 	
 	std::vector<std::string> cmdModeConstraintV;
 	cmdModeConstraintV.push_back("noise");
@@ -851,9 +851,9 @@ int main(int argc, char** argv)
 		std::cout << "Error: JPEG & WebP Compression quality range is 0-101! (0 being smallest size and lowest quality), use 101 for lossless WebP" << std::endl;
 		std::exit(-1);
 	}
-	if (cmdLogLevel.getValue() < 0 || cmdLogLevel.getValue() > 5)
+	if (cmdLogLevel.getValue() < 0 || cmdLogLevel.getValue() > 4)
 	{
-		std::cout << "Error: Log-level has to be within range (0-5), 5 being the noisiest." << std::endl;
+		std::cout << "Error: Log-level has to be within range (0-4), 4 being the noisiest." << std::endl;
 		std::exit(-1);
 	}
 	if (validate_format_extension(cmdOutputFormat.getValue()) == false)
@@ -895,12 +895,14 @@ int main(int argc, char** argv)
 	size_t num_proc;
 	w2xconv_get_processor_list(&num_proc);
 	int proc = cmdTargetProcessor.getValue();
-	int log_level = 2;
+	int log_level = 3;
 
 	if (cmdQuiet.getValue())
 	{
 		log_level = 1;
 	}
+	else
+		log_level = cmdLogLevel.getValue();
 
 	if (proc != -1 && proc < num_proc)
 	{
@@ -940,22 +942,24 @@ int main(int argc, char** argv)
 	);
 	
 	double time_start = getsec();
-
-	switch (converter->target_processor->type) {
-		case W2XCONV_PROC_HOST:
-		{
-			printf("CPU: %s\n", converter->target_processor->dev_name);
-			break;
-		}
-		case W2XCONV_PROC_CUDA:
-		{
-			printf("CUDA: %s\n", converter->target_processor->dev_name);
-			break;
-		}
-		case W2XCONV_PROC_OPENCL:
-		{
-			printf("OpenCL: %s\n", converter->target_processor->dev_name);
-			break;
+	
+	if (log_level >= 1) {
+		switch (converter->target_processor->type) {
+			case W2XCONV_PROC_HOST:
+			{
+				printf("CPU: %s\n", converter->target_processor->dev_name);
+				break;
+			}
+			case W2XCONV_PROC_CUDA:
+			{
+				printf("CUDA: %s\n", converter->target_processor->dev_name);
+				break;
+			}
+			case W2XCONV_PROC_OPENCL:
+			{
+				printf("OpenCL: %s\n", converter->target_processor->dev_name);
+				break;
+			}
 		}
 	}
 
@@ -976,7 +980,10 @@ int main(int argc, char** argv)
 	{
 		//Build files list
 		std::deque<fs::path> files_list;
-		std::cout << "We're going to be operating in a directory. dir:" << fs::absolute(input) << std::endl;
+		
+		if (log_level >= 1) {
+			std::cout << "We're going to be operating in a directory. dir:" << fs::absolute(input) << std::endl;
+		}
 		
 		if (recursive_directory_iterator)
 		{
@@ -991,8 +998,10 @@ int main(int argc, char** argv)
 					}
 					else
 					{
-						std::cout << "Skipping file '" << inputFile.path().filename().string()
-							<< "' for having an unsupported file extension (" << ext << ")" << std::endl;
+						if (log_level >= 1) {
+							std::cout << "Skipping file '" << inputFile.path().filename().string()
+								<< "' for having an unsupported file extension (" << ext << ")" << std::endl;
+						}
 						numSkipped++;
 						continue;
 					}
@@ -1012,8 +1021,10 @@ int main(int argc, char** argv)
 					}
 					else
 					{
-						std::cout << "Skipping file '" << inputFile.path().filename().string()
-							<< "' for having an unsupported file extension (" << ext << ")" << std::endl;
+						if (log_level >= 1) {
+							std::cout << "Skipping file '" << inputFile.path().filename().string()
+								<< "' for having an unsupported file extension (" << ext << ")" << std::endl;
+						}
 						numSkipped++;
 						continue;
 					}
@@ -1029,12 +1040,12 @@ int main(int argc, char** argv)
 			++numFilesProcessed;
 			double time_file_start = getsec();
 			
-			if (log_level) {
+			if (log_level >= 1) {
 				printf("Processing file [%d/%d] \"%s\":%s",
 					numFilesProcessed,
 					files_count,
 					fn.filename().string().c_str(),
-					(log_level>0 ? "\n" : " ")
+					(log_level >= 2 ? "\n" : " ")
 				);
 			}
 
@@ -1046,7 +1057,7 @@ int main(int argc, char** argv)
 				std::cout << e.what() << std::endl;
 			}
 
-			if (log_level) {
+			if (log_level >= 1) {
 				//Calculate and out elapsed time
 				double time_end = getsec();
 				double time_file = time_end - time_file_start;
@@ -1083,7 +1094,11 @@ int main(int argc, char** argv)
 	{
 		numFilesProcessed++;
 		double time_file_start = getsec();
-		std::cout << "Processing file [1/1] \"" << input << "\":" << (log_level > 0 ? "\n" : " ");
+		
+		if (log_level >= 1) {
+			std::cout << "Processing file [1/1] \"" << input << "\":" << (log_level >= 2 ? "\n" : " ");
+		}
+		
 		try
 		{
 			convert_file(convInfo, input, output);
@@ -1093,10 +1108,15 @@ int main(int argc, char** argv)
 			numErrors++;
 			std::cout << e.what() << std::endl;
 		}
-		double time_end = getsec();
-		double time_file = time_end - time_file_start;
-		printf("Done, took: %.3fs total, file: %.3fs avg: %.3fs\n", time_file, time_file, time_file);
+		
+		if (log_level >= 1) {
+			double time_end = getsec();
+			double time_file = time_end - time_file_start;
+			printf("Done, took: %.3fs total, file: %.3fs avg: %.3fs\n", time_file, time_file, time_file);
+		}
 	}
+	
+	if (log_level >= 1)
 	{
 		double time_end = getsec();
 
@@ -1105,7 +1125,7 @@ int main(int argc, char** argv)
 
 		printf("Finished processing %d files%s%.3fsecs total, filter: %.3fsecs; %d files skipped, %d files errored. [GFLOPS: %7.2f, GFLOPS-Filter: %7.2f]\n",
 			numFilesProcessed,
-			(log_level > 0 ? "\nTook: " : ", took: "),
+			(log_level >=2 ? "\nTook: " : ", took: "),
 			(time_end - time_start),
 			converter->flops.filter_sec,
 			numSkipped,
