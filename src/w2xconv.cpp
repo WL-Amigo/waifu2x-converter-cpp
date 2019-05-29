@@ -52,14 +52,10 @@ struct W2XConvImpl
 };
 
 static std::vector<struct W2XConvProcessor> processor_list;
-static int w2x_total_steps;
-static int w2x_current_step;
 
 static void global_init2(void)
 {
 	{
-		w2x_total_steps = 0;
-		w2x_current_step = 1;
 		W2XConvProcessor host;
 		host.type = W2XCONV_PROC_HOST;
 		host.sub_type = W2XCONV_PROC_HOST_OPENCV;
@@ -828,7 +824,7 @@ static void apply_scale
 	{
 		if (conv->enable_log)
 		{
-			printf("Step %02d/%02d, 2x Scaling:\n", w2x_current_step++, w2x_total_steps);
+			printf("2x Scaling:\n");
 		}
 		cv::Size imageSize = image.size();
 		imageSize.width *= 2;
@@ -1784,14 +1780,14 @@ void w2xconv_convert_mat
 
 	image_src->release();
 	
-	w2x_total_steps = 0;
-	w2x_current_step = 1;
+	int w2x_total_steps = 0;
+	int w2x_current_step = 1;
 	int iterTimesTwiceScaling;
 	
 	if (scale != 1.0)
 	{
 		iterTimesTwiceScaling = static_cast<int>(std::ceil(std::log2(scale)));
-		w2x_total_steps = w2x_total_steps + iterTimesTwiceScaling;
+		w2x_total_steps += iterTimesTwiceScaling;
 	}
 	
 	if (denoise_level != -1)
@@ -1801,7 +1797,7 @@ void w2xconv_convert_mat
 		
 		if (conv->enable_log)
 		{
-			printf("Step %02d/%02d: Denoising\n", w2x_current_step++, ++w2x_total_steps);
+			printf("\nStep %02d/%02d: Denoising", w2x_current_step++, ++w2x_total_steps);
 		}
 			
 		slice_into_pieces(pieces, image, 1);
@@ -1818,7 +1814,7 @@ void w2xconv_convert_mat
 		
 		if (pieces.size() > 1 && conv->enable_log)
 		{
-			printf("\nMerging slices back to one image... in queue: %zd slices\n", pieces.size());
+			printf("\nMerging slices back to one image... in queue: %zu slices\n", pieces.size());
 		}
 		merge_slices(&image, pieces, 1);
 	}
@@ -1837,10 +1833,10 @@ void w2xconv_convert_mat
 		{
 			// divide images in to 4^n pieces when output size is too big.
 			std::vector<cv::Mat> pieces;
-				
+			
 			if (conv->enable_log)
 			{
-				printf("\nProccessing [%d/%d] steps...\n", ld+1, iterTimesTwiceScaling);
+				printf("\nStep %02d/%02d: 2x Scaling", w2x_current_step++, w2x_total_steps);
 			}
 			
 			slice_into_pieces(pieces, image);
@@ -1865,7 +1861,7 @@ void w2xconv_convert_mat
 
 			if (pieces.size() > 1 && conv->enable_log)
 			{
-				printf("\nMerging slices back to one image... in queue: %zd slices\n", pieces.size());
+				printf("\nMerging slices back to one image... in queue: %zu slices\n", pieces.size());
 			}
 			merge_slices(&image, pieces);
 		}
@@ -2206,8 +2202,8 @@ static void convert_mat
 	enum w2xc::image_format fmt
 )
 {
-	w2x_total_steps = 0;
-	w2x_current_step = 1;
+	int w2x_total_steps = 0;
+	int w2x_current_step = 1;
 	int iterTimesTwiceScaling;
 	
 	if (scale != 1.0)
