@@ -1313,6 +1313,15 @@ void skip_sig(FILE *png_fp, char *sig)
 	//DEBUG printf("crc: %08X\n",crc);
 }
 
+enum PNG_TYPE
+{
+	Grayscale = 0,
+	Truecolor = 2,
+	Indexed = 3,
+	GrayscaleAlpha = 4,
+	TruecolorAlpha = 6,
+};
+
 //This checks if the file type is png, it defalts to the user inputted bkgd_colour otherwise.
 //The returning bool is whether the function excecuted successfully or not.
 void get_png_background_colour(FILE *png_fp, bool *has_alpha, struct w2xconv_rgb_float3 *bkgd_colour)
@@ -1542,6 +1551,11 @@ void get_png_background_colour(FILE *png_fp, bool *has_alpha, struct w2xconv_rgb
 	}
 	return;
 }
+
+#define SLICER_PAD_SIZE 12
+#define OUTPUT_SIZE_MAX 178700000
+#define WEBP_LOSSY_OUTPUT_MAX 196000000
+#define WEBP_MAX_WIDTH 16383
 
 void slice_into_pieces(std::vector<cv::Mat> &pieces, const cv::Mat &image, const int max_scale=2)
 {

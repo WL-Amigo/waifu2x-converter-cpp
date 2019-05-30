@@ -63,20 +63,6 @@ enum W2XConvGPUMode
 	W2XCONV_GPU_FORCE_OPENCL = 2
 };
 
-enum PNG_TYPE
-{
-	Grayscale = 0,
-	GrayscaleAlpha = 4,
-	Indexed = 3,
-	Truecolor = 2,
-	TruecolorAlpha = 6,
-};
-
-#define SLICER_PAD_SIZE 12
-#define OUTPUT_SIZE_MAX 178700000
-#define WEBP_LOSSY_OUTPUT_MAX 196000000
-#define WEBP_MAX_WIDTH 16383
-
 enum W2XConvErrorCode
 {
 	W2XCONV_NOERROR,
@@ -217,8 +203,6 @@ struct w2xconv_rgb_float3
 	float r;
 	float g;
 	float b;
-	//float3(){}
-	//float3(float r, float g, float b):r(r), g(g), b(b){}
 };
 
 W2XCONV_EXPORT	void get_png_background_colour(FILE *png_fp, bool *png_rgb, struct w2xconv_rgb_float3 *bkgd_colour);
