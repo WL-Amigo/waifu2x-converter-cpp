@@ -453,7 +453,7 @@ void convert_file(ConvInfo info, fs::path inputName, fs::path output)
 {
 	//std::cout << "Operating on: " << fs::absolute(inputName).string() << std::endl;
 
-	_tstring outputName = generate_output_location(fs::absolute(inputName), output, info.mode, info.NRLevel, info.scaleRatio, info.outputFormat);
+	_tstring outputName = generate_output_location(fs::absolute(inputName).TSTRING_METHOD(), output.TSTRING_METHOD(), info.mode, info.NRLevel, info.scaleRatio, info.outputFormat);
 
 	int _nrLevel = -1;
 
@@ -470,7 +470,7 @@ void convert_file(ConvInfo info, fs::path inputName, fs::path output)
 
 	int error = w2xconv_convert_file(info.converter,
 			outputName.c_str(),
-			fs::absolute(inputName).c_str(),
+			fs::absolute(inputName).TSTRING_METHOD().c_str(),
 			_nrLevel,
 			_scaleRatio,
 			info.blockSize,
@@ -581,10 +581,13 @@ int main(int argc, char** argv)
 #endif
 {
 	int ret = 1;
+	_tstring modelDir;
 #if defined(_WIN32) && defined(_UNICODE)
 	int argc = 0;
 	char **argv = CommandLineToArgvA(GetCommandLineA(), &argc);
-	std::wstring inputFileName, outputFileName=L"auto", modelDir = DEFAULT_MODELS_DIRECTORYW;
+	std::wstring inputFileName, outputFileName=L"auto";
+	
+	modelDir = DEFAULT_MODELS_DIRECTORYW;
 	
 	for (int ai = 1; ai < argc_w; ai++)
 	{
@@ -882,7 +885,7 @@ int main(int argc, char** argv)
 		std::deque<fs::path> files_list;
 		
 		if (log_level >= 1) {
-			std::cout << "We're going to be operating in a directory. dir:" << fs::absolute(input) << std::endl;
+			std::cout << "We're going to be operating in a directory. dir:" << fs::absolute(input).string() << std::endl;
 		}
 		
 		if (recursive_directory_iterator)

@@ -33,4 +33,10 @@
 	typedef	std::string		_tstring;
 #endif
 
+#ifdef _UNICODE
+	#define	TSTRING_METHOD	wstring
+#else
+	#define	TSTRING_METHOD	string
+#endif
+
 #endif
