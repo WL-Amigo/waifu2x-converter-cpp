@@ -40,8 +40,6 @@
 
 #if defined(_WIN32) && defined(_UNICODE)
 #include <Windows.h>
-#include <io.h>
-#include <fcntl.h>
 #pragma comment ( linker, "/entry:\"wmainCRTStartup\"" )
 #endif
 
