@@ -1119,8 +1119,8 @@ namespace w2xc
 		std::vector<std::unique_ptr<Model> > &models
 	)
 	{
-		_tstring binpath = fileName + _W2X_T(".bin");
-		FILE *binfp = _tfopen(binpath.c_str(), _W2X_T("rb"));
+		_tstring binpath = fileName + _T(".bin");
+		FILE *binfp = _tfopen(binpath.c_str(), _T("rb"));
 
 		if (binfp)
 		{
@@ -1181,7 +1181,7 @@ namespace w2xc
 				models.push_back(std::move(m));
 			}
 
-			binfp = _tfopen(binpath.c_str(), _W2X_T("wb"));
+			binfp = _tfopen(binpath.c_str(), _T("wb"));
 			if (binfp)
 			{
 				size_t nModel = objectArray.size();

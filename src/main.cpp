@@ -379,37 +379,37 @@ _tstring generate_output_location(
 	_tstring outputFormat
 )
 {
-	size_t lastSlashPos = outputFileName.find_last_of(_W2X_T("/\\"));
-	size_t lastDotPos = outputFileName.find_last_of(_W2X_T('.'));
+	size_t lastSlashPos = outputFileName.find_last_of(_T("/\\"));
+	size_t lastDotPos = outputFileName.find_last_of(_T('.'));
 
-	if (_tcscmp(outputFileName.c_str(), _W2X_T("auto")) == 0)
+	if (_tcscmp(outputFileName.c_str(), _T("auto")) == 0)
 	{
 		outputFileName = inputFileName;
-		size_t tailDot = outputFileName.find_last_of(_W2X_T('.'));
+		size_t tailDot = outputFileName.find_last_of(_T('.'));
 		if (tailDot != _tstring::npos)
 		{
 			outputFileName.erase(tailDot, outputFileName.length());
 		}
-		outputFileName = outputFileName + _W2X_T("_[");
+		outputFileName = outputFileName + _T("_[");
 		
 		if(mode.find("noise-scale") != mode.npos)
 		{
-			outputFileName = outputFileName + _W2X_T("NS");
+			outputFileName = outputFileName + _T("NS");
 		}
 		if (mode.find("noise") != mode.npos) {
-			outputFileName = outputFileName + _W2X_T("-L") + std::_to_tstring(NRLevel) + _W2X_T("]");
+			outputFileName = outputFileName + _T("-L") + std::_to_tstring(NRLevel) + _T("]");
 		}
 		else
 		{
-			outputFileName = outputFileName + _W2X_T("]");
+			outputFileName = outputFileName + _T("]");
 		}
 		if (mode.find("scale") != mode.npos)
 		{
-			outputFileName = outputFileName + _W2X_T("[x") + std::_to_tstring(scaleRatio) + _W2X_T("]");
+			outputFileName = outputFileName + _T("[x") + std::_to_tstring(scaleRatio) + _T("]");
 		}
-		outputFileName += _W2X_T(".") + outputFormat;
+		outputFileName += _T(".") + outputFormat;
 	}	
-	else if (outputFileName.back() == _W2X_T('/') || outputFileName.back() == _W2X_T('\\'))
+	else if (outputFileName.back() == _T('/') || outputFileName.back() == _T('\\'))
 	{
 		//outputFileName = output folder or "auto/"
 		if ((!fs::is_directory(outputFileName)))
@@ -419,9 +419,9 @@ _tstring generate_output_location(
 		//We pass tmp into generate_output_location because we will use the default way of naming processed files.
 		//We will remove everything, in the tmp string, prior to the last slash to get the filename.
 		//This removes all contextual information about where a file originated from if "recursive_directory" was enabled.
-		_tstring tmp = generate_output_location(inputFileName, _W2X_T("auto"), mode, NRLevel, scaleRatio, outputFormat);
+		_tstring tmp = generate_output_location(inputFileName, _T("auto"), mode, NRLevel, scaleRatio, outputFormat);
 		//tmp = full formatted output file path
-		size_t lastSlash = tmp.find_last_of(_W2X_T("/\\"));
+		size_t lastSlash = tmp.find_last_of(_T("/\\"));
 		if (lastSlash != _tstring::npos)
 		{
 			tmp.erase(0, lastSlash+1);
@@ -431,7 +431,7 @@ _tstring generate_output_location(
 	else if (lastDotPos == _tstring::npos || lastSlashPos != _tstring::npos && lastDotPos < lastSlashPos)
 	{
 		//e.g. ./test.d/out needs to be changed to ./test.d/out.png
-		outputFileName += _W2X_T(".") + outputFormat;
+		outputFileName += _T(".") + outputFormat;
 	}
 	else if (lastSlashPos == _tstring::npos || lastDotPos > lastSlashPos)
 	{
@@ -778,9 +778,9 @@ int main(int argc, char** argv)
 	std::string tmpOutput = cmdOutput.getValue();
 	modelDir = cmdModelPath.getValue();
 #endif
-	if (fs::is_directory(input) && (tmpOutput.back() != _W2X_T('/')) && _tcscmp(tmpOutput.c_str(), _W2X_T("auto")) != 0)
+	if (fs::is_directory(input) && (tmpOutput.back() != _T('/')) && _tcscmp(tmpOutput.c_str(), _T("auto")) != 0)
 	{
-		tmpOutput += _W2X_T("/");
+		tmpOutput += _T("/");
 	}
 	fs::path output = tmpOutput;
 	
