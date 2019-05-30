@@ -33,7 +33,7 @@
 	typedef	std::string		_w2xstring;
 #endif
 
-#ifdef _UNICODE
+#if defined(_WIN32) && defined(_UNICODE)
 	#define	TSTRING_METHOD	wstring
 #else
 	#define	TSTRING_METHOD	string
