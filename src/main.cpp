@@ -47,6 +47,7 @@
 
 
 #include "w2xconv.h"
+#include "tstring.hpp"
 
 #ifndef DEFAULT_MODELS_DIRECTORY
 #define DEFAULT_MODELS_DIRECTORY "models_rgb"
@@ -236,6 +237,8 @@ bool validate_format_extension(std::string ext)
 bool validate_format_extension(std::wstring ext_w)
 {
 	std::string ext;
+	if(ext_w.length() == 0)
+		return false;
 	
 	if(ext_w.at(0) == L'.')
 		ext_w=ext_w.substr(1);
@@ -369,129 +372,46 @@ struct ConvInfo {
 };
 
 
-std::string generate_output_location(
-	std::string inputFileName,
-	std::string outputFileName,
+_tstring generate_output_location(
+	_tstring inputFileName,
+	_tstring outputFileName,
 	std::string mode,
 	int NRLevel,
 	double scaleRatio,
-	std::string outputFormat
+	_tstring outputFormat
 )
 {
+	size_t lastSlashPos = outputFileName.find_last_of(_T("/\\"));
+	size_t lastDotPos = outputFileName.find_last_of(_T('.'));
 
-	size_t lastSlashPos = outputFileName.find_last_of("/\\");
-	size_t lastDotPos = outputFileName.find_last_of('.');
-
-	if (strcmp(outputFileName.c_str(), "auto") == 0)
+	if (_tcscmp(outputFileName.c_str(), _T("auto")) == 0)
 	{
 		outputFileName = inputFileName;
-		size_t tailDot = outputFileName.find_last_of('.');
-		if (tailDot != std::string::npos)
+		size_t tailDot = outputFileName.find_last_of(_T('.'));
+		if (tailDot != _tstring::npos)
 		{
 			outputFileName.erase(tailDot, outputFileName.length());
 		}
-		outputFileName = outputFileName + "_[";
+		outputFileName = outputFileName + _T("_[");
 		
 		if(mode.find("noise-scale") != mode.npos)
 		{
-			outputFileName = outputFileName + "NS";
-		}
-		if (mode.find("noise") != mode.npos)
-		{
-			outputFileName = outputFileName + "-L" + std::to_string(NRLevel) + "]";
-		}
-		else
-			outputFileName = outputFileName + "]";
-		
-		if (mode.find("scale") != mode.npos)
-		{
-			outputFileName = outputFileName + "[x" + std::to_string(scaleRatio) + "]";
-		}
-		outputFileName += "." + outputFormat;
-	}
-	else if (outputFileName.back() == '/' || outputFileName.back() == '\\')
-	{
-		//outputFileName = output folder or "auto/"
-		if ((!fs::is_directory(outputFileName))) {
-			fs::create_directories(outputFileName);
-		}
-		//We pass tmp into generate_output_location because we will use the default way of naming processed files.
-		//We will remove everything, in the tmp string, prior to the last slash to get the filename.
-		//This removes all contextual information about where a file originated from if "recursive_directory" was enabled.
-		std::string tmp = generate_output_location(inputFileName, "auto", mode, NRLevel, scaleRatio, outputFormat);
-		//tmp = full formatted output file path
-		size_t lastSlash = tmp.find_last_of("/\\");
-		if (lastSlash != std::string::npos)
-		{
-			tmp.erase(0, lastSlash+1);
-		}
-		outputFileName += tmp;
-	}
-	else if (lastDotPos == std::string::npos || (lastSlashPos != std::string::npos && lastDotPos < lastSlashPos))
-	{
-		//e.g. ./test.d/out needs to be changed to ./test.d/out.png
-		outputFileName += "." + outputFormat;
-	}
-	else if (lastSlashPos == std::string::npos || lastDotPos > lastSlashPos)
-	{
-		//We may have a regular output file here or something went wrong.
-		//outputFileName is already what it should be thus nothing needs to be done.
-		if(validate_format_extension(outputFileName.substr(lastDotPos))==false)
-		{
-			throw std::runtime_error("Unsupported output extension. outputFileName:" + outputFileName + " extension:" +outputFileName.substr(lastDotPos));
-		}
-	}
-	else
-	{
-		throw std::runtime_error("An unknown 'outputFileName' has been inserted into generate_output_location. outputFileName: " + outputFileName);
-	}
-	return outputFileName;
-}
-
-#if defined(WIN32) && defined(UNICODE)
-std::wstring generate_output_location(
-	std::wstring inputFileName,
-	std::wstring outputFileName,
-	std::string mode,
-	int NRLevel,
-	double scaleRatio,
-	std::string outputFormat
-)
-{
-	size_t lastSlashPos = outputFileName.find_last_of(L"/\\");
-	size_t lastDotPos = outputFileName.find_last_of(L'.');
-
-	if (wcscmp(outputFileName.c_str(), L"auto") == 0)
-	{
-		outputFileName = inputFileName;
-		size_t tailDot = outputFileName.find_last_of(L'.');
-		if (tailDot != std::wstring::npos)
-		{
-			outputFileName.erase(tailDot, outputFileName.length());
-		}
-		outputFileName = outputFileName + L"_[";
-		
-		if(mode.find("noise-scale") != mode.npos)
-		{
-			outputFileName = outputFileName + L"NS";
+			outputFileName = outputFileName + _T("NS");
 		}
 		if (mode.find("noise") != mode.npos) {
-			outputFileName = outputFileName + L"-L" + std::to_wstring(NRLevel) + L"]";
+			outputFileName = outputFileName + _T("-L") + std::_to_tstring(NRLevel) + _T("]");
 		}
 		else
 		{
-			outputFileName = outputFileName + L"]";
+			outputFileName = outputFileName + _T("]");
 		}
 		if (mode.find("scale") != mode.npos)
 		{
-			outputFileName = outputFileName + L"[x" + std::to_wstring(scaleRatio) + L"]";
+			outputFileName = outputFileName + _T("[x") + std::_to_tstring(scaleRatio) + _T("]");
 		}
-		outputFileName += L".";
-		std::wstring of;
-		of.assign(outputFormat.begin(), outputFormat.end());
-		outputFileName += of;
+		outputFileName += _T(".") + outputFormat;
 	}	
-	else if (outputFileName.back() == L'/' || outputFileName.back() == L'\\')
+	else if (outputFileName.back() == _T('/') || outputFileName.back() == _T('\\'))
 	{
 		//outputFileName = output folder or "auto/"
 		if ((!fs::is_directory(outputFileName)))
@@ -501,24 +421,21 @@ std::wstring generate_output_location(
 		//We pass tmp into generate_output_location because we will use the default way of naming processed files.
 		//We will remove everything, in the tmp string, prior to the last slash to get the filename.
 		//This removes all contextual information about where a file originated from if "recursive_directory" was enabled.
-		std::wstring tmp = generate_output_location(inputFileName, L"auto", mode, NRLevel, scaleRatio, outputFormat);
+		_tstring tmp = generate_output_location(inputFileName, _T("auto"), mode, NRLevel, scaleRatio, outputFormat);
 		//tmp = full formatted output file path
-		size_t lastSlash = tmp.find_last_of(L"/\\");
-		if (lastSlash != std::wstring::npos)
+		size_t lastSlash = tmp.find_last_of(_T("/\\"));
+		if (lastSlash != _tstring::npos)
 		{
 			tmp.erase(0, lastSlash+1);
 		}
 		outputFileName += tmp;
 	}
-	else if (lastDotPos == std::wstring::npos || lastSlashPos != std::wstring::npos && lastDotPos < lastSlashPos)
+	else if (lastDotPos == _tstring::npos || lastSlashPos != _tstring::npos && lastDotPos < lastSlashPos)
 	{
 		//e.g. ./test.d/out needs to be changed to ./test.d/out.png
-		outputFileName += L".";
-		std::wstring of;
-		of.assign(outputFormat.begin(), outputFormat.end());
-		outputFileName += of;
+		outputFileName += _T(".") + outputFormat;
 	}
-	else if (lastSlashPos == std::wstring::npos || lastDotPos > lastSlashPos)
+	else if (lastSlashPos == _tstring::npos || lastDotPos > lastSlashPos)
 	{
 		//We may have a regular output file here or something went wrong.
 		//outputFileName is already what it should be thus nothing needs to be done.
@@ -533,14 +450,15 @@ std::wstring generate_output_location(
 	}
 	return outputFileName;
 }
-#endif
 
 void convert_file(ConvInfo info, fs::path inputName, fs::path output)
 {
 	//std::cout << "Operating on: " << fs::absolute(inputName).string() << std::endl;
 
 #if defined(WIN32) && defined(UNICODE)
-	std::wstring outputName = generate_output_location(fs::absolute(inputName).wstring(), output.wstring(), info.mode, info.NRLevel, info.scaleRatio, info.outputFormat);
+	std::wstring of;
+	of.assign(info.outputFormat.begin(), info.outputFormat.end());
+	std::wstring outputName = generate_output_location(fs::absolute(inputName).wstring(), output.wstring(), info.mode, info.NRLevel, info.scaleRatio, of);
 #else
 	std::string outputName = generate_output_location(fs::absolute(inputName).string(), output.string(), info.mode, info.NRLevel, info.scaleRatio, info.outputFormat);
 #endif
@@ -669,7 +587,7 @@ char** CommandLineToArgvA(char* CmdLine, int* _argc)
 
 
 #if defined(WIN32) && defined(UNICODE)
-int wmain(void)
+int wmain(int argc_w, WCHAR** argv_w)
 #else
 int main(int argc, char** argv)
 #endif
@@ -678,9 +596,7 @@ int main(int argc, char** argv)
 #if defined(WIN32) && defined(UNICODE)
 	int argc = 0;
 	char **argv = CommandLineToArgvA(GetCommandLineA(), &argc);
-	int argc_w = 0;
 	std::wstring inputFileName, outputFileName=L"auto", modelDir = DEFAULT_MODELS_DIRECTORYW;
-	LPWSTR *argv_w = CommandLineToArgvW(GetCommandLineW(), &argc_w);
 	
 	for (int ai = 1; ai < argc_w; ai++)
 	{
@@ -728,7 +644,7 @@ int main(int argc, char** argv)
 			dump_procs();
 			return 0;
 		}
-		if (strcmp(argv[ai], "--list-opencv-formats") == 0 || strcmp(argv[ai], "--list-supported-formats") == 0)
+		else if (strcmp(argv[ai], "--list-opencv-formats") == 0 || strcmp(argv[ai], "--list-supported-formats") == 0)
 		{
 			check_supported_formats();
 			display_supported_formats();
@@ -866,18 +782,14 @@ int main(int argc, char** argv)
 #if defined(WIN32) && defined(UNICODE)
 	fs::path input = inputFileName;
 	std::wstring tmpOutput = outputFileName;
-	if (fs::is_directory(input) && (tmpOutput.back() != L'/') && wcscmp(tmpOutput.c_str(), L"auto") != 0)
-	{
-		tmpOutput += L"/";
-	}
 #else
 	fs::path input = cmdInput.getValue();
 	std::string tmpOutput = cmdOutput.getValue();
-	if (fs::is_directory(input) && (tmpOutput.back() != '/') && strcmp(tmpOutput.c_str(), "auto") != 0)
-	{
-		tmpOutput += "/";
-	}
 #endif
+	if (fs::is_directory(input) && (tmpOutput.back() != _T('/')) && _tcscmp(tmpOutput.c_str(), _T("auto")) != 0)
+	{
+		tmpOutput += _T("/");
+	}
 	fs::path output = tmpOutput;
 	
 	enum W2XConvGPUMode gpu = W2XCONV_GPU_AUTO;

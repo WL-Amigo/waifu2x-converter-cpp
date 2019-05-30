@@ -33,6 +33,7 @@
 #include "filters.hpp"
 #include "w2xconv.h"
 #include "cvwrap.hpp"
+#include "tstring.hpp"
 
 namespace w2xc
 {
@@ -151,11 +152,7 @@ namespace w2xc
 		public:
 			static bool generateModelFromJSON
 			(
-#if defined(WIN32) && defined(UNICODE)
-				const std::wstring &fileName,
-#else
-				const std::string &fileName,
-#endif
+				const _tstring &fileName,
 				std::vector<std::unique_ptr<Model> > &models
 			);
 			static void generateModelFromMEM

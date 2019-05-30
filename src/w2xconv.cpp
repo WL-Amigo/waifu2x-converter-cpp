@@ -37,6 +37,7 @@ namespace fs = std::experimental::filesystem;
 #include "convertRoutine.hpp"
 #include "filters.hpp"
 #include "cvwrap.hpp"
+#include "tstring.hpp"
 
 struct W2XConvImpl
 {
@@ -555,26 +556,19 @@ void w2xconv_free(void *p)
 }
 
 
-static void setPathError(W2XConv *conv, enum W2XConvErrorCode code, std::string const &path)
+static void setPathError(W2XConv *conv, enum W2XConvErrorCode code, _tstring const &path)
 {
 	clearError(conv);
 
 	conv->last_error.code = code;
-	conv->last_error.u.path = strdup(path.c_str());
-}
-
 #if defined(WIN32) && defined(UNICODE)
-
-static void setPathError(W2XConv *conv, enum W2XConvErrorCode code, std::wstring const &path)
-{
 	fs::path fspath = path;
-	clearError(conv);
-
-	conv->last_error.code = code;
 	conv->last_error.u.path = strdup(fspath.string().c_str());
+#else
+	conv->last_error.u.path = strdup(path.c_str());
+#endif
 }
 
-#endif
 
 static void setError(W2XConv *conv, enum W2XConvErrorCode code)
 {
@@ -582,12 +576,11 @@ static void setError(W2XConv *conv, enum W2XConvErrorCode code)
 	conv->last_error.code = code;
 }
 
-#if defined(WIN32) && defined(UNICODE)
-int w2xconv_load_models(W2XConv *conv, const WCHAR *model_dir)
+int w2xconv_load_models(W2XConv *conv, const TCHAR *model_dir)
 {
 	struct W2XConvImpl *impl = conv->impl;
 
-	std::wstring modelFileName(model_dir);
+	_tstring modelFileName(model_dir);
 
 	impl->noise0_models.clear();
 	impl->noise1_models.clear();
@@ -596,86 +589,38 @@ int w2xconv_load_models(W2XConv *conv, const WCHAR *model_dir)
 	impl->scale2_models.clear();
 	
 	//FutureNote: Maybe use loop instead of if-spam?
-	if (!w2xc::modelUtility::generateModelFromJSON(modelFileName + L"/noise0_model.json", impl->noise0_models))
+	if (!w2xc::modelUtility::generateModelFromJSON(modelFileName + _T("/noise0_model.json"), impl->noise0_models))
 	{
-		setPathError(conv, W2XCONV_ERROR_MODEL_LOAD_FAILED, modelFileName + L"/noise0_model.json");
+		setPathError(conv, W2XCONV_ERROR_MODEL_LOAD_FAILED, modelFileName + _T("/noise0_model.json"));
 		return -1;
 	}
 
-	if (!w2xc::modelUtility::generateModelFromJSON(modelFileName + L"/noise1_model.json", impl->noise1_models))
+	if (!w2xc::modelUtility::generateModelFromJSON(modelFileName + _T("/noise1_model.json"), impl->noise1_models))
 	{
-		setPathError(conv, W2XCONV_ERROR_MODEL_LOAD_FAILED, modelFileName + L"/noise1_model.json");
+		setPathError(conv, W2XCONV_ERROR_MODEL_LOAD_FAILED, modelFileName + _T("/noise1_model.json"));
 		return -1;
 	}
 
-	if (!w2xc::modelUtility::generateModelFromJSON(modelFileName + L"/noise2_model.json", impl->noise2_models))
+	if (!w2xc::modelUtility::generateModelFromJSON(modelFileName + _T("/noise2_model.json"), impl->noise2_models))
 	{
-		setPathError(conv, W2XCONV_ERROR_MODEL_LOAD_FAILED, modelFileName + L"/noise2_model.json");
+		setPathError(conv, W2XCONV_ERROR_MODEL_LOAD_FAILED, modelFileName + _T("/noise2_model.json"));
 		return -1;
 	}
 
-	if (!w2xc::modelUtility::generateModelFromJSON(modelFileName + L"/noise3_model.json", impl->noise3_models))
+	if (!w2xc::modelUtility::generateModelFromJSON(modelFileName + _T("/noise3_model.json"), impl->noise3_models))
 	{
-		setPathError(conv, W2XCONV_ERROR_MODEL_LOAD_FAILED, modelFileName + L"/noise3_model.json");
+		setPathError(conv, W2XCONV_ERROR_MODEL_LOAD_FAILED, modelFileName + _T("/noise3_model.json"));
 		return -1;
 	}
 
-	if (!w2xc::modelUtility::generateModelFromJSON(modelFileName + L"/scale2.0x_model.json", impl->scale2_models))
+	if (!w2xc::modelUtility::generateModelFromJSON(modelFileName + _T("/scale2.0x_model.json"), impl->scale2_models))
 	{
-		setPathError(conv, W2XCONV_ERROR_MODEL_LOAD_FAILED, modelFileName + L"/scale2.0x_model.json");
+		setPathError(conv, W2XCONV_ERROR_MODEL_LOAD_FAILED, modelFileName + _T("/scale2.0x_model.json"));
 		return -1;
 	}
 
 	return 0;
 }
-
-#else // !WIN32 && !UNICODE
-int w2xconv_load_models(W2XConv *conv, const char *model_dir)
-{
-	struct W2XConvImpl *impl = conv->impl;
-
-	std::string modelFileName(model_dir);
-
-	impl->noise0_models.clear();
-	impl->noise1_models.clear();
-	impl->noise2_models.clear();
-	impl->noise3_models.clear();
-	impl->scale2_models.clear();
-
-	if (!w2xc::modelUtility::generateModelFromJSON(modelFileName + "/noise0_model.json", impl->noise0_models))
-	{
-		setPathError(conv, W2XCONV_ERROR_MODEL_LOAD_FAILED, modelFileName + "/noise0_model.json");
-		return -1;
-	}
-
-	if (!w2xc::modelUtility::generateModelFromJSON(modelFileName + "/noise1_model.json", impl->noise1_models))
-	{
-		setPathError(conv, W2XCONV_ERROR_MODEL_LOAD_FAILED, modelFileName + "/noise1_model.json");
-		return -1;
-	}
-
-	if (!w2xc::modelUtility::generateModelFromJSON(modelFileName + "/noise2_model.json", impl->noise2_models))
-	{
-		setPathError(conv, W2XCONV_ERROR_MODEL_LOAD_FAILED, modelFileName + "/noise2_model.json");
-		return -1;
-	}
-
-	if (!w2xc::modelUtility::generateModelFromJSON(modelFileName + "/noise3_model.json", impl->noise3_models))
-	{
-		setPathError(conv, W2XCONV_ERROR_MODEL_LOAD_FAILED, modelFileName + "/noise3_model.json");
-		return -1;
-	}
-
-	if (!w2xc::modelUtility::generateModelFromJSON(modelFileName + "/scale2.0x_model.json", impl->scale2_models))
-	{
-		setPathError(conv, W2XCONV_ERROR_MODEL_LOAD_FAILED, modelFileName + "/scale2.0x_model.json");
-		return -1;
-
-	}
-
-	return 0;
-}
-#endif
 
 void w2xconv_set_model_3x3
 (
@@ -1942,76 +1887,80 @@ void w2xconv_convert_mat
 }
 
 #if defined(WIN32) && defined(UNICODE)
+	cv::Mat read_imageW(const WCHAR* filepath, int flags=cv::IMREAD_COLOR)
+	{
+		long lSize;
+		char* imgBuffer;
+		FILE* pFile = _wfopen(filepath, L"rb");
+		cv::Mat image;
+		
+		if (!pFile)
+		{
+			image = cv::Mat::zeros(1, 1, CV_8U);
+		}
+		
+		fseek(pFile, 0, SEEK_END);
+		lSize = ftell(pFile);
+		fseek(pFile, 0, SEEK_SET);
+		
+		imgBuffer = new char[lSize];
+		
+		if(!imgBuffer)
+		{
+			image = cv::Mat::zeros(1, 1, CV_8U);
+		}
+		
+		fread(imgBuffer, 1, lSize, pFile);
+		
+		fclose(pFile);
+		
+		cv::_InputArray arr(imgBuffer, lSize);
+		image = cv::imdecode(arr, flags);
+		
+		delete[] imgBuffer;
+		
+		return image.clone();
+	}
 
-void read_imageW(cv::Mat* image, const WCHAR* filepath, int flags=cv::IMREAD_COLOR)
-{
-	long lSize;
-	char* imgBuffer;
-    FILE* pFile = _wfopen(filepath, L"rb");
-	
-    if (!pFile)
+	bool write_imageW(const WCHAR* filepath, cv::Mat& img, std::vector<int>& imwrite_params)
 	{
-        *image = cv::Mat::zeros(1, 1, CV_8U);
-    }
-	
-    fseek(pFile, 0, SEEK_END);
-    lSize = ftell(pFile);
-    fseek(pFile, 0, SEEK_SET);
-	
-    imgBuffer = new char[lSize];
-	
-	if(!imgBuffer)
-	{
-        *image = cv::Mat::zeros(1, 1, CV_8U);
+		FILE* pFile;
+		std::vector<uchar> imageBuffer;
+		std::string ext;
+		std::wstring ext_w = std::wstring(filepath);
+		ext_w = ext_w.substr(ext_w.find_last_of(L'.'));
+		ext.assign(ext_w.begin(), ext_w.end());
+		
+		if(!cv::imencode(ext.c_str(),img, imageBuffer, imwrite_params))
+		{
+			return false;
+		}
+		
+		pFile = _wfopen(filepath, L"wb+");
+		if (!pFile)
+		{
+			return false;
+		}
+		
+		fwrite(imageBuffer.data(), sizeof(unsigned char), imageBuffer.size(), pFile);
+		
+		fclose(pFile);
+		return true;
 	}
-	
-    fread(imgBuffer, 1, lSize, pFile);
-	
-    fclose(pFile);
-	
-    cv::_InputArray arr(imgBuffer, lSize);
-    *image = cv::imdecode(arr, flags);
-	
-    delete[] imgBuffer;
-}
 
-bool write_imageW(const WCHAR* filepath, cv::Mat& img, std::vector<int>& imwrite_params)
-{
-	FILE* pFile;
-	std::vector<uchar> imageBuffer;
-	std::string ext;
-	std::wstring ext_w = std::wstring(filepath);
-	ext_w = ext_w.substr(ext_w.find_last_of(L'.'));
-	ext.assign(ext_w.begin(), ext_w.end());
-	
-	if(!cv::imencode(ext.c_str(),img, imageBuffer, imwrite_params))
-	{
-		return false;
-	}
-	
-    pFile = _wfopen(filepath, L"wb+");
-    if (!pFile)
-	{
-        return false;
-	}
-	
-	fwrite(imageBuffer.data(), sizeof(unsigned char), imageBuffer.size(), pFile);
-	
-    fclose(pFile);
-    return true;
-}
+	#define read_image read_imageW
+	#define write_image write_imageW
+
+#else
+	#define read_image cv::imread
+	#define write_image cv::imwrite
 #endif
 
 int w2xconv_convert_file
 (
 	struct W2XConv *conv,
-#if defined(WIN32) && defined(UNICODE)
-	const WCHAR *dst_path,
-	const WCHAR *src_path,
-#else
-	const char *dst_path,
-	const char *src_path,
-#endif
+	const TCHAR *dst_path,
+	const TCHAR *src_path,
 	int denoise_level,
 	double scale,
 	int blockSize,
@@ -2022,11 +1971,7 @@ int w2xconv_convert_file
 
 	FILE *png_fp = nullptr;
 	
-#if defined(WIN32) && defined(UNICODE)
-	png_fp = _wfopen(src_path, L"rb");
-#else
-	png_fp = fopen(src_path, "rb");
-#endif
+	png_fp = _tfopen(src_path, _T("rb"));
 
 	if (png_fp == nullptr)
 	{
@@ -2055,68 +2000,32 @@ int w2xconv_convert_file
 	 * IMREAD_UNCHANGED + otherwise : ???
 	 */
 	
-#if defined(WIN32) && defined(UNICODE)
 	if (png_rgb)
 	{
-		read_imageW(&image_src, src_path, cv::IMREAD_UNCHANGED);
+		image_src = read_image(src_path, cv::IMREAD_UNCHANGED);
 	}
 	else
 	{
-		read_imageW(&image_src, src_path, cv::IMREAD_COLOR);
+		image_src = read_image(src_path, cv::IMREAD_COLOR);
 	}
 	
 	bool dst_png = false;
+	bool dst_webp = false;
 	{
-		size_t len = wcslen(dst_path);
+		size_t len = _tcslen(dst_path);
+		if (len >= 5) {
+			if (_totlower(dst_path[len-5]) == _T('.') && _totlower(dst_path[len-4]) == _T('w') && _totlower(dst_path[len-3]) == _T('e') && _totlower(dst_path[len-2]) == _T('b') && _totlower(dst_path[len-1]) == _T('p'))
+			{
+				dst_webp=true;
+			}
+		}
 		if (len >= 3) {
-			if (towlower(dst_path[len-4]) == L'.' && towlower(dst_path[len-3]) == L'p' && towlower(dst_path[len-2]) == L'n' && towlower(dst_path[len-1]) == L'g')
+			if (_totlower(dst_path[len-4]) == _T('.') && _totlower(dst_path[len-3]) == _T('p') && _totlower(dst_path[len-2]) == _T('n') && _totlower(dst_path[len-1]) == _T('g'))
 			{
 				dst_png = true;
 			}
 		}
 	}
-#else
-	if (png_rgb)
-	{
-		image_src = cv::imread(src_path, cv::IMREAD_UNCHANGED);
-	}
-	else
-	{
-		image_src = cv::imread(src_path, cv::IMREAD_COLOR);
-	}
-
-	bool dst_png = false;
-	{
-		size_t len = strlen(dst_path);
-		if (len >= 3)
-		{
-			if (tolower(dst_path[len-4]) == '.' && tolower(dst_path[len-3]) == 'p' && tolower(dst_path[len-2]) == 'n' && tolower(dst_path[len-1]) == 'g')
-			{
-				dst_png = true;
-			}
-		}
-	}
-#endif
-	
-	bool dst_webp=false;
-#if defined(WIN32) && defined(UNICODE)
-	size_t len = wcslen(dst_path);
-	if (len >= 5) {
-		if (towlower(dst_path[len-5]) == L'.' && towlower(dst_path[len-4]) == L'w' && towlower(dst_path[len-3]) == L'e' && towlower(dst_path[len-2]) == L'b' && towlower(dst_path[len-1]) == L'p')
-		{
-			dst_webp=true;
-		}
-	}
-#else
-	size_t len = strlen(dst_path);
-	if (len >= 5)
-	{
-		if (tolower(dst_path[len-5]) == '.' && tolower(dst_path[len-4]) == 'w' && tolower(dst_path[len-3]) == 'e' && tolower(dst_path[len-2]) == 'b' && tolower(dst_path[len-1]) == 'p')
-		{
-			dst_webp=true;
-		}
-	}
-#endif		
 
 	// w2x converts 2x and down scales when scale_ratio is not power of 2 (ex: 2.28 -> scale x4 - > down scale)
 	int max_scale = static_cast<int>(std::pow(2, std::ceil(std::log2(scale))));
@@ -2171,11 +2080,7 @@ int w2xconv_convert_file
 		vec_imwrite_params.push_back(imwrite_params[i]);
 	}
 	
-#if defined(WIN32) && defined(UNICODE)
-	if (!write_imageW(dst_path, image_dst, vec_imwrite_params))
-#else
-	if (!cv::imwrite(dst_path, image_dst, vec_imwrite_params))
-#endif
+	if (!write_image(dst_path, image_dst, vec_imwrite_params))
 	{
 		setPathError(conv, W2XCONV_ERROR_IMWRITE_FAILED, dst_path);
 		return -1;
