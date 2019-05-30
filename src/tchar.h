@@ -25,9 +25,9 @@
 #define __TCHAR_H__
 
 #if defined(_WIN32) && defined(_UNICODE)
-	#define	_W2X_T(x)	L ## x
+	#define	_W2X_T(STR)	(L ## STR)
 #else
-	#define	_W2X_T(x)	x
+	#define	_W2X_T(STR)	(STR)
 #endif
 
 
