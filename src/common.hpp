@@ -27,6 +27,7 @@
 #include <vector>
 #include "compiler.h"
 #include "cvwrap.hpp"
+#include "tchar.h"
 
 #define ALIGN_UP(v,a) (((v+(a-1))/(a))*(a))
 
@@ -53,10 +54,5 @@ void unpack_mat_bgr(W2Mat &outputMat, const float *in, int w, int h);
  * src is exist && dst is exist && dst is older than src  : true
  * otherwise                                              : false
  */
-#if defined(WIN32) && defined(UNICODE)
-#include <Windows.h>
-bool update_test(const WCHAR *dst_path, const WCHAR *src_path);
-#else
-bool update_test(const char *dst_path, const char *src_path);
-#endif
+bool update_test(const TCHAR *dst_path, const TCHAR *src_path);
 #endif

@@ -24,12 +24,6 @@
 #ifndef __TCHAR_H__
 #define __TCHAR_H__
 
-#ifdef UNICODE
-	#define _totlower	towlower
-#else
-	#define _totlower	tolower
-#endif
-
 #ifdef _UNICODE
 	#define	__T(x)		L ## x
 #else
@@ -60,6 +54,7 @@
 	#define _tfopen		_wfopen
 	#define	_fgetts		fgetws
 	#define	_fputts		fputws
+	#define _totlower	towlower
 	#define _to_tstring	to_wstring
 #else
 	#define	_tmain		main
@@ -78,6 +73,7 @@
 	#define _tfopen		fopen
 	#define _fgetts		fgets
 	#define	_fputts		fputs
+	#define _totlower	tolower
 	#define _to_tstring	to_string
 #endif
 
