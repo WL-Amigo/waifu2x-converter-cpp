@@ -27,10 +27,10 @@
 #include <string>
 #include "tchar.h"
 
-#ifdef _UNICODE
-	typedef	std::wstring	_tstring;
+#if defined(_WIN32) && defined(_UNICODE)
+	typedef	std::wstring	_w2xstring;
 #else
-	typedef	std::string		_tstring;
+	typedef	std::string		_w2xstring;
 #endif
 
 #ifdef _UNICODE
