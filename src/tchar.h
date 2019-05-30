@@ -25,9 +25,9 @@
 #define __TCHAR_H__
 
 #if defined(_WIN32) && defined(_UNICODE)
-	#define	_W2X_T(STR)	(L ## STR)
+	#define	_W2X_T(x)	L ## x
 #else
-	#define	_W2X_T(STR)	(STR)
+	#define	_W2X_T(x)	x
 #endif
 
 
@@ -72,9 +72,9 @@
 #endif
 
 #if defined(_WIN32) && defined(_UNICODE)
-	typedef	wchar_t	TCHAR;
+	typedef	wchar_t	W2X_TCHAR;
 #else
-	typedef	char	TCHAR;
+	typedef	char	W2X_TCHAR;
 #endif
 
 #endif

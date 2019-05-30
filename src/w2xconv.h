@@ -210,7 +210,7 @@ W2XCONV_EXPORT struct W2XConv *w2xconv_init(enum W2XConvGPUMode gpu, int njob /*
 W2XCONV_EXPORT struct W2XConv *w2xconv_init_with_processor(int processor_idx, int njob, int log_level);
 
 /* return negative if failed */
-W2XCONV_EXPORT int w2xconv_load_models(struct W2XConv *conv, const TCHAR *model_dir);
+W2XCONV_EXPORT int w2xconv_load_models(struct W2XConv *conv, const W2X_TCHAR *model_dir);
 
 W2XCONV_EXPORT void w2xconv_set_model_3x3
 (
@@ -230,8 +230,8 @@ W2XCONV_EXPORT void w2xconv_fini(struct W2XConv *conv);
 W2XCONV_EXPORT int w2xconv_convert_file
 (
 	struct W2XConv *conv,
-	const TCHAR *dst_path,
-	const TCHAR *src_path,
+	const W2X_TCHAR *dst_path,
+	const W2X_TCHAR *src_path,
 	int denoise_level, /* -1:none, 0:L0 denoise, 1:L1 denoise, 2:L2 denoise, 3:L3 denoise  */
 	double scale,
 	int block_size,
