@@ -478,11 +478,7 @@ void convert_file(ConvInfo info, fs::path inputName, fs::path output)
 
 	int error = w2xconv_convert_file(info.converter,
 			outputName.c_str(),
-#if defined(WIN32) && defined(UNICODE)
-			fs::absolute(inputName).wstring().c_str(),
-#else
-			fs::absolute(inputName).string().c_str(),
-#endif
+			fs::absolute(inputName).c_str(),
 			_nrLevel,
 			_scaleRatio,
 			info.blockSize,
@@ -785,6 +781,7 @@ int main(int argc, char** argv)
 #else
 	fs::path input = cmdInput.getValue();
 	std::string tmpOutput = cmdOutput.getValue();
+	modelDir = cmdModelPath.getValue();
 #endif
 	if (fs::is_directory(input) && (tmpOutput.back() != _T('/')) && _tcscmp(tmpOutput.c_str(), _T("auto")) != 0)
 	{
@@ -876,11 +873,7 @@ int main(int argc, char** argv)
 	}
 
 	bool recursive_directory_iterator = cmdRecursiveDirectoryIterator.getValue();
-#if defined(WIN32) && defined(UNICODE)
 	int error = w2xconv_load_models(converter, modelDir.c_str());
-#else
-	int error = w2xconv_load_models(converter, cmdModelPath.getValue().c_str());
-#endif
 	check_for_errors(converter, error);
 
 	//This includes errored files.
@@ -1051,7 +1044,6 @@ int main(int argc, char** argv)
 
 #if defined(WIN32) && defined(UNICODE)
 	free(argv);
-	LocalFree(argv_w);
 #endif
 
 	return 0;

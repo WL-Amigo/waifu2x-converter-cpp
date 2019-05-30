@@ -28,10 +28,6 @@
 #include <stdio.h>
 #include <stdbool.h>
 
-#if defined(WIN32) && defined(UNICODE)
-#include <Windows.h>
-#endif
-
 #include "tchar.h"
 
 #ifdef __cplusplus

@@ -23,13 +23,6 @@
 #include <limits.h>
 #include <sstream>
 
-#if defined(WIN32) && defined(UNICODE)
-#include <experimental/filesystem>
-
-namespace fs = std::experimental::filesystem;
-
-#endif
-
 #include "w2xconv.h"
 #include "sec.hpp"
 #include "Buffer.hpp"
@@ -555,20 +548,15 @@ void w2xconv_free(void *p)
 	free(p);
 }
 
-
 static void setPathError(W2XConv *conv, enum W2XConvErrorCode code, _tstring const &path)
 {
+	std::string strpath;
+	strpath.assign(path.begin(), path.end());
 	clearError(conv);
 
 	conv->last_error.code = code;
-#if defined(WIN32) && defined(UNICODE)
-	fs::path fspath = path;
-	conv->last_error.u.path = strdup(fspath.string().c_str());
-#else
-	conv->last_error.u.path = strdup(path.c_str());
-#endif
+	conv->last_error.u.path = strdup(strpath.c_str());
 }
-
 
 static void setError(W2XConv *conv, enum W2XConvErrorCode code)
 {

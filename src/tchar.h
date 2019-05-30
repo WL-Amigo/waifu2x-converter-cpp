@@ -33,10 +33,6 @@
 #define	_T(x)		__T(x)
 #define	_TEXT()		__T(x)
 
-#if defined(WIN32) && defined(UNICODE)
-	#include <tchar.h>
-#endif
-
 #ifdef _UNICODE
 	#define	_tmain		wmain
 	#define	_tcslen		wcslen
