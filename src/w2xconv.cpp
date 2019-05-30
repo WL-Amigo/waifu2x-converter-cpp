@@ -548,7 +548,7 @@ void w2xconv_free(void *p)
 	free(p);
 }
 
-static void setPathError(W2XConv *conv, enum W2XConvErrorCode code, _tstring const &path)
+static void setPathError(W2XConv *conv, enum W2XConvErrorCode code, _w2xstring const &path)
 {
 	std::string strpath;
 	strpath.assign(path.begin(), path.end());
@@ -568,7 +568,7 @@ int w2xconv_load_models(W2XConv *conv, const W2X_TCHAR *model_dir)
 {
 	struct W2XConvImpl *impl = conv->impl;
 
-	_tstring modelFileName(model_dir);
+	_w2xstring modelFileName(model_dir);
 
 	impl->noise0_models.clear();
 	impl->noise1_models.clear();

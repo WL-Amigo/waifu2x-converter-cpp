@@ -350,7 +350,7 @@ struct ConvInfo {
 	int blockSize;
 	W2XConv* converter;
 	int* imwrite_params;
-	_tstring outputFormat;
+	_w2xstring outputFormat;
 	ConvInfo(
 		std::string mode,
 		int NRLevel,
@@ -358,7 +358,7 @@ struct ConvInfo {
 		int blockSize,
 		W2XConv* converter,
 		int* imwrite_params,
-		_tstring outputFormat
+		_w2xstring outputFormat
 	):
 		mode(mode),
 		NRLevel(NRLevel),
@@ -370,13 +370,13 @@ struct ConvInfo {
 };
 
 
-_tstring generate_output_location(
-	_tstring inputFileName,
-	_tstring outputFileName,
+_w2xstring generate_output_location(
+	_w2xstring inputFileName,
+	_w2xstring outputFileName,
 	std::string mode,
 	int NRLevel,
 	double scaleRatio,
-	_tstring outputFormat
+	_w2xstring outputFormat
 )
 {
 	size_t lastSlashPos = outputFileName.find_last_of(_W2X_T("/\\"));
@@ -386,7 +386,7 @@ _tstring generate_output_location(
 	{
 		outputFileName = inputFileName;
 		size_t tailDot = outputFileName.find_last_of(_W2X_T('.'));
-		if (tailDot != _tstring::npos)
+		if (tailDot != _w2xstring::npos)
 		{
 			outputFileName.erase(tailDot, outputFileName.length());
 		}
@@ -397,7 +397,7 @@ _tstring generate_output_location(
 			outputFileName = outputFileName + _W2X_T("NS");
 		}
 		if (mode.find("noise") != mode.npos) {
-			outputFileName = outputFileName + _W2X_T("-L") + std::_to_tstring(NRLevel) + _W2X_T("]");
+			outputFileName = outputFileName + _W2X_T("-L") + std::_to_w2xstring(NRLevel) + _W2X_T("]");
 		}
 		else
 		{
@@ -405,7 +405,7 @@ _tstring generate_output_location(
 		}
 		if (mode.find("scale") != mode.npos)
 		{
-			outputFileName = outputFileName + _W2X_T("[x") + std::_to_tstring(scaleRatio) + _W2X_T("]");
+			outputFileName = outputFileName + _W2X_T("[x") + std::_to_w2xstring(scaleRatio) + _W2X_T("]");
 		}
 		outputFileName += _W2X_T(".") + outputFormat;
 	}	
@@ -419,21 +419,21 @@ _tstring generate_output_location(
 		//We pass tmp into generate_output_location because we will use the default way of naming processed files.
 		//We will remove everything, in the tmp string, prior to the last slash to get the filename.
 		//This removes all contextual information about where a file originated from if "recursive_directory" was enabled.
-		_tstring tmp = generate_output_location(inputFileName, _W2X_T("auto"), mode, NRLevel, scaleRatio, outputFormat);
+		_w2xstring tmp = generate_output_location(inputFileName, _W2X_T("auto"), mode, NRLevel, scaleRatio, outputFormat);
 		//tmp = full formatted output file path
 		size_t lastSlash = tmp.find_last_of(_W2X_T("/\\"));
-		if (lastSlash != _tstring::npos)
+		if (lastSlash != _w2xstring::npos)
 		{
 			tmp.erase(0, lastSlash+1);
 		}
 		outputFileName += tmp;
 	}
-	else if (lastDotPos == _tstring::npos || lastSlashPos != _tstring::npos && lastDotPos < lastSlashPos)
+	else if (lastDotPos == _w2xstring::npos || lastSlashPos != _w2xstring::npos && lastDotPos < lastSlashPos)
 	{
 		//e.g. ./test.d/out needs to be changed to ./test.d/out.png
 		outputFileName += _W2X_T(".") + outputFormat;
 	}
-	else if (lastSlashPos == _tstring::npos || lastDotPos > lastSlashPos)
+	else if (lastSlashPos == _w2xstring::npos || lastDotPos > lastSlashPos)
 	{
 		//We may have a regular output file here or something went wrong.
 		//outputFileName is already what it should be thus nothing needs to be done.
@@ -453,7 +453,7 @@ void convert_file(ConvInfo info, fs::path inputName, fs::path output)
 {
 	//std::cout << "Operating on: " << fs::absolute(inputName).string() << std::endl;
 
-	_tstring outputName = generate_output_location(fs::absolute(inputName).TSTRING_METHOD(), output.TSTRING_METHOD(), info.mode, info.NRLevel, info.scaleRatio, info.outputFormat);
+	_w2xstring outputName = generate_output_location(fs::absolute(inputName).TSTRING_METHOD(), output.TSTRING_METHOD(), info.mode, info.NRLevel, info.scaleRatio, info.outputFormat);
 
 	int _nrLevel = -1;
 
@@ -581,7 +581,7 @@ int main(int argc, char** argv)
 #endif
 {
 	int ret = 1;
-	_tstring modelDir;
+	_w2xstring modelDir;
 #if defined(_WIN32) && defined(_UNICODE)
 	int argc = 0;
 	char **argv = CommandLineToArgvA(GetCommandLineA(), &argc);
@@ -835,7 +835,7 @@ int main(int argc, char** argv)
 		cmdPngCompression.getValue()
 	};
 
-	_tstring outputFormat;
+	_w2xstring outputFormat;
 	outputFormat.assign(cmdOutputFormat.getValue().begin(), cmdOutputFormat.getValue().end());
 	
 	ConvInfo convInfo(
