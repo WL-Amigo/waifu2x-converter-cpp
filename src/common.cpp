@@ -197,7 +197,7 @@ void unpack_mat_rgb_f32(W2Mat &outputMat, const float *in, int w, int h)
 /* return true if A is newer than B */ 
 bool update_test(const TCHAR *dst_path, const TCHAR *src_path)
 {
-#if (defined _WIN32)
+#ifdef _WIN32
 	WIN32_FIND_DATA dst_st;
 	HANDLE finder = FindFirstFile(dst_path, &dst_st);
 	if (finder == INVALID_HANDLE_VALUE) {

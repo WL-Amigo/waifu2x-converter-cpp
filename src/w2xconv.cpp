@@ -1888,7 +1888,7 @@ void w2xconv_convert_mat
 	cv::imwrite(name, *image_dst);*/
 }
 
-#if defined(WIN32) && defined(UNICODE)
+#if defined(_WIN32) && defined(_UNICODE)
 	cv::Mat read_imageW(const WCHAR* filepath, int flags=cv::IMREAD_COLOR)
 	{
 		long lSize;

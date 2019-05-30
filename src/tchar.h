@@ -73,7 +73,7 @@
 	#define _to_tstring	to_string
 #endif
 
-#ifdef UNICODE
+#ifdef _UNICODE
 	typedef	wchar_t	TCHAR;
 #else
 	typedef	char	TCHAR;

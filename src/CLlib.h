@@ -41,7 +41,7 @@ extern "C" {
 #define CLLIB_EXTERN extern
 #endif
 
-#if defined(_WIN32)
+#ifdef _WIN32
     #define CL_API_ENTRY
     #define CL_API_CALL     __stdcall
     #define CL_CALLBACK     __stdcall

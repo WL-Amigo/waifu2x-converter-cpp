@@ -27,7 +27,7 @@
 #include <string>
 #include "tchar.h"
 
-#ifdef UNICODE
+#ifdef _UNICODE
 	typedef	std::wstring	_tstring;
 #else
 	typedef	std::string		_tstring;

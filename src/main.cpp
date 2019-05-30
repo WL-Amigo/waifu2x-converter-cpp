@@ -38,7 +38,7 @@
 #include "tclap/CmdLine.h"
 #include "sec.hpp"
 
-#if defined(WIN32) && defined(UNICODE)
+#if defined(_WIN32) && defined(_UNICODE)
 #include <Windows.h>
 #include <io.h>
 #include <fcntl.h>
@@ -233,7 +233,7 @@ bool validate_format_extension(std::string ext)
 	return false;
 }
 
-#if defined(WIN32) && defined(UNICODE)
+#if defined(_WIN32) && defined(_UNICODE)
 bool validate_format_extension(std::wstring ext_w)
 {
 	std::string ext;
@@ -455,7 +455,7 @@ void convert_file(ConvInfo info, fs::path inputName, fs::path output)
 {
 	//std::cout << "Operating on: " << fs::absolute(inputName).string() << std::endl;
 
-#if defined(WIN32) && defined(UNICODE)
+#if defined(_WIN32) && defined(_UNICODE)
 	std::wstring of;
 	of.assign(info.outputFormat.begin(), info.outputFormat.end());
 	std::wstring outputName = generate_output_location(fs::absolute(inputName).wstring(), output.wstring(), info.mode, info.NRLevel, info.scaleRatio, of);
@@ -490,7 +490,7 @@ void convert_file(ConvInfo info, fs::path inputName, fs::path output)
 
 
 
-#if defined(WIN32) && defined(UNICODE)
+#if defined(_WIN32) && defined(_UNICODE)
 //CommandLineToArgvA source from: http://alter.org.ua/en/docs/win/args/
 char** CommandLineToArgvA(char* CmdLine, int* _argc)
 {
@@ -582,14 +582,14 @@ char** CommandLineToArgvA(char* CmdLine, int* _argc)
 #endif
 
 
-#if defined(WIN32) && defined(UNICODE)
+#if defined(_WIN32) && defined(_UNICODE)
 int wmain(int argc_w, WCHAR** argv_w)
 #else
 int main(int argc, char** argv)
 #endif
 {
 	int ret = 1;
-#if defined(WIN32) && defined(UNICODE)
+#if defined(_WIN32) && defined(_UNICODE)
 	int argc = 0;
 	char **argv = CommandLineToArgvA(GetCommandLineA(), &argc);
 	std::wstring inputFileName, outputFileName=L"auto", modelDir = DEFAULT_MODELS_DIRECTORYW;
@@ -775,7 +775,7 @@ int main(int argc, char** argv)
 	}
 	
 	//We need to do this conversion because using a TCLAP::ValueArg<fs::path> can not handle spaces.
-#if defined(WIN32) && defined(UNICODE)
+#if defined(_WIN32) && defined(_UNICODE)
 	fs::path input = inputFileName;
 	std::wstring tmpOutput = outputFileName;
 #else
@@ -1042,7 +1042,7 @@ int main(int argc, char** argv)
 
 	w2xconv_fini(converter);
 
-#if defined(WIN32) && defined(UNICODE)
+#if defined(_WIN32) && defined(_UNICODE)
 	free(argv);
 #endif
 
