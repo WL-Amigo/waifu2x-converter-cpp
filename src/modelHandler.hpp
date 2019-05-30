@@ -152,7 +152,7 @@ namespace w2xc
 		public:
 			static bool generateModelFromJSON
 			(
-				const _w2xstring &fileName,
+				const _tstring &fileName,
 				std::vector<std::unique_ptr<Model> > &models
 			);
 			static void generateModelFromMEM

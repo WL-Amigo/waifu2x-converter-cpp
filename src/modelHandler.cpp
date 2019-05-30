@@ -1115,11 +1115,11 @@ namespace w2xc
 	}
 	bool modelUtility::generateModelFromJSON
 	(
-		const _w2xstring &fileName,
+		const _tstring &fileName,
 		std::vector<std::unique_ptr<Model> > &models
 	)
 	{
-		_w2xstring binpath = fileName + _W2X_T(".bin");
+		_tstring binpath = fileName + _W2X_T(".bin");
 		FILE *binfp = _tfopen(binpath.c_str(), _W2X_T("rb"));
 
 		if (binfp)

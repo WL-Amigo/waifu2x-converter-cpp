@@ -49,7 +49,7 @@
 	#define	_fgetts		fgetws
 	#define	_fputts		fputws
 	#define _totlower	towlower
-	#define _to_w2xstring	to_wstring
+	#define _to_tstring	to_wstring
 #else
 	#define	_tmain		main
 	#define	_tcslen		strlen
@@ -68,7 +68,7 @@
 	#define _fgetts		fgets
 	#define	_fputts		fputs
 	#define _totlower	tolower
-	#define _to_w2xstring	to_string
+	#define _to_tstring	to_string
 #endif
 
 #if defined(_WIN32) && defined(_UNICODE)

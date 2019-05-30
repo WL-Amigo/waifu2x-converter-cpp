@@ -28,9 +28,9 @@
 #include "tchar.h"
 
 #if defined(_WIN32) && defined(_UNICODE)
-	typedef	std::wstring	_w2xstring;
+	typedef	std::wstring	_tstring;
 #else
-	typedef	std::string		_w2xstring;
+	typedef	std::string		_tstring;
 #endif
 
 #if defined(_WIN32) && defined(_UNICODE)
