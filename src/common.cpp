@@ -195,7 +195,7 @@ void unpack_mat_rgb_f32(W2Mat &outputMat, const float *in, int w, int h)
 	Is not too big so duplicates are fine.. and the win to unix one differs quite a lot too.
 */
 /* return true if A is newer than B */ 
-bool update_test(const W2X_TCHAR *dst_path, const W2X_TCHAR *src_path)
+bool update_test(const TCHAR *dst_path, const TCHAR *src_path)
 {
 #ifdef _WIN32
 	WIN32_FIND_DATA dst_st;

@@ -54,5 +54,5 @@ void unpack_mat_bgr(W2Mat &outputMat, const float *in, int w, int h);
  * src is exist && dst is exist && dst is older than src  : true
  * otherwise                                              : false
  */
-bool update_test(const W2X_TCHAR *dst_path, const W2X_TCHAR *src_path);
+bool update_test(const TCHAR *dst_path, const TCHAR *src_path);
 #endif

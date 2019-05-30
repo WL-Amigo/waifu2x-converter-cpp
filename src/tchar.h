@@ -72,9 +72,9 @@
 #endif
 
 #if defined(_WIN32) && defined(_UNICODE)
-	typedef	wchar_t	W2X_TCHAR;
+	typedef	wchar_t	TCHAR;
 #else
-	typedef	char	W2X_TCHAR;
+	typedef	char	TCHAR;
 #endif
 
 #endif

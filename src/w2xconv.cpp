@@ -564,7 +564,7 @@ static void setError(W2XConv *conv, enum W2XConvErrorCode code)
 	conv->last_error.code = code;
 }
 
-int w2xconv_load_models(W2XConv *conv, const W2X_TCHAR *model_dir)
+int w2xconv_load_models(W2XConv *conv, const TCHAR *model_dir)
 {
 	struct W2XConvImpl *impl = conv->impl;
 
@@ -1961,8 +1961,8 @@ void w2xconv_convert_mat
 int w2xconv_convert_file
 (
 	struct W2XConv *conv,
-	const W2X_TCHAR *dst_path,
-	const W2X_TCHAR *src_path,
+	const TCHAR *dst_path,
+	const TCHAR *src_path,
 	int denoise_level,
 	double scale,
 	int blockSize,
