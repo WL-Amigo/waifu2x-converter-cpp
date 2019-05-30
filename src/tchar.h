@@ -24,7 +24,7 @@
 #ifndef __TCHAR_H__
 #define __TCHAR_H__
 
-#ifdef _UNICODE
+#if define(_WIN32) && define(_UNICODE)
 	#define	__T(x)		L ## x
 #else
 	#define	__T(x)		x
@@ -33,7 +33,7 @@
 #define	_T(x)		__T(x)
 #define	_TEXT()		__T(x)
 
-#ifdef _UNICODE
+#if define(_WIN32) && define(_UNICODE)
 	#define	_tmain		wmain
 	#define	_tcslen		wcslen
 	#define	_tcscat		wcscat
@@ -73,7 +73,7 @@
 	#define _to_tstring	to_string
 #endif
 
-#ifdef _UNICODE
+#if define(_WIN32) && define(_UNICODE)
 	typedef	wchar_t	TCHAR;
 #else
 	typedef	char	TCHAR;
