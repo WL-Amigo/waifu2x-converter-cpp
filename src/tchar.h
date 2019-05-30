@@ -25,13 +25,11 @@
 #define __TCHAR_H__
 
 #if defined(_WIN32) && defined(_UNICODE)
-	#define	__T(x)		L ## x
+	#define	_W2X_T(x)	L ## x
 #else
-	#define	__T(x)		x
+	#define	_W2X_T(x)	x
 #endif
 
-#define	_T(x)		__T(x)
-#define	_TEXT()		__T(x)
 
 #if defined(_WIN32) && defined(_UNICODE)
 	#define	_tmain		wmain
