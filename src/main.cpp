@@ -350,7 +350,7 @@ struct ConvInfo {
 	int blockSize;
 	W2XConv* converter;
 	int* imwrite_params;
-	std::string outputFormat;
+	_tstring outputFormat;
 	ConvInfo(
 		std::string mode,
 		int NRLevel,
@@ -358,7 +358,7 @@ struct ConvInfo {
 		int blockSize,
 		W2XConv* converter,
 		int* imwrite_params,
-		std::string outputFormat
+		_tstring outputFormat
 	):
 		mode(mode),
 		NRLevel(NRLevel),
@@ -453,13 +453,7 @@ void convert_file(ConvInfo info, fs::path inputName, fs::path output)
 {
 	//std::cout << "Operating on: " << fs::absolute(inputName).string() << std::endl;
 
-#if defined(_WIN32) && defined(_UNICODE)
-	std::wstring of;
-	of.assign(info.outputFormat.begin(), info.outputFormat.end());
-	std::wstring outputName = generate_output_location(fs::absolute(inputName).wstring(), output.wstring(), info.mode, info.NRLevel, info.scaleRatio, of);
-#else
-	std::string outputName = generate_output_location(fs::absolute(inputName).string(), output.string(), info.mode, info.NRLevel, info.scaleRatio, info.outputFormat);
-#endif
+	_tstring outputName = generate_output_location(fs::absolute(inputName), output, info.mode, info.NRLevel, info.scaleRatio, info.outputFormat);
 
 	int _nrLevel = -1;
 
@@ -838,6 +832,9 @@ int main(int argc, char** argv)
 		cmdPngCompression.getValue()
 	};
 
+	_tstring outputFormat;
+	outputFormat.assign(cmdOutputFormat.getValue().begin(), cmdOutputFormat.getValue().end());
+	
 	ConvInfo convInfo(
 		cmdMode.getValue(),
 		cmdNRLevel.getValue(),
@@ -845,7 +842,7 @@ int main(int argc, char** argv)
 		cmdBlockSize.getValue(),
 		converter,
 		imwrite_params,
-		cmdOutputFormat.getValue()
+		outputFormat
 	);
 	
 	double time_start = getsec();
