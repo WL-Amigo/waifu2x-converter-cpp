@@ -231,6 +231,8 @@ if(CMAKE_SYSTEM_PROCESSOR STREQUAL "amd64" OR
 	set(X86_TRUE true)
 elseif(CMAKE_SYSTEM_PROCESSOR MATCHES "^aarch|^arm")
 	set(ARM_TRUE true)
+elseif(CMAKE_SYSTEM_PROCESSOR MATCHES "^ppc")
+	set(PPC_TRUE true)
 else()
 	set(X86_TRUE false)
 endif()
@@ -258,6 +260,39 @@ if(ARMOPT)
 	endforeach()
 endif()
 
+option(PPCOPT "Enable PowerPC SIMD optimizations" ${PPC_TRUE})
+if(PPCOPT)
+	include("CheckCSourceRuns")
+
+	check_c_source_runs("
+		#include <sys/auxv.h>
+		int main(void) {
+			return 0;
+		}" HAVE_AUXV)
+
+	set(CMAKE_REQUIRED_FLAGS -maltivec)
+
+	check_c_source_runs("
+		#include <altivec.h>
+		int main(void) {
+			__vector int vi = { 0, 0, 0, 0 };
+			int i[4];
+			vec_st(vi, 0, i);
+			return i[0];
+		}" HAVE_ALTIVEC)
+
+	unset(CMAKE_REQUIRED_FLAGS)
+
+	if(HAVE_AUXV)
+		add_definitions(-DPPCOPT -DHAVE_AUXV)
+		set(OPT_SOURCES src/modelHandler_altivec.cpp)
+	elseif(HAVE_ALTIVEC)
+		add_definitions(-DPPCOPT)
+		set(OPT_SOURCES src/modelHandler_altivec.cpp)
+	else()
+		message(STATUS "AltiVec not found. disabled.")
+	endif()
+endif()
 
 add_library(w2xc SHARED
 	src/modelHandler.cpp ${OPT_SOURCES}
@@ -290,6 +325,7 @@ if(CMAKE_COMPILER_IS_GNUCXX OR ${CMAKE_CXX_COMPILER_ID} MATCHES "^(Apple)?Clang$
 	set_source_files_properties(src/modelHandler_avx.cpp PROPERTIES COMPILE_FLAGS "${CMAKE_CXX_FLAGS} -O2 -mavx ${REMOVE_SYMBOL}")
 	set_source_files_properties(src/modelHandler_fma.cpp PROPERTIES COMPILE_FLAGS "${CMAKE_CXX_FLAGS} -O2 -mfma ${REMOVE_SYMBOL}")
 	set_source_files_properties(src/modelHandler_sse.cpp PROPERTIES COMPILE_FLAGS "${CMAKE_CXX_FLAGS} -O2 -save-temps -msse3 ${REMOVE_SYMBOL}")
+	set_source_files_properties(src/modelHandler_altivec.cpp PROPERTIES COMPILE_FLAGS "${CMAKE_CXX_FLAGS} -O3 -maltivec ${REMOVE_SYMBOL}")
 	if(_march_armv7_a)
 		set_source_files_properties(src/modelHandler_neon.cpp PROPERTIES COMPILE_FLAGS "${CMAKE_CXX_FLAGS} -O2 -march=armv7-a ${REMOVE_SYMBOL}")
 	endif()

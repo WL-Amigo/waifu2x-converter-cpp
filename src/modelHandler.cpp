@@ -441,6 +441,12 @@ namespace w2xc
 						simd_oplane = true;
 						break;
 					}
+					case W2XCONV_PROC_HOST_ALTIVEC:
+					{
+						simd_vec_width = 8;
+						simd_oplane = true;
+						break;
+					}
 					case W2XCONV_PROC_HOST_AVX:
 					case W2XCONV_PROC_HOST_FMA:
 					{
@@ -665,6 +671,15 @@ namespace w2xc
 						break;
 					}
 #endif
+#ifdef PPCOPT
+					case W2XCONV_PROC_HOST_ALTIVEC:
+					{
+						filter_AltiVec_impl(env, packed_input, packed_output,
+								nInputPlanes, nOutputPlanes, fbiases_flat, weight_flat,
+								size.width, size.height, nJob);
+						break;
+					}
+#endif
 					default:
 					{
 						filter_CV(env, packed_input_buf, packed_output_buf, size);
@@ -831,6 +846,25 @@ namespace w2xc
 						break;
 					}
 #endif
+#ifdef PPCOPT
+					case W2XCONV_PROC_HOST_ALTIVEC:
+					{
+						filter_AltiVec_impl
+						(
+							env,
+							packed_input,
+							packed_output,
+							nInputPlanes,
+							nOutputPlanes,
+							fbiases_flat,
+							weight_flat,
+							size.width,
+							size.height,
+							nJob
+						);
+						break;
+					}
+#endif
 					default:
 					{
 						filter_CV(env, packed_input_buf, packed_output_buf, size);
@@ -979,7 +1013,6 @@ namespace w2xc
 		unsigned int nWorks
 	)
 	{
-
 		std::vector<cv::Mat> inputPlanes;
 		std::vector<cv::Mat> weightMatrices;
 		std::vector<cv::Mat> outputPlanes;
