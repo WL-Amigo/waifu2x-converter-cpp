@@ -103,7 +103,7 @@ https://github.com/DeadSix27/waifu2x-converter-cpp/releases
 
 ### nVidia GPUs (CUDA):
 - Arch: `cuda`
-- Ubuntu: `?` (Submit PR if you know)
+- Ubuntu: `nvidia-cuda-toolkit`
 
 ### Building:
 ##### If you want to build for all GPU brands, just install all packages (untested, see above).
