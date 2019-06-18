@@ -51,6 +51,7 @@ namespace fs = std::experimental::filesystem;
 #include <unistd.h>
 #include <sys/types.h>
 #include <pwd.h>
+#include <errno.h>
 #endif
 
 static const char prog[] =
@@ -510,7 +511,7 @@ namespace w2xc
 				if (fp == NULL)
 				{
 #if (defined __linux)
-						if (errno == 13)
+						if (errno == EACCES)
 						{
 							std::string user_folder("/tmp/.waifu2x");
 							char *home_dir = getenv ("HOME");
