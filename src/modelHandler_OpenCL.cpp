@@ -511,7 +511,7 @@ namespace w2xc
 				if (fp == NULL)
 				{
 #if (defined __linux)
-						if (errno == EACCES)
+						if (errno == EACCES || errno == EROFS)
 						{
 							std::string user_folder("/tmp/.waifu2x");
 							char *home_dir = getenv ("HOME");
