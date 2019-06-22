@@ -758,7 +758,7 @@ int main(int argc, char** argv)
 
 	TCLAP::SwitchArg cmdQuiet("s", "silent", "Enable silent mode. (same as --log-level 1)", cmd, false);
 	
-	TCLAP::ValueArg<int> cmdLogLevel("", "log-level", "Set log level (0-4)", false, 3, "integer", cmd);
+	TCLAP::ValueArg<int> cmdLogLevel("v", "log-level", "Set log level (0-4)", false, 3, "integer", cmd);
 	
 	std::vector<std::string> cmdModeConstraintV;
 	cmdModeConstraintV.push_back("noise");
