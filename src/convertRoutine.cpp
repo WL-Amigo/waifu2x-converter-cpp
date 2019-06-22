@@ -444,11 +444,6 @@ namespace w2xc
 			{
 				clipEndY = r * clipHeight + blockHeight;
 			}
-			
-			if (enableLog)
-			{
-					printf("Processing block, row (%02d/%02d) ...\n", (r+1), splitRows);
-			}
 
 			for (unsigned int c = 0; c < splitColumns; c++)
 			{

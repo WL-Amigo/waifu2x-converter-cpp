@@ -109,21 +109,22 @@ W2Mat::W2Mat(const W2Mat & rhs, int view_left_offset, int view_top_offset, int v
     this->type = rhs.type;
 }
 
-void W2Mat::copy_full(W2Mat & target, W2Mat & rhs)
+void W2Mat::copyTo(W2Mat* target)
 {
-	target = W2Mat(rhs.view_width, rhs.view_height,	rhs.type);
+	W2Mat ret(this->view_width, this->view_height, this->type);
 
-	int elem_size = CV_ELEM_SIZE(rhs.type);
-	int w = rhs.view_width;
-	int h = rhs.view_height;
+	int elem_size = CV_ELEM_SIZE(this->type);
+	int w = this->view_width;
+	int h = this->view_height;
 
 	for (int yi = 0; yi < h; yi++)
 	{
-		char *out = target.ptr<char>(yi);
-		char *in = rhs.ptr<char>(yi);
+		char *out = ret.ptr<char>(yi);
+		char *in = this->ptr<char>(yi);
 
 		memcpy(out, in, w * elem_size);
 	}
+	*target = std::move(ret);
 }
 
 #ifdef HAVE_OPENCV
@@ -149,21 +150,22 @@ W2Mat::W2Mat(cv::Mat &m) : data_owner(true), view_top(0), view_left(0)
 	}
 }
 
-void W2Mat::to_cvmat(cv::Mat &target)
+void W2Mat::to_cvmat(cv::Mat *target)
 {
 	int w = this->view_width;
 	int h = this->view_height;
 
-	target = cv::Mat::zeros(cv::Size(w, h), this->type);
+	cv::Mat ret = cv::Mat::zeros(cv::Size(w, h), this->type);
 	int elem_size = CV_ELEM_SIZE(this->type);
 
 	for (int yi = 0; yi < h; yi++)
 	{
-		void *out = target.ptr(yi);
+		void *out = ret.ptr(yi);
 		void *in = this->ptr<char>(yi);
 
 		memcpy(out, in, w * elem_size);
 	}
+	*target = ret.clone();
 }
 
 // DO NOT USE IN NORMAL SITUAYION. Return wm is not own their data.
@@ -221,7 +223,9 @@ void extract_viewlist_from_cvmat(std::vector<W2Mat> &list, std::vector<cv::Mat> 
 {
 	std::for_each(cvmat.begin(), cvmat.end(),
 		[&list](cv::Mat &cv) {
-		list.push_back(W2Mat(cv));
+		W2Mat w2;
+		extract_view_from_cvmat(w2, cv);
+		list.push_back(std::move(w2));
 	});
 }
 
@@ -231,7 +235,7 @@ void extract_viewlist_to_cvmat(std::vector<cv::Mat> &cvmat, std::vector<W2Mat> &
 		[&cvmat](W2Mat &wm) {
 		cv::Mat cv;
 		extract_view_to_cvmat(cv, wm);
-		cvmat.push_back(cv);
+		cvmat.push_back(cv.clone());
 	});
 }
 
