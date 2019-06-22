@@ -204,7 +204,7 @@ struct W2XConv
 	struct W2XConvError last_error;
 	struct W2XConvFlopsCounter flops;
 	const struct W2XConvProcessor *target_processor;
-	int enable_log;
+	int log_level;
 
 	/* internal */
 	struct W2XConvImpl *impl;
@@ -223,9 +223,9 @@ W2XCONV_EXPORT	void get_png_background_colour(FILE *png_fp, bool *png_rgb, struc
 
 W2XCONV_EXPORT const struct W2XConvProcessor *w2xconv_get_processor_list(size_t *ret_num);
 
-W2XCONV_EXPORT struct W2XConv *w2xconv_init(enum W2XConvGPUMode gpu, int njob /* 0 = auto */, int enable_log);
+W2XCONV_EXPORT struct W2XConv *w2xconv_init(enum W2XConvGPUMode gpu, int njob /* 0 = auto */, int log_level);
 
-W2XCONV_EXPORT struct W2XConv *w2xconv_init_with_processor(int processor_idx, int njob, int enable_log);
+W2XCONV_EXPORT struct W2XConv *w2xconv_init_with_processor(int processor_idx, int njob, int log_level);
 
 /* return negative if failed */
 W2XCONV_EXPORT int w2xconv_load_models
