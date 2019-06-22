@@ -2158,6 +2158,11 @@ int w2xconv_convert_file
 		return -1;
 	}
 	
+	if (conv->enable_log && scale > 1.0 )
+	{
+		printf("Scaling image from %dx%d to %dx%d\n", image_src.cols, image_src.rows, (int) (image_src.cols * scale), (int) (image_src.rows * scale));
+	}
+	
 	w2xconv_convert_mat(conv, &image_dst, &image_src, denoise_level, scale, blockSize, background, png_rgb, dst_png);
 	
 	if (conv->log_level >= 2)
