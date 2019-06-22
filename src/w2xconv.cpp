@@ -1324,13 +1324,26 @@ void get_png_background_colour(FILE *png_fp, bool *has_alpha, struct w2xconv_rgb
 	const static unsigned char sig_gift[4] = {'g','I','F','t'};
 	const static unsigned char sig_idat[4] = {'I','D','A','T'};
 	const static unsigned char sig_srgb[4] = {'s','R','G','B'};
+	const static unsigned char sig_vpag[4] = {'v','p','A','g'};
+	const static unsigned char sig_actl[4] = {'a','c','T','L'};
+	const static unsigned char sig_dsig[4] = {'d','S','I','G'};
+	const static unsigned char sig_exif[4] = {'e','X','I','f'};
+	const static unsigned char sig_iccp[4] = {'i','C','C','P'};
+	const static unsigned char sig_ster[4] = {'s','T','E','R'};
+	const static unsigned char sig_txmp[4] = {'t','X','M','P'};
+	const static unsigned char sig_zxif[4] = {'z','x','I','f'};
+
 
 	const static unsigned char *sig_ignores[] = // array of unused PNG chunks and their signature.
 	{
-		sig_gama, sig_chrm, sig_plte, sig_phys, sig_time,
-		sig_text, sig_ztxt, sig_itxt, sig_hist, sig_splt,
-		sig_sbit, sig_scal, sig_offs, sig_pcal, sig_frac,
-		sig_gifg, sig_gifx, sig_gift, sig_idat, sig_srgb
+		sig_gama, sig_chrm, sig_plte, sig_phys,
+		sig_time, sig_text, sig_ztxt, sig_itxt,
+		sig_hist, sig_splt, sig_sbit, sig_scal,
+		sig_offs, sig_pcal, sig_frac, sig_gifg,
+		sig_gifx, sig_gift, sig_idat, sig_srgb,
+		sig_vpag, sig_actl, sig_dsig, sig_exif,
+		sig_iccp, sig_ster, sig_txmp, sig_zxif,
+		sig_ihdr
 	};
 	
 	const static size_t sig_ignore_size = sizeof(sig_ignores)/sizeof(*sig_ignores);
@@ -1379,20 +1392,21 @@ void get_png_background_colour(FILE *png_fp, bool *has_alpha, struct w2xconv_rgb
 	int interlace = fgetc(png_fp);
 
 	/* use IMREAD_UNCHANGED
-	 * if png && type == RGBA || depth == 16
+	 * if png has alpha channel or is indexed with tRNS chunk.
 	 */
-	if (type == PNG_TYPE::TruecolorAlpha || type == PNG_TYPE::Indexed || type == PNG_TYPE::GrayscaleAlpha) {
-		if (depth == 8 || // RGBA 8bit
-		    depth == 16	  // RGBA 16bit
-			)
+	if (type == PNG_TYPE::TruecolorAlpha || type == PNG_TYPE::Indexed || type == PNG_TYPE::GrayscaleAlpha)
+	{
+		if (depth == 8 || depth == 16 || (depth == 4 && type == PNG_TYPE::Indexed))
 		{
 			*has_alpha = true;
 		}
-	} else if (depth == 16) { // RGB 16bit
+	}
+	else if (depth == 16)
+	{
 		*has_alpha = true;
 	}
-	
-	//DEBUG printf("png type: %d, depth: %d\n", type, depth);
+
+	//DEBUG printf("png type: %d, depth: %d, has_alpha: %s", type, depth, *has_alpha ? "true" : "false");
 
 	//end of iheader reading
 
@@ -1477,7 +1491,7 @@ void get_png_background_colour(FILE *png_fp, bool *has_alpha, struct w2xconv_rgb
 					// printf("palette_index: %d\n", palette_index);
 				}
 				*/
-				else // keep looking for tRNS?
+				else // keep looking for tRNS
 				{
 					fseek(png_fp, chunk_size, SEEK_CUR);
 					unsigned int crc = read_int4(png_fp);

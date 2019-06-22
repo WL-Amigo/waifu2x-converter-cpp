@@ -55,13 +55,13 @@ names = {
 			8: 8,
 		}
 	},
-	"indexed_alpha" : { # is this even correct?
+	"indexed_alpha" : { # not sure if this is valid.
 		"png_type": 3,
 		"bits": {
-			1: 2,
-			2: 4,
-			4: 8,
-			# 8: 16, # convert-im6.q16: Valid palette required for paletted images `indexed_alpha_8-16bit_type_3.png' @ error/png.c/MagickPNGErrorHandler/1628.
+			1: 4,
+			2: 8,
+			4: 16,
+			# 8: 32, # convert-im6.q16: Valid palette required for paletted images `indexed_alpha_8-16bit_type_3.png' @ error/png.c/MagickPNGErrorHandler/1628.
 		}
 	},
 	"truecolor" : {
