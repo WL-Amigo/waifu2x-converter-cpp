@@ -2158,7 +2158,7 @@ int w2xconv_convert_file
 		return -1;
 	}
 	
-	if (conv->enable_log && scale > 1.0 )
+	if (conv->log_level >= 2 && scale > 1.0 )
 	{
 		printf("Scaling image from %dx%d to %dx%d\n", image_src.cols, image_src.rows, (int) (image_src.cols * scale), (int) (image_src.rows * scale));
 	}
