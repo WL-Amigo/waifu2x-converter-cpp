@@ -1,16 +1,39 @@
+/*
+* The MIT License (MIT)
+* Copyright (c) 2015 amigo(white luckers), tanakamura, DeadSix27, YukihoAA and contributors
+* 
+* Permission is hereby granted, free of charge, to any person obtaining a copy
+* of this software and associated documentation files (the "Software"), to deal
+* in the Software without restriction, including without limitation the rights
+* to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+* copies of the Software, and to permit persons to whom the Software is
+* furnished to do so, subject to the following conditions:
+* 
+* The above copyright notice and this permission notice shall be included in all
+* copies or substantial portions of the Software.
+* 
+* THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+* IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+* FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+* AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+* LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+* OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+* SOFTWARE.
+*/
+
 #include <thread>
 #include <immintrin.h>
 #include <atomic>
 #include "filters.hpp"
 #include "sec.hpp"
 
-struct v256_t {
+struct v256_t
+{
 	__m128 v0, v1;
 };
 
 
-static inline ALWAYS_INLINE v256_t
-madd256(v256_t const &v0, v256_t const &v1, v256_t const &v2)
+static inline ALWAYS_INLINE v256_t madd256(v256_t const &v0, v256_t const &v1, v256_t const &v2)
 {
 	v256_t ret;
 	ret.v0 = _mm_add_ps(_mm_mul_ps(v0.v0,v1.v0), v2.v0);
@@ -18,8 +41,7 @@ madd256(v256_t const &v0, v256_t const &v1, v256_t const &v2)
 	return ret;
 }
 
-static inline v256_t
-load_broadcast(const float *p)
+static inline v256_t load_broadcast(const float *p)
 {
 	v256_t ret;
 	ret.v0 = _mm_set1_ps(p[0]);
@@ -27,8 +49,7 @@ load_broadcast(const float *p)
 	return ret;
 }
 
-static inline v256_t
-load256(const float *p)
+static inline v256_t load256(const float *p)
 {
 	v256_t ret;
 	ret.v0 = _mm_load_ps(p);
@@ -37,15 +58,13 @@ load256(const float *p)
 }
 
 
-static inline void
-store256(float *p, v256_t const &v)
+static inline void store256(float *p, v256_t const &v)
 {
 	_mm_storeu_ps(p, v.v0);
 	_mm_storeu_ps(p+4, v.v1);
 }
 
-static inline v256_t
-zero()
+static inline v256_t zero()
 {
 	v256_t ret;
 	ret.v0 = _mm_setzero_ps();
@@ -53,8 +72,7 @@ zero()
 	return ret;
 }
 
-static inline v256_t
-set1(float a)
+static inline v256_t set1(float a)
 {
 	v256_t ret;
 	ret.v0 = _mm_set1_ps(a);
@@ -62,8 +80,7 @@ set1(float a)
 	return ret;
 }
 
-static inline float
-hadd8(v256_t const &v)
+static inline float hadd8(v256_t const &v)
 {
 	__m128 sum4 = _mm_add_ps(v.v0, v.v1);
 	sum4 = _mm_hadd_ps(sum4, sum4);
@@ -71,14 +88,14 @@ hadd8(v256_t const &v)
 	return _mm_cvtss_f32(sum4);
 }
 
-#define SSE_GEN_BINARY(func_name, intrin_name)	\
-static inline v256_t				\
-func_name(v256_t const &a, v256_t const &b)			\
-{						\
-	v256_t ret;				\
-	ret.v0 = intrin_name(a.v0, b.v0);	\
-	ret.v1 = intrin_name(a.v1, b.v1);	\
-	return ret;				\
+#define SSE_GEN_BINARY(func_name, intrin_name) \
+static inline v256_t                           \
+func_name(v256_t const &a, v256_t const &b)    \
+{                                              \
+	v256_t ret;                                \
+	ret.v0 = intrin_name(a.v0, b.v0);          \
+	ret.v1 = intrin_name(a.v1, b.v1);          \
+	return ret;                                \
 }
 
 SSE_GEN_BINARY(add256, _mm_add_ps)
@@ -103,14 +120,12 @@ typedef __m128 vreg_t;
 #define store_vreg(ptr,val) _mm_store_ps((float*)(ptr), val)
 #define load_vreg(ptr) _mm_load_ps((float*)(ptr))
     
-static inline __m128
-load_vreg_broadcast(const unsigned char *ptr)
+static inline __m128 load_vreg_broadcast(const unsigned char *ptr)
 {
     return _mm_set1_ps(*(float*)ptr);
 }
 
-static inline __m128
-madd_vreg(__m128 a, __m128 b, __m128 c)
+static inline __m128 madd_vreg(__m128 a, __m128 b, __m128 c)
 {
     return _mm_add_ps(_mm_mul_ps(a,b), c);
 }
@@ -126,9 +141,11 @@ madd_vreg(__m128 a, __m128 b, __m128 c)
 #include "modelHandler_simd.hpp"
 
 
-namespace w2xc {
-void
-filter_SSE_impl(ComputeEnv *env,
+namespace w2xc
+{
+	void filter_SSE_impl
+	(
+		ComputeEnv *env,
 		const float *packed_input,
 		float *packed_output,
 		int nInputPlanes,
@@ -137,32 +154,40 @@ filter_SSE_impl(ComputeEnv *env,
 		const float *weight,
 		int ip_width,
 		int ip_height,
-		int nJob)
-{
-	if (simd_available(nInputPlanes, nOutputPlanes)) {
-		filter_simd_impl0(env,
-				  packed_input,
-				  packed_output,
-				  nInputPlanes,
-				  nOutputPlanes,
-				  fbiases,
-				  weight,
-				  ip_width,
-				  ip_height,
-				  nJob);
-	} else {
-		filter_AVX_impl0(env,
-				 packed_input,
-				 packed_output,
-				 nInputPlanes,
-				 nOutputPlanes,
-				 fbiases,
-				 weight,
-				 ip_width,
-				 ip_height,
-				 nJob);
+		int nJob
+	)
+	{
+		if (simd_available(nInputPlanes, nOutputPlanes))
+		{
+			filter_simd_impl0
+			(
+				env,
+				packed_input,
+				packed_output,
+				nInputPlanes,
+				nOutputPlanes,
+				fbiases,
+				weight,
+				ip_width,
+				ip_height,
+				nJob
+			);
+		}
+		else
+		{
+			filter_AVX_impl0
+			(
+				env,
+				packed_input,
+				packed_output,
+				nInputPlanes,
+				nOutputPlanes,
+				fbiases,
+				weight,
+				ip_width,
+				ip_height,
+				nJob
+			);
+		}
 	}
-}
-
-
 }

@@ -1,3 +1,26 @@
+/*
+* The MIT License (MIT)
+* Copyright (c) 2015 amigo(white luckers), tanakamura, DeadSix27, YukihoAA and contributors
+* 
+* Permission is hereby granted, free of charge, to any person obtaining a copy
+* of this software and associated documentation files (the "Software"), to deal
+* in the Software without restriction, including without limitation the rights
+* to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+* copies of the Software, and to permit persons to whom the Software is
+* furnished to do so, subject to the following conditions:
+* 
+* The above copyright notice and this permission notice shall be included in all
+* copies or substantial portions of the Software.
+* 
+* THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+* IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+* FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+* AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+* LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+* OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+* SOFTWARE.
+*/
+
 #define CLLIB_EXTERN
 
 #ifdef _WIN32
@@ -24,8 +47,6 @@
 #include <experimental/filesystem>
 namespace fs = std::experimental::filesystem;
 
-
-
 #ifdef __linux
 #include <unistd.h>
 #include <sys/types.h>
@@ -39,9 +60,8 @@ static const char prog[] =
 #define S_(a) #a
 #define S(a) S_(a)
 
-namespace w2xc {
-
-
+namespace w2xc
+{
 #ifdef _WIN32
 	static HMODULE handle;
 #else
@@ -55,8 +75,7 @@ namespace w2xc {
 
 	static std::vector<OpenCLDevListEntry> dev_list;
 
-	void
-		initOpenCLGlobal(std::vector<W2XConvProcessor> *proc_list)
+	void initOpenCLGlobal(std::vector<W2XConvProcessor> *proc_list)
 	{
 #ifdef _WIN32
 		handle = LoadLibraryA("OpenCL.dll");
@@ -67,22 +86,28 @@ namespace w2xc {
 
 #else
         handle = dlopen("libOpenCL.so.2.0.0", RTLD_LAZY);
-        if (handle == nullptr) {
+        if (handle == nullptr)
+		{
 			handle = dlopen("libOpenCL.so.1", RTLD_LAZY);
         }
-		if (handle == nullptr) {
+		if (handle == nullptr)
+		{
 			handle = dlopen("libOpenCL.so.1.0.0", RTLD_LAZY);
         }
-		if (handle == nullptr) {
+		if (handle == nullptr)
+		{
 			handle = dlopen("libOpenCL.so", RTLD_LAZY);
         }
-        if (handle == nullptr) {
+        if (handle == nullptr)
+		{
 			handle = dlopen("/system/vendor/lib/libOpenCL.so", RTLD_LAZY);
         }
-        if (handle == nullptr) {
+        if (handle == nullptr)
+		{
 			handle = dlopen("/system/vendor/lib/libOpenCL.so", RTLD_LAZY);
         }
-		if (handle == nullptr) {
+		if (handle == nullptr)
+		{
 			handle = dlopen("/system/vendor/lib/libPVROCL.so", RTLD_LAZY);
 		}
 
@@ -90,9 +115,9 @@ namespace w2xc {
 #define FreeLibrary dlclose
 
 #endif
-
-		if (!handle) {
-			printf("No openCL handle found, is libOpenCL installed\n");
+		if (!handle)
+		{
+			printf("No openCL handle found, is libOpenCL installed?\n");
 			return;
 		}
 
@@ -142,7 +167,8 @@ namespace w2xc {
 		int cur_dev_id = 0;
 		proc.type = W2XCONV_PROC_OPENCL;
 
-		for (unsigned int i = 0; i < num_plt; i++) {
+		for (unsigned int i = 0; i < num_plt; i++)
+		{
 			size_t sz;
 			clGetPlatformInfo(plts[i], CL_PLATFORM_NAME, 0, nullptr, &sz);
 			std::vector<char> name(sz);
@@ -155,40 +181,50 @@ namespace w2xc {
 
 			cl_uint num_dev;
 			cl_int ret = clGetDeviceIDs(plts[i], CL_DEVICE_TYPE_ALL, 0, nullptr, &num_dev);
-			if ((num_dev == 0) || (ret != CL_SUCCESS)) {
+
+			if ((num_dev == 0) || (ret != CL_SUCCESS))
+			{
 				continue;
 			}
 
 			std::vector<cl_device_id> devs(num_dev);
 			clGetDeviceIDs(plts[i], CL_DEVICE_TYPE_ALL, num_dev, &devs[0], &num_dev);
 
-			for (unsigned int di = 0; di < num_dev; di++) {
+			for (unsigned int di = 0; di < num_dev; di++)
+			{
 				cl_device_id dev = devs[di];
 				cl_device_type dtype;
 
 				clGetDeviceInfo(dev, CL_DEVICE_TYPE, sizeof(dtype), &dtype, NULL);
 				int sub_type = 0;
 
-				if (is_amd) {
+				if (is_amd)
+				{
 					sub_type = W2XCONV_PROC_OPENCL_PLATFORM_AMD;
 				}
-				else if (is_nvidia) {
+				else if (is_nvidia)
+				{
 					sub_type = W2XCONV_PROC_OPENCL_PLATFORM_NVIDIA;
 				}
-				else if (is_intel) {
+				else if (is_intel)
+				{
 					sub_type = W2XCONV_PROC_OPENCL_PLATFORM_INTEL;
 				}
-				else {
+				else
+				{
 					sub_type = W2XCONV_PROC_OPENCL_PLATFORM_UNKNOWN;
 				}
 
-				if (dtype == CL_DEVICE_TYPE_GPU) {
+				if (dtype == CL_DEVICE_TYPE_GPU)
+				{
 					sub_type |= W2XCONV_PROC_OPENCL_DEVICE_GPU;
 				}
-				else if (dtype == CL_DEVICE_TYPE_CPU) {
+				else if (dtype == CL_DEVICE_TYPE_CPU)
+				{
 					sub_type |= W2XCONV_PROC_OPENCL_DEVICE_CPU;
 				}
-				else {
+				else
+				{
 					sub_type |= W2XCONV_PROC_OPENCL_DEVICE_UNKNOWN;
 				}
 
@@ -213,14 +249,10 @@ namespace w2xc {
 				dev_list.push_back(entry);
 			}
 		}
-
 		return;
 	}
 
-	static void
-		setCLError(W2XConv *c,
-			int dev_id,
-			int error_code)
+	static void setCLError(W2XConv *c, int dev_id, int error_code)
 	{
 		clearError(c);
 		c->last_error.code = W2XCONV_ERROR_OPENCL;
@@ -232,7 +264,9 @@ namespace w2xc {
 	{
 		std::string::iterator it;
 		std::string illegalChars = "\\/:?\"<>|, ";
-		for (it = s->begin(); it < s->end(); ++it) {
+
+		for (it = s->begin(); it < s->end(); ++it)
+		{
 			bool found = illegalChars.find(*it) != std::string::npos;
 			if (found) {
 				*it = '_';
@@ -240,8 +274,7 @@ namespace w2xc {
 		}
 	}
 
-	bool
-		initOpenCL(W2XConv *c, ComputeEnv *env, W2XConvProcessor *proc)
+	bool initOpenCL(W2XConv *c, ComputeEnv *env, W2XConvProcessor *proc)
 	{
 		int dev_id = proc->dev_id;
 		env->num_cl_dev = 1;
@@ -252,12 +285,15 @@ namespace w2xc {
 		cl_context_properties props[] =
 		{ CL_CONTEXT_PLATFORM, (cl_context_properties)(de->plt_id), 0 };
 		cl_context context = clCreateContext(props, 1, &dev, NULL, NULL, &err);
-		if (err != CL_SUCCESS) {
+
+		if (err != CL_SUCCESS)
+		{
 			setCLError(c, dev_id, err);
 			return false;
 		}
 
-		if (proc->sub_type == W2XCONV_PROC_OPENCL_INTEL_GPU) {
+		if (proc->sub_type == W2XCONV_PROC_OPENCL_INTEL_GPU)
+		{
 			env->pref_block_size = 256;
 		}
 
@@ -278,9 +314,13 @@ namespace w2xc {
 #ifdef __linux
 		ssize_t path_len = 4;
 		char *self_path = (char*)malloc(path_len + 1);
-		while (1) {
+
+		while (true)
+		{
 			ssize_t r = readlink("/proc/self/exe", self_path, path_len);
-			if (r < path_len) {
+
+			if (r < path_len)
+			{
 				self_path[r] = '\0';
 				break;
 			}
@@ -296,8 +336,11 @@ namespace w2xc {
 		size_t path_len = 4;
 		char *self_path = (char*)malloc(path_len + 1);
 		DWORD len;
-		while (1) {
+
+		while (true)
+		{
 			len = GetModuleFileNameA(NULL, self_path, (DWORD) path_len);
+
 			if (len > 0 && len != path_len) {
 				break;
 			}
@@ -309,8 +352,10 @@ namespace w2xc {
 		HANDLE finder = FindFirstFileA(self_path, &self_st);
 		FindClose(finder);
 
-		for (int si = len - 1; si >= 0; si--) {
-			if (self_path[si] == '\\') {
+		for (int si = len - 1; si >= 0; si--)
+		{
+			if (self_path[si] == '\\')
+			{
 				self_path[si] = '\0';
 				break;
 			}
@@ -323,21 +368,27 @@ namespace w2xc {
 		std::string bin_path = std::string(self_path) + "/" + dev_nameStr + ".bin";
 
 		FILE *binfp = fopen(bin_path.c_str(), "rb");
-		if (binfp) {
+		if (binfp)
+		{
 #if (defined __linux)
 			struct stat bin_st;
 			stat(bin_path.c_str(), &bin_st);
 
 			bool old = false;
-			if (bin_st.st_mtim.tv_sec < self_st.st_mtim.tv_sec) {
+
+			if (bin_st.st_mtim.tv_sec < self_st.st_mtim.tv_sec)
+			{
 				old = true;
 			}
 
-			if (bin_st.st_mtim.tv_sec == self_st.st_mtim.tv_sec) {
-				if (bin_st.st_mtim.tv_nsec < self_st.st_mtim.tv_nsec) {
+			if (bin_st.st_mtim.tv_sec == self_st.st_mtim.tv_sec)
+			{
+				if (bin_st.st_mtim.tv_nsec < self_st.st_mtim.tv_nsec)
+				{
 					old = true;
 				}
 			}
+
 			size_t bin_sz = bin_st.st_size;
 #else
 			WIN32_FIND_DATAA bin_st;
@@ -345,19 +396,22 @@ namespace w2xc {
 			FindClose(finder);
 
 			bool old = false;
+
 			uint64_t self_time = (((uint64_t)self_st.ftLastWriteTime.dwHighDateTime) << 32) |
 				((uint64_t)self_st.ftLastWriteTime.dwLowDateTime);
+
 			uint64_t bin_time = (((uint64_t)bin_st.ftLastWriteTime.dwHighDateTime) << 32) |
 				((uint64_t)bin_st.ftLastWriteTime.dwLowDateTime);
 
-			if (bin_time < self_time) {
+			if (bin_time < self_time)
+			{
 				old = true;
 			}
 
 			size_t bin_sz = bin_st.nFileSizeLow;
 #endif
-
-			if (!old) {
+			if (!old)
+			{
 				unsigned char *bin = (unsigned char*)malloc(bin_sz);
 
 				size_t rem = bin_sz;
@@ -372,12 +426,13 @@ namespace w2xc {
 					p += rsz;
 				}
 
-				if (rem == 0) {
+				if (rem == 0)
+				{
 					cl_int err;
-					program = clCreateProgramWithBinary(context, 1, &dev, &bin_sz,
-						(const unsigned char**)&bin, NULL, &err);
+					program = clCreateProgramWithBinary(context, 1, &dev, &bin_sz, (const unsigned char**)&bin, NULL, &err);
 
-					if (err == CL_SUCCESS) {
+					if (err == CL_SUCCESS)
+					{
 						bin_avaiable = true;
 					}
 				}
@@ -389,12 +444,21 @@ namespace w2xc {
 		}
 #endif
 
-		if (!bin_avaiable) {
-			const char *source[1] = { prog };
-			size_t src_len[1] = { sizeof(prog) - 1 };
+		if (!bin_avaiable)
+		{
+			//FutureNote: [1] ?
+			const char *source[1] =
+			{
+				prog 
+			};
+			size_t src_len[1] =
+			{
+				sizeof(prog) - 1
+			};
 
 			program = clCreateProgramWithSource(context, 1, source, src_len, &err);
-			if (err != CL_SUCCESS) {
+			if (err != CL_SUCCESS)
+			{
 				clReleaseContext(context);
 				setCLError(c, dev_id, err);
 				return false;
@@ -407,7 +471,8 @@ namespace w2xc {
 #endif
 
 		err = clBuildProgram(program, 1, &dev, "", nullptr, nullptr);
-		if (err != CL_SUCCESS) {
+		if (err != CL_SUCCESS)
+		{
 			size_t log_len;
 			clGetProgramBuildInfo(program, dev, CL_PROGRAM_BUILD_LOG, 0, nullptr, &log_len);
 
@@ -423,10 +488,9 @@ namespace w2xc {
 			return false;
 		}
 
-
-
 #ifdef GENERATE_BINARY
-		if (!bin_avaiable) {
+		if (!bin_avaiable)
+		{
 			size_t binsz;
 			size_t ret_len;
 			clGetProgramInfo(program, CL_PROGRAM_BINARY_SIZES, sizeof(binsz), &binsz, &ret_len);
@@ -438,30 +502,43 @@ namespace w2xc {
 			clGetProgramInfo(program, CL_PROGRAM_BINARIES, sizeof(ptrs), ptrs, &ret_len);
 			
 			FILE *fp = NULL;
+
 			while (fp == NULL)
 			{
 				fp = fopen(bin_path.c_str(), "wb");
-				if (fp == NULL) {
-					#if (defined __linux)
-						if (errno == 13) {
+
+				if (fp == NULL)
+				{
+#if (defined __linux)
+						if (errno == 13)
+						{
 							std::string user_folder("/tmp/.waifu2x");
 							char *home_dir = getenv ("HOME");
-							if (home_dir != NULL) {
+
+							if (home_dir != NULL)
+							{
 								user_folder = std::string(home_dir) + "/.waifu2x";
 							}
 							
-							if (!fs::exists(user_folder)) {
-								try { fs::create_directory(user_folder); }
-								catch (fs::filesystem_error& e) {
+							if (!fs::exists(user_folder))
+							{
+								try
+								{
+									fs::create_directory(user_folder);
+								}
+								catch (fs::filesystem_error& e)
+								{
 									printf("ERROR: %s\n",e.what());
 									exit(EXIT_FAILURE);
 								}
 							}
+
 							bin_path = user_folder + "/" + dev_nameStr + ".bin";
 							fp = fopen(bin_path.c_str(), "wb");
 							printf("Writing OpenCL-Binary to: %s\n",bin_path.c_str());
 						}
-						else {
+						else
+						{
 							printf("Error opening file %s: [%d] %s\n",bin_path.c_str(),errno,strerror(errno));
 							exit (EXIT_FAILURE);
 						}
@@ -470,26 +547,33 @@ namespace w2xc {
 						exit (EXIT_FAILURE);
 					#endif
 				}
-				else { printf("Writing OpenCL-Binary to: %s\n",bin_path.c_str()); }
+				else
+				{
+					printf("Writing OpenCL-Binary to: %s\n",bin_path.c_str());
+				}
 			}
-			
 
 			size_t rem = binsz;
 			char *p = buffer;
 
-			while (rem) {
+			while (rem)
+			{
 				size_t wsz = fwrite(p, 1, rem, fp);
-				if (wsz <= 0) {
+
+				if (wsz <= 0)
+				{
 					fclose(fp);
 					unlink(bin_path.c_str());
 					fp = NULL;
 					break;
 				}
+
 				rem -= wsz;
 				p += wsz;
 			}
 
-			if (fp) {
+			if (fp)
+			{
 				fclose(fp);
 			}
 
@@ -497,10 +581,10 @@ namespace w2xc {
 		}
 #endif
 
-
-
 		ker_filter = clCreateKernel(program, "filter", &err);
-		if (err != CL_SUCCESS) {
+
+		if (err != CL_SUCCESS)
+		{
 			clReleaseProgram(program);
 			clReleaseContext(context);
 			setCLError(c, dev_id, err);
@@ -508,7 +592,9 @@ namespace w2xc {
 		}
 
 		ker_filter_in1_out32 = clCreateKernel(program, "filter_in1_out32", &err);
-		if (err != CL_SUCCESS) {
+
+		if (err != CL_SUCCESS)
+		{
 			clReleaseProgram(program);
 			clReleaseContext(context);
 			clReleaseKernel(ker_filter);
@@ -517,7 +603,9 @@ namespace w2xc {
 		}
 
 		ker_filter_in3_out32 = clCreateKernel(program, "filter_in3_out32", &err);
-		if (err != CL_SUCCESS) {
+
+		if (err != CL_SUCCESS)
+		{
 			clReleaseProgram(program);
 			clReleaseContext(context);
 			clReleaseKernel(ker_filter);
@@ -527,7 +615,9 @@ namespace w2xc {
 		}
 
 		ker_filter_in128_out1 = clCreateKernel(program, "filter_in128_out1", &err);
-		if (err != CL_SUCCESS) {
+
+		if (err != CL_SUCCESS)
+		{
 			clReleaseProgram(program);
 			clReleaseContext(context);
 			clReleaseKernel(ker_filter);
@@ -537,7 +627,9 @@ namespace w2xc {
 		}
 
 		ker_filter_in128_out3 = clCreateKernel(program, "filter_in128_out3", &err);
-		if (err != CL_SUCCESS) {
+
+		if (err != CL_SUCCESS)
+		{
 			clReleaseProgram(program);
 			clReleaseContext(context);
 			clReleaseKernel(ker_filter);
@@ -547,7 +639,9 @@ namespace w2xc {
 		}
 
 		queue = clCreateCommandQueue(context, dev, 0, &err);
-		if (err != CL_SUCCESS) {
+
+		if (err != CL_SUCCESS)
+		{
 			clReleaseProgram(program);
 			clReleaseContext(context);
 			clReleaseKernel(ker_filter);
@@ -574,10 +668,10 @@ namespace w2xc {
 		return true;
 	}
 
-	void
-		finiOpenCL(ComputeEnv *env)
+	void finiOpenCL(ComputeEnv *env)
 	{
-		for (int di = 0; di < env->num_cl_dev; di++) {
+		for (int di = 0; di < env->num_cl_dev; di++)
+		{
 			OpenCLDev *d = &env->cl_dev_list[di];
 			clReleaseKernel(d->ker_filter);
 			clReleaseKernel(d->ker_filter_in128_out1);
@@ -594,17 +688,19 @@ namespace w2xc {
 
 
 
-	void
-		filter_OpenCL_impl(ComputeEnv *env,
-			Buffer *packed_input_buf,
-			Buffer *packed_output_buf,
-			int nInputPlanes,
-			int nOutputPlanes,
-			const float *fbiases,
-			const float *weight,
-			int w,
-			int h,
-			int nJob)
+	void filter_OpenCL_impl
+	(
+		ComputeEnv *env,
+		Buffer *packed_input_buf,
+		Buffer *packed_output_buf,
+		int nInputPlanes,
+		int nOutputPlanes,
+		const float *fbiases,
+		const float *weight,
+		int w,
+		int h,
+		int nJob
+	)
 	{
 		cl_int err;
 		int dev_id = 0;
@@ -616,12 +712,16 @@ namespace w2xc {
 		cl_mem cl_packed_input = packed_input_buf->get_read_ptr_cl(env, dev_id, in_size);
 		cl_mem cl_packed_output = packed_output_buf->get_write_ptr_cl(env, dev_id);
 
-		cl_mem cl_fbiases = clCreateBuffer(context,
+		cl_mem cl_fbiases = clCreateBuffer
+		(	context,
 			CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
 			sizeof(float) * nOutputPlanes,
-			(void*)fbiases, &err
+			(void*)fbiases,
+			&err
 		);
-		enum filter_type {
+
+		enum filter_type
+		{
 			FILTER_GENERIC,
 			FILTER_IN1,
 			FILTER_IN3,
@@ -632,51 +732,70 @@ namespace w2xc {
 		cl_kernel ker = dev->ker_filter;
 		bool static_nplane = false;
 
-		if (nInputPlanes == 1 && nOutputPlanes == 32) {
+		if (nInputPlanes == 1 && nOutputPlanes == 32)
+		{
 			type = FILTER_IN1;
 			ker = dev->ker_filter_in1_out32;
 		}
-		else if (nInputPlanes == 3 && nOutputPlanes == 32) {
+		else if (nInputPlanes == 3 && nOutputPlanes == 32)
+		{
 			type = FILTER_IN3;
 			ker = dev->ker_filter_in3_out32;
 			static_nplane = true;
 		}
-		else if (nOutputPlanes == 1 && nInputPlanes == 128) {
+		else if (nOutputPlanes == 1 && nInputPlanes == 128)
+		{
 			type = FILTER_OUT1;
 			ker = dev->ker_filter_in128_out1;
 		}
-		else if (nOutputPlanes == 3 && nInputPlanes == 128) {
+		else if (nOutputPlanes == 3 && nInputPlanes == 128)
+		{
 			type = FILTER_OUT3;
 			ker = dev->ker_filter_in128_out3;
 			static_nplane = true;
 		}
 
-
 		size_t weight_size;
 
-		if (type == FILTER_GENERIC) {
+		if (type == FILTER_GENERIC)
+		{
 			weight_size = sizeof(float) * GPU_VEC_WIDTH * nInputPlanes * 9;
 		}
-		else {
+		else
+		{
 			weight_size = sizeof(float) * nOutputPlanes * nInputPlanes * 9;
 		}
 
-		cl_mem cl_weight = clCreateBuffer(context,
+		cl_mem cl_weight = clCreateBuffer
+		(
+			context,
 			CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR,
 			weight_size,
-			(void*)weight, &err
+			(void*)weight,
+			&err
 		);
 
 		int ai = 0;
 
-		clSetKernelArg(ker, ai++, sizeof(cl_mem), &cl_packed_input);
-		if (!static_nplane) {
+		clSetKernelArg
+		(
+			ker,
+			ai++,
+			sizeof(cl_mem),
+			&cl_packed_input
+		);
+
+		if (!static_nplane)
+		{
 			clSetKernelArg(ker, ai++, sizeof(cl_int), &nInputPlanes);
 		}
+
 		clSetKernelArg(ker, ai++, sizeof(cl_mem), &cl_packed_output);
+
 		if (!static_nplane) {
 			clSetKernelArg(ker, ai++, sizeof(cl_int), &nOutputPlanes);
 		}
+
 		clSetKernelArg(ker, ai++, sizeof(cl_mem), &cl_fbiases);
 		clSetKernelArg(ker, ai++, sizeof(cl_int), &h);
 		clSetKernelArg(ker, ai++, sizeof(cl_int), &w);
@@ -686,40 +805,57 @@ namespace w2xc {
 
 		size_t gws[3] = { 1, 1, 1 };
 		size_t lws[3] = { 1, 1, 1 };
-		if (type == FILTER_GENERIC) {
+
+		if (type == FILTER_GENERIC)
+		{
 			gws[0] = h * nOutputPlanes;
 			lws[0] = nOutputPlanes;
 		}
-		else if (type == FILTER_IN1) {
+		else if (type == FILTER_IN1)
+		{
 			gws[0] = h * 256;
 			lws[0] = 256;
 		}
-		else if (type == FILTER_OUT1 || type == FILTER_OUT3) {
+		else if (type == FILTER_OUT1 || type == FILTER_OUT3)
+		{
 			gws[0] = h * 128;
 			lws[0] = 128;
 		}
-		else if (type == FILTER_IN3) {
+		else if (type == FILTER_IN3)
+		{
 			gws[0] = h * 192;
 			lws[0] = 192;
 		}
 
-		err = clEnqueueNDRangeKernel(dev->queue,
+		err = clEnqueueNDRangeKernel
+		(
+			dev->queue,
 			ker,
 			3,
-			nullptr, gws, lws,
-			0, nullptr, &event);
-		if (err != CL_SUCCESS) {
+			nullptr,
+			gws,
+			lws,
+			0,
+			nullptr,
+			&event
+		);
+
+		if (err != CL_SUCCESS)
+		{
 			printf("enqueue ndrange error : %d\n", err);
 			exit(1);
 		}
 
 		err = clWaitForEvents(1, &event);
-		if (err != CL_SUCCESS) {
+
+		if (err != CL_SUCCESS)
+		{
 			printf("wait ndrange error : %d\n", err);
 			exit(1);
 		}
 
-		if (err != CL_SUCCESS) {
+		if (err != CL_SUCCESS)
+		{
 			printf("read buffer error : %d\n", err);
 			exit(1);
 		}

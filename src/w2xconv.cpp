@@ -38,7 +38,8 @@ namespace fs = std::experimental::filesystem;
 #include "filters.hpp"
 #include "cvwrap.hpp"
 
-struct W2XConvImpl {
+struct W2XConvImpl
+{
 	std::string dev_name;
 
 	ComputeEnv env;
@@ -54,8 +55,7 @@ static std::vector<struct W2XConvProcessor> processor_list;
 static int w2x_total_steps;
 static int w2x_current_step;
 
-static void
-global_init2(void)
+static void global_init2(void)
 {
 	{
 		w2x_total_steps = 0;
@@ -79,14 +79,17 @@ global_init2(void)
 		cpuid_t data[4*3+1];
 
 		x_cpuid(v, 0x80000000);
-		if ((unsigned int)v[0] >= 0x80000004) {
+		if ((unsigned int)v[0] >= 0x80000004)
+		{
 			x_cpuid(data+4*0, 0x80000002);
 			x_cpuid(data+4*1, 0x80000003);
 			x_cpuid(data+4*2, 0x80000004);
 			data[12] = 0;
 
 			host.dev_name = strdup((char*)data);
-		} else {
+		}
+		else
+		{
 			x_cpuid(data, 0x0);
 			data[4] = 0;
 			host.dev_name = strdup((char*)(data + 1));
@@ -94,13 +97,19 @@ global_init2(void)
 
 		x_cpuid(v, 1);
 
-		if (ENABLE_AVX && (v[2] & 0x18000000) == 0x18000000) {
-			if (v[2] & (1<<12)) {
+		if (ENABLE_AVX && (v[2] & 0x18000000) == 0x18000000)
+		{
+			if (v[2] & (1<<12))
+			{
 				host.sub_type = W2XCONV_PROC_HOST_FMA;
-			} else {
+			}
+			else
+			{
 				host.sub_type = W2XCONV_PROC_HOST_AVX;
 			}
-		} else if (v[2] & (1<<0)) {
+		}
+		else if (v[2] & (1<<0))
+		{
 			host.sub_type = W2XCONV_PROC_HOST_SSE3;
 		}
 #endif // X86OPT
@@ -112,21 +121,23 @@ global_init2(void)
 		have_neon = true;
 #elif defined(__ANDROID__)
 		int hwcap = android_getCpuFeatures();
-		if (hwcap & ANDROID_CPU_ARM_FEATURE_NEON) {
+		if (hwcap & ANDROID_CPU_ARM_FEATURE_NEON)
+		{
 			have_neon = true;
 		}
 #elif defined(__linux)
 		int hwcap = getauxval(AT_HWCAP);
-		if (hwcap & HWCAP_ARM_NEON) {
+		if (hwcap & HWCAP_ARM_NEON)
+		{
 			have_neon = true;
 		}
 #endif
-		if (have_neon) {
+		if (have_neon)
+		{
 			host.dev_name = "ARM NEON";
 			host.sub_type = W2XCONV_PROC_HOST_NEON;
 		}
 #endif
-
 		processor_list.push_back(host);
 	}
 
@@ -145,141 +156,135 @@ global_init2(void)
 	 *
 	 * && orderd by num_core
 	 */
-	std::sort(processor_list.begin(),
-		  processor_list.end(),
-		  [&](W2XConvProcessor const &p0,
-		      W2XConvProcessor const &p1)
-		  {
-			  bool p0_is_opencl_gpu =
-				  (p0.type == W2XCONV_PROC_OPENCL) &&
-				  ((p0.sub_type&W2XCONV_PROC_OPENCL_DEVICE_MASK) == W2XCONV_PROC_OPENCL_DEVICE_GPU)
-				  ;
+	std::sort(
+		processor_list.begin(),
+		processor_list.end(),
+		[&](W2XConvProcessor const &p0,W2XConvProcessor const &p1)
+		{
+			bool p0_is_opencl_gpu = (p0.type == W2XCONV_PROC_OPENCL) && ((p0.sub_type&W2XCONV_PROC_OPENCL_DEVICE_MASK) == W2XCONV_PROC_OPENCL_DEVICE_GPU);
 
-			  bool p1_is_opencl_gpu =
-				  (p1.type == W2XCONV_PROC_OPENCL) &&
-				  ((p1.sub_type&W2XCONV_PROC_OPENCL_DEVICE_MASK) == W2XCONV_PROC_OPENCL_DEVICE_GPU)
-				  ;
+			bool p1_is_opencl_gpu = (p1.type == W2XCONV_PROC_OPENCL) && ((p1.sub_type&W2XCONV_PROC_OPENCL_DEVICE_MASK) == W2XCONV_PROC_OPENCL_DEVICE_GPU);
 
 
-			  bool p0_is_opencl_intel_gpu =
-				  (p0.type == W2XCONV_PROC_OPENCL) &&
-				  (p0.sub_type == W2XCONV_PROC_OPENCL_INTEL_GPU)
-				  ;
+			bool p0_is_opencl_intel_gpu = (p0.type == W2XCONV_PROC_OPENCL) && (p0.sub_type == W2XCONV_PROC_OPENCL_INTEL_GPU);
 
-			  bool p1_is_opencl_intel_gpu =
-				  (p1.type == W2XCONV_PROC_OPENCL) &&
-				  (p1.sub_type == W2XCONV_PROC_OPENCL_INTEL_GPU)
-				  ;
+			bool p1_is_opencl_intel_gpu = (p1.type == W2XCONV_PROC_OPENCL) && (p1.sub_type == W2XCONV_PROC_OPENCL_INTEL_GPU);
 
-			  bool p0_host_avx =
-				  (p0.type == W2XCONV_PROC_HOST) &&
-				  (p0.sub_type >= W2XCONV_PROC_HOST_AVX)
-				  ;
+			bool p0_host_avx = (p0.type == W2XCONV_PROC_HOST) && (p0.sub_type >= W2XCONV_PROC_HOST_AVX);
 
-			  bool p1_host_avx =
-				  (p1.type == W2XCONV_PROC_HOST) &&
-				  (p1.sub_type >= W2XCONV_PROC_HOST_AVX)
-				  ;
+			bool p1_host_avx = (p1.type == W2XCONV_PROC_HOST) && (p1.sub_type >= W2XCONV_PROC_HOST_AVX);
 
-			  if (p0.type == p1.type) {
-				  if (p0.type == W2XCONV_PROC_OPENCL) {
-					  if (p0.sub_type != p1.sub_type) {
-						  if (p0_is_opencl_gpu) {
-							  return true;
-						  }
+			if (p0.type == p1.type)
+			{
+				if (p0.type == W2XCONV_PROC_OPENCL)
+				{
+					if (p0.sub_type != p1.sub_type)
+					{
+						if (p0_is_opencl_gpu)
+						{
+							return true;
+						}
 
-						  if (p1_is_opencl_gpu) {
-							  return false;
-						  }
-					  }
-				  }
+						if (p1_is_opencl_gpu)
+						{
+							return false;
+						}
+					}
+				}
 
-				  if (p0.num_core != p1.num_core) {
-					  return p0.num_core > p1.num_core;
-				  }
-			  } else {
-				  if (p0.type == W2XCONV_PROC_CUDA) {
-					  return true;
-				  }
+				if (p0.num_core != p1.num_core)
+				{
+					return p0.num_core > p1.num_core;
+				}
+			}
+			else
+			{
+				if (p0.type == W2XCONV_PROC_CUDA)
+				{
+					return true;
+				}
 
-				  if (p1.type == W2XCONV_PROC_CUDA) {
+				if (p1.type == W2XCONV_PROC_CUDA)
+				{
+					return false;
+				}
+
+				if (p0_is_opencl_intel_gpu)
+				{
+					if (p1_host_avx)
+					{
 					  return false;
-				  }
+					}
+				}
 
-				  if (p0_is_opencl_intel_gpu) {
-					  if (p1_host_avx) {
-						  return false;
-					  }
-				  }
-
-				  if (p1_is_opencl_intel_gpu) {
-					  if (p0_host_avx) {
-						  return false;
-					  }
-				  }
-
-				  if (p0_is_opencl_gpu) {
-					  return true;
-				  }
-
-				  if (p1_is_opencl_gpu) {
+				if (p1_is_opencl_intel_gpu)
+				{
+					if (p0_host_avx)
+					{
 					  return false;
-				  }
-			  }
+					}
+				}
 
-			  if (p0.type == W2XCONV_PROC_HOST) {
-				  return true;
-			  }
+				if (p0_is_opencl_gpu)
+				{
+				return true;
+				}
 
-			  if (p1.type == W2XCONV_PROC_HOST) {
-				  return false;
-			  }
+				if (p1_is_opencl_gpu)
+				{
+					return false;
+				}
+			}
 
-			  /* ?? */
-			  return p0.dev_id < p1.dev_id;
-		  });
+			if (p0.type == W2XCONV_PROC_HOST)
+			{
+				return true;
+			}
+
+			if (p1.type == W2XCONV_PROC_HOST)
+			{
+				return false;
+			}
+
+			/* ?? */
+			return p0.dev_id < p1.dev_id;
+		}
+	);
 }
 
 #ifdef _WIN32
 #include <windows.h>
 static INIT_ONCE global_init_once = INIT_ONCE_STATIC_INIT;
 
-static BOOL CALLBACK
-global_init1(PINIT_ONCE initOnce,
-	     PVOID Parameter,
-	     PVOID *Context)
+static BOOL CALLBACK global_init1(PINIT_ONCE initOnce, PVOID Parameter, PVOID *Context)
 {
 	global_init2();
 	return TRUE;
 }
 
-static void
-global_init(void)
+static void global_init(void) 
 {
-	InitOnceExecuteOnce(&global_init_once,
-			    global_init1,
-			    nullptr, nullptr);
+	InitOnceExecuteOnce(&global_init_once, global_init1, nullptr, nullptr);
 }
 #else
-
 #include <pthread.h>
 
 static pthread_once_t global_init_once = PTHREAD_ONCE_INIT;
-static void
-global_init1()
+
+static void global_init1()
 {
 	global_init2();
 }
-static void
-global_init()
+
+static void global_init()
 {
 	pthread_once(&global_init_once, global_init1);
 }
+
 #endif
 
 
-const struct W2XConvProcessor *
-w2xconv_get_processor_list(size_t *ret_num)
+const struct W2XConvProcessor * w2xconv_get_processor_list(size_t *ret_num)
 {
 	global_init();
 
@@ -287,27 +292,32 @@ w2xconv_get_processor_list(size_t *ret_num)
 	return &processor_list[0];
 }
 
-static int
-select_device(enum W2XConvGPUMode gpu)
+static int select_device(enum W2XConvGPUMode gpu)
 {
 	size_t n = processor_list.size();
-	if (gpu == W2XCONV_GPU_FORCE_OPENCL) {
-		for (size_t i=0; i<n; i++) {
-			if (processor_list[i].type == W2XCONV_PROC_OPENCL) {
+	if (gpu == W2XCONV_GPU_FORCE_OPENCL)
+	{
+		for (size_t i=0; i<n; i++)
+		{
+			if (processor_list[i].type == W2XCONV_PROC_OPENCL)
+			{
 				return (int) i;
 			}
 		}
 	}
 
 	int host_proc = 0;
-	for (int i=0; i<n; i++) {
-		if (processor_list[i].type == W2XCONV_PROC_HOST) {
+	for (int i=0; i<n; i++)
+	{
+		if (processor_list[i].type == W2XCONV_PROC_HOST)
+		{
 			host_proc = i;
 			break;
 		}
 	}
 
-	if (gpu == W2XCONV_GPU_AUTO) {
+	if (gpu == W2XCONV_GPU_AUTO)
+	{
 		/* 1. CUDA
 		 * 2. AMD GPU OpenCL
 		 * 3. FMA
@@ -315,29 +325,30 @@ select_device(enum W2XConvGPUMode gpu)
 		 * 5. Intel GPU OpenCL
 		 */
 
-		for (int i=0; i<n; i++) {
-			if (processor_list[i].type == W2XCONV_PROC_CUDA) {
-				return i;
-			}
-		}
-
-		for (int i=0; i<n; i++) {
-			if ((processor_list[i].type == W2XCONV_PROC_OPENCL) &&
-			    (processor_list[i].sub_type == W2XCONV_PROC_OPENCL_AMD_GPU))
+		for (int i=0; i<n; i++)
+		{
+			if (processor_list[i].type == W2XCONV_PROC_CUDA)
 			{
 				return i;
 			}
 		}
 
-		if (processor_list[host_proc].sub_type == W2XCONV_PROC_HOST_FMA ||
-		    processor_list[host_proc].sub_type == W2XCONV_PROC_HOST_AVX)
+		for (int i=0; i<n; i++)
+		{
+			if ((processor_list[i].type == W2XCONV_PROC_OPENCL) && (processor_list[i].sub_type == W2XCONV_PROC_OPENCL_AMD_GPU))
+			{
+				return i;
+			}
+		}
+
+		if (processor_list[host_proc].sub_type == W2XCONV_PROC_HOST_FMA || processor_list[host_proc].sub_type == W2XCONV_PROC_HOST_AVX)
 		{
 			return host_proc;
 		}
 
-		for (int i=0; i<n; i++) {
-			if ((processor_list[i].type == W2XCONV_PROC_OPENCL) &&
-			    (processor_list[i].sub_type == W2XCONV_PROC_OPENCL_INTEL_GPU))
+		for (int i=0; i<n; i++)
+		{
+			if ((processor_list[i].type == W2XCONV_PROC_OPENCL) && (processor_list[i].sub_type == W2XCONV_PROC_OPENCL_INTEL_GPU))
 			{
 				return i;
 			}
@@ -347,19 +358,18 @@ select_device(enum W2XConvGPUMode gpu)
 	}
 
 	/* (gpu == GPU_DISABLE) */
-	for (int i=0; i<n; i++) {
-		if (processor_list[i].type == W2XCONV_PROC_HOST) {
+	for (int i=0; i<n; i++)
+	{
+		if (processor_list[i].type == W2XCONV_PROC_HOST)
+		{
 			return i;
 		}
 	}
 
-	return 0;		// ??
+	return 0; // ??
 }
 
-W2XConv *
-w2xconv_init(enum W2XConvGPUMode gpu,
-             int nJob,
-	     int enable_log)
+W2XConv * w2xconv_init(enum W2XConvGPUMode gpu, int nJob, int enable_log)
 {
 	global_init();
 
@@ -367,10 +377,7 @@ w2xconv_init(enum W2XConvGPUMode gpu,
 	return w2xconv_init_with_processor(proc_idx, nJob, enable_log);
 }
 
-struct W2XConv *
-w2xconv_init_with_processor(int processor_idx,
-			    int nJob,
-			    int enable_log)
+struct W2XConv * w2xconv_init_with_processor(int processor_idx, int nJob, int enable_log)
 {
 	global_init();
 
@@ -378,27 +385,31 @@ w2xconv_init_with_processor(int processor_idx,
 	struct W2XConvImpl *impl = new W2XConvImpl;
 	struct W2XConvProcessor *proc = &processor_list[processor_idx];
 
-	if (nJob == 0) {
+	if (nJob == 0)
+	{
 		nJob = std::thread::hardware_concurrency();
 	}
 
 	bool r;
 
-	switch (proc->type) {
-	case W2XCONV_PROC_CUDA:
-		w2xc::initCUDA(&impl->env, proc->dev_id);
-		break;
-
-	case W2XCONV_PROC_OPENCL:
-		r = w2xc::initOpenCL(c, &impl->env, proc);
-		if (!r) {
-			return NULL;
+	switch (proc->type)
+	{
+		case W2XCONV_PROC_CUDA:
+		{
+			w2xc::initCUDA(&impl->env, proc->dev_id);
+			break;
 		}
-		break;
-
-	default:
-	case W2XCONV_PROC_HOST:
-		break;
+		case W2XCONV_PROC_OPENCL:
+		{
+			r = w2xc::initOpenCL(c, &impl->env, proc);
+			if (!r) {
+				return NULL;
+			}
+			break;
+		}
+		default: //FutureNote: if PROC_HOST is breaking too.. why not just default: break.. and if aesthetics.. why not case, then default?
+		case W2XCONV_PROC_HOST:
+			break;
 	}
 
 #if defined(_WIN32) || defined(__linux)
@@ -418,110 +429,127 @@ w2xconv_init_with_processor(int processor_idx,
 	return c;
 }
 
-void
-clearError(W2XConv *conv)
+void clearError(W2XConv *conv)
 {
-	switch (conv->last_error.code) {
-	case W2XCONV_NOERROR:
-	case W2XCONV_ERROR_Y_MODEL_MISMATCH_TO_RGB_F32:
-	case W2XCONV_ERROR_WIN32_ERROR:
-	case W2XCONV_ERROR_LIBC_ERROR:
-	case W2XCONV_ERROR_RGB_MODEL_MISMATCH_TO_Y:
-		break;
-
-	case W2XCONV_ERROR_WIN32_ERROR_PATH:
-		free(conv->last_error.u.win32_path.path);
-		break;
-
-	case W2XCONV_ERROR_LIBC_ERROR_PATH:
-		free(conv->last_error.u.libc_path.path);
-		break;
-
-	case W2XCONV_ERROR_MODEL_LOAD_FAILED:
-	case W2XCONV_ERROR_IMREAD_FAILED:
-	case W2XCONV_ERROR_IMWRITE_FAILED:
-		free(conv->last_error.u.path);
-		break;
-	default:
-		break;
+	switch (conv->last_error.code)
+	{
+		case W2XCONV_NOERROR:
+		case W2XCONV_ERROR_Y_MODEL_MISMATCH_TO_RGB_F32:
+		case W2XCONV_ERROR_WIN32_ERROR:
+		case W2XCONV_ERROR_LIBC_ERROR:
+		case W2XCONV_ERROR_RGB_MODEL_MISMATCH_TO_Y:
+		{
+			break;
+		}
+		case W2XCONV_ERROR_WIN32_ERROR_PATH:
+		{
+			free(conv->last_error.u.win32_path.path);
+			break;
+		}
+		case W2XCONV_ERROR_LIBC_ERROR_PATH:
+		{
+			free(conv->last_error.u.libc_path.path);
+			break;
+		}
+		case W2XCONV_ERROR_MODEL_LOAD_FAILED:
+		case W2XCONV_ERROR_IMREAD_FAILED:
+		case W2XCONV_ERROR_IMWRITE_FAILED:
+		{
+			free(conv->last_error.u.path);
+			break;
+		}
+		default:
+		{
+			break;
+		}
 	}
 }
 
-char *
-w2xconv_strerror(W2XConvError *e)
+char * w2xconv_strerror(W2XConvError *e)
 {
 	std::ostringstream oss;
 	char *str;
 
-	switch (e->code) {
-	case W2XCONV_NOERROR:
-		oss << "no error";
-		break;
-
-	case W2XCONV_ERROR_OPENCL:
-		oss << "opencl_err: " << e->u.errno_;
-		break;
-
-	case W2XCONV_ERROR_WIN32_ERROR:
-		oss << "win32_err: " << e->u.errno_;
-		break;
-
-	case W2XCONV_ERROR_WIN32_ERROR_PATH:
-		oss << "win32_err: " << e->u.win32_path.errno_ << "(" << e->u.win32_path.path << ")";
-		break;
-
-	case W2XCONV_ERROR_LIBC_ERROR:
-		oss << strerror(e->u.errno_);
-		break;
-
-	case W2XCONV_ERROR_LIBC_ERROR_PATH:
-		str = strerror(e->u.libc_path.errno_);
-		oss << str << "(" << e->u.libc_path.path << ")";
-		break;
-
-	case W2XCONV_ERROR_MODEL_LOAD_FAILED:
-		oss << "model load failed: " << e->u.path;
-		break;
-
-	case W2XCONV_ERROR_IMREAD_FAILED:
-		oss << "cv::imread(\"" << e->u.path << "\") failed";
-		break;
-
-	case W2XCONV_ERROR_IMWRITE_FAILED:
-		oss << "cv::imwrite(\"" << e->u.path << "\") failed";
-		break;
-
-	case W2XCONV_ERROR_RGB_MODEL_MISMATCH_TO_Y:
-		oss << "cannot apply rgb model to yuv.";
-		break;
-
-	case W2XCONV_ERROR_Y_MODEL_MISMATCH_TO_RGB_F32:
-		oss << "cannot apply y model to rgb_f32.";
-		break;
-		
-	case W2XCONV_ERROR_SCALE_LIMIT:
-		oss << "image scale is too big to convert.";
-		break;
-		
-	case W2XCONV_ERROR_SIZE_LIMIT:
-		oss << "image width (or height) under 40px cannot converted in this scale."; 
-		break;
+	switch (e->code)
+		{
+		case W2XCONV_NOERROR:
+		{
+			oss << "no error";
+			break;
+		}
+		case W2XCONV_ERROR_OPENCL:
+		{
+			oss << "opencl_err: " << e->u.errno_;
+			break;
+		}
+		case W2XCONV_ERROR_WIN32_ERROR:
+		{
+			oss << "win32_err: " << e->u.errno_;
+			break;
+		}
+		case W2XCONV_ERROR_WIN32_ERROR_PATH:
+		{
+			oss << "win32_err: " << e->u.win32_path.errno_ << "(" << e->u.win32_path.path << ")";
+			break;
+		}
+		case W2XCONV_ERROR_LIBC_ERROR:
+		{
+			oss << strerror(e->u.errno_);
+			break;
+		}
+		case W2XCONV_ERROR_LIBC_ERROR_PATH:
+		{
+			str = strerror(e->u.libc_path.errno_);
+			oss << str << "(" << e->u.libc_path.path << ")";
+			break;
+		}
+		case W2XCONV_ERROR_MODEL_LOAD_FAILED:
+		{
+			oss << "model load failed: " << e->u.path;
+			break;
+		}
+		case W2XCONV_ERROR_IMREAD_FAILED:
+		{
+			oss << "cv::imread(\"" << e->u.path << "\") failed";
+			break;
+		}
+		case W2XCONV_ERROR_IMWRITE_FAILED:
+		{
+			oss << "cv::imwrite(\"" << e->u.path << "\") failed";
+			break;
+		}
+		case W2XCONV_ERROR_RGB_MODEL_MISMATCH_TO_Y:
+		{
+			oss << "cannot apply rgb model to yuv.";
+			break;
+		}
+		case W2XCONV_ERROR_Y_MODEL_MISMATCH_TO_RGB_F32:
+		{
+			oss << "cannot apply y model to rgb_f32.";
+			break;
+		}
+		case W2XCONV_ERROR_SCALE_LIMIT:
+		{
+			oss << "image scale is too big to convert.";
+			break;
+		}	
+		case W2XCONV_ERROR_SIZE_LIMIT:
+		{
+			oss << "image width (or height) under 40px cannot converted in this scale."; 
+			break;
+		}
 	}
 
 	return strdup(oss.str().c_str());
 }
 
-void
-w2xconv_free(void *p)
+void w2xconv_free(void *p)
 {
 	free(p);
 }
 
 
-static void
-setPathError(W2XConv *conv,
-             enum W2XConvErrorCode code,
-             std::string const &path)
+static void setPathError(W2XConv *conv, enum W2XConvErrorCode code, std::string const &path)
 {
 	clearError(conv);
 
@@ -530,10 +558,8 @@ setPathError(W2XConv *conv,
 }
 
 #if defined(WIN32) && defined(UNICODE)
-static void
-setPathError(W2XConv *conv,
-             enum W2XConvErrorCode code,
-             std::wstring const &path)
+
+static void setPathError(W2XConv *conv, enum W2XConvErrorCode code, std::wstring const &path)
 {
 	fs::path fspath = path;
 	clearError(conv);
@@ -541,19 +567,17 @@ setPathError(W2XConv *conv,
 	conv->last_error.code = code;
 	conv->last_error.u.path = strdup(fspath.string().c_str());
 }
+
 #endif
 
-static void
-setError(W2XConv *conv,
-	 enum W2XConvErrorCode code)
+static void setError(W2XConv *conv, enum W2XConvErrorCode code)
 {
 	clearError(conv);
 	conv->last_error.code = code;
 }
 
 #if defined(WIN32) && defined(UNICODE)
-int
-w2xconv_load_models(W2XConv *conv, const WCHAR *model_dir)
+int w2xconv_load_models(W2XConv *conv, const WCHAR *model_dir)
 {
 	struct W2XConvImpl *impl = conv->impl;
 
@@ -564,46 +588,43 @@ w2xconv_load_models(W2XConv *conv, const WCHAR *model_dir)
 	impl->noise2_models.clear();
 	impl->noise3_models.clear();
 	impl->scale2_models.clear();
-
-	if (!w2xc::modelUtility::generateModelFromJSON(modelFileName + L"/noise0_model.json", impl->noise0_models)) {
-		setPathError(conv,
-			     W2XCONV_ERROR_MODEL_LOAD_FAILED,
-			     modelFileName + L"/noise0_model.json");
+	
+	//FutureNote: Maybe use loop instead of if-spam?
+	if (!w2xc::modelUtility::generateModelFromJSON(modelFileName + L"/noise0_model.json", impl->noise0_models))
+	{
+		setPathError(conv, W2XCONV_ERROR_MODEL_LOAD_FAILED, modelFileName + L"/noise0_model.json");
 		return -1;
 	}
 
-	if (!w2xc::modelUtility::generateModelFromJSON(modelFileName + L"/noise1_model.json", impl->noise1_models)) {
-		setPathError(conv,
-			     W2XCONV_ERROR_MODEL_LOAD_FAILED,
-			     modelFileName + L"/noise1_model.json");
+	if (!w2xc::modelUtility::generateModelFromJSON(modelFileName + L"/noise1_model.json", impl->noise1_models))
+	{
+		setPathError(conv, W2XCONV_ERROR_MODEL_LOAD_FAILED, modelFileName + L"/noise1_model.json");
 		return -1;
 	}
-	if (!w2xc::modelUtility::generateModelFromJSON(modelFileName + L"/noise2_model.json", impl->noise2_models)) {
-		setPathError(conv,
-			     W2XCONV_ERROR_MODEL_LOAD_FAILED,
-			     modelFileName + L"/noise2_model.json");
-		return -1;
-	}
-	if (!w2xc::modelUtility::generateModelFromJSON(modelFileName + L"/noise3_model.json", impl->noise3_models)) {
-		setPathError(conv,
-			     W2XCONV_ERROR_MODEL_LOAD_FAILED,
-			     modelFileName + L"/noise3_model.json");
-		return -1;
-	}
-	if (!w2xc::modelUtility::generateModelFromJSON(modelFileName + L"/scale2.0x_model.json", impl->scale2_models)) {
-		setPathError(conv,
-			     W2XCONV_ERROR_MODEL_LOAD_FAILED,
-			     modelFileName + L"/scale2.0x_model.json");
-		return -1;
 
+	if (!w2xc::modelUtility::generateModelFromJSON(modelFileName + L"/noise2_model.json", impl->noise2_models))
+	{
+		setPathError(conv, W2XCONV_ERROR_MODEL_LOAD_FAILED, modelFileName + L"/noise2_model.json");
+		return -1;
+	}
+
+	if (!w2xc::modelUtility::generateModelFromJSON(modelFileName + L"/noise3_model.json", impl->noise3_models))
+	{
+		setPathError(conv, W2XCONV_ERROR_MODEL_LOAD_FAILED, modelFileName + L"/noise3_model.json");
+		return -1;
+	}
+
+	if (!w2xc::modelUtility::generateModelFromJSON(modelFileName + L"/scale2.0x_model.json", impl->scale2_models))
+	{
+		setPathError(conv, W2XCONV_ERROR_MODEL_LOAD_FAILED, modelFileName + L"/scale2.0x_model.json");
+		return -1;
 	}
 
 	return 0;
 }
 
-#else
-int
-w2xconv_load_models(W2XConv *conv, const char *model_dir)
+#else // !WIN32 && !UNICODE
+int w2xconv_load_models(W2XConv *conv, const char *model_dir)
 {
 	struct W2XConvImpl *impl = conv->impl;
 
@@ -615,35 +636,33 @@ w2xconv_load_models(W2XConv *conv, const char *model_dir)
 	impl->noise3_models.clear();
 	impl->scale2_models.clear();
 
-	if (!w2xc::modelUtility::generateModelFromJSON(modelFileName + "/noise0_model.json", impl->noise0_models)) {
-		setPathError(conv,
-			     W2XCONV_ERROR_MODEL_LOAD_FAILED,
-			     modelFileName + "/noise0_model.json");
+	if (!w2xc::modelUtility::generateModelFromJSON(modelFileName + "/noise0_model.json", impl->noise0_models))
+	{
+		setPathError(conv, W2XCONV_ERROR_MODEL_LOAD_FAILED, modelFileName + "/noise0_model.json");
 		return -1;
 	}
 
-	if (!w2xc::modelUtility::generateModelFromJSON(modelFileName + "/noise1_model.json", impl->noise1_models)) {
-		setPathError(conv,
-			     W2XCONV_ERROR_MODEL_LOAD_FAILED,
-			     modelFileName + "/noise1_model.json");
+	if (!w2xc::modelUtility::generateModelFromJSON(modelFileName + "/noise1_model.json", impl->noise1_models))
+	{
+		setPathError(conv, W2XCONV_ERROR_MODEL_LOAD_FAILED, modelFileName + "/noise1_model.json");
 		return -1;
 	}
-	if (!w2xc::modelUtility::generateModelFromJSON(modelFileName + "/noise2_model.json", impl->noise2_models)) {
-		setPathError(conv,
-			     W2XCONV_ERROR_MODEL_LOAD_FAILED,
-			     modelFileName + "/noise2_model.json");
+
+	if (!w2xc::modelUtility::generateModelFromJSON(modelFileName + "/noise2_model.json", impl->noise2_models))
+	{
+		setPathError(conv, W2XCONV_ERROR_MODEL_LOAD_FAILED, modelFileName + "/noise2_model.json");
 		return -1;
 	}
-	if (!w2xc::modelUtility::generateModelFromJSON(modelFileName + "/noise3_model.json", impl->noise3_models)) {
-		setPathError(conv,
-			     W2XCONV_ERROR_MODEL_LOAD_FAILED,
-			     modelFileName + "/noise3_model.json");
+
+	if (!w2xc::modelUtility::generateModelFromJSON(modelFileName + "/noise3_model.json", impl->noise3_models))
+	{
+		setPathError(conv, W2XCONV_ERROR_MODEL_LOAD_FAILED, modelFileName + "/noise3_model.json");
 		return -1;
 	}
-	if (!w2xc::modelUtility::generateModelFromJSON(modelFileName + "/scale2.0x_model.json", impl->scale2_models)) {
-		setPathError(conv,
-			     W2XCONV_ERROR_MODEL_LOAD_FAILED,
-			     modelFileName + "/scale2.0x_model.json");
+
+	if (!w2xc::modelUtility::generateModelFromJSON(modelFileName + "/scale2.0x_model.json", impl->scale2_models))
+	{
+		setPathError(conv, W2XCONV_ERROR_MODEL_LOAD_FAILED, modelFileName + "/scale2.0x_model.json");
 		return -1;
 
 	}
@@ -652,48 +671,63 @@ w2xconv_load_models(W2XConv *conv, const char *model_dir)
 }
 #endif
 
-void
-w2xconv_set_model_3x3(struct W2XConv *conv,
-		      enum W2XConvFilterType m,
-		      int layer_depth,
-		      int num_input_plane,
-		      const int *num_map, // num_map[layer_depth]
-		      const float *coef_list, // coef_list[layer_depth][num_map][3x3]
-		      const float *bias // bias[layer_depth][num_map]
-	)
+void w2xconv_set_model_3x3
+(
+	struct W2XConv *conv,
+	enum W2XConvFilterType filter_type,
+	int layer_depth,
+	int num_input_plane,
+	const int *num_map, // num_map[layer_depth]
+	const float *coef_list, // coef_list[layer_depth][num_map][3x3]
+	const float *bias // bias[layer_depth][num_map]
+)
 {
 	struct W2XConvImpl *impl = conv->impl;
 	std::vector<std::unique_ptr<w2xc::Model> > *models = nullptr;
 
-	switch (m) {
-	case W2XCONV_FILTER_DENOISE0:
-		models = &impl->noise0_models;
-		break;
-	case W2XCONV_FILTER_DENOISE1:
-		models = &impl->noise1_models;
-		break;
-	case W2XCONV_FILTER_DENOISE2:
-		models = &impl->noise2_models;
-		break;
-	case W2XCONV_FILTER_DENOISE3:
-		models = &impl->noise3_models;
-		break;
-	case W2XCONV_FILTER_SCALE2x:
-		models = &impl->scale2_models;
-		break;
+	switch (filter_type)
+	{
+		case W2XCONV_FILTER_DENOISE0:
+		{
+			models = &impl->noise0_models;
+			break;
+		}
+		case W2XCONV_FILTER_DENOISE1:
+		{
+			models = &impl->noise1_models;
+			break;
+		}
+		case W2XCONV_FILTER_DENOISE2:
+		{
+			models = &impl->noise2_models;
+			break;
+		}
+		case W2XCONV_FILTER_DENOISE3:
+		{
+			models = &impl->noise3_models;
+			break;
+		}
+		case W2XCONV_FILTER_SCALE2x:
+		{
+			models = &impl->scale2_models;
+			break;
+		}
 	}
 
 	models->clear();
-	w2xc::modelUtility::generateModelFromMEM(layer_depth,
-						 num_input_plane,
-						 num_map,
-						 coef_list,
-						 bias,
-						 *models);
+	
+	w2xc::modelUtility::generateModelFromMEM
+	(
+		layer_depth,
+		num_input_plane,
+		num_map,
+		coef_list,
+		bias,
+		*models
+	);
 }
 
-void
-w2xconv_fini(struct W2XConv *conv)
+void w2xconv_fini(struct W2XConv *conv)
 {
 	struct W2XConvImpl *impl = conv->impl;
 	clearError(conv);
@@ -709,12 +743,14 @@ w2xconv_fini(struct W2XConv *conv)
 }
 
 #ifdef HAVE_OPENCV
-static void
-apply_denoise(struct W2XConv *conv,
-	      cv::Mat &image,
-	      int denoise_level,
-	      int blockSize,
-	      enum w2xc::image_format fmt)
+static void apply_denoise
+(
+	struct W2XConv *conv,
+	cv::Mat &image,
+	int denoise_level,
+	int blockSize,
+	enum w2xc::image_format fmt
+)
 {
 	struct W2XConvImpl *impl = conv->impl;
 	ComputeEnv *env = &impl->env;
@@ -724,10 +760,13 @@ apply_denoise(struct W2XConv *conv,
 	cv::Mat *output;
 	cv::Mat imageY;
 
-	if (IS_3CHANNEL(fmt)) {
+	if (IS_3CHANNEL(fmt))
+	{
 		input = &image;
 		output = &image;
-	} else {
+	}
+	else
+	{
 		cv::split(image, imageSplit);
 		imageSplit[0].copyTo(imageY);
 		input = &imageY;
@@ -737,47 +776,48 @@ apply_denoise(struct W2XConv *conv,
 	W2Mat output_2;
 	W2Mat input_2(*input);
 
-	if (denoise_level == 0) {
-		w2xc::convertWithModels(conv, env, input_2, output_2,
-					impl->noise0_models,
-					&conv->flops, blockSize, fmt, conv->enable_log);
+	if (denoise_level == 0)
+	{
+		w2xc::convertWithModels(conv, env, input_2, output_2, impl->noise0_models, &conv->flops, blockSize, fmt, conv->enable_log);
 	}
-	else if (denoise_level == 1) {
-		w2xc::convertWithModels(conv, env, input_2, output_2,
-					impl->noise1_models,
-					&conv->flops, blockSize, fmt, conv->enable_log);
+	else if (denoise_level == 1)
+	{
+		w2xc::convertWithModels(conv, env, input_2, output_2, impl->noise1_models, &conv->flops, blockSize, fmt, conv->enable_log);
 	}
-	else if (denoise_level == 2) {
-		w2xc::convertWithModels(conv, env, input_2, output_2,
-					impl->noise2_models,
-					&conv->flops, blockSize, fmt, conv->enable_log);
+	else if (denoise_level == 2)
+	{
+		w2xc::convertWithModels(conv, env, input_2, output_2, impl->noise2_models, &conv->flops, blockSize, fmt, conv->enable_log);
 	}
-	else if (denoise_level == 3) {
-		w2xc::convertWithModels(conv, env, input_2, output_2,
-					impl->noise3_models,
-					&conv->flops, blockSize, fmt, conv->enable_log);
+	else if (denoise_level == 3)
+	{
+		w2xc::convertWithModels(conv, env, input_2, output_2, impl->noise3_models, &conv->flops, blockSize, fmt, conv->enable_log);
 	}
 
 	output_2.to_cvmat(*output);
 
-	if (! IS_3CHANNEL(fmt)) {
+	if (! IS_3CHANNEL(fmt))
+	{
 		cv::merge(imageSplit, image);
 	}
 }
 
-static void
-apply_scale(struct W2XConv *conv,
-	    cv::Mat &image,
-	    int iterTimesTwiceScaling,
-	    int blockSize,
-	    enum w2xc::image_format fmt)
+static void apply_scale
+(
+	struct W2XConv *conv,
+	cv::Mat &image,
+	int iterTimesTwiceScaling,
+	int blockSize,
+	enum w2xc::image_format fmt
+)
 {
 	struct W2XConvImpl *impl = conv->impl;
 	ComputeEnv *env = &impl->env;
 
 	// 2x scaling
-	for (int nIteration = 0; nIteration < iterTimesTwiceScaling; nIteration++) {
-		if (conv->enable_log) {
+	for (int nIteration = 0; nIteration < iterTimesTwiceScaling; nIteration++)
+	{
+		if (conv->enable_log)
+		{
 			printf("Step %02d/%02d, 2x Scaling:\n", w2x_current_step++, w2x_total_steps);
 		}
 		cv::Size imageSize = image.size();
@@ -791,10 +831,13 @@ apply_scale(struct W2XConv *conv,
 
 		cv::resize(image, image2xNearest, imageSize, 0, 0, cv::INTER_NEAREST);
 
-		if (IS_3CHANNEL(fmt)) {
+		if (IS_3CHANNEL(fmt))
+		{
 			input = &image2xNearest;
 			output = &image;
-		} else {
+		}
+		else
+		{
 			cv::split(image2xNearest, imageSplit);
 			imageSplit[0].copyTo(imageY);
 			// generate bicubic scaled image and
@@ -809,30 +852,30 @@ apply_scale(struct W2XConv *conv,
 		W2Mat output_2;
 		W2Mat input_2(*input);
 
-		if(!w2xc::convertWithModels(conv,
-					    env,
-					    input_2,
-					    output_2,
-					    impl->scale2_models,
-					    &conv->flops, blockSize, fmt,
-					    conv->enable_log))
+		if(!w2xc::convertWithModels(
+			conv,
+			env,
+			input_2,
+			output_2,
+			impl->scale2_models,
+			&conv->flops, blockSize, fmt,
+			conv->enable_log
+		))
 		{
-			std::cerr << "w2xc::convertWithModels : something error has occured.\n"
-				"stop." << std::endl;
+			std::cerr << "w2xc::convertWithModels : something error has occured.\nstop." << std::endl;
 			std::exit(1);
 		}
 
 		output_2.to_cvmat(*output);
 
-		if (!IS_3CHANNEL(fmt)) {
+		if (!IS_3CHANNEL(fmt))
+		{
 			cv::merge(imageSplit, image);
 		}
-
 	} // 2x scaling : end
 }
 
-static inline float
-clipf(float min, float v, float max)
+static inline float clipf(float min, float v, float max)
 {
 	v = std::max(min,v);
 	v = std::min(max,v);
@@ -841,20 +884,20 @@ clipf(float min, float v, float max)
 }
 
 template <typename SRC_TYPE, int src_max, int ridx, int bidx>
-static void
-preproc_rgb2yuv(cv::Mat *dst,
-		cv::Mat *src)
+static void preproc_rgb2yuv(cv::Mat *dst, cv::Mat *src)
 {
 	int w = src->size().width;
 	int h = src->size().height;
 
 	float div = 1.0f / src_max;
 
-	for (int yi=0; yi<h; yi++) {
+	for (int yi=0; yi<h; yi++)
+	{
 		const SRC_TYPE *src_line = (SRC_TYPE*)src->ptr(yi);
 		float *dst_line = (float*)dst->ptr(yi);
 
-		for (int xi=0; xi<w; xi++) {
+		for (int xi=0; xi<w; xi++)
+		{
 			float b = src_line[xi*3 + bidx] * div;
 			float g = src_line[xi*3 + 1] * div;
 			float r = src_line[xi*3 + ridx] * div;
@@ -871,10 +914,7 @@ preproc_rgb2yuv(cv::Mat *dst,
 }
 
 template <typename SRC_TYPE, int ridx, int bidx>
-static bool
-set_nearest_nontransparent(float *r, float *g, float *b,
-			   const SRC_TYPE *s,
-			   int xi)
+static bool set_nearest_nontransparent(float *r, float *g, float *b, const SRC_TYPE *s, int xi)
 {
 	SRC_TYPE a = s[xi*4+3];
 	if (a == 0) {
@@ -890,13 +930,7 @@ set_nearest_nontransparent(float *r, float *g, float *b,
 
 
 template <typename SRC_TYPE, int src_max, int ridx, int bidx>
-static void
-preproc_rgba2yuv(cv::Mat *dst_yuv,
-		 cv::Mat *dst_alpha,
-		 cv::Mat *src,
-		 float bkgd_r,
-		 float bkgd_g,
-		 float bkgd_b)
+static void preproc_rgba2yuv(cv::Mat *dst_yuv, cv::Mat *dst_alpha, cv::Mat *src, float bkgd_r, float bkgd_g, float bkgd_b)
 {
 	int w = src->size().width;
 	int h = src->size().height;
@@ -904,66 +938,102 @@ preproc_rgba2yuv(cv::Mat *dst_yuv,
 	float div = 1.0f / src_max;
 	float alpha_coef = 1.0f / src_max;
 
-	for (int yi=0; yi<h; yi++) {
+	for (int yi=0; yi<h; yi++)
+	{
 		const SRC_TYPE *src_line = (SRC_TYPE*)src->ptr(yi);
 		const SRC_TYPE *src_line0 = NULL, *src_line2 = NULL;
 
-		if (yi != 0) {
+		if (yi != 0)
+		{
 			src_line0 = (SRC_TYPE*)src->ptr(yi-1);
 		}
 
-		if (yi != h-1) {
+		if (yi != h-1)
+		{
 			src_line2 = (SRC_TYPE*)src->ptr(yi+1);
 		}
 
 		float *dst_yuv_line = (float*)dst_yuv->ptr(yi);
 		float *dst_alpha_line = (float*)dst_alpha->ptr(yi);
 
-		for (int xi=0; xi<w; xi++) {
+		for (int xi=0; xi<w; xi++)
+		{
 			float r = src_line[xi*4 + ridx] * div;
 			float g = src_line[xi*4 + 1] * div;
 			float b = src_line[xi*4 + bidx] * div;
 			SRC_TYPE a = src_line[xi*4 + 3];
-			if (a == 0) {
+			if (a == 0)
+			{
 				r = bkgd_r;
 				g = bkgd_g;
 				b = bkgd_b;
 
 #if 0
-				if (yi == 0 || yi == h-1 || xi == 0 || xi == w-1) {
+				if (yi == 0 || yi == h-1 || xi == 0 || xi == w-1)
+				{
 					/* xx */
 					r = bkgd_r;
 					g = bkgd_g;
 					b = bkgd_b;
-				} else {
+				}
+				else
+				{
 					/* set nearest non-transparental color */
 					SRC_TYPE near_a;
 					bool set = false;
 
-					if (!set) set = set_nearest_nontransparent<SRC_TYPE,ridx,bidx>(&r, &g, &b, src_line0, xi-1);
-					if (!set) set = set_nearest_nontransparent<SRC_TYPE,ridx,bidx>(&r, &g, &b, src_line0, xi);
-					if (!set) set = set_nearest_nontransparent<SRC_TYPE,ridx,bidx>(&r, &g, &b, src_line0, xi+1);
+					if (!set)
+					{
+						set = set_nearest_nontransparent<SRC_TYPE,ridx,bidx>(&r, &g, &b, src_line0, xi-1);
+					}
+					if (!set)
+					{
+						set = set_nearest_nontransparent<SRC_TYPE,ridx,bidx>(&r, &g, &b, src_line0, xi);
+					}
+					if (!set)
+					{
+						set = set_nearest_nontransparent<SRC_TYPE,ridx,bidx>(&r, &g, &b, src_line0, xi+1);
+					}
 
-					if (!set) set = set_nearest_nontransparent<SRC_TYPE,ridx,bidx>(&r, &g, &b, src_line,  xi-1);
-					if (!set) set = set_nearest_nontransparent<SRC_TYPE,ridx,bidx>(&r, &g, &b, src_line,  xi+1);
+					if (!set)
+					{
+						set = set_nearest_nontransparent<SRC_TYPE,ridx,bidx>(&r, &g, &b, src_line,  xi-1);
+					}
+					if (!set)
+					{
+						set = set_nearest_nontransparent<SRC_TYPE,ridx,bidx>(&r, &g, &b, src_line,  xi+1);
+					}
 
-					if (!set) set = set_nearest_nontransparent<SRC_TYPE,ridx,bidx>(&r, &g, &b, src_line2, xi-1);
-					if (!set) set = set_nearest_nontransparent<SRC_TYPE,ridx,bidx>(&r, &g, &b, src_line2, xi);
-					if (!set) set = set_nearest_nontransparent<SRC_TYPE,ridx,bidx>(&r, &g, &b, src_line2, xi+1);
+					if (!set)
+					{
+						set = set_nearest_nontransparent<SRC_TYPE,ridx,bidx>(&r, &g, &b, src_line2, xi-1);
+					}
+					if (!set)
+					{
+						set = set_nearest_nontransparent<SRC_TYPE,ridx,bidx>(&r, &g, &b, src_line2, xi);
+					}
+					if (!set)
+					{
+						set = set_nearest_nontransparent<SRC_TYPE,ridx,bidx>(&r, &g, &b, src_line2, xi+1);
+					}
 
-					if (set) {
+					if (set)
+					{
 						r *= div;
 						g *= div;
 						b *= div;
-					} else {
+					}
+					else
+					{
 						r = bkgd_r;
 						g = bkgd_g;
 						b = bkgd_b;
 					}
 				}
 #endif
-
-			} else {
+			}
+			else
+			{
 				SRC_TYPE ra = src_max - a;
 				r = r * (a * alpha_coef) + bkgd_r * (ra * alpha_coef);
 				g = g * (a * alpha_coef) + bkgd_g * (ra * alpha_coef);
@@ -982,20 +1052,20 @@ preproc_rgba2yuv(cv::Mat *dst_yuv,
 }
 
 template <typename SRC_TYPE, int src_max, int ridx, int bidx>
-static void
-preproc_rgb2rgb(cv::Mat *dst,
-		cv::Mat *src)
+static void preproc_rgb2rgb(cv::Mat *dst, cv::Mat *src)
 {
 	int w = src->size().width;
 	int h = src->size().height;
 
 	float div = 1.0f / src_max;
 
-	for (int yi=0; yi<h; yi++) {
+	for (int yi=0; yi<h; yi++)
+	{
 		const SRC_TYPE *src_line = (SRC_TYPE*)src->ptr(yi);
 		float *dst_line = (float*)dst->ptr(yi);
 
-		for (int xi=0; xi<w; xi++) {
+		for (int xi=0; xi<w; xi++)
+		{
 			float r = src_line[xi*3 + ridx] * div;
 			float g = src_line[xi*3 + 1] * div;
 			float b = src_line[xi*3 + bidx] * div;
@@ -1007,13 +1077,7 @@ preproc_rgb2rgb(cv::Mat *dst,
 	}
 }
 template <typename SRC_TYPE, int src_max, int ridx, int bidx>
-static void
-preproc_rgba2rgb(cv::Mat *dst_rgb,
-		 cv::Mat *dst_alpha,
-		 cv::Mat *src,
-		 float bkgd_r,
-		 float bkgd_g,
-		 float bkgd_b)
+static void preproc_rgba2rgb(cv::Mat *dst_rgb,cv::Mat *dst_alpha, cv::Mat *src, float bkgd_r, float bkgd_g, float bkgd_b)
 {
 	int w = src->size().width;
 	int h = src->size().height;
@@ -1021,38 +1085,45 @@ preproc_rgba2rgb(cv::Mat *dst_rgb,
 	float div = 1.0f / src_max;
 	float alpha_coef = 1.0f / src_max;
 
-	for (int yi=0; yi<h; yi++) {
+	for (int yi=0; yi<h; yi++)
+	{
 		const SRC_TYPE *src_line = (SRC_TYPE*)src->ptr(yi);
 		const SRC_TYPE *src_line0 = NULL, *src_line2 = NULL;
 
-		if (yi != 0) {
+		if (yi != 0)
+		{
 			src_line0 = (SRC_TYPE*)src->ptr(yi-1);
 		}
 
-		if (yi != h-1) {
+		if (yi != h-1)
+		{
 			src_line2 = (SRC_TYPE*)src->ptr(yi+1);
 		}
 
 		float *dst_rgb_line = (float*)dst_rgb->ptr(yi);
 		float *dst_alpha_line = (float*)dst_alpha->ptr(yi);
 
-		for (int xi=0; xi<w; xi++) {
+		for (int xi=0; xi<w; xi++)
+		{
 			float r = src_line[xi*4 + ridx] * div;
 			float g = src_line[xi*4 + 1] * div;
 			float b = src_line[xi*4 + bidx] * div;
 			SRC_TYPE a = src_line[xi*4 + 3];
-			if (a == 0) {
+			if (a == 0)
+			{
 				r = bkgd_r;
 				g = bkgd_g;
 				b = bkgd_b;
-
 #if 0
-				if (yi == 0 || yi == h-1 || xi == 0 || xi == w-1) {
+				if (yi == 0 || yi == h-1 || xi == 0 || xi == w-1)
+				{
 					/* xx */
 					r = bkgd_r;
 					g = bkgd_g;
 					b = bkgd_b;
-				} else {
+				}
+				else
+				{
 					/* set nearest non-transparental color */
 					SRC_TYPE near_a;
 					bool set = false;
@@ -1068,18 +1139,23 @@ preproc_rgba2rgb(cv::Mat *dst_rgb,
 					if (!set) set = set_nearest_nontransparent<SRC_TYPE,ridx,bidx>(&r, &g, &b, src_line2, xi);
 					if (!set) set = set_nearest_nontransparent<SRC_TYPE,ridx,bidx>(&r, &g, &b, src_line2, xi+1);
 
-					if (set) {
+					if (set)
+					{
 						r *= div;
 						g *= div;
 						b *= div;
-					} else {
+					}
+					else
+					{
 						r = bkgd_r;
 						g = bkgd_g;
 						b = bkgd_b;
 					}
 				}
 #endif
-			} else {
+			}
+			else
+			{
 				SRC_TYPE ra = src_max - a;
 				r = r * (a * alpha_coef) + bkgd_r * (ra * alpha_coef);
 				g = g * (a * alpha_coef) + bkgd_g * (ra * alpha_coef);
@@ -1099,23 +1175,19 @@ preproc_rgba2rgb(cv::Mat *dst_rgb,
 
 
 template <typename DST_TYPE, int dst_max, int ridx, int bidx>
-static void
-postproc_rgb2rgba(cv::Mat *dst,
-		  cv::Mat *src_rgb,
-		  cv::Mat *src_alpha,
-		  float bkgd_r,
-		  float bkgd_g,
-		  float bkgd_b)
+static void postproc_rgb2rgba(cv::Mat *dst, cv::Mat *src_rgb, cv::Mat *src_alpha, float bkgd_r, float bkgd_g, float bkgd_b)
 {
 	int w = dst->size().width;
 	int h = dst->size().height;
 
-	for (int yi=0; yi<h; yi++) {
+	for (int yi=0; yi<h; yi++)
+	{
 		const float *src_rgb_line = (float*)src_rgb->ptr(yi);
 		const float *src_alpha_line = (float*)src_alpha->ptr(yi);
 		DST_TYPE *dst_line = (DST_TYPE*)dst->ptr(yi);
 
-		for (int xi=0; xi<w; xi++) {
+		for (int xi=0; xi<w; xi++)
+		{
 			float r = src_rgb_line[xi*3 + 0];
 			float g = src_rgb_line[xi*3 + 1];
 			float b = src_rgb_line[xi*3 + 2];
@@ -1145,18 +1217,18 @@ postproc_rgb2rgba(cv::Mat *dst,
 }
 
 template <typename DST_TYPE, int dst_max, int ridx, int bidx>
-static void
-postproc_rgb2rgb(cv::Mat *dst,
-		 cv::Mat *src_rgb)
+static void postproc_rgb2rgb(cv::Mat *dst, cv::Mat *src_rgb)
 {
 	int w = dst->size().width;
 	int h = dst->size().height;
 
-	for (int yi=0; yi<h; yi++) {
+	for (int yi=0; yi<h; yi++)
+	{
 		const float *src_rgb_line = (float*)src_rgb->ptr(yi);
 		DST_TYPE *dst_line = (DST_TYPE*)dst->ptr(yi);
 
-		for (int xi=0; xi<w; xi++) {
+		for (int xi=0; xi<w; xi++)
+		{
 			float r = src_rgb_line[xi*3 + 0];
 			float g = src_rgb_line[xi*3 + 1];
 			float b = src_rgb_line[xi*3 + 2];
@@ -1173,23 +1245,19 @@ postproc_rgb2rgb(cv::Mat *dst,
 }
 
 template <typename DST_TYPE, int dst_max, int ridx, int bidx>
-static void
-postproc_yuv2rgba(cv::Mat *dst,
-		  cv::Mat *src_yuv,
-		  cv::Mat *src_alpha,
-		  float bkgd_r,
-		  float bkgd_g,
-		  float bkgd_b)
+static void postproc_yuv2rgba(cv::Mat *dst, cv::Mat *src_yuv, cv::Mat *src_alpha, float bkgd_r, float bkgd_g, float bkgd_b)
 {
 	int w = dst->size().width;
 	int h = dst->size().height;
 
-	for (int yi=0; yi<h; yi++) {
+	for (int yi=0; yi<h; yi++)
+	{
 		const float *src_yuv_line = (float*)src_yuv->ptr(yi);
 		const float *src_alpha_line = (float*)src_alpha->ptr(yi);
 		DST_TYPE *dst_line = (DST_TYPE*)dst->ptr(yi);
 
-		for (int xi=0; xi<w; xi++) {
+		for (int xi=0; xi<w; xi++)
+		{
 			float a = src_alpha_line[xi];
 			float y = src_yuv_line[xi*3 + 0];
 			float cr = src_yuv_line[xi*3 + 1];
@@ -1218,18 +1286,18 @@ postproc_yuv2rgba(cv::Mat *dst,
 }
 
 template <typename DST_TYPE, int dst_max, int ridx, int bidx>
-static void
-postproc_yuv2rgb(cv::Mat *dst,
-		 cv::Mat *src_yuv)
+static void postproc_yuv2rgb(cv::Mat *dst, cv::Mat *src_yuv)
 {
 	int w = dst->size().width;
 	int h = dst->size().height;
 
-	for (int yi=0; yi<h; yi++) {
+	for (int yi=0; yi<h; yi++)
+	{
 		const float *src_yuv_line = (float*)src_yuv->ptr(yi);
 		DST_TYPE *dst_line = (DST_TYPE*)dst->ptr(yi);
 
-		for (int xi=0; xi<w; xi++) {
+		for (int xi=0; xi<w; xi++)
+		{
 			float y = src_yuv_line[xi*3 + 0];
 			float cr = src_yuv_line[xi*3 + 1];
 			float cb = src_yuv_line[xi*3 + 2];
@@ -1263,7 +1331,9 @@ static unsigned int read_uint4(FILE *fi)
 {
 	unsigned char oneBytes[4];
 	if (fread(oneBytes, 1, 4, fi) == 4)
+	{
 		return (oneBytes[0]<<24) | (oneBytes[1]<<16) | (oneBytes[2]<<8) | (oneBytes[3]); // unsinged char will be automatically promoted to unsinged int
+	}
 	return 0;
 }
 
@@ -1346,38 +1416,43 @@ void get_png_background_colour(FILE *png_fp, bool *has_alpha, struct w2xconv_rgb
 		sig_ihdr
 	};
 	
-	const static size_t sig_ignore_size = sizeof(sig_ignores)/sizeof(*sig_ignores);
+	const static size_t sig_ignore_size = sizeof(sig_ignores) / sizeof(*sig_ignores);
 	
 	char sig[8];
 
 	//checks if the file is at least 8 bytes long (png signature)
 	size_t rdsz = fread(sig, 1, 8, png_fp);
-	if (rdsz != 8) {
+	if (rdsz != 8)
+	{
 		//DEBUG printf("png_sig rdsz is not 8, rdsz: %zu, sig: %.8s\n", rdsz, sig);
 		return;
 	}
 	
 	//check if file signatures match
-	if (memcmp(sig_png, sig, 8) != 0) {
+	if (memcmp(sig_png, sig, 8) != 0)
+	{
 		//DEBUG printf("png_sig does not match, sig: %.8s\n", sig);
 		return;
 	}
 	
 	//check if ihdr is the required 13 bytes long
 	int ihdr_size = read_int4(png_fp);
-	if (ihdr_size != 13) {
+	if (ihdr_size != 13)
+	{
 		//DEBUG printf("ihdr_size is not 13, ihdr_size: %d, sig: %.8s\n", ihdr_size, sig);
 		return;
 	}
 
 	rdsz = fread(sig, 1, 4, png_fp);
-	if (rdsz != 4) {
+	if (rdsz != 4)
+	{
 		//DEBUG printf("first rdsz is not 4, rdsz: %zu, sig: %.4s\n", rdsz, sig);
 		return;
 	}
 	
 	//missing ihdr/invalid png
-	if (memcmp(sig_ihdr, sig, 4) != 0) {
+	if (memcmp(sig_ihdr, sig, 4) != 0)
+	{
 		//DEBUG printf("missing ihdr/invalid png: %s\n", sig);
 		return;
 	}
@@ -1416,10 +1491,11 @@ void get_png_background_colour(FILE *png_fp, bool *has_alpha, struct w2xconv_rgb
 			*has_alpha = false;
 		}
 		//read rest of png
-		while (1) {
+		while (true) {
 			rdsz = fread(sig, 1, 4, png_fp);
 			
-			if (rdsz != 4) {
+			if (rdsz != 4)
+			{
 				//DEBUG printf("rdsz is not 4 rdsz: %zu, sig: %.4s\n", rdsz, sig);
 				break;
 			}
@@ -1498,7 +1574,8 @@ void get_png_background_colour(FILE *png_fp, bool *has_alpha, struct w2xconv_rgb
 					//DEBUG printf("crc: %08X\n",crc);
 				}
 			}
-			else {
+			else
+			{
 				for(int i = 0; i < sig_ignore_size; i++)
 				{
 					if (memcmp(sig, sig_ignores[i], 4) == 0)
@@ -1512,21 +1589,22 @@ void get_png_background_colour(FILE *png_fp, bool *has_alpha, struct w2xconv_rgb
 			// printf("crc: %08X\n",crc);
 		}
 	}
-
 	return;
 }
 
-void
-w2xconv_convert_mat(struct W2XConv *conv, 
-			cv::Mat& image_dst, 
-					cv::Mat& image_src, 
-					int denoise_level, 
-					double scale, 
-			int blockSize,
-			 w2xconv_rgb_float3 background,
-			 bool png_rgb,
-			 bool dst_png){
-				
+void w2xconv_convert_mat
+(
+	struct W2XConv *conv,
+	cv::Mat& image_dst, 
+	cv::Mat& image_src, 
+	int denoise_level, 
+	double scale, 
+	int blockSize,
+	w2xconv_rgb_float3 background,
+	bool png_rgb,
+	bool dst_png
+)
+{				
 	bool is_rgb = (conv->impl->scale2_models[0]->getNInputPlanes() == 3);
 	enum w2xc::image_format fmt;
 
@@ -1535,120 +1613,160 @@ w2xconv_convert_mat(struct W2XConv *conv,
 	cv::Mat image = cv::Mat(image_src.size(), CV_32FC3);
 	cv::Mat alpha;
 
-	if (is_rgb) {
-		if (png_rgb) {
-			if (src_cn == 4) {
+	if (is_rgb)
+	{
+		if (png_rgb)
+		{
+			if (src_cn == 4)
+			{
 				// save alpha
 				alpha = cv::Mat(image_src.size(), CV_32FC1);
-				if (src_depth == CV_16U) {
-					preproc_rgba2rgb<unsigned short, 65535, 2, 0>(&image, &alpha, &image_src,
-										      background.r, background.g, background.b);
-				} else {
-					preproc_rgba2rgb<unsigned char, 255, 2, 0>(&image, &alpha, &image_src,
-										   background.r, background.g, background.b);
+				if (src_depth == CV_16U)
+				{
+					preproc_rgba2rgb<unsigned short, 65535, 2, 0>(&image, &alpha, &image_src, background.r, background.g, background.b);
 				}
-			} else {
+				else
+				{
+					preproc_rgba2rgb<unsigned char, 255, 2, 0>(&image, &alpha, &image_src, background.r, background.g, background.b);
+				}
+			}
+			else
+			{
 				preproc_rgb2rgb<unsigned short, 65535, 2, 0>(&image, &image_src);
 			}
-		} else {
+		}
+		else
+		{
 			preproc_rgb2rgb<unsigned char, 255, 2, 0>(&image, &image_src);
 		}
 		fmt = w2xc::IMAGE_RGB_F32;
-	} else {
-		if (png_rgb) {
-			if (src_cn == 4) {
+	}
+	else
+	{
+		if (png_rgb)
+		{
+			if (src_cn == 4)
+			{
 				// save alpha
 				alpha = cv::Mat(image_src.size(), CV_32FC1);
-				if (src_depth == CV_16U) {
-					preproc_rgba2yuv<unsigned short, 65535, 2, 0>(&image, &alpha, &image_src,
-										      background.r, background.g, background.b);
-				} else {
-					preproc_rgba2yuv<unsigned char, 255, 2, 0>(&image, &alpha, &image_src,
-										   background.r, background.g, background.b);
+				if (src_depth == CV_16U)
+				{
+					preproc_rgba2yuv<unsigned short, 65535, 2, 0>(&image, &alpha, &image_src, background.r, background.g, background.b);
 				}
-			} else {
+				else
+				{
+					preproc_rgba2yuv<unsigned char, 255, 2, 0>(&image, &alpha, &image_src, background.r, background.g, background.b);
+				}
+			}
+			else
+			{
 				preproc_rgb2yuv<unsigned short, 65535, 2, 0>(&image, &image_src);
 			}
-		} else {
+		}
+		else
+		{
 			preproc_rgb2yuv<unsigned char, 255, 2, 0>(&image, &image_src);
 		}
 
 		fmt = w2xc::IMAGE_Y;
 	}
+
 	image_src.release();
 	
 	w2x_total_steps = 0;
 	w2x_current_step = 1;
 	int iterTimesTwiceScaling;
 	
-	if (scale != 1.0) {
+	if (scale != 1.0)
+	{
 		iterTimesTwiceScaling = static_cast<int>(std::ceil(std::log2(scale)));
 		w2x_total_steps = w2x_total_steps + iterTimesTwiceScaling;
 	}
 	
-	if (denoise_level != -1) {
-		if (conv->enable_log) {
+	if (denoise_level != -1)
+	{
+		if (conv->enable_log)
+		{
 			printf("Step %02d/%02d: Denoising\n", w2x_current_step++, ++w2x_total_steps);
 		}
 		apply_denoise(conv, image, denoise_level, blockSize, fmt);
 	}
 
-	if (scale != 1.0) {
+	if (scale != 1.0)
+	{
 		// calculate iteration times of 2x scaling and shrink ratio which will use at last
 		double shrinkRatio = 0.0;
-		if (static_cast<int>(scale)
-		    != std::pow(2, iterTimesTwiceScaling))
+		if (static_cast<int>(scale) != std::pow(2, iterTimesTwiceScaling))
 		{
 			shrinkRatio = scale / std::pow(2.0, static_cast<double>(iterTimesTwiceScaling));
 		}
 
 		apply_scale(conv, image, iterTimesTwiceScaling, blockSize, fmt);
 
-		if (shrinkRatio != 0.0) {
+		if (shrinkRatio != 0.0)
+		{
 			cv::Size lastImageSize = image.size();
-			lastImageSize.width =
-				static_cast<int>(static_cast<double>(lastImageSize.width
-								     * shrinkRatio));
-			lastImageSize.height =
-				static_cast<int>(static_cast<double>(lastImageSize.height
-								     * shrinkRatio));
+			lastImageSize.width = static_cast<int>(static_cast<double>(lastImageSize.width * shrinkRatio));
+			lastImageSize.height = static_cast<int>(static_cast<double>(lastImageSize.height * shrinkRatio));
 			cv::resize(image, image, lastImageSize, 0, 0, cv::INTER_LINEAR);
 		}
 	}
 
-	if (alpha.empty() || !dst_png) {
+	if (alpha.empty() || !dst_png)
+	{
 		image_dst = cv::Mat(image.size(), CV_MAKETYPE(src_depth,3));
 
-		if (is_rgb) {
-			if (src_depth == CV_16U) {
+		if (is_rgb)
+		{
+			if (src_depth == CV_16U)
+			{
 				postproc_rgb2rgb<unsigned short, 65535, 2, 0>(&image_dst, &image);
-			} else {
+			}
+			else
+			{
 				postproc_rgb2rgb<unsigned char, 255, 2, 0>(&image_dst, &image);
 			}
-		} else {
-			if (src_depth == CV_16U) {
+		}
+		else
+		{
+			if (src_depth == CV_16U)
+			{
 				postproc_yuv2rgb<unsigned short, 65535, 0, 2>(&image_dst, &image);
-			} else {
+			}
+			else
+			{
 				postproc_yuv2rgb<unsigned char, 255, 0, 2>(&image_dst, &image);
 			}
 		}
-	} else {
+	}
+	else
+	{
 		image_dst = cv::Mat(image.size(), CV_MAKETYPE(src_depth,4));
 
-		if (image.size() != alpha.size()) {
+		if (image.size() != alpha.size())
+		{
 			cv::resize(alpha, alpha, image.size(), 0, 0, cv::INTER_LINEAR);
 		}
 
-		if (is_rgb) {
-			if (src_depth == CV_16U) {
+		if (is_rgb)
+		{
+			if (src_depth == CV_16U)
+			{
 				postproc_rgb2rgba<unsigned short, 65535, 2, 0>(&image_dst, &image, &alpha, background.r, background.g, background.b);
-			} else {
+			}
+			else
+			{
 				postproc_rgb2rgba<unsigned char, 255, 2, 0>(&image_dst, &image, &alpha, background.r, background.g, background.b);
 			}
-		} else {
-			if (src_depth == CV_16U) {
+		}
+		else
+		{
+			if (src_depth == CV_16U)
+			{
 				postproc_yuv2rgba<unsigned short, 65535, 0, 2>(&image_dst, &image, &alpha, background.r, background.g, background.b);
-			} else {
+			}
+			else
+			{
 				postproc_yuv2rgba<unsigned char, 255, 0, 2>(&image_dst, &image, &alpha, background.r, background.g, background.b);
 			}
 		}
@@ -1657,12 +1775,14 @@ w2xconv_convert_mat(struct W2XConv *conv,
 
 #if defined(WIN32) && defined(UNICODE)
 
-void read_imageW(cv::Mat* image, const WCHAR* filepath, int flags=cv::IMREAD_COLOR) {
+void read_imageW(cv::Mat* image, const WCHAR* filepath, int flags=cv::IMREAD_COLOR)
+{
 	long lSize;
 	char* imgBuffer;
     FILE* pFile = _wfopen(filepath, L"rb");
 	
-    if (!pFile) {
+    if (!pFile)
+	{
         *image = cv::Mat::zeros(1, 1, CV_8U);
     }
 	
@@ -1672,7 +1792,8 @@ void read_imageW(cv::Mat* image, const WCHAR* filepath, int flags=cv::IMREAD_COL
 	
     imgBuffer = new char[lSize];
 	
-	if(!imgBuffer) {
+	if(!imgBuffer)
+	{
         *image = cv::Mat::zeros(1, 1, CV_8U);
 	}
 	
@@ -1695,12 +1816,16 @@ bool write_imageW(const WCHAR* filepath, cv::Mat& img, std::vector<int>& param)
 	ext_w = ext_w.substr(ext_w.find_last_of(L'.'));
 	ext.assign(ext_w.begin(), ext_w.end());
 	
-	if(!cv::imencode(ext.c_str(),img, imageBuffer, param) )
+	if(!cv::imencode(ext.c_str(),img, imageBuffer, param))
+	{
 		return false;
+	}
 	
     pFile = _wfopen(filepath, L"wb+");
     if (!pFile)
+	{
         return false;
+	}
 	
 	fwrite(imageBuffer.data(), sizeof(unsigned char), imageBuffer.size(), pFile);
 	
@@ -1709,7 +1834,8 @@ bool write_imageW(const WCHAR* filepath, cv::Mat& img, std::vector<int>& param)
 }
 #endif
 
-int w2xconv_convert_file(
+int w2xconv_convert_file
+(
 	struct W2XConv *conv,
 #if defined(WIN32) && defined(UNICODE)
 	const WCHAR *dst_path,
@@ -1721,7 +1847,8 @@ int w2xconv_convert_file(
 	int denoise_level,
 	double scale,
 	int blockSize,
-	int* imwrite_params)
+	int* imwrite_params
+)
 {
 	double time_start = getsec();
 
@@ -1733,7 +1860,8 @@ int w2xconv_convert_file(
 	png_fp = fopen(src_path, "rb");
 #endif
 
-	if (png_fp == nullptr) {
+	if (png_fp == nullptr)
+	{
 		setPathError(conv, W2XCONV_ERROR_IMREAD_FAILED, src_path);
 		return -1;
 	}
@@ -1745,7 +1873,8 @@ int w2xconv_convert_file(
 	background.r = background.g = background.b = 1.0f;
 	get_png_background_colour(png_fp, &png_rgb, &background);
 
-	if (png_fp) {
+	if (png_fp)
+	{
 		fclose(png_fp);
 		png_fp = nullptr;
 	}
@@ -1759,9 +1888,12 @@ int w2xconv_convert_file(
 	 */
 	
 #if defined(WIN32) && defined(UNICODE)
-	if (png_rgb) {
+	if (png_rgb)
+	{
 		read_imageW(&image_src, src_path, cv::IMREAD_UNCHANGED);
-	} else {
+	}
+	else
+	{
 		read_imageW(&image_src, src_path, cv::IMREAD_COLOR);
 	}
 	
@@ -1779,20 +1911,21 @@ int w2xconv_convert_file(
 		}
 	}
 #else
-	if (png_rgb) {
+	if (png_rgb)
+	{
 		image_src = cv::imread(src_path, cv::IMREAD_UNCHANGED);
-	} else {
+	}
+	else
+	{
 		image_src = cv::imread(src_path, cv::IMREAD_COLOR);
 	}
 
 	bool dst_png = false;
 	{
 		size_t len = strlen(dst_path);
-		if (len >= 4) {
-			if (tolower(dst_path[len-4]) == '.' &&
-			    tolower(dst_path[len-3]) == 'p' &&
-			    tolower(dst_path[len-2]) == 'n' &&
-			    tolower(dst_path[len-1]) == 'g')
+		if (len >= 4)
+		{
+			if (tolower(dst_path[len-4]) == '.' && tolower(dst_path[len-3]) == 'p' && tolower(dst_path[len-2]) == 'n' && tolower(dst_path[len-1]) == 'g')
 			{
 				dst_png = true;
 			}
@@ -1827,12 +1960,15 @@ int w2xconv_convert_file(
 	// with max_scale is 2048, it only can converts less then (w+20) x (h+20) = 42 px, which is no meaning to run w2x.
 	// with max_scale is 4096, you cannot convert it at all.
 	
-	if( image_src.rows * image_src.cols > 178700000 / 4 ){
-		if( max_scale >= 512 ){
+	if (image_src.rows * image_src.cols > 178700000 / 4)
+	{
+		if (max_scale >= 512)
+		{
 			setError(conv, W2XCONV_ERROR_SCALE_LIMIT);
 			return -1;
 		}
-		else if( ( image_src.rows < 40 || image_src.cols < 40 ) && image_src.rows * image_src.cols > 178700000 / 4){
+		else if ((image_src.rows < 40 || image_src.cols < 40 ) && image_src.rows * image_src.cols > 178700000 / 4)
+		{
 			setError(conv, W2XCONV_ERROR_SIZE_LIMIT);
 			return -1;
 		}
@@ -1840,30 +1976,32 @@ int w2xconv_convert_file(
 	
 	if(denoise_level != -1)
 	{
-		if (conv->enable_log) {
+		if (conv->enable_log)
+		{
 			printf("\nDenoise before Proccessing...\n");
 		}
 		w2xconv_convert_mat(conv, image_src, image_src, denoise_level, 1, blockSize, background, png_rgb, dst_png);
 	}
 	
-	int iteration_2x = static_cast<int>(std::ceil(std::log2(scale))) ;
+	int iteration_2x = static_cast<int>(std::ceil(std::log2(scale)));
 	double shrinkRatio = scale / std::pow(2.0, static_cast<double>(iteration_2x));
 	
 	image_src.copyTo(image_dst);
 	image_src.release();
 	
-	for( int ld = 0; ld < iteration_2x ; ld++)
+	for(int ld = 0; ld < iteration_2x ; ld++)
 	{
 		// divide images in to 4^n pieces when output width is bigger then 8000^2....
 		std::vector<cv::Mat> pieces, converted;
 			
-		if (conv->enable_log) {
+		if (conv->enable_log)
+		{
 			printf("\nProccessing [%d/%d] steps...\n", ld+1, iteration_2x);
 		}
 		
 		pieces.push_back(image_dst);
 		
-		while( pieces.front().rows * pieces.front().cols > 178700000 / 4 )
+		while(pieces.front().rows * pieces.front().cols > 178700000 / 4)
 		{
 			cv::Mat front = pieces.front();
 			int r=front.rows, c=front.cols;
@@ -1879,7 +2017,7 @@ int w2xconv_convert_file(
 			pieces.erase(pieces.begin());
 		}
 		
-		for( int i=0; i<pieces.size(); i++ )
+		for(int i=0; i<pieces.size(); i++)
 		{
 			cv::Mat res;
 			/*
@@ -1887,7 +2025,8 @@ int w2xconv_convert_file(
 			cv::imwrite(name, pieces.at(i));
 			*/
 			
-			if (conv->enable_log) {
+			if (conv->enable_log)
+			{
 				printf("\nProccessing [%d/%zu] slices\n", i+1, pieces.size());
 			}
 			
@@ -1902,8 +2041,9 @@ int w2xconv_convert_file(
 			cv::imwrite(name, res);
 			*/
 		}
-		
-		 int j=0;	// for test_merge
+
+		//FutureNote: unused/leftover debug ?
+		int j=0; // for test_merge
 		
 		// combine images
 		while (converted.size() > 1)
@@ -1911,7 +2051,8 @@ int w2xconv_convert_file(
 			cv::Mat quarter[4], tmp, merged;
 			int cut = (int) (pad * 2);
 			
-			if (conv->enable_log) {
+			if (conv->enable_log)
+			{
 				printf("\nMerging slices back to one image... in queue: %zd slices\n", converted.size());
 			}
 			
@@ -1948,38 +2089,36 @@ int w2xconv_convert_file(
 		image_dst = converted.front();
 	}
 	
-	if (shrinkRatio != 0.0) {
-		if (conv->enable_log) {
+	if (shrinkRatio != 0.0)
+	{
+		if (conv->enable_log)
+		{
 			printf("\nResizing image to input scale...\n");
 		}
 		cv::Size lastImageSize = image_dst.size();
-		lastImageSize.width =
-			static_cast<int>(static_cast<double>(lastImageSize.width
-							     * shrinkRatio));
-		lastImageSize.height =
-			static_cast<int>(static_cast<double>(lastImageSize.height
-							     * shrinkRatio));
+		lastImageSize.width = static_cast<int>(static_cast<double>(lastImageSize.width * shrinkRatio));
+		lastImageSize.height = static_cast<int>(static_cast<double>(lastImageSize.height * shrinkRatio));
 		cv::resize(image_dst, image_dst, lastImageSize, 0, 0, cv::INTER_LINEAR);
 	}
 	
-	if (conv->enable_log) {
+	if (conv->enable_log)
+	{
 		printf("Writing image to file...\n\n");
 	}
 	
 	std::vector<int> compression_params;	
-	for ( int i = 0; i < sizeof(imwrite_params); i = i + 1 )
+	for (int i = 0; i < sizeof(imwrite_params); i = i + 1)
 	{
 		compression_params.push_back(imwrite_params[i]);
 	}
 	
 #if defined(WIN32) && defined(UNICODE)
-	if (!write_imageW(dst_path, image_dst, compression_params)) {
+	if (!write_imageW(dst_path, image_dst, compression_params))
 #else
-	if (!cv::imwrite(dst_path, image_dst, compression_params)) {
+	if (!cv::imwrite(dst_path, image_dst, compression_params))
 #endif
-		setPathError(conv,
-			     W2XCONV_ERROR_IMWRITE_FAILED,
-			     dst_path);
+	{
+		setPathError(conv, W2XCONV_ERROR_IMWRITE_FAILED, dst_path);
 		return -1;
 	}
 
@@ -1993,41 +2132,47 @@ int w2xconv_convert_file(
 }
 
 
-static void
-convert_mat(struct W2XConv *conv,
-	    cv::Mat &image,
-	    int denoise_level,
-	    double scale,
-	    int dst_w, int dst_h,
-	    int blockSize,
-	    enum w2xc::image_format fmt)
+static void convert_mat
+(
+	struct W2XConv *conv,
+	cv::Mat &image,
+	int denoise_level,
+	double scale,
+	int dst_w, int dst_h,
+	int blockSize,
+	enum w2xc::image_format fmt
+)
 {
 	w2x_total_steps = 0;
 	w2x_current_step = 1;
 	int iterTimesTwiceScaling;
 	
-	if (scale != 1.0) {
+	if (scale != 1.0)
+	{
 		iterTimesTwiceScaling = static_cast<int>(std::ceil(std::log2(scale)));
 		w2x_total_steps = w2x_total_steps + iterTimesTwiceScaling;
 	}
-	if (denoise_level != -1) {
-		if (conv->enable_log) {
+	if (denoise_level != -1)
+	{
+		if (conv->enable_log)
+		{
 			printf("Step %02d/%02d: Denoising\n", w2x_current_step++, ++w2x_total_steps);
 		}
 		apply_denoise(conv, image, denoise_level, blockSize, fmt);
 	}
 
-	if (scale != 1.0) {
+	if (scale != 1.0)
+	{
 		// calculate iteration times of 2x scaling and shrink ratio which will use at last
 		double shrinkRatio = 0.0;
-		if (static_cast<int>(scale)
-		    != std::pow(2, iterTimesTwiceScaling))
+		if (static_cast<int>(scale) != std::pow(2, iterTimesTwiceScaling))
 		{
 			shrinkRatio = scale / std::pow(2.0, static_cast<double>(iterTimesTwiceScaling));
 		}
 		apply_scale(conv, image, iterTimesTwiceScaling, blockSize, fmt);
 
-		if (shrinkRatio != 0.0) {
+		if (shrinkRatio != 0.0)
+		{
 			cv::Size lastImageSize = image.size();
 			lastImageSize.width = dst_w;
 			lastImageSize.height = dst_h;
@@ -2037,29 +2182,34 @@ convert_mat(struct W2XConv *conv,
 }
 
 
-int
-w2xconv_convert_rgb(struct W2XConv *conv,
-		    unsigned char *dst, size_t dst_step_byte, /* rgb24 (src_w*ratio, src_h*ratio) */
-		    unsigned char *src, size_t src_step_byte, /* rgb24 (src_w, src_h) */
-		    int src_w, int src_h,
-		    int denoise_level, /* 0:none, 1:L1 denoise, other:L2 denoise  */
-		    double scale,
-		    int block_size)
+int w2xconv_convert_rgb
+(
+	struct W2XConv *conv,
+	unsigned char *dst, size_t dst_step_byte, /* rgb24 (src_w*ratio, src_h*ratio) */
+	unsigned char *src, size_t src_step_byte, /* rgb24 (src_w, src_h) */
+	int src_w, int src_h,
+	int denoise_level, /* 0:none, 1:L1 denoise, other:L2 denoise  */
+	double scale,
+	int block_size
+)
 {
 	int dst_h = (int) (src_h * scale);
 	int dst_w = (int) (src_w * scale);
 
 	cv::Mat srci(src_h, src_w, CV_8UC3, src, src_step_byte);
 	cv::Mat dsti(dst_h, dst_w, CV_8UC3, dst, dst_step_byte);
-
 	cv::Mat image;
+
 	bool is_rgb = (conv->impl->scale2_models[0]->getNInputPlanes() == 3);
 
-	if (is_rgb) {
+	if (is_rgb)
+	{
 		srci.copyTo(image);
 		convert_mat(conv, image, denoise_level, scale, dst_w, dst_h, block_size, w2xc::IMAGE_RGB);
 		image.copyTo(dsti);
-	} else {
+	}
+	else
+	{
 		srci.convertTo(image, CV_32F, 1.0 / 255.0);
 		cv::cvtColor(image, image, cv::COLOR_RGB2YUV);
 		convert_mat(conv, image, denoise_level, scale, dst_w, dst_h, block_size, w2xc::IMAGE_Y);
@@ -2071,18 +2221,21 @@ w2xconv_convert_rgb(struct W2XConv *conv,
 	return 0;
 }
 
-int
-w2xconv_convert_rgb_f32(struct W2XConv *conv,
-			unsigned char *dst, size_t dst_step_byte, /* rgb float32x3 normalized[0-1] (src_w*ratio, src_h*ratio) */
-			unsigned char *src, size_t src_step_byte, /* rgb float32x3 normalized[0-1] (src_w, src_h) */
-			int src_w, int src_h,
-			int denoise_level, /* 0:none, 1:L1 denoise, other:L2 denoise  */
-			double scale,
-			int block_size)
+int w2xconv_convert_rgb_f32
+(
+	struct W2XConv *conv,
+	unsigned char *dst, size_t dst_step_byte, /* rgb float32x3 normalized[0-1] (src_w*ratio, src_h*ratio) */
+	unsigned char *src, size_t src_step_byte, /* rgb float32x3 normalized[0-1] (src_w, src_h) */
+	int src_w, int src_h,
+	int denoise_level, /* 0:none, 1:L1 denoise, other:L2 denoise  */
+	double scale,
+	int block_size
+)
 {
 	bool is_rgb = (conv->impl->scale2_models[0]->getNInputPlanes() == 3);
 
-	if (!is_rgb) {
+	if (!is_rgb)
+	{
 		setError(conv, W2XCONV_ERROR_Y_MODEL_MISMATCH_TO_RGB_F32);
 		return -1;
 	}
@@ -2092,7 +2245,6 @@ w2xconv_convert_rgb_f32(struct W2XConv *conv,
 
 	cv::Mat srci(src_h, src_w, CV_32FC3, src, src_step_byte);
 	cv::Mat dsti(dst_h, dst_w, CV_32FC3, dst, dst_step_byte);
-
 	cv::Mat image;
 
 	srci.copyTo(image);
@@ -2103,27 +2255,30 @@ w2xconv_convert_rgb_f32(struct W2XConv *conv,
 }
 
 
-int
-w2xconv_convert_yuv(struct W2XConv *conv,
-		    unsigned char *dst, size_t dst_step_byte, /* float32x3 (src_w*ratio, src_h*ratio) */
-		    unsigned char *src, size_t src_step_byte, /* float32x3 (src_w, src_h) */
-		    int src_w, int src_h,
-		    int denoise_level, /* 0:none, 1:L1 denoise, other:L2 denoise  */
-		    double scale,
-		    int block_size)
+int w2xconv_convert_yuv
+(
+	struct W2XConv *conv,
+	unsigned char *dst, size_t dst_step_byte, /* float32x3 (src_w*ratio, src_h*ratio) */
+	unsigned char *src, size_t src_step_byte, /* float32x3 (src_w, src_h) */
+	int src_w, int src_h,
+	int denoise_level, /* 0:none, 1:L1 denoise, other:L2 denoise  */
+	double scale,
+	int block_size
+)
 {
 	int dst_h = (int) (src_h * scale);
 	int dst_w = (int) (src_w * scale);
 
 	bool is_rgb = (conv->impl->scale2_models[0]->getNInputPlanes() == 3);
-	if (is_rgb) {
+
+	if (is_rgb)
+	{
 		setError(conv, W2XCONV_ERROR_RGB_MODEL_MISMATCH_TO_Y);
 		return -1;
 	}
 
 	cv::Mat srci(src_h, src_w, CV_32FC3, src, src_step_byte);
 	cv::Mat dsti(dst_h, dst_w, CV_32FC3, dst, dst_step_byte);
-
 	cv::Mat image = srci.clone();
 
 	convert_mat(conv, image, denoise_level, scale, dst_w, dst_h, block_size, w2xc::IMAGE_Y);
@@ -2134,16 +2289,20 @@ w2xconv_convert_yuv(struct W2XConv *conv,
 }
 #endif // HAVE_OPENCV
 
-int
-w2xconv_apply_filter_y(struct W2XConv *conv,
-		       enum W2XConvFilterType type,
-		       unsigned char *dst, size_t dst_step_byte, /* float32x1 (src_w, src_h) */
-		       unsigned char *src, size_t src_step_byte, /* float32x1 (src_w, src_h) */
-		       int src_w, int src_h,
-		       int blockSize)
+int w2xconv_apply_filter_y
+(
+	struct W2XConv *conv,
+	enum W2XConvFilterType type,
+	unsigned char *dst, size_t dst_step_byte, /* float32x1 (src_w, src_h) */
+	unsigned char *src, size_t src_step_byte, /* float32x1 (src_w, src_h) */
+	int src_w, int src_h,
+	int blockSize
+)
 {
 	bool is_rgb = (conv->impl->scale2_models[0]->getNInputPlanes() == 3);
-	if (is_rgb) {
+
+	if (is_rgb)
+	{
 		setError(conv, W2XCONV_ERROR_RGB_MODEL_MISMATCH_TO_Y);
 		return -1;
 	}
@@ -2156,49 +2315,53 @@ w2xconv_apply_filter_y(struct W2XConv *conv,
 
 	std::vector<std::unique_ptr<w2xc::Model> > *mp = NULL;
 
-	switch (type) {
-	case W2XCONV_FILTER_DENOISE0:
-		mp = &impl->noise0_models;
-		break;
-		
-	case W2XCONV_FILTER_DENOISE1:
-		mp = &impl->noise1_models;
-		break;
-
-	case W2XCONV_FILTER_DENOISE2:
-		mp = &impl->noise2_models;
-		break;
-
-	case W2XCONV_FILTER_DENOISE3:
-		mp = &impl->noise3_models;
-		break;
-
-	case W2XCONV_FILTER_SCALE2x:
-		mp = &impl->scale2_models;
-		break;
-
-	default:
-		return -1;
+	switch (type)
+	{
+		case W2XCONV_FILTER_DENOISE0:
+		{
+			mp = &impl->noise0_models;
+			break;
+		}	
+		case W2XCONV_FILTER_DENOISE1:
+		{
+			mp = &impl->noise1_models;
+			break;
+		}
+		case W2XCONV_FILTER_DENOISE2:
+		{
+			mp = &impl->noise2_models;
+			break;
+		}
+		case W2XCONV_FILTER_DENOISE3:
+		{
+			mp = &impl->noise3_models;
+			break;
+		}
+		case W2XCONV_FILTER_SCALE2x:
+		{
+			mp = &impl->scale2_models;
+			break;
+		}
+		default:
+		{
+			return -1;
+		}
 	}
 
 	W2Mat result;
-	w2xc::convertWithModels(conv, env, srci, result,
-				*mp,
-				&conv->flops, blockSize, w2xc::IMAGE_Y, conv->enable_log);
+	w2xc::convertWithModels(conv, env, srci, result, *mp, &conv->flops, blockSize, w2xc::IMAGE_Y, conv->enable_log);
 
-	for (int yi=0; yi<src_h; yi++) {
+	for (int yi=0; yi<src_h; yi++)
+	{
 		char *d0 = dsti.ptr<char>(yi);
 		char *s0 = result.ptr<char>(yi);
-
 		memcpy(d0, s0, src_w * sizeof(float));
 	}
-
 	return 0;
 }
 
 #ifdef HAVE_OPENCV
-int
-w2xconv_test(struct W2XConv *conv, int block_size)
+int w2xconv_test(struct W2XConv *conv, int block_size)
 {
 	int w = 200;
 	int h = 100;
@@ -2207,25 +2370,41 @@ w2xconv_test(struct W2XConv *conv, int block_size)
 	cv::Mat src_rgb = cv::Mat::zeros(h, w, CV_8UC3);
 	cv::Mat dst = cv::Mat::zeros(h, w, CV_8UC3);
 
-	cv::line(src_rgb,
-		 cv::Point(10, 10),
-		 cv::Point(20, 20),
-		 cv::Scalar(255,0,0), 8);
+	cv::line
+	(
+		src_rgb,
+		cv::Point(10, 10),
+		cv::Point(20, 20),
+		cv::Scalar(255,0,0),
+		8
+	);
 
-	cv::line(src_rgb,
-		 cv::Point(20, 10),
-		 cv::Point(10, 20),
-		 cv::Scalar(0,255,0), 8);
+	cv::line
+	(
+		src_rgb,
+		cv::Point(20, 10),
+		cv::Point(10, 20),
+		cv::Scalar(0,255,0),
+		8
+	);
 
-	cv::line(src_rgb,
-		 cv::Point(50, 30),
-		 cv::Point(10, 30),
-		 cv::Scalar(0,0,255), 1);
+	cv::line
+	(
+		src_rgb,
+		cv::Point(50, 30),
+		cv::Point(10, 30),
+		cv::Scalar(0,0,255), 
+		1
+	);
 
-	cv::line(src_rgb,
-		 cv::Point(50, 80),
-		 cv::Point(10, 80),
-		 cv::Scalar(255,255,255), 3);
+	cv::line
+	(
+		src_rgb,
+		cv::Point(50, 80),
+		cv::Point(10, 80),
+		cv::Scalar(255,255,255),
+		3
+	);
 
 	cv::Mat src_32fc3;
 	cv::Mat src_yuv;
@@ -2239,41 +2418,62 @@ w2xconv_test(struct W2XConv *conv, int block_size)
 
 	cv::imwrite("test_src.png", src_rgb);
 
-	w2xconv_convert_rgb(conv,
-			    dst_rgb_x2.data, dst_rgb_x2.step[0],
-			    src_rgb.data, src_rgb.step[0],
-			    w, h,
-			    1,
-			    2.0,
-			    block_size);
+	w2xconv_convert_rgb
+	(
+		conv,
+		dst_rgb_x2.data,
+		dst_rgb_x2.step[0],
+		src_rgb.data,
+		src_rgb.step[0],
+		w,
+		h,
+		1,
+		2.0,
+		block_size
+	);
 
 	cv::imwrite("test_rgb.png", dst_rgb_x2);
 
 
-	w2xconv_convert_rgb_f32(conv,
-				dst_rgb_f32_x2.data, dst_rgb_f32_x2.step[0],
-				src_32fc3.data, src_32fc3.step[0],
-				w, h,
-				1,
-				2.0,
-				block_size);
+	w2xconv_convert_rgb_f32
+	(
+		conv,
+		dst_rgb_f32_x2.data,
+		dst_rgb_f32_x2.step[0],
+		src_32fc3.data,
+		src_32fc3.step[0],
+		w,
+		h,
+		1,
+		2.0,
+		block_size
+	);
 
 	dst_rgb_f32_x2.convertTo(dst_rgb_x2, CV_8U, 255.0);
 	cv::imwrite("test_rgb_f32.png", dst_rgb_x2);
 
-	r = w2xconv_convert_yuv(conv,
-				dst_yuv_x2.data, dst_yuv_x2.step[0],
-				src_yuv.data, src_yuv.step[0],
-				w, h,
-				1,
-				2.0,
-				block_size);
+	r = w2xconv_convert_yuv
+	(
+		conv,
+		dst_yuv_x2.data,
+		dst_yuv_x2.step[0],
+		src_yuv.data,
+		src_yuv.step[0],
+		w,
+		h,
+		1,
+		2.0,
+		block_size
+	);
 
-	if (r < 0) {
+	if (r < 0)
+	{
 		char *e = w2xconv_strerror(&conv->last_error);
 		puts(e);
 		w2xconv_free(e);
-	} else {
+	}
+	else
+	{
 		cv::cvtColor(dst_yuv_x2, dst_yuv_x2, cv::COLOR_YUV2RGB);
 		dst_yuv_x2.convertTo(dst_rgb_x2, CV_8U, 255.0);
 		cv::imwrite("test_yuv.png", dst_rgb_x2);
@@ -2285,23 +2485,31 @@ w2xconv_test(struct W2XConv *conv, int block_size)
 	cv::Mat split_dst, dst_rgb;
 	cv::Mat split_dsty(h, w, CV_32F);
 
-	r = w2xconv_apply_filter_y(conv,
-				   W2XCONV_FILTER_DENOISE1,
-				   split_dsty.data, split_dsty.step[0],
-				   split_src.data, split_src.step[0],
-				   w, h, block_size);
-	if (r < 0) {
+	r = w2xconv_apply_filter_y
+	(
+		conv,
+		W2XCONV_FILTER_DENOISE1,
+		split_dsty.data,
+		split_dsty.step[0],
+		split_src.data,
+		split_src.step[0],
+		w, 
+		h,
+		block_size
+	);
+
+	if (r < 0)
+	{
 		char *e = w2xconv_strerror(&conv->last_error);
 		puts(e);
 		w2xconv_free(e);
-	} else {
+	}
+	else
+	{
 		imageSplit[0] = split_dsty.clone();
-
 		cv::merge(imageSplit, split_dst);
-
 		cv::cvtColor(split_dst, split_dst, cv::COLOR_YUV2RGB);
 		split_dst.convertTo(dst_rgb, CV_8U, 255.0);
-
 		cv::imwrite("test_apply.png", dst_rgb);
 	}
 
