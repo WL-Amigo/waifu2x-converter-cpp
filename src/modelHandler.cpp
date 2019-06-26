@@ -1115,21 +1115,12 @@ namespace w2xc
 	}
 	bool modelUtility::generateModelFromJSON
 	(
-#if defined(WIN32) && defined(UNICODE)
-		const std::wstring &fileName,
-#else
-		const std::string &fileName,
-#endif
+		const _tstring &fileName,
 		std::vector<std::unique_ptr<Model> > &models
 	)
 	{
-#if defined(WIN32) && defined(UNICODE)
-		std::wstring binpath = fileName + L".bin";
-		FILE *binfp = _wfopen(binpath.c_str(), L"rb");
-#else
-		std::string binpath = fileName + ".bin";
-		FILE *binfp = fopen(binpath.c_str(), "rb");
-#endif
+		_tstring binpath = fileName + _T(".bin");
+		FILE *binfp = _tfopen(binpath.c_str(), _T("rb"));
 
 		if (binfp)
 		{
@@ -1190,11 +1181,7 @@ namespace w2xc
 				models.push_back(std::move(m));
 			}
 
-#if defined(WIN32) && defined(UNICODE)
-			binfp = _wfopen(binpath.c_str(), L"wb");
-#else
-			binfp = fopen(binpath.c_str(), "wb");
-#endif
+			binfp = _tfopen(binpath.c_str(), _T("wb"));
 			if (binfp)
 			{
 				size_t nModel = objectArray.size();

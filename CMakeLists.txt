@@ -321,7 +321,7 @@ if(WIN32) # We build FOR windows.
 	elseif(UNIX) # we build on linux.... on windows.. somehow WSL?/Cygwin? We'll see
 		target_link_libraries(w2xc ${OPENCV_WINDOWS_LIBRARY} user32 ippicvmt)
 	endif()
-	if(ENABLE_GUI)
+	if(ENABLE_GUI AND ENABLE_UNICODE)
 		add_executable(w2xcr WIN32 w32-apps/w2xcr.c w32-apps/w2xcr.rc)
 		target_link_libraries(w2xcr w2xc user32 shlwapi gdi32)
 	endif()

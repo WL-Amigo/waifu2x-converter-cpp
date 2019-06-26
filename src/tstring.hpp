@@ -21,38 +21,22 @@
 * SOFTWARE.
 */
 
-#ifndef COMMON_HPP
-#define COMMON_HPP
+#ifndef __TSTRING_H__
+#define __TSTRING_H__
 
-#include <vector>
-#include "compiler.h"
-#include "cvwrap.hpp"
+#include <string>
 #include "tchar.h"
 
-#define ALIGN_UP(v,a) (((v+(a-1))/(a))*(a))
+#if defined(_WIN32) && defined(_UNICODE)
+	typedef	std::wstring	_tstring;
+#else
+	typedef	std::string		_tstring;
+#endif
 
-void pack_mat(float *out, std::vector<W2Mat> &inputPlanes, int w, int h, int nplane);
+#if defined(_WIN32) && defined(_UNICODE)
+	#define	TSTRING_METHOD	wstring
+#else
+	#define	TSTRING_METHOD	string
+#endif
 
-void unpack_mat(std::vector<W2Mat> &outputPlanes, const float *in, int w, int h, int nplane);
-
-void unpack_mat1(W2Mat &outputMat, const float *in, int w, int h);
-
-void pack_mat_rgb(float *out, W2Mat &inputPlane, int w, int h);
-
-void pack_mat_rgb_f32(float *out, W2Mat &inputPlane, int w, int h);
-
-void pack_mat_bgr(float *out, W2Mat &inputPlane, int w, int h);
-
-void unpack_mat_rgb(W2Mat &outputMat, const float *in, int w, int h);
-
-void unpack_mat_rgb_f32(W2Mat &outputMat, const float *in, int w, int h);
-
-void unpack_mat_bgr(W2Mat &outputMat, const float *in, int w, int h);
-
-/*
- * src is exist && dst is not exist                       : true
- * src is exist && dst is exist && dst is older than src  : true
- * otherwise                                              : false
- */
-bool update_test(const TCHAR *dst_path, const TCHAR *src_path);
 #endif

@@ -195,33 +195,19 @@ void unpack_mat_rgb_f32(W2Mat &outputMat, const float *in, int w, int h)
 	Is not too big so duplicates are fine.. and the win to unix one differs quite a lot too.
 */
 /* return true if A is newer than B */ 
-#if defined(WIN32) && defined(UNICODE)
-bool update_test(const WCHAR *dst_path, const WCHAR *src_path)
-#else
-bool update_test(const char *dst_path, const char *src_path)
-#endif
+bool update_test(const TCHAR *dst_path, const TCHAR *src_path)
 {
-#if (defined _WIN32)
-#if defined(UNICODE)
-	WIN32_FIND_DATAW dst_st;
-	HANDLE finder = FindFirstFileW(dst_path, &dst_st);
-#else
-	WIN32_FIND_DATAA dst_st;
-	HANDLE finder = FindFirstFileA(dst_path, &dst_st);
-#endif
+#ifdef _WIN32
+	WIN32_FIND_DATA dst_st;
+	HANDLE finder = FindFirstFile(dst_path, &dst_st);
 	if (finder == INVALID_HANDLE_VALUE) {
 		return true;
 	}
 
 	FindClose(finder);
 
-#if defined(UNICODE)
-	WIN32_FIND_DATAW src_st;
-	finder = FindFirstFileW(src_path, &src_st);
-#else
-	WIN32_FIND_DATAA src_st;
-	finder = FindFirstFileA(src_path, &src_st);
-#endif
+	WIN32_FIND_DATA src_st;
+	finder = FindFirstFile(src_path, &src_st);
 	FindClose(finder);
 
 	bool old = false;

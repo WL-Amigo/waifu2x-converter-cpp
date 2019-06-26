@@ -28,9 +28,7 @@
 #include <stdio.h>
 #include <stdbool.h>
 
-#if defined(WIN32) && defined(UNICODE)
-#include <Windows.h>
-#endif
+#include "tchar.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -60,20 +58,6 @@ enum W2XConvGPUMode
 	W2XCONV_GPU_AUTO = 1,
 	W2XCONV_GPU_FORCE_OPENCL = 2
 };
-
-enum PNG_TYPE
-{
-	Grayscale = 0,
-	GrayscaleAlpha = 4,
-	Indexed = 3,
-	Truecolor = 2,
-	TruecolorAlpha = 6,
-};
-
-#define SLICER_PAD_SIZE 12
-#define OUTPUT_SIZE_MAX 178700000
-#define WEBP_LOSSY_OUTPUT_MAX 196000000
-#define WEBP_MAX_WIDTH 16383
 
 enum W2XConvErrorCode
 {
@@ -215,8 +199,6 @@ struct w2xconv_rgb_float3
 	float r;
 	float g;
 	float b;
-	//float3(){}
-	//float3(float r, float g, float b):r(r), g(g), b(b){}
 };
 
 W2XCONV_EXPORT	void get_png_background_colour(FILE *png_fp, bool *png_rgb, struct w2xconv_rgb_float3 *bkgd_colour);
@@ -228,15 +210,7 @@ W2XCONV_EXPORT struct W2XConv *w2xconv_init(enum W2XConvGPUMode gpu, int njob /*
 W2XCONV_EXPORT struct W2XConv *w2xconv_init_with_processor(int processor_idx, int njob, int log_level);
 
 /* return negative if failed */
-W2XCONV_EXPORT int w2xconv_load_models
-(
-	struct W2XConv *conv,
-#if defined(WIN32) && defined(UNICODE)
-	const WCHAR *model_dir //FutureNote, possible to use #define W2X_CHAR WCHAR & #define W2X_CHAR char?
-#else
-	const char *model_dir
-#endif
-);
+W2XCONV_EXPORT int w2xconv_load_models(struct W2XConv *conv, const TCHAR *model_dir);
 
 W2XCONV_EXPORT void w2xconv_set_model_3x3
 (
@@ -256,13 +230,8 @@ W2XCONV_EXPORT void w2xconv_fini(struct W2XConv *conv);
 W2XCONV_EXPORT int w2xconv_convert_file
 (
 	struct W2XConv *conv,
-#if defined(WIN32) && defined(UNICODE)	
-	const WCHAR *dst_path, //FutureNote: see #229
-	const WCHAR *src_path,
-#else
-	const char *dst_path,
-	const char *src_path,
-#endif			
+	const TCHAR *dst_path,
+	const TCHAR *src_path,
 	int denoise_level, /* -1:none, 0:L0 denoise, 1:L1 denoise, 2:L2 denoise, 3:L3 denoise  */
 	double scale,
 	int block_size,
