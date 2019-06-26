@@ -408,13 +408,16 @@ if(ENABLE_TESTS)
 	else()
 		target_link_libraries(runbench LINK_PUBLIC w2xc ${FILE_SYSTEM_LIB} stdc++)
 	endif()
-	install(FILES src/w2xconv.h DESTINATION include)
 endif()
 
+# Install models only on request
 if(INSTALL_MODELS)
 	add_definitions(-DDEFAULT_MODELS_DIRECTORY="${CMAKE_INSTALL_PREFIX}/share/waifu2x-converter-cpp")
 	install(DIRECTORY models_rgb/ DESTINATION share/waifu2x-converter-cpp)
 endif()
+
+# Always install header.
+install(FILES src/w2xconv.h DESTINATION include)
 
 message(STATUS "")
 message(STATUS "Config summary:")
