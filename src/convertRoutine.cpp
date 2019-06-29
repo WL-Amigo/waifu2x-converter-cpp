@@ -144,7 +144,7 @@ namespace w2xc
 				double bytes = (double) filterSize.width * filterSize.height * sizeof(float) * (nOutputPlanes + nInputPlanes);
 				double gigabytesPerSec = (bytes/(1000.0*1000.0*1000.0)) / (t1-t0);
 
-				printf("(%.5f[ms], %7.2f[GFLOPS], %8.3f[GB/s])\n", t1-t0, gflops, gigabytesPerSec);
+				printf("(%.5f[s], %7.2f[GFLOPS], %8.3f[GB/s])\n", t1-t0, gflops, gigabytesPerSec);
 			}
 			
 			ops_sum += ops;
