@@ -543,10 +543,10 @@ namespace w2xc
 							printf("Error opening file %s: [%d] %s\n",bin_path.c_str(),errno,strerror(errno));
 							exit (EXIT_FAILURE);
 						}
-					#else
+#else
 						printf("Error opening file %s: [%d] %s\n",bin_path.c_str(),errno,strerror(errno));
 						exit (EXIT_FAILURE);
-					#endif
+#endif
 				}
 				else
 				{
