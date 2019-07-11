@@ -41,7 +41,7 @@ https://github.com/DeadSix27/waifu2x-converter-cpp/releases
 	- (Optional, for the git clones, you'll have to download it as zip otherwise)
 - Khronos OpenCL Headers: https://github.com/KhronosGroup/OpenCL-Headers
 	- Git clone it anywhere, example: `K:\w2x\OpenCL-Headers`
-- OpenCV 4.1.0 [ [opencv-4.1.0-vc14_vc15.exe](https://opencv.org/releases.html) ] (optional, but recommended)
+- OpenCV 4.1.0 [ [opencv-4.1.0-vc14_vc15.exe](https://opencv.org/releases.html) ] (required for the main binary/program, not the library)
 	- Extract to, for example: `K:\w2x\opencv`
 
 #### CUDA (Optional, requires driver version v419.35 or newer):
@@ -84,7 +84,7 @@ https://github.com/DeadSix27/waifu2x-converter-cpp/releases
 - GCC 5+
 - CMake
 - OpenCL
-- OpenCV 3+ (optional, but recommended)
+- OpenCV 3+ (required for the main binary/program, not the library)
 	- On Arch you probably also need: `gtk3 hdf5 vtk glew` because something seems broken in their CV package.
 
 #### Packages:
