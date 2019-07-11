@@ -1756,7 +1756,7 @@ void w2xconv_convert_mat
 				printf("Proccessing [%d/%zu] slices\n", i+1, pieces.size());
 			}
 			
-			apply_denoise(conv, image, denoise_level, blockSize, fmt);
+			apply_denoise(conv, pieces[i], denoise_level, blockSize, fmt);
 		}
 		
 		if (pieces.size() > 1 && conv->log_level >= 2)
