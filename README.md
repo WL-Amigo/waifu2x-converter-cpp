@@ -19,7 +19,11 @@ This software was originally made by @WL-Amigo and has been improved a lot over 
   - [waifu2x-converter-cpp-git](https://aur.archlinux.org/packages/waifu2x-converter-cpp-git/) (git master)
   - [waifu2x-converter-cpp](https://aur.archlinux.org/packages/waifu2x-converter-cpp/) (releaes)
   - These are maintained by [nfnty](https://aur.archlinux.org/account/nfnty). If you have issues with the AUR packages, please contact him.
-
+  
+- #### Fedora
+  - [waifu2x-converter-cpp](https://apps.fedoraproject.org/packages/waifu2x-converter-cpp)
+  - This is maintained by [eclipseo](https://fedoraproject.org/wiki/User:Eclipseo). If you have issues with the Fedora package, please contact him.
+  
 - ####  Other Linux
 	 - Please build from source. See [BUILDING.md](BUILDING.md) for help.
 
