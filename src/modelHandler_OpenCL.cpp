@@ -529,7 +529,7 @@ namespace w2xc
 								}
 								catch (fs::filesystem_error& e)
 								{
-									printf("ERROR: %s\n",e.what());
+									printf("Error creating directory: %s\n", e.what());
 									exit(EXIT_FAILURE);
 								}
 							}
