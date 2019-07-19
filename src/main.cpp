@@ -394,19 +394,11 @@ _tstring generate_output_location(
 		{
 			outputFileName.erase(tailDot, outputFileName.length());
 		}
-		outputFileName = outputFileName + _T("_[");
+		outputFileName = outputFileName + _T("_");
 		
-		if(mode == CONV_NOISE_SCALE)
-		{
-			outputFileName = outputFileName + _T("NS");
-		}
 		if (mode & CONV_NOISE)
 		{
-			outputFileName = outputFileName + _T("-L") + std::_to_tstring(NRLevel) + _T("]");
-		}
-		else
-		{
-			outputFileName = outputFileName + _T("]");
+			outputFileName = outputFileName + _T("[L") + std::_to_tstring(NRLevel) + _T("]");
 		}
 		if (mode & CONV_SCALE)
 		{
