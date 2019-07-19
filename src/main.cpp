@@ -341,10 +341,14 @@ void display_supported_formats()
 	}
 }
 
-
+// convert mode
+#define CONV_NONE 0
+#define CONV_NOISE 1
+#define CONV_SCALE 2
+#define CONV_NOISE_SCALE 3
 
 struct ConvInfo {
-	std::string mode;
+	int mode;
 	int NRLevel;
 	double scaleRatio;
 	int blockSize;
@@ -352,7 +356,7 @@ struct ConvInfo {
 	int* imwrite_params;
 	_tstring outputFormat;
 	ConvInfo(
-		std::string mode,
+		int mode,
 		int NRLevel,
 		double scaleRatio,
 		int blockSize,
@@ -373,7 +377,7 @@ struct ConvInfo {
 _tstring generate_output_location(
 	_tstring inputFileName,
 	_tstring outputFileName,
-	std::string mode,
+	int mode,
 	int NRLevel,
 	double scaleRatio,
 	_tstring outputFormat
@@ -392,18 +396,19 @@ _tstring generate_output_location(
 		}
 		outputFileName = outputFileName + _T("_[");
 		
-		if(mode.find("noise-scale") != mode.npos)
+		if(mode == CONV_NOISE_SCALE)
 		{
 			outputFileName = outputFileName + _T("NS");
 		}
-		if (mode.find("noise") != mode.npos) {
+		if (mode & CONV_NOISE)
+		{
 			outputFileName = outputFileName + _T("-L") + std::_to_tstring(NRLevel) + _T("]");
 		}
 		else
 		{
 			outputFileName = outputFileName + _T("]");
 		}
-		if (mode.find("scale") != mode.npos)
+		if (mode & CONV_SCALE)
 		{
 			outputFileName = outputFileName + _T("[x") + std::_to_tstring(scaleRatio) + _T("]");
 		}
@@ -457,13 +462,13 @@ void convert_file(ConvInfo info, fs::path inputName, fs::path output)
 
 	int _nrLevel = -1;
 
-	if (strcmp(info.mode.c_str(), "noise")==0 || strcmp(info.mode.c_str(), "noise-scale") == 0)
+	if (info.mode & CONV_NOISE)
 	{
 		_nrLevel = info.NRLevel;
 	}
 
 	double _scaleRatio = 1;
-	if (strcmp(info.mode.c_str(), "scale")==0 || strcmp(info.mode.c_str(), "noise-scale") == 0)
+	if (info.mode & CONV_SCALE)
 	{
 		_scaleRatio = info.scaleRatio;
 	}
@@ -838,8 +843,17 @@ int main(int argc, char** argv)
 	_tstring outputFormat;
 	outputFormat.assign(cmdOutputFormat.getValue().begin(), cmdOutputFormat.getValue().end());
 	
+	int mode = CONV_NONE;
+	
+	if (cmdMode.getValue().find("noise") != _tstring::npos) {
+		mode |= CONV_NOISE;
+	}
+	if (cmdMode.getValue().find("scale") != _tstring::npos) {
+		mode |= CONV_SCALE;
+	}
+	
 	ConvInfo convInfo(
-		cmdMode.getValue(),
+		mode,
 		cmdNRLevel.getValue(),
 		cmdScaleRatio.getValue(),
 		cmdBlockSize.getValue(),
