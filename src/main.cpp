@@ -354,6 +354,7 @@ struct ConvInfo {
 	int blockSize;
 	W2XConv* converter;
 	int* imwrite_params;
+	_tstring postfix;
 	_tstring outputFormat;
 	ConvInfo(
 		int mode,
@@ -370,17 +371,26 @@ struct ConvInfo {
 		blockSize(blockSize),
 		converter(converter),
 		imwrite_params(imwrite_params),
-		outputFormat(outputFormat) {};
+		outputFormat(outputFormat) {
+			postfix = _T("_");
+			
+			if (mode & CONV_NOISE)
+			{
+				postfix = postfix + _T("[L") + std::_to_tstring(NRLevel) + _T("]");
+			}
+			if (mode & CONV_SCALE)
+			{
+				postfix = postfix + _T("[x") + std::_to_tstring(scaleRatio) + _T("]");
+			}
+		};
 };
 
 
 _tstring generate_output_location(
-	_tstring inputFileName,
+	const _tstring inputFileName,
 	_tstring outputFileName,
-	int mode,
-	int NRLevel,
-	double scaleRatio,
-	_tstring outputFormat
+	const _tstring postfix,
+	const _tstring outputFormat
 )
 {
 	size_t lastSlashPos = outputFileName.find_last_of(_T("/\\"));
@@ -394,29 +404,20 @@ _tstring generate_output_location(
 		{
 			outputFileName.erase(tailDot, outputFileName.length());
 		}
-		outputFileName = outputFileName + _T("_");
-		
-		if (mode & CONV_NOISE)
-		{
-			outputFileName = outputFileName + _T("[L") + std::_to_tstring(NRLevel) + _T("]");
-		}
-		if (mode & CONV_SCALE)
-		{
-			outputFileName = outputFileName + _T("[x") + std::_to_tstring(scaleRatio) + _T("]");
-		}
-		outputFileName += _T(".") + outputFormat;
+		outputFileName = outputFileName + postfix + _T(".") + outputFormat;
 	}	
 	else if (outputFileName.back() == _T('/') || outputFileName.back() == _T('\\'))
 	{
 		//outputFileName = output folder or "auto/"
-		if ((!fs::is_directory(outputFileName)))
+		if (!fs::is_directory(outputFileName))
 		{
 			fs::create_directories(outputFileName);
 		}
 		//We pass tmp into generate_output_location because we will use the default way of naming processed files.
 		//We will remove everything, in the tmp string, prior to the last slash to get the filename.
 		//This removes all contextual information about where a file originated from if "recursive_directory" was enabled.
-		_tstring tmp = generate_output_location(inputFileName, _T("auto"), mode, NRLevel, scaleRatio, outputFormat);
+		_tstring tmp = generate_output_location(inputFileName, _T("auto"), postfix, outputFormat);
+		//_tstring tmp = inputFileName;
 		//tmp = full formatted output file path
 		size_t lastSlash = tmp.find_last_of(_T("/\\"));
 		if (lastSlash != _tstring::npos)
@@ -450,7 +451,7 @@ void convert_file(ConvInfo info, fs::path inputName, fs::path output)
 {
 	//std::cout << "Operating on: " << fs::absolute(inputName).string() << std::endl;
 
-	_tstring outputName = generate_output_location(fs::absolute(inputName).TSTRING_METHOD(), output.TSTRING_METHOD(), info.mode, info.NRLevel, info.scaleRatio, info.outputFormat);
+	_tstring outputName = generate_output_location(fs::absolute(inputName).TSTRING_METHOD(), output.TSTRING_METHOD(), info.postfix, info.outputFormat);
 
 	int _nrLevel = -1;
 
