@@ -793,11 +793,6 @@ int main(int argc, char** argv)
 		std::cout << "Error: JPEG & WebP Compression quality range is 0-101! (0 being smallest size and lowest quality), use 101 for lossless WebP" << std::endl;
 		std::exit(-1);
 	}
-	if (cmdLogLevel.getValue() < 0 || cmdLogLevel.getValue() > 4)
-	{
-		std::cout << "Error: Log-level has to be within range (0-4), 4 being the noisiest." << std::endl;
-		std::exit(-1);
-	}
 	if (validate_format_extension(cmdOutputFormat.getValue()) == false)
 	{
 		printf("Unsupported output extension: %s\nUse option --list-supported-formats to see a list of supported formats", cmdOutputFormat.getValue().c_str());
