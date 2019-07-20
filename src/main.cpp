@@ -435,10 +435,6 @@ _tstring generate_output_location(
 	{
 		//We may have a regular output file here or something went wrong.
 		//outputFileName is already what it should be thus nothing needs to be done.
-		if(validate_format_extension(outputFileName.substr(lastDotPos)) == false)
-		{
-			throw std::runtime_error("Unsupported output extension.");
-		}
 	}
 	else
 	{
@@ -454,7 +450,6 @@ void convert_file(ConvInfo info, fs::path inputName, fs::path output)
 	_tstring outputName = generate_output_location(fs::absolute(inputName).TSTRING_METHOD(), output.TSTRING_METHOD(), info.postfix, info.outputFormat);
 
 	int _nrLevel = -1;
-
 	if (info.mode & CONV_NOISE)
 	{
 		_nrLevel = info.NRLevel;
