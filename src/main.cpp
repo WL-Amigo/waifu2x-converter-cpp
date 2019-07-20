@@ -772,10 +772,10 @@ int main(int argc, char** argv)
 	//We need to do this conversion because using a TCLAP::ValueArg<fs::path> can not handle spaces.
 #if defined(_WIN32) && defined(_UNICODE)
 	fs::path input = inputFileName;
-	std::wstring tmpOutput = outputFileName;
+	_tstring tmpOutput = outputFileName;
 #else
 	fs::path input = cmdInput.getValue();
-	std::string tmpOutput = cmdOutput.getValue();
+	_tstring tmpOutput = cmdOutput.getValue();
 	modelDir = cmdModelPath.getValue();
 #endif
 	if (fs::is_directory(input) && (tmpOutput.back() != _T('/')) && _tcscmp(tmpOutput.c_str(), _T("auto")) != 0)
@@ -840,10 +840,12 @@ int main(int argc, char** argv)
 	
 	int convMode = CONV_NONE;
 	
-	if (cmdMode.getValue().find("noise") != _tstring::npos) {
+	if (cmdMode.getValue().find("noise") != _tstring::npos)
+	{
 		convMode |= CONV_NOISE;
 	}
-	if (cmdMode.getValue().find("scale") != _tstring::npos) {
+	if (cmdMode.getValue().find("scale") != _tstring::npos)
+	{
 		convMode |= CONV_SCALE;
 	}
 	
@@ -860,8 +862,10 @@ int main(int argc, char** argv)
 	
 	double time_start = getsec();
 	
-	if (log_level >= 1) {
-		switch (converter->target_processor->type) {
+	if (log_level >= 1)
+	{
+		switch (converter->target_processor->type)
+		{
 			case W2XCONV_PROC_HOST:
 			{
 				printf("CPU: %s\n", converter->target_processor->dev_name);
@@ -889,12 +893,13 @@ int main(int argc, char** argv)
 	int numErrors = 0;
 	int numSkipped = 0;
 	
+	//Build files list
+	std::deque<fs::path> files_list;
+	
 	if (fs::is_directory(input))
 	{
-		//Build files list
-		std::deque<fs::path> files_list;
-		
-		if (log_level >= 1) {
+		if (log_level >= 1)
+		{
 			std::cout << "We're going to be operating in a directory. dir:" << fs::absolute(input).string() << std::endl;
 		}
 		
@@ -911,7 +916,8 @@ int main(int argc, char** argv)
 					}
 					else
 					{
-						if (log_level >= 1) {
+						if (log_level >= 1)
+						{
 							std::cout << "Skipping file '" << inputFile.path().filename().string()
 								<< "' for having an unsupported file extension (" << ext << ")" << std::endl;
 						}
@@ -934,7 +940,8 @@ int main(int argc, char** argv)
 					}
 					else
 					{
-						if (log_level >= 1) {
+						if (log_level >= 1)
+						{
 							std::cout << "Skipping file '" << inputFile.path().filename().string()
 								<< "' for having an unsupported file extension (" << ext << ")" << std::endl;
 						}
@@ -944,91 +951,70 @@ int main(int argc, char** argv)
 				}
 			}
 		}
-
-		//Proceed by list
-		double timeAvg = 0.0;
-		int files_count = static_cast<int>(files_list.size());
-		for (auto &fn : files_list)
-		{
-			++numFilesProcessed;
-			double time_file_start = getsec();
-			
-			if (log_level >= 1) {
-				printf("Processing file [%d/%d] \"%s\":%s",
-					numFilesProcessed,
-					files_count,
-					fn.filename().string().c_str(),
-					(log_level >= 2 ? "\n" : " ")
-				);
-			}
-
-			try {
-				convert_file(convInfo, fn, output);
-			}
-			catch (const std::exception& e) {
-				numErrors++;
-				std::cout << e.what() << std::endl;
-			}
-
-			if (log_level >= 1) {
-				//Calculate and out elapsed time
-				double time_end = getsec();
-				double time_file = time_end - time_file_start;
-				double time_all = time_end - time_start;
-				if (timeAvg > 0.0)
-				{
-					timeAvg = time_all / numFilesProcessed;
-				}
-				else
-				{
-					timeAvg = time_all;
-				}
-			
-				double elapsed = files_count * timeAvg - time_all;
-				int el_h = (int) elapsed / (60 * 60);
-				int el_m = (int) (elapsed - el_h * 60 * 60) / 60;
-				int el_s = (int) (elapsed - el_h * 60 * 60 - el_m * 60);
-				printf("Done, took: ");
-				if (el_h)
-				{
-					printf("%dh", el_h);
-				}
-				if (el_m)
-				{
-					printf("%dm", el_h);
-				}
-				printf("%ds total, file: %.3fs avg: %.3fs\n", el_s, time_file, timeAvg);
-			}
-		}
-
-
 	}
 	else
+		files_list.push_back(input);
+
+	//Proceed by list
+	double timeAvg = 0.0;
+	int files_count = static_cast<int>(files_list.size());
+	for (auto &fn : files_list)
 	{
-		numFilesProcessed++;
+		++numFilesProcessed;
 		double time_file_start = getsec();
-		
-		if (log_level >= 1) {
-			std::cout << "Processing file [1/1] \"" << input << "\":" << (log_level >= 2 ? "\n" : " ");
+			
+		if (log_level >= 1)
+		{
+			printf("Processing file [%d/%d] \"%s\":%s",
+				numFilesProcessed,
+				files_count,
+				fn.filename().string().c_str(),
+				(log_level >= 2 ? "\n" : " ")
+			);
 		}
-		
+
 		try
 		{
-			convert_file(convInfo, input, output);
+			convert_file(convInfo, fn, output);
 		}
 		catch (const std::exception& e)
 		{
 			numErrors++;
 			std::cout << e.what() << std::endl;
 		}
-		
-		if (log_level >= 1) {
+
+		if (log_level >= 1)
+		{
+			//Calculate and out elapsed time
 			double time_end = getsec();
 			double time_file = time_end - time_file_start;
-			printf("Done, took: %.3fs total, file: %.3fs avg: %.3fs\n", time_file, time_file, time_file);
+			double time_all = time_end - time_start;
+			if (timeAvg > 0.0)
+			{
+				timeAvg = time_all / numFilesProcessed;
+			}
+			else
+			{
+				timeAvg = time_all;
+			}
+		
+			double elapsed = files_count * timeAvg - time_all;
+			int el_h = (int) elapsed / (60 * 60);
+			int el_m = (int) (elapsed - el_h * 60 * 60) / 60;
+			int el_s = (int) (elapsed - el_h * 60 * 60 - el_m * 60);
+			printf("Done, took: ");
+			if (el_h)
+			{
+				printf("%dh", el_h);
+			}
+			if (el_m)
+			{
+				printf("%dm", el_h);
+			}
+			printf("%ds total, file: %.3fs avg: %.3fs\n", el_s, time_file, timeAvg);
 		}
 	}
-	
+
 	if (log_level >= 1)
 	{
 		double time_end = getsec();
