@@ -356,6 +356,7 @@ struct ConvInfo {
 	int* imwrite_params;
 	_tstring postfix;
 	_tstring outputFormat;
+	int namingOption;
 	ConvInfo(
 		int convMode,
 		int NRLevel,
@@ -363,7 +364,8 @@ struct ConvInfo {
 		int blockSize,
 		W2XConv* converter,
 		int* imwrite_params,
-		_tstring outputFormat
+		_tstring outputFormat,
+		int namingOption
 	):
 		convMode(convMode),
 		NRLevel(NRLevel),
@@ -371,7 +373,8 @@ struct ConvInfo {
 		blockSize(blockSize),
 		converter(converter),
 		imwrite_params(imwrite_params),
-		outputFormat(outputFormat) {
+		outputFormat(outputFormat),
+		namingOption(namingOption) {
 			postfix = _T("_");
 			
 			if (convMode & CONV_NOISE)
@@ -390,7 +393,8 @@ _tstring generate_output_location(
 	const _tstring inputFileName,
 	_tstring outputFileName,
 	const _tstring postfix,
-	const _tstring outputFormat
+	const _tstring outputFormat,
+	int namingOption
 )
 {
 	size_t lastSlashPos = outputFileName.find_last_of(_T("/\\"));
@@ -416,8 +420,12 @@ _tstring generate_output_location(
 		//We pass tmp into generate_output_location because we will use the default way of naming processed files.
 		//We will remove everything, in the tmp string, prior to the last slash to get the filename.
 		//This removes all contextual information about where a file originated from if "recursive_directory" was enabled.
-		_tstring tmp = generate_output_location(inputFileName, _T("auto"), postfix, outputFormat);
-		//_tstring tmp = inputFileName;
+		_tstring tmp;
+		if ( namingOption == 1 )
+			tmp = generate_output_location(inputFileName, _T("auto"), postfix, outputFormat, namingOption);
+		else
+			tmp = inputFileName;
+	
 		//tmp = full formatted output file path
 		size_t lastSlash = tmp.find_last_of(_T("/\\"));
 		if (lastSlash != _tstring::npos)
@@ -447,7 +455,7 @@ void convert_file(ConvInfo info, fs::path inputName, fs::path output)
 {
 	//std::cout << "Operating on: " << fs::absolute(inputName).string() << std::endl;
 
-	_tstring outputName = generate_output_location(fs::absolute(inputName).TSTRING_METHOD(), output.TSTRING_METHOD(), info.postfix, info.outputFormat);
+	_tstring outputName = generate_output_location(fs::absolute(inputName).TSTRING_METHOD(), output.TSTRING_METHOD(), info.postfix, info.outputFormat, info.namingOption);
 
 	int _nrLevel = -1;
 	if (info.convMode & CONV_NOISE)
@@ -652,8 +660,12 @@ int main(int argc, char** argv)
 		"auto", "string", cmd);
 
 	TCLAP::ValueArg<bool> cmdRecursiveDirectoryIterator("r", "recursive-directory",
-		"Search recursively through directories to find more images to process.\nIf this is set to 0 it will only check in the directory specified if the input is a directory instead of an image.\nYou mustn't supply this argument with something other than 0 or 1.", false,
+		"Search recursively through directories to find more images to process.\nIf this is set to 0 it will only check in the directory specified if the input is a directory instead of an image. (0 or 1)", false,
 		0, "bool", cmd);
+
+	TCLAP::ValueArg<bool> cmdAutoNaming("n", "auto-naming",
+		"Add postfix to output name when output path is not specified.\nSet 0 to disable this. (0 or 1)", false,
+		1, "bool", cmd);
 
 
 	TCLAP::SwitchArg cmdQuiet("s", "silent", "Enable silent mode. (same as --log-level 1)", cmd, false);
@@ -857,7 +869,8 @@ int main(int argc, char** argv)
 		cmdBlockSize.getValue(),
 		converter,
 		imwrite_params,
-		outputFormat
+		outputFormat,
+		cmdAutoNaming.getValue()
 	);
 	
 	double time_start = getsec();
