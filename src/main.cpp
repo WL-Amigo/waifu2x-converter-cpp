@@ -348,7 +348,7 @@ void display_supported_formats()
 #define CONV_NOISE_SCALE 3
 
 struct ConvInfo {
-	int mode;
+	int convMode;
 	int NRLevel;
 	double scaleRatio;
 	int blockSize;
@@ -357,7 +357,7 @@ struct ConvInfo {
 	_tstring postfix;
 	_tstring outputFormat;
 	ConvInfo(
-		int mode,
+		int convMode,
 		int NRLevel,
 		double scaleRatio,
 		int blockSize,
@@ -365,7 +365,7 @@ struct ConvInfo {
 		int* imwrite_params,
 		_tstring outputFormat
 	):
-		mode(mode),
+		convMode(convMode),
 		NRLevel(NRLevel),
 		scaleRatio(scaleRatio),
 		blockSize(blockSize),
@@ -374,11 +374,11 @@ struct ConvInfo {
 		outputFormat(outputFormat) {
 			postfix = _T("_");
 			
-			if (mode & CONV_NOISE)
+			if (convMode & CONV_NOISE)
 			{
 				postfix = postfix + _T("[L") + std::_to_tstring(NRLevel) + _T("]");
 			}
-			if (mode & CONV_SCALE)
+			if (convMode & CONV_SCALE)
 			{
 				postfix = postfix + _T("[x") + std::_to_tstring(scaleRatio) + _T("]");
 			}
@@ -450,13 +450,13 @@ void convert_file(ConvInfo info, fs::path inputName, fs::path output)
 	_tstring outputName = generate_output_location(fs::absolute(inputName).TSTRING_METHOD(), output.TSTRING_METHOD(), info.postfix, info.outputFormat);
 
 	int _nrLevel = -1;
-	if (info.mode & CONV_NOISE)
+	if (info.convMode & CONV_NOISE)
 	{
 		_nrLevel = info.NRLevel;
 	}
 
 	double _scaleRatio = 1;
-	if (info.mode & CONV_SCALE)
+	if (info.convMode & CONV_SCALE)
 	{
 		_scaleRatio = info.scaleRatio;
 	}
@@ -658,7 +658,14 @@ int main(int argc, char** argv)
 
 	TCLAP::SwitchArg cmdQuiet("s", "silent", "Enable silent mode. (same as --log-level 1)", cmd, false);
 	
-	TCLAP::ValueArg<int> cmdLogLevel("v", "log-level", "Set log level (0-4)", false, 3, "integer", cmd);
+	std::vector<int> cmdLogLevelConstraintV;
+	cmdLogLevelConstraintV.push_back(0);
+	cmdLogLevelConstraintV.push_back(1);
+	cmdLogLevelConstraintV.push_back(2);
+	cmdLogLevelConstraintV.push_back(3);
+	cmdLogLevelConstraintV.push_back(4);
+	TCLAP::ValuesConstraint<int> cmdLogLevelConstraint(cmdLogLevelConstraintV);
+	TCLAP::ValueArg<int> cmdLogLevel("v", "log-level", "Set log level", false, 3, &cmdLogLevelConstraint, cmd);
 	
 	std::vector<std::string> cmdModeConstraintV;
 	cmdModeConstraintV.push_back("noise");
@@ -831,17 +838,18 @@ int main(int argc, char** argv)
 	_tstring outputFormat;
 	outputFormat.assign(cmdOutputFormat.getValue().begin(), cmdOutputFormat.getValue().end());
 	
-	int mode = CONV_NONE;
+	int convMode = CONV_NONE;
 	
 	if (cmdMode.getValue().find("noise") != _tstring::npos) {
-		mode |= CONV_NOISE;
+		convMode |= CONV_NOISE;
 	}
 	if (cmdMode.getValue().find("scale") != _tstring::npos) {
-		mode |= CONV_SCALE;
+		convMode |= CONV_SCALE;
 	}
 	
+	
 	ConvInfo convInfo(
-		mode,
+		convMode,
 		cmdNRLevel.getValue(),
 		cmdScaleRatio.getValue(),
 		cmdBlockSize.getValue(),
@@ -881,7 +889,7 @@ int main(int argc, char** argv)
 	int numErrors = 0;
 	int numSkipped = 0;
 	
-	if (fs::is_directory(input) == true)
+	if (fs::is_directory(input))
 	{
 		//Build files list
 		std::deque<fs::path> files_list;
