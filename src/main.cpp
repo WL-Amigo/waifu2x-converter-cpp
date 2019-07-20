@@ -355,8 +355,9 @@ struct ConvInfo {
 	W2XConv* converter;
 	int* imwrite_params;
 	_tstring postfix;
+	_tstring origPath;
 	_tstring outputFormat;
-	int namingOption;
+	int outputOption;
 	ConvInfo(
 		int convMode,
 		int NRLevel,
@@ -364,8 +365,9 @@ struct ConvInfo {
 		int blockSize,
 		W2XConv* converter,
 		int* imwrite_params,
+		_tstring origPath,
 		_tstring outputFormat,
-		int namingOption
+		int outputOption
 	):
 		convMode(convMode),
 		NRLevel(NRLevel),
@@ -373,8 +375,9 @@ struct ConvInfo {
 		blockSize(blockSize),
 		converter(converter),
 		imwrite_params(imwrite_params),
+		origPath(origPath),
 		outputFormat(outputFormat),
-		namingOption(namingOption) {
+		outputOption(outputOption) {
 			postfix = _T("_");
 			
 			if (convMode & CONV_NOISE)
@@ -390,11 +393,12 @@ struct ConvInfo {
 
 
 _tstring generate_output_location(
+	const _tstring origPath,
 	const _tstring inputFileName,
 	_tstring outputFileName,
 	const _tstring postfix,
 	const _tstring outputFormat,
-	int namingOption
+	int outputOption
 )
 {
 	size_t lastSlashPos = outputFileName.find_last_of(_T("/\\"));
@@ -403,26 +407,40 @@ _tstring generate_output_location(
 	if (_tcscmp(outputFileName.c_str(), _T("auto")) == 0)
 	{
 		outputFileName = inputFileName;
+		
 		size_t tailDot = outputFileName.find_last_of(_T('.'));
 		if (tailDot != _tstring::npos)
 		{
 			outputFileName.erase(tailDot, outputFileName.length());
 		}
-		outputFileName = outputFileName + postfix + _T(".") + outputFormat;
+		
+		if (outputOption & 1)
+		{
+			outputFileName = outputFileName + postfix;
+		}
+		
+		outputFileName = outputFileName + _T(".") + outputFormat;
 	}	
 	else if (outputFileName.back() == _T('/') || outputFileName.back() == _T('\\'))
 	{
+		if (outputOption & 2 && inputFileName.find(origPath) != _tstring::npos)
+		{
+			_tstring relative = inputFileName.substr(origPath.length()+1);
+			outputFileName += relative.substr(0, relative.find_last_of(_T("/\\"))+1);
+		}
+		
 		//outputFileName = output folder or "auto/"
 		if (!fs::is_directory(outputFileName))
 		{
 			fs::create_directories(outputFileName);
 		}
+		
 		//We pass tmp into generate_output_location because we will use the default way of naming processed files.
 		//We will remove everything, in the tmp string, prior to the last slash to get the filename.
 		//This removes all contextual information about where a file originated from if "recursive_directory" was enabled.
 		_tstring tmp;
-		if ( namingOption == 1 )
-			tmp = generate_output_location(inputFileName, _T("auto"), postfix, outputFormat, namingOption);
+		if (outputOption & 1)
+			tmp = generate_output_location(origPath, inputFileName, _T("auto"), postfix, outputFormat, outputOption);
 		else
 			tmp = inputFileName;
 	
@@ -432,6 +450,7 @@ _tstring generate_output_location(
 		{
 			tmp.erase(0, lastSlash+1);
 		}
+		
 		outputFileName += tmp;
 	}
 	else if (lastDotPos == _tstring::npos || lastSlashPos != _tstring::npos && lastDotPos < lastSlashPos)
@@ -455,7 +474,7 @@ void convert_file(ConvInfo info, fs::path inputName, fs::path output)
 {
 	//std::cout << "Operating on: " << fs::absolute(inputName).string() << std::endl;
 
-	_tstring outputName = generate_output_location(fs::absolute(inputName).TSTRING_METHOD(), output.TSTRING_METHOD(), info.postfix, info.outputFormat, info.namingOption);
+	_tstring outputName = generate_output_location(info.origPath, fs::absolute(inputName).TSTRING_METHOD(), output.TSTRING_METHOD(), info.postfix, info.outputFormat, info.outputOption);
 
 	int _nrLevel = -1;
 	if (info.convMode & CONV_NOISE)
@@ -667,6 +686,10 @@ int main(int argc, char** argv)
 		"Add postfix to output name when output path is not specified.\nSet 0 to disable this. (0 or 1)", false,
 		1, "bool", cmd);
 
+	TCLAP::ValueArg<bool> cmdGenerateSubdir("g", "generate-subdir",
+		"Generate sub folder when recursive directory is enabled.\nSet 1 to enable this. (0 or 1)", false,
+		0, "bool", cmd);
+
 
 	TCLAP::SwitchArg cmdQuiet("s", "silent", "Enable silent mode. (same as --log-level 1)", cmd, false);
 	
@@ -832,7 +855,7 @@ int main(int argc, char** argv)
 	int jpeg_quality = 90;
 	int webp_quality = 101;
 	
-	if(cmdImgQuality.getValue() != -1)
+	if (cmdImgQuality.getValue() != -1)
 	{
 		jpeg_quality = webp_quality = cmdImgQuality.getValue();
 	}
@@ -861,6 +884,19 @@ int main(int argc, char** argv)
 		convMode |= CONV_SCALE;
 	}
 	
+	int outputOption = cmdAutoNaming.getValue();
+	bool recursive_directory_iterator = cmdRecursiveDirectoryIterator.getValue();
+	
+	if (fs::is_directory(input) && cmdGenerateSubdir.getValue() && recursive_directory_iterator)
+	{
+		outputOption |= 2;
+	}
+	
+	_tstring origPath = fs::absolute(input).TSTRING_METHOD();
+	
+	if(origPath.back() == _T('\\') || origPath.back() == _T('/')){
+		origPath = origPath.substr(0, origPath.length()-1);
+	}
 	
 	ConvInfo convInfo(
 		convMode,
@@ -869,8 +905,9 @@ int main(int argc, char** argv)
 		cmdBlockSize.getValue(),
 		converter,
 		imwrite_params,
+		origPath,
 		outputFormat,
-		cmdAutoNaming.getValue()
+		outputOption
 	);
 	
 	double time_start = getsec();
@@ -897,7 +934,6 @@ int main(int argc, char** argv)
 		}
 	}
 
-	bool recursive_directory_iterator = cmdRecursiveDirectoryIterator.getValue();
 	int error = w2xconv_load_models(converter, modelDir.c_str());
 	check_for_errors(converter, error);
 
