@@ -129,5 +129,5 @@ $ brew install llvm opencv
 $ git clone https://github.com/DeadSix27/waifu2x-converter-cpp && cd waifu2x-converter-cpp
 $ cmake -DOPENCV_PREFIX=/usr/local/Cellar/opencv/<your version here> .
 $ make -j4
-$ cp -r models_rgb models
+$ sudo make install
 ```
