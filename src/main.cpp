@@ -445,9 +445,19 @@ _tstring generate_output_location(
 		//This removes all contextual information about where a file originated from if "recursive_directory" was enabled.
 		_tstring tmp;
 		if (outputOption & OUTPUT_RECURSIVE)
+		{
 			tmp = generate_output_location(origPath, inputFileName, _T("auto"), postfix, outputFormat, outputOption);
+		}
 		else
+		{
 			tmp = inputFileName;
+			size_t tailDot = tmp.find_last_of(_T('.'));
+			if (tailDot != _tstring::npos)
+			{
+				tmp.erase(tailDot, tmp.length());
+			}
+			tmp = tmp + _T(".") + outputFormat;
+		}
 	
 		//tmp = full formatted output file path
 		size_t lastSlash = tmp.find_last_of(_T("/\\"));
