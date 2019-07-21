@@ -50,6 +50,14 @@ extern "C" {
 
 #endif
 
+#ifndef W2XCONV_TCHAR
+#if defined(_WIN32) && defined(_UNICODE)
+#define W2XCONV_TCHAR wchar_t
+#else
+#define W2XCONV_TCHAR char
+#endif
+#endif
+
 enum W2XConvGPUMode
 {
 	W2XCONV_GPU_DISABLE = 0,
@@ -208,11 +216,7 @@ W2XCONV_EXPORT struct W2XConv *w2xconv_init(enum W2XConvGPUMode gpu, int njob /*
 W2XCONV_EXPORT struct W2XConv *w2xconv_init_with_processor(int processor_idx, int njob, int log_level);
 
 /* return negative if failed */
-#if defined(_WIN32) && defined(_UNICODE)
-W2XCONV_EXPORT int w2xconv_load_models(struct W2XConv *conv, const wchar_t *model_dir);
-#else
-W2XCONV_EXPORT int w2xconv_load_models(struct W2XConv *conv, const char *model_dir);
-#endif
+W2XCONV_EXPORT int w2xconv_load_models(struct W2XConv *conv, const W2XCONV_TCHAR *model_dir);
 
 W2XCONV_EXPORT void w2xconv_set_model_3x3
 (
@@ -232,13 +236,8 @@ W2XCONV_EXPORT void w2xconv_fini(struct W2XConv *conv);
 W2XCONV_EXPORT int w2xconv_convert_file
 (
 	struct W2XConv *conv,
-#if defined(_WIN32) && defined(_UNICODE)
-	const wchar_t *dst_path,
-	const wchar_t *src_path,
-#else
-	const char *dst_path,
-	const char *src_path,
-#endif
+	const W2XCONV_TCHAR *dst_path,
+	const W2XCONV_TCHAR *src_path,
 	int denoise_level, /* -1:none, 0:L0 denoise, 1:L1 denoise, 2:L2 denoise, 3:L3 denoise  */
 	double scale,
 	int block_size,
