@@ -347,6 +347,11 @@ void display_supported_formats()
 #define CONV_SCALE 2
 #define CONV_NOISE_SCALE 3
 
+// output option
+#define OUTPUT_NORMAL 0
+#define OUTPUT_RECURSIVE 1
+#define OUTPUT_SUBDIR 2
+
 struct ConvInfo {
 	int convMode;
 	int NRLevel;
@@ -414,7 +419,7 @@ _tstring generate_output_location(
 			outputFileName.erase(tailDot, outputFileName.length());
 		}
 		
-		if (outputOption & 1)
+		if (outputOption & OUTPUT_RECURSIVE)
 		{
 			outputFileName = outputFileName + postfix;
 		}
@@ -423,7 +428,7 @@ _tstring generate_output_location(
 	}	
 	else if (outputFileName.back() == _T('/') || outputFileName.back() == _T('\\'))
 	{
-		if (outputOption & 2 && inputFileName.find(origPath) != _tstring::npos)
+		if (outputOption & OUTPUT_SUBDIR && inputFileName.find(origPath) != _tstring::npos)
 		{
 			_tstring relative = inputFileName.substr(origPath.length()+1);
 			outputFileName += relative.substr(0, relative.find_last_of(_T("/\\"))+1);
@@ -439,7 +444,7 @@ _tstring generate_output_location(
 		//We will remove everything, in the tmp string, prior to the last slash to get the filename.
 		//This removes all contextual information about where a file originated from if "recursive_directory" was enabled.
 		_tstring tmp;
-		if (outputOption & 1)
+		if (outputOption & OUTPUT_RECURSIVE)
 			tmp = generate_output_location(origPath, inputFileName, _T("auto"), postfix, outputFormat, outputOption);
 		else
 			tmp = inputFileName;
@@ -884,7 +889,7 @@ int main(int argc, char** argv)
 	
 	if (fs::is_directory(input) && cmdGenerateSubdir.getValue() && recursive_directory_iterator)
 	{
-		outputOption |= 2;
+		outputOption |= OUTPUT_SUBDIR;
 	}
 	
 	_tstring origPath = fs::absolute(input).TSTRING_METHOD();
