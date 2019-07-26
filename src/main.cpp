@@ -341,42 +341,69 @@ void display_supported_formats()
 	}
 }
 
+// convert mode
+#define CONV_NONE 0
+#define CONV_NOISE 1
+#define CONV_SCALE 2
+#define CONV_NOISE_SCALE 3
 
+// output option
+#define OUTPUT_NORMAL 0
+#define OUTPUT_RECURSIVE 1
+#define OUTPUT_SUBDIR 2
 
 struct ConvInfo {
-	std::string mode;
+	int convMode;
 	int NRLevel;
 	double scaleRatio;
 	int blockSize;
 	W2XConv* converter;
 	int* imwrite_params;
+	_tstring postfix;
+	_tstring origPath;
 	_tstring outputFormat;
+	int outputOption;
 	ConvInfo(
-		std::string mode,
+		int convMode,
 		int NRLevel,
 		double scaleRatio,
 		int blockSize,
 		W2XConv* converter,
 		int* imwrite_params,
-		_tstring outputFormat
+		_tstring origPath,
+		_tstring outputFormat,
+		int outputOption
 	):
-		mode(mode),
+		convMode(convMode),
 		NRLevel(NRLevel),
 		scaleRatio(scaleRatio),
 		blockSize(blockSize),
 		converter(converter),
 		imwrite_params(imwrite_params),
-		outputFormat(outputFormat) {};
+		origPath(origPath),
+		outputFormat(outputFormat),
+		outputOption(outputOption) {
+			postfix = _T("_");
+			
+			if (convMode & CONV_NOISE)
+			{
+				postfix = postfix + _T("[L") + std::_to_tstring(NRLevel) + _T("]");
+			}
+			if (convMode & CONV_SCALE)
+			{
+				postfix = postfix + _T("[x") + std::_to_tstring(scaleRatio) + _T("]");
+			}
+		};
 };
 
 
 _tstring generate_output_location(
-	_tstring inputFileName,
+	const _tstring origPath,
+	const _tstring inputFileName,
 	_tstring outputFileName,
-	std::string mode,
-	int NRLevel,
-	double scaleRatio,
-	_tstring outputFormat
+	const _tstring postfix,
+	const _tstring outputFormat,
+	int outputOption
 )
 {
 	size_t lastSlashPos = outputFileName.find_last_of(_T("/\\"));
@@ -385,47 +412,60 @@ _tstring generate_output_location(
 	if (_tcscmp(outputFileName.c_str(), _T("auto")) == 0)
 	{
 		outputFileName = inputFileName;
+		
 		size_t tailDot = outputFileName.find_last_of(_T('.'));
 		if (tailDot != _tstring::npos)
 		{
 			outputFileName.erase(tailDot, outputFileName.length());
 		}
-		outputFileName = outputFileName + _T("_[");
 		
-		if(mode.find("noise-scale") != mode.npos)
+		if (outputOption & OUTPUT_RECURSIVE)
 		{
-			outputFileName = outputFileName + _T("NS");
+			outputFileName = outputFileName + postfix;
 		}
-		if (mode.find("noise") != mode.npos) {
-			outputFileName = outputFileName + _T("-L") + std::_to_tstring(NRLevel) + _T("]");
-		}
-		else
-		{
-			outputFileName = outputFileName + _T("]");
-		}
-		if (mode.find("scale") != mode.npos)
-		{
-			outputFileName = outputFileName + _T("[x") + std::_to_tstring(scaleRatio) + _T("]");
-		}
-		outputFileName += _T(".") + outputFormat;
+		
+		outputFileName = outputFileName + _T(".") + outputFormat;
 	}	
 	else if (outputFileName.back() == _T('/') || outputFileName.back() == _T('\\'))
 	{
+		if (outputOption & OUTPUT_SUBDIR && inputFileName.find(origPath) != _tstring::npos)
+		{
+			_tstring relative = inputFileName.substr(origPath.length()+1);
+			outputFileName += relative.substr(0, relative.find_last_of(_T("/\\"))+1);
+		}
+		
 		//outputFileName = output folder or "auto/"
-		if ((!fs::is_directory(outputFileName)))
+		if (!fs::is_directory(outputFileName))
 		{
 			fs::create_directories(outputFileName);
 		}
+		
 		//We pass tmp into generate_output_location because we will use the default way of naming processed files.
 		//We will remove everything, in the tmp string, prior to the last slash to get the filename.
 		//This removes all contextual information about where a file originated from if "recursive_directory" was enabled.
-		_tstring tmp = generate_output_location(inputFileName, _T("auto"), mode, NRLevel, scaleRatio, outputFormat);
+		_tstring tmp;
+		if (outputOption & OUTPUT_RECURSIVE)
+		{
+			tmp = generate_output_location(origPath, inputFileName, _T("auto"), postfix, outputFormat, outputOption);
+		}
+		else
+		{
+			tmp = inputFileName;
+			size_t tailDot = tmp.find_last_of(_T('.'));
+			if (tailDot != _tstring::npos)
+			{
+				tmp.erase(tailDot, tmp.length());
+			}
+			tmp = tmp + _T(".") + outputFormat;
+		}
+	
 		//tmp = full formatted output file path
 		size_t lastSlash = tmp.find_last_of(_T("/\\"));
 		if (lastSlash != _tstring::npos)
 		{
 			tmp.erase(0, lastSlash+1);
 		}
+		
 		outputFileName += tmp;
 	}
 	else if (lastDotPos == _tstring::npos || lastSlashPos != _tstring::npos && lastDotPos < lastSlashPos)
@@ -437,10 +477,6 @@ _tstring generate_output_location(
 	{
 		//We may have a regular output file here or something went wrong.
 		//outputFileName is already what it should be thus nothing needs to be done.
-		if(validate_format_extension(outputFileName.substr(lastDotPos)) == false)
-		{
-			throw std::runtime_error("Unsupported output extension.");
-		}
 	}
 	else
 	{
@@ -453,17 +489,16 @@ void convert_file(ConvInfo info, fs::path inputName, fs::path output)
 {
 	//std::cout << "Operating on: " << fs::absolute(inputName).string() << std::endl;
 
-	_tstring outputName = generate_output_location(fs::absolute(inputName).TSTRING_METHOD(), output.TSTRING_METHOD(), info.mode, info.NRLevel, info.scaleRatio, info.outputFormat);
+	_tstring outputName = generate_output_location(info.origPath, fs::absolute(inputName).TSTRING_METHOD(), output.TSTRING_METHOD(), info.postfix, info.outputFormat, info.outputOption);
 
 	int _nrLevel = -1;
-
-	if (strcmp(info.mode.c_str(), "noise")==0 || strcmp(info.mode.c_str(), "noise-scale") == 0)
+	if (info.convMode & CONV_NOISE)
 	{
 		_nrLevel = info.NRLevel;
 	}
 
 	double _scaleRatio = 1;
-	if (strcmp(info.mode.c_str(), "scale")==0 || strcmp(info.mode.c_str(), "noise-scale") == 0)
+	if (info.convMode & CONV_SCALE)
 	{
 		_scaleRatio = info.scaleRatio;
 	}
@@ -659,13 +694,28 @@ int main(int argc, char** argv)
 		"auto", "string", cmd);
 
 	TCLAP::ValueArg<bool> cmdRecursiveDirectoryIterator("r", "recursive-directory",
-		"Search recursively through directories to find more images to process.\nIf this is set to 0 it will only check in the directory specified if the input is a directory instead of an image.\nYou mustn't supply this argument with something other than 0 or 1.", false,
+		"Search recursively through directories to find more images to process.\nIf this is set to 0 it will only check in the directory specified if the input is a directory instead of an image. (0 or 1)", false,
+		0, "bool", cmd);
+
+	TCLAP::ValueArg<bool> cmdAutoNaming("n", "auto-naming",
+		"Add postfix to output name when output path is not specified.\nSet 0 to disable this. (0 or 1)", false,
+		1, "bool", cmd);
+
+	TCLAP::ValueArg<bool> cmdGenerateSubdir("g", "generate-subdir",
+		"Generate sub folder when recursive directory is enabled.\nSet 1 to enable this. (0 or 1)", false,
 		0, "bool", cmd);
 
 
 	TCLAP::SwitchArg cmdQuiet("s", "silent", "Enable silent mode. (same as --log-level 1)", cmd, false);
 	
-	TCLAP::ValueArg<int> cmdLogLevel("v", "log-level", "Set log level (0-4)", false, 3, "integer", cmd);
+	std::vector<int> cmdLogLevelConstraintV;
+	cmdLogLevelConstraintV.push_back(0);
+	cmdLogLevelConstraintV.push_back(1);
+	cmdLogLevelConstraintV.push_back(2);
+	cmdLogLevelConstraintV.push_back(3);
+	cmdLogLevelConstraintV.push_back(4);
+	TCLAP::ValuesConstraint<int> cmdLogLevelConstraint(cmdLogLevelConstraintV);
+	TCLAP::ValueArg<int> cmdLogLevel("v", "log-level", "Set log level", false, 3, &cmdLogLevelConstraint, cmd);
 	
 	std::vector<std::string> cmdModeConstraintV;
 	cmdModeConstraintV.push_back("noise");
@@ -758,11 +808,6 @@ int main(int argc, char** argv)
 		std::cout << "Error: JPEG & WebP Compression quality range is 0-101! (0 being smallest size and lowest quality), use 101 for lossless WebP" << std::endl;
 		std::exit(-1);
 	}
-	if (cmdLogLevel.getValue() < 0 || cmdLogLevel.getValue() > 4)
-	{
-		std::cout << "Error: Log-level has to be within range (0-4), 4 being the noisiest." << std::endl;
-		std::exit(-1);
-	}
 	if (validate_format_extension(cmdOutputFormat.getValue()) == false)
 	{
 		printf("Unsupported output extension: %s\nUse option --list-supported-formats to see a list of supported formats", cmdOutputFormat.getValue().c_str());
@@ -772,10 +817,10 @@ int main(int argc, char** argv)
 	//We need to do this conversion because using a TCLAP::ValueArg<fs::path> can not handle spaces.
 #if defined(_WIN32) && defined(_UNICODE)
 	fs::path input = inputFileName;
-	std::wstring tmpOutput = outputFileName;
+	_tstring tmpOutput = outputFileName;
 #else
 	fs::path input = cmdInput.getValue();
-	std::string tmpOutput = cmdOutput.getValue();
+	_tstring tmpOutput = cmdOutput.getValue();
 	modelDir = cmdModelPath.getValue();
 #endif
 	if (fs::is_directory(input) && (tmpOutput.back() != _T('/')) && _tcscmp(tmpOutput.c_str(), _T("auto")) != 0)
@@ -820,7 +865,7 @@ int main(int argc, char** argv)
 	int jpeg_quality = 90;
 	int webp_quality = 101;
 	
-	if(cmdImgQuality.getValue() != -1)
+	if (cmdImgQuality.getValue() != -1)
 	{
 		jpeg_quality = webp_quality = cmdImgQuality.getValue();
 	}
@@ -838,20 +883,49 @@ int main(int argc, char** argv)
 	_tstring outputFormat;
 	outputFormat.assign(cmdOutputFormat.getValue().begin(), cmdOutputFormat.getValue().end());
 	
+	int convMode = CONV_NONE;
+	
+	if (cmdMode.getValue().find("noise") != _tstring::npos)
+	{
+		convMode |= CONV_NOISE;
+	}
+	if (cmdMode.getValue().find("scale") != _tstring::npos)
+	{
+		convMode |= CONV_SCALE;
+	}
+	
+	int outputOption = cmdAutoNaming.getValue();
+	bool recursive_directory_iterator = cmdRecursiveDirectoryIterator.getValue();
+	
+	if (fs::is_directory(input) && cmdGenerateSubdir.getValue() && recursive_directory_iterator)
+	{
+		outputOption |= OUTPUT_SUBDIR;
+	}
+	
+	_tstring origPath = fs::absolute(input).TSTRING_METHOD();
+	
+	if(origPath.back() == _T('\\') || origPath.back() == _T('/')){
+		origPath = origPath.substr(0, origPath.length()-1);
+	}
+	
 	ConvInfo convInfo(
-		cmdMode.getValue(),
+		convMode,
 		cmdNRLevel.getValue(),
 		cmdScaleRatio.getValue(),
 		cmdBlockSize.getValue(),
 		converter,
 		imwrite_params,
-		outputFormat
+		origPath,
+		outputFormat,
+		outputOption
 	);
 	
 	double time_start = getsec();
 	
-	if (log_level >= 1) {
-		switch (converter->target_processor->type) {
+	if (log_level >= 1)
+	{
+		switch (converter->target_processor->type)
+		{
 			case W2XCONV_PROC_HOST:
 			{
 				printf("CPU: %s\n", converter->target_processor->dev_name);
@@ -870,7 +944,6 @@ int main(int argc, char** argv)
 		}
 	}
 
-	bool recursive_directory_iterator = cmdRecursiveDirectoryIterator.getValue();
 	int error = w2xconv_load_models(converter, modelDir.c_str());
 	check_for_errors(converter, error);
 
@@ -879,12 +952,13 @@ int main(int argc, char** argv)
 	int numErrors = 0;
 	int numSkipped = 0;
 	
-	if (fs::is_directory(input) == true)
+	//Build files list
+	std::deque<fs::path> files_list;
+	
+	if (fs::is_directory(input))
 	{
-		//Build files list
-		std::deque<fs::path> files_list;
-		
-		if (log_level >= 1) {
+		if (log_level >= 1)
+		{
 			std::cout << "We're going to be operating in a directory. dir:" << fs::absolute(input).string() << std::endl;
 		}
 		
@@ -901,7 +975,8 @@ int main(int argc, char** argv)
 					}
 					else
 					{
-						if (log_level >= 1) {
+						if (log_level >= 1)
+						{
 							std::cout << "Skipping file '" << inputFile.path().filename().string()
 								<< "' for having an unsupported file extension (" << ext << ")" << std::endl;
 						}
@@ -924,7 +999,8 @@ int main(int argc, char** argv)
 					}
 					else
 					{
-						if (log_level >= 1) {
+						if (log_level >= 1)
+						{
 							std::cout << "Skipping file '" << inputFile.path().filename().string()
 								<< "' for having an unsupported file extension (" << ext << ")" << std::endl;
 						}
@@ -934,91 +1010,70 @@ int main(int argc, char** argv)
 				}
 			}
 		}
-
-		//Proceed by list
-		double timeAvg = 0.0;
-		int files_count = static_cast<int>(files_list.size());
-		for (auto &fn : files_list)
-		{
-			++numFilesProcessed;
-			double time_file_start = getsec();
-			
-			if (log_level >= 1) {
-				printf("Processing file [%d/%d] \"%s\":%s",
-					numFilesProcessed,
-					files_count,
-					fn.filename().string().c_str(),
-					(log_level >= 2 ? "\n" : " ")
-				);
-			}
-
-			try {
-				convert_file(convInfo, fn, output);
-			}
-			catch (const std::exception& e) {
-				numErrors++;
-				std::cout << e.what() << std::endl;
-			}
-
-			if (log_level >= 1) {
-				//Calculate and out elapsed time
-				double time_end = getsec();
-				double time_file = time_end - time_file_start;
-				double time_all = time_end - time_start;
-				if (timeAvg > 0.0)
-				{
-					timeAvg = time_all / numFilesProcessed;
-				}
-				else
-				{
-					timeAvg = time_all;
-				}
-			
-				double elapsed = files_count * timeAvg - time_all;
-				int el_h = (int) elapsed / (60 * 60);
-				int el_m = (int) (elapsed - el_h * 60 * 60) / 60;
-				int el_s = (int) (elapsed - el_h * 60 * 60 - el_m * 60);
-				printf("Done, took: ");
-				if (el_h)
-				{
-					printf("%dh", el_h);
-				}
-				if (el_m)
-				{
-					printf("%dm", el_h);
-				}
-				printf("%ds total, file: %.3fs avg: %.3fs\n", el_s, time_file, timeAvg);
-			}
-		}
-
-
 	}
 	else
+		files_list.push_back(input);
+
+	//Proceed by list
+	double timeAvg = 0.0;
+	int files_count = static_cast<int>(files_list.size());
+	for (auto &fn : files_list)
 	{
-		numFilesProcessed++;
+		++numFilesProcessed;
 		double time_file_start = getsec();
-		
-		if (log_level >= 1) {
-			std::cout << "Processing file [1/1] \"" << input << "\":" << (log_level >= 2 ? "\n" : " ");
+			
+		if (log_level >= 1)
+		{
+			printf("Processing file [%d/%d] \"%s\":%s",
+				numFilesProcessed,
+				files_count,
+				fn.filename().string().c_str(),
+				(log_level >= 2 ? "\n" : " ")
+			);
 		}
-		
+
 		try
 		{
-			convert_file(convInfo, input, output);
+			convert_file(convInfo, fn, output);
 		}
 		catch (const std::exception& e)
 		{
 			numErrors++;
 			std::cout << e.what() << std::endl;
 		}
-		
-		if (log_level >= 1) {
+
+		if (log_level >= 1)
+		{
+			//Calculate and out elapsed time
 			double time_end = getsec();
 			double time_file = time_end - time_file_start;
-			printf("Done, took: %.3fs total, file: %.3fs avg: %.3fs\n", time_file, time_file, time_file);
+			double time_all = time_end - time_start;
+			if (timeAvg > 0.0)
+			{
+				timeAvg = time_all / numFilesProcessed;
+			}
+			else
+			{
+				timeAvg = time_all;
+			}
+		
+			double elapsed = files_count * timeAvg - time_all;
+			int el_h = (int) elapsed / (60 * 60);
+			int el_m = (int) (elapsed - el_h * 60 * 60) / 60;
+			int el_s = (int) (elapsed - el_h * 60 * 60 - el_m * 60);
+			printf("Done, took: ");
+			if (el_h)
+			{
+				printf("%dh", el_h);
+			}
+			if (el_m)
+			{
+				printf("%dm", el_h);
+			}
+			printf("%ds total, file: %.3fs avg: %.3fs\n", el_s, time_file, timeAvg);
 		}
 	}
-	
+
 	if (log_level >= 1)
 	{
 		double time_end = getsec();
