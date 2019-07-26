@@ -1024,10 +1024,19 @@ int main(int argc, char** argv)
 			
 		if (log_level >= 1)
 		{
+			std::string file_path = fs::absolute(fn).string();
+			if(fs::is_directory(input)){
+				std::string orig_path = fs::absolute(input).string();
+				if (file_path.find(orig_path) != _tstring::npos)
+				{
+					file_path = file_path.substr(origPath.length()+1);
+				}
+			}
+			
 			printf("Processing file [%d/%d] \"%s\":%s",
 				numFilesProcessed,
 				files_count,
-				fn.filename().string().c_str(),
+				file_path.c_str(),
 				(log_level >= 2 ? "\n" : " ")
 			);
 		}
