@@ -2022,7 +2022,7 @@ int w2xconv_convert_file
 				dst_alpha=true;
 			}
 		}
-		else if (len >= 3) {
+		if (len >= 3) {
 			if (_totlower(dst_path[len-4]) == _T('.') && _totlower(dst_path[len-3]) == _T('p') && _totlower(dst_path[len-2]) == _T('n') && _totlower(dst_path[len-1]) == _T('g'))
 			{
 				dst_alpha = true;
