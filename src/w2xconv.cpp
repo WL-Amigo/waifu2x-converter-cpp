@@ -1350,6 +1350,10 @@ void get_png_background_colour(FILE *png_fp, bool *has_alpha, struct w2xconv_rgb
 	const static unsigned char sig_ster[4] = {'s','T','E','R'};
 	const static unsigned char sig_txmp[4] = {'t','X','M','P'};
 	const static unsigned char sig_zxif[4] = {'z','x','I','f'};
+	
+	//webp file signature
+	const static unsigned char sig_riff[4] = {'R','I','F','F'};
+	const static unsigned char sig_webp[4] = {'W','E','B','P'};
 
 
 	const static unsigned char *sig_ignores[] = // array of unused PNG chunks and their signature.
@@ -1372,14 +1376,42 @@ void get_png_background_colour(FILE *png_fp, bool *has_alpha, struct w2xconv_rgb
 	size_t rdsz = fread(sig, 1, 8, png_fp);
 	if (rdsz != 8)
 	{
-		//DEBUG printf("sig_png rdsz is not 8, rdsz: %zu, sig: %.8s\n", rdsz, sig);
+		//DEBUG printf("png_sig rdsz is not 8, rdsz: %zu, sig: %.8s\n", rdsz, sig);
 		return;
 	}
 	
 	//check if file signatures match
 	if (memcmp(sig_png, sig, 8) != 0)
 	{
-		//DEBUG printf("sig_png does not match, sig: %.8s\n", sig);
+		fseek(png_fp, -8L, SEEK_CUR);
+		rdsz = fread(sig, 1, 4, png_fp);
+		if (rdsz != 4)
+		{
+			//DEBUG printf("sig_webp rdsz is not 4, rdsz: %zu, sig: %.4s\n", rdsz, sig);
+			return;
+		}
+		if (memcmp(sig_riff, sig, 4) != 0)
+		{
+			//DEBUG fseek(png_fp, -4L, SEEK_CUR);
+			//DEBUG rdsz = fread(sig, 1, 8, png_fp);
+			//DEBUG printf("sig_png/sig_webp does not match, sig: %.8s\n", sig);
+			return;
+		}
+		int webp_size = read_int4(png_fp);
+		rdsz = fread(sig, 1, 4, png_fp);
+		if (rdsz != 4)
+		{
+			//DEBUG printf("sig_webp rdsz is not 4, rdsz: %zu, sig: %.4s\n", rdsz, sig);
+			return;
+		}
+		if (memcmp(sig_webp, sig, 4) != 0)
+		{
+			//DEBUG fseek(png_fp, -4L, SEEK_CUR);
+			//DEBUG rdsz = fread(sig, 1, 8, png_fp);
+			//DEBUG printf("sig_png/sig_webp does not match, sig: %.8s\n", sig);
+			return;
+		}
+		*has_alpha = true;
 		return;
 	}
 	
