@@ -1376,7 +1376,7 @@ void get_png_background_colour(FILE *png_fp, bool *has_alpha, struct w2xconv_rgb
 	size_t rdsz = fread(sig, 1, 8, png_fp);
 	if (rdsz != 8)
 	{
-		//DEBUG printf("png_sig rdsz is not 8, rdsz: %zu, sig: %.8s\n", rdsz, sig);
+		//DEBUG printf("sig_png rdsz is not 8, rdsz: %zu, sig: %.8s\n", rdsz, sig);
 		return;
 	}
 	
