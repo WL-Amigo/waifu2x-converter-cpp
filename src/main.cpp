@@ -391,7 +391,14 @@ struct ConvInfo {
 			}
 			if (convMode & CONV_SCALE)
 			{
-				postfix = postfix + _T("[x") + std::_to_tstring(scaleRatio) + _T("]");
+				_tstringstream tss;
+				tss << _T("[x") << std::fixed << std::setprecision(2) << scaleRatio << _T("]");
+				postfix = postfix + tss.str();
+			}
+			
+			if (converter->tta_mode)
+			{
+				postfix = postfix + _T("[T]");
 			}
 		};
 };
