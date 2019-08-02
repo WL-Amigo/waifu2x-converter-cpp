@@ -712,7 +712,8 @@ int main(int argc, char** argv)
 		"Generate sub folder when recursive directory is enabled.\nSet 1 to enable this. (0 or 1)", false,
 		0, "bool", cmd);
 
-	TCLAP::SwitchArg cmdTTA("", "tta", "Enable Test-Time Augmentation mode. (x8 slower, more accurate)", cmd, false);
+	TCLAP::ValueArg<bool> cmdTTA("t", "tta", "Enable Test-Time Augmentation mode. (0 or 1)", false,
+		0, "bool", cmd);
 
 	TCLAP::SwitchArg cmdQuiet("s", "silent", "Enable silent mode. (same as --log-level 1)", cmd, false);
 	
