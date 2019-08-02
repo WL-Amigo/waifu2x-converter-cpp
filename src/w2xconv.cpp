@@ -361,13 +361,23 @@ static int select_device(enum W2XConvGPUMode gpu)
 
 W2XConv * w2xconv_init(enum W2XConvGPUMode gpu, int nJob, int log_level)
 {
+	return w2xconv_init_with_tta(gpu, nJob, log_level, false);
+}
+
+W2XConv * w2xconv_init_with_tta(enum W2XConvGPUMode gpu, int nJob, int log_level, bool tta_mode)
+{
 	global_init();
 
 	int proc_idx = select_device(gpu);
-	return w2xconv_init_with_processor(proc_idx, nJob, log_level);
+	return w2xconv_init_with_processor_and_tta(proc_idx, nJob, log_level, tta_mode);
 }
 
 struct W2XConv * w2xconv_init_with_processor(int processor_idx, int nJob, int log_level)
+{
+	return w2xconv_init_with_processor_and_tta(processor_idx, nJob, log_level, false);
+}
+
+struct W2XConv * w2xconv_init_with_processor_and_tta(int processor_idx, int nJob, int log_level, bool tta_mode)
 {
 	global_init();
 
@@ -410,6 +420,7 @@ struct W2XConv * w2xconv_init_with_processor(int processor_idx, int nJob, int lo
 
 	c->impl = impl;
 	c->log_level = log_level;
+	c->tta_mode = tta_mode;
 	c->target_processor = proc;
 	c->last_error.code = W2XCONV_NOERROR;
 	c->flops.flop = 0;
@@ -1788,7 +1799,54 @@ void w2xconv_convert_mat
 				printf("Proccessing [%d/%zu] slices\n", i+1, pieces.size());
 			}
 			
-			apply_denoise(conv, pieces[i], denoise_level, blockSize, fmt);
+			if(conv->tta_mode)
+			{
+				cv::Mat tta_mat;
+				for(int ti=0; ti<8; ti++)
+				{
+					cv::Mat tmp=pieces[i].clone();
+					
+					if (conv->log_level >= 2)
+					{
+						printf("Working on TTA mode... step%d/8\n", ti+1);
+					}
+					
+					for(int tj=0; tj < ti%4; tj++)
+					{
+						cv::transpose(tmp, tmp);
+						cv::flip(tmp, tmp, 1);
+					}
+					
+					if(ti >= 4)
+					{
+						cv::flip(tmp, tmp, 1);
+					}
+					
+					apply_denoise(conv, tmp, denoise_level, blockSize, fmt);
+					
+					if(ti >= 4)
+					{
+						cv::flip(tmp, tmp, 1);
+					}
+					
+					for(int tj=0; tj < ti%4; tj++)
+					{
+						cv::transpose(tmp, tmp);
+						cv::flip(tmp, tmp, 0);
+					}
+					
+					if(ti==0)
+					{
+						tta_mat=tmp.clone();
+					}
+					else
+					{
+						tta_mat+=tmp;
+					}
+				}
+				tta_mat /= 8.0;
+				pieces[i] = tta_mat.clone();
+			}
 		}
 		
 		if (pieces.size() > 1 && conv->log_level >= 2)
@@ -1827,7 +1885,54 @@ void w2xconv_convert_mat
 					printf("Proccessing [%d/%zu] slices\n", i+1, pieces.size());
 				}
 				
-				apply_scale(conv, pieces[i], 1, blockSize, fmt);
+				if(conv->tta_mode)
+				{
+					cv::Mat tta_mat;
+					for(int ti=0; ti<8; ti++)
+					{
+						cv::Mat tmp=pieces[i].clone();
+						
+						if (conv->log_level >= 2)
+						{
+							printf("Working on TTA mode... step%d/8\n", ti+1);
+						}
+						
+						for(int tj=0; tj < ti%4; tj++)
+						{
+							cv::transpose(tmp, tmp);
+							cv::flip(tmp, tmp, 1);
+						}
+						
+						if(ti >= 4)
+						{
+							cv::flip(tmp, tmp, 1);
+						}
+						
+						apply_scale(conv, tmp, 1, blockSize, fmt);
+						
+						if(ti >= 4)
+						{
+							cv::flip(tmp, tmp, 1);
+						}
+						
+						for(int j=0; j < ti%4; j++)
+						{
+							cv::transpose(tmp, tmp);
+							cv::flip(tmp, tmp, 0);
+						}
+						
+						if(ti==0)
+						{
+							tta_mat=tmp.clone();
+						}
+						else
+						{
+							tta_mat+=tmp;
+						}
+					}
+					tta_mat /= 8.0;
+					pieces[i] = tta_mat.clone();
+				}
 				
 				/*
 				sprintf(name, "[test] step%d_slice%d_converted.webp", ld, i);

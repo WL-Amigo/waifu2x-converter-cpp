@@ -705,6 +705,7 @@ int main(int argc, char** argv)
 		"Generate sub folder when recursive directory is enabled.\nSet 1 to enable this. (0 or 1)", false,
 		0, "bool", cmd);
 
+	TCLAP::SwitchArg cmdTTA("", "tta", "Enable Test-Time Augmentation mode. (x8 slower, more accurate)", cmd, false);
 
 	TCLAP::SwitchArg cmdQuiet("s", "silent", "Enable silent mode. (same as --log-level 1)", cmd, false);
 	
@@ -855,11 +856,11 @@ int main(int argc, char** argv)
 
 	if (proc != -1 && proc < num_proc)
 	{
-		converter = w2xconv_init_with_processor(proc, cmdNumberOfJobs.getValue(), log_level);
+		converter = w2xconv_init_with_processor_and_tta(proc, cmdNumberOfJobs.getValue(), log_level, cmdTTA.getValue());
 	}
 	else
 	{
-		converter = w2xconv_init(gpu, cmdNumberOfJobs.getValue(), log_level);
+		converter = w2xconv_init_with_tta(gpu, cmdNumberOfJobs.getValue(), log_level, cmdTTA.getValue());
 	}
 	
 	int jpeg_quality = 90;
