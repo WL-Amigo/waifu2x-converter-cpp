@@ -704,7 +704,7 @@ int main(int argc, char** argv)
 		"Search recursively through directories to find more images to process.\nIf this is set to 0 it will only check in the directory specified if the input is a directory instead of an image. (0 or 1)", false,
 		0, "bool", cmd);
 
-	TCLAP::ValueArg<bool> cmdAutoNaming("n", "auto-naming",
+	TCLAP::ValueArg<bool> cmdAutoNaming("a", "auto-naming",
 		"Add postfix to output name when output path is not specified.\nSet 0 to disable this. (0 or 1)", false,
 		1, "bool", cmd);
 
