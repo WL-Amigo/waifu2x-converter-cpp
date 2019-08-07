@@ -1849,7 +1849,7 @@ void w2xconv_convert_mat
 			}
 			else
 			{
-				apply_denoise(conv, tmp, denoise_level, blockSize, fmt);
+				apply_denoise(conv, pieces[i], denoise_level, blockSize, fmt);
 			}
 		}
 		
@@ -1939,7 +1939,7 @@ void w2xconv_convert_mat
 				}
 				else
 				{
-					apply_scale(conv, tmp, 1, blockSize, fmt);
+					apply_scale(conv, pieces[i], 1, blockSize, fmt);
 				}
 				
 				/*
