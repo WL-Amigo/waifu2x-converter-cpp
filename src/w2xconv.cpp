@@ -1847,6 +1847,10 @@ void w2xconv_convert_mat
 				tta_mat /= 8.0;
 				pieces[i] = tta_mat.clone();
 			}
+			else
+			{
+				apply_denoise(conv, tmp, denoise_level, blockSize, fmt);
+			}
 		}
 		
 		if (pieces.size() > 1 && conv->log_level >= 2)
@@ -1932,6 +1936,10 @@ void w2xconv_convert_mat
 					}
 					tta_mat /= 8.0;
 					pieces[i] = tta_mat.clone();
+				}
+				else
+				{
+					apply_scale(conv, tmp, 1, blockSize, fmt);
 				}
 				
 				/*
