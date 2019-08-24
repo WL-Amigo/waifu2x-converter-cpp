@@ -28,9 +28,11 @@
 #include "tchar.h"
 
 #if defined(_WIN32) && defined(_UNICODE)
-	typedef	std::wstring	_tstring;
+	typedef	std::wstring		_tstring;
+	typedef	std::wstringstream	_tstringstream;
 #else
-	typedef	std::string		_tstring;
+	typedef	std::string			_tstring;
+	typedef	std::stringstream	_tstringstream;
 #endif
 
 #if defined(_WIN32) && defined(_UNICODE)

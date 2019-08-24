@@ -391,7 +391,14 @@ struct ConvInfo {
 			}
 			if (convMode & CONV_SCALE)
 			{
-				postfix = postfix + _T("[x") + std::_to_tstring(scaleRatio) + _T("]");
+				_tstringstream tss;
+				tss << _T("[x") << std::fixed << std::setprecision(2) << scaleRatio << _T("]");
+				postfix = postfix + tss.str();
+			}
+			
+			if (converter->tta_mode)
+			{
+				postfix = postfix + _T("[T]");
 			}
 		};
 };
@@ -697,7 +704,7 @@ int main(int argc, char** argv)
 		"Search recursively through directories to find more images to process.\nIf this is set to 0 it will only check in the directory specified if the input is a directory instead of an image. (0 or 1)", false,
 		0, "bool", cmd);
 
-	TCLAP::ValueArg<bool> cmdAutoNaming("n", "auto-naming",
+	TCLAP::ValueArg<bool> cmdAutoNaming("a", "auto-naming",
 		"Add postfix to output name when output path is not specified.\nSet 0 to disable this. (0 or 1)", false,
 		1, "bool", cmd);
 
@@ -705,6 +712,8 @@ int main(int argc, char** argv)
 		"Generate sub folder when recursive directory is enabled.\nSet 1 to enable this. (0 or 1)", false,
 		0, "bool", cmd);
 
+	TCLAP::ValueArg<bool> cmdTTA("t", "tta", "Enable Test-Time Augmentation mode. (0 or 1)", false,
+		0, "bool", cmd);
 
 	TCLAP::SwitchArg cmdQuiet("s", "silent", "Enable silent mode. (same as --log-level 1)", cmd, false);
 	
@@ -855,11 +864,11 @@ int main(int argc, char** argv)
 
 	if (proc != -1 && proc < num_proc)
 	{
-		converter = w2xconv_init_with_processor(proc, cmdNumberOfJobs.getValue(), log_level);
+		converter = w2xconv_init_with_processor_and_tta(proc, cmdNumberOfJobs.getValue(), log_level, cmdTTA.getValue());
 	}
 	else
 	{
-		converter = w2xconv_init(gpu, cmdNumberOfJobs.getValue(), log_level);
+		converter = w2xconv_init_with_tta(gpu, cmdNumberOfJobs.getValue(), log_level, cmdTTA.getValue());
 	}
 	
 	int jpeg_quality = 90;
