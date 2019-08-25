@@ -20,6 +20,12 @@
 #endif
 #endif
 
+#ifdef PPCOPT
+#ifdef HAVE_AUXV
+#include <sys/auxv.h>
+#endif
+#endif
+
 #include <limits.h>
 #include <sstream>
 
@@ -127,7 +133,28 @@ static void global_init2(void)
 			host.dev_name = "ARM NEON";
 			host.sub_type = W2XCONV_PROC_HOST_NEON;
 		}
-#endif
+#endif // ARMOPT
+
+#ifdef PPCOPT
+		bool have_altivec = false;
+#ifdef HAVE_AUXV
+		unsigned long cap = getauxval(AT_HWCAP);
+		if (cap & (1U << 28)) /* HWCAP_ALTIVEC */
+		{
+			have_altivec = true;
+		}
+#else
+		/* Assume that the machine has AltiVec
+		 * since it passed the compile-time check. */
+		have_altivec = true;
+#endif // HAVE_AUXV
+		if (have_altivec)
+		{
+			host.dev_name = "PowerPC AltiVec";
+			host.sub_type = W2XCONV_PROC_HOST_ALTIVEC;
+		}
+#endif // PPCOPT
+
 		processor_list.push_back(host);
 	}
 
