@@ -63,11 +63,12 @@ set1(float a)
 static inline float
 hadd8(v256_t const &v)
 {
-	vector float sum4;
-	sum4 = vec_add(v.v0, v.v1);
+	vector float sum2, sum4, sum8;
+	sum2 = vec_add(v.v0, v.v1);
+	sum4 = vec_add(sum2, vec_sld(sum2, sum2, 4));
+	sum8 = vec_add(sum4, vec_sld(sum4, sum4, 8));
 
-	return vec_extract(sum4, 0) + vec_extract(sum4, 1)
-		+ vec_extract(sum4, 2) + vec_extract(sum4, 3);
+	return vec_extract(sum8, 0);
 }
 
 static inline v256_t
