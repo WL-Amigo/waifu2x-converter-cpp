@@ -117,9 +117,9 @@ min256(v256_t const &a, v256_t const &b)
 
 /* Use v256_t as vreg_t so that the compiler will utilize the large amount of
  * registers available.
- * Note: removing the array and struct boxing seems to slow things down.
- *       I currently don't know why it's happening,
- *       so I'm keeping it for now. */
+ *
+ * Note: GCC8 seems to need the struct/array wrapping to generate well-performing code,
+ *       so I'm keeping it. */
 typedef struct {
 	v256_t v[VPACK];
 } vreg_t;
