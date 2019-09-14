@@ -109,7 +109,7 @@ min256(v256_t const &a, v256_t const &b)
 #include "modelHandler_avx_func.hpp"
 
 #undef UNROLL
-#define UNROLL 5
+#define UNROLL 4
 
 /* PowerPC AltiVec */
 #define VPACK 1
