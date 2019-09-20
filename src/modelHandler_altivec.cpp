@@ -63,11 +63,12 @@ set1(float a)
 static inline float
 hadd8(v256_t const &v)
 {
-	vector float sum4;
-	sum4 = vec_add(v.v0, v.v1);
+	vector float sum2, sum4, sum8;
+	sum2 = vec_add(v.v0, v.v1);
+	sum4 = vec_add(sum2, vec_sld(sum2, sum2, 4));
+	sum8 = vec_add(sum4, vec_sld(sum4, sum4, 8));
 
-	return vec_extract(sum4, 0) + vec_extract(sum4, 1)
-		+ vec_extract(sum4, 2) + vec_extract(sum4, 3);
+	return vec_extract(sum8, 0);
 }
 
 static inline v256_t
@@ -109,7 +110,7 @@ min256(v256_t const &a, v256_t const &b)
 #include "modelHandler_avx_func.hpp"
 
 #undef UNROLL
-#define UNROLL 5
+#define UNROLL 4
 
 /* PowerPC AltiVec */
 #define VPACK 1
@@ -117,9 +118,9 @@ min256(v256_t const &a, v256_t const &b)
 
 /* Use v256_t as vreg_t so that the compiler will utilize the large amount of
  * registers available.
- * Note: removing the array and struct boxing seems to slow things down.
- *       I currently don't know why it's happening,
- *       so I'm keeping it for now. */
+ *
+ * Note: GCC8 seems to need the struct/array wrapping to generate well-performing code,
+ *       so I'm keeping it. */
 typedef struct {
 	v256_t v[VPACK];
 } vreg_t;
