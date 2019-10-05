@@ -6,7 +6,7 @@ https://github.com/DeadSix27/waifu2x-converter-cpp/releases
 
 #### Index:
 - [Windows x64](#windows)
-- [Linux](#linux) (ARM is not supported, but could work maybe, open an issue if you get it working.)
+- [Linux](#linux) (ARM only tested via Raspberry Pi 3)
 - [MacOS](#macos--osx)
 
 ---
