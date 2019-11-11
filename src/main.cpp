@@ -32,7 +32,7 @@
 #include <map>
 #include <stdio.h>
 #include <stdlib.h>
-#include <experimental/filesystem>
+#include <filesystem>
 #include <algorithm>
 
 #include "tclap/CmdLine.h"
@@ -56,7 +56,7 @@
 #include <opencv2/opencv.hpp>
 #endif
 
-namespace fs = std::experimental::filesystem;
+namespace fs = std::filesystem;
 
 
 class CustomFailOutput : public TCLAP::StdOutput

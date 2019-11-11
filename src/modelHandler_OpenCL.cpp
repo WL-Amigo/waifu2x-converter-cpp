@@ -44,8 +44,8 @@
 #define CL_TARGET_OPENCL_VERSION 220
 #include "CL/cl.h"
 #endif
-#include <experimental/filesystem>
-namespace fs = std::experimental::filesystem;
+#include <filesystem>
+namespace fs = std::filesystem;
 
 #ifdef __linux
 #include <unistd.h>
