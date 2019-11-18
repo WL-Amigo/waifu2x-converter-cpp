@@ -8,9 +8,7 @@ on:
       - '**'
   push:
     branches:
-      - '**'
-    tags:
-      - '**'
+      - master
   release:
     types: [published, created]
 
