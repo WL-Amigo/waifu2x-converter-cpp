@@ -32,8 +32,16 @@
 #include <map>
 #include <stdio.h>
 #include <stdlib.h>
-#include <filesystem>
 #include <algorithm>
+
+// Support ancient versions of GCC still used in stubborn distros.
+#if __GNUC__ < 8 && __linux__
+#include <experimental/filesystem>
+namespace fs = std::experimental::filesystem;
+#else
+#include <filesystem>
+namespace fs = std::filesystem;
+#endif
 
 #include "tclap/CmdLine.h"
 #include "sec.hpp"
@@ -55,8 +63,6 @@
 #ifdef HAVE_OPENCV
 #include <opencv2/opencv.hpp>
 #endif
-
-namespace fs = std::filesystem;
 
 
 class CustomFailOutput : public TCLAP::StdOutput
