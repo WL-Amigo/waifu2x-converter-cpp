@@ -69,15 +69,13 @@ message(STATUS "System is: ${CMAKE_SYSTEM_NAME} (${LOCAL_SYS_TYPE})")
 ### ########
 
 ### Get binary paths for APPLE users
-if(APPLE)
+if(APPLE AND CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
 	set(CMAKE_C_COMPILER "/usr/local/opt/llvm/bin/clang")
 	set(CMAKE_CXX_COMPILER "/usr/local/opt/llvm/bin/clang++")
 	set(CMAKE_EXE_LINKER_FLAGS "-L/usr/local/opt/llvm/lib -Wl,-rpath,/usr/local/opt/llvm/lib")
 	set(CMAKE_SHARED_LINKER_FLAGS "-L/usr/local/opt/llvm/lib -Wl,-rpath,/usr/local/opt/llvm/lib")
-	if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
-		if (CMAKE_CXX_COMPILER_VERSION VERSION_LESS 9.0)
-			set(FILE_SYSTEM_LIB "c++fs")
-		endif()
+	if (CMAKE_CXX_COMPILER_VERSION VERSION_LESS 9.0)
+		set(FILE_SYSTEM_LIB "c++fs")
 	endif()
 elseif(UNIX OR MINGW)
 	set(FILE_SYSTEM_LIB "stdc++fs")
