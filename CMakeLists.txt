@@ -69,7 +69,7 @@ message(STATUS "System is: ${CMAKE_SYSTEM_NAME} (${LOCAL_SYS_TYPE})")
 ### ########
 
 ### Get binary paths for APPLE users
-if(APPLE AND CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+if(APPLE AND CMAKE_CXX_COMPILER_ID MATCHES "^(Apple)?Clang$")
 	set(CMAKE_C_COMPILER "/usr/local/opt/llvm/bin/clang")
 	set(CMAKE_CXX_COMPILER "/usr/local/opt/llvm/bin/clang++")
 	set(CMAKE_EXE_LINKER_FLAGS "-L/usr/local/opt/llvm/lib -Wl,-rpath,/usr/local/opt/llvm/lib")
@@ -315,7 +315,7 @@ add_library(w2xc SHARED
 add_dependencies(w2xc gensrcs)
 
 
-if(CMAKE_COMPILER_IS_GNUCXX OR ${CMAKE_CXX_COMPILER_ID} MATCHES "^(Apple)?Clang$")
+if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "^(Apple)?Clang$"))
 	set(CMAKE_CXX_STANDARD 17)
 	if(CMAKE_COMPILER_IS_GNUCXX)
 		set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=gnu++17")
