@@ -28,23 +28,23 @@
 #include <clocale>
 #include "tchar.h"
 
-std::string wstr2str(std::wstring ws);
-std::wstring str2wstr(std::string s);
+void wstr2str(std::string* s, const std::wstring* ws);
+void str2wstr(std::wstring* ws, const std::string* s);
 
 #if defined(_WIN32) && defined(_UNICODE)
 	typedef	std::wstring		_tstring;
 	typedef	std::wstringstream	_tstringstream;
-	#define _tstr2wstr(X) X;
-	#define _tstr2str(X) wstr2str(X);
-	#define _wstr2tstr(X) X;
-	#define _str2tstr(X) str2wstr(X);
+	#define _tstr2wstr(T,X) X;
+	#define _tstr2str(T,X) wstr2str(T,X);
+	#define _wstr2tstr(T,X) X;
+	#define _str2tstr(T,X) str2wstr(T,X);
 #else
 	typedef	std::string			_tstring;
 	typedef	std::stringstream	_tstringstream;
-	#define _tstr2wstr(X) str2wstr(X);
-	#define _tstr2str(X) X;
-	#define _wstr2tstr(X) wstr2str(X);
-	#define _str2tstr(X) X;
+	#define _tstr2wstr(T,X) str2wstr(T,X);
+	#define _tstr2str(T,X) X;
+	#define _wstr2tstr(T,X) wstr2str(T,X);
+	#define _str2tstr(T,X) X;
 #endif
 
 #if defined(_WIN32) && defined(_UNICODE)

@@ -240,13 +240,15 @@ bool validate_format_extension(std::string ext)
 #if defined(_WIN32) && defined(_UNICODE)
 bool validate_format_extension(std::wstring ext_w)
 {
+	std::string ext;
+	
 	if(ext_w.length() == 0)
 		return false;
 	
 	if(ext_w.at(0) == L'.')
 		ext_w=ext_w.substr(1);
 	
-	std::string ext = wstr2str(ext_w);
+	wstr2str(&ext, &ext_w);
 	return validate_format_extension(ext);
 }
 #endif
@@ -894,7 +896,8 @@ int main(int argc, char** argv)
 		cmdPngCompression.getValue()
 	};
 
-	_tstring outputFormat = _str2tstr(cmdOutputFormat.getValue());
+	_tstring outputFormat;
+	_str2tstr(&outputFormat, &cmdOutputFormat.getValue());
 	
 	int convMode = CONV_NONE;
 	
