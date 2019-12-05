@@ -34,12 +34,12 @@ jobs:
       uses: actions/upload-artifact@v1
       with:
         name: waifu2x-converter-cpp.exe
-        path: _build/out/Release/waifu2x-converter-cpp.exe
+        path: _build/Release/waifu2x-converter-cpp.exe
     - name: upload build artifact w2xc.dll
       uses: actions/upload-artifact@v1
       with:
         name: w2xc.dll
-        path: _build/out/Release/w2xc.dll
+        path: _build/Release/w2xc.dll
   linux-build:
     runs-on: ubuntu-latest
     steps:
