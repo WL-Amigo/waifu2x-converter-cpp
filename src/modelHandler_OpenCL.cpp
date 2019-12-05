@@ -58,6 +58,7 @@ namespace fs = std::filesystem;
 #include <unistd.h>
 #include <sys/types.h>
 #include <pwd.h>
+#include <errno.h>
 #endif
 
 static const char prog[] =
@@ -517,7 +518,7 @@ namespace w2xc
 				if (fp == NULL)
 				{
 #if (defined __linux)
-						if (errno == 13)
+						if (errno == EACCES || errno == EROFS)
 						{
 							std::string user_folder("/tmp/.waifu2x");
 							char *home_dir = getenv ("HOME");
@@ -535,7 +536,7 @@ namespace w2xc
 								}
 								catch (fs::filesystem_error& e)
 								{
-									printf("ERROR: %s\n",e.what());
+									printf("Error creating directory: %s\n", e.what());
 									exit(EXIT_FAILURE);
 								}
 							}
@@ -549,10 +550,10 @@ namespace w2xc
 							printf("Error opening file %s: [%d] %s\n",bin_path.c_str(),errno,strerror(errno));
 							exit (EXIT_FAILURE);
 						}
-					#else
+#else
 						printf("Error opening file %s: [%d] %s\n",bin_path.c_str(),errno,strerror(errno));
 						exit (EXIT_FAILURE);
-					#endif
+#endif
 				}
 				else
 				{
