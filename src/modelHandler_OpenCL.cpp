@@ -44,8 +44,15 @@
 #define CL_TARGET_OPENCL_VERSION 220
 #include "CL/cl.h"
 #endif
+
+// Support ancient versions of GCC still used in stubborn distros.
+#if __GNUC__ < 8 && __linux__
 #include <experimental/filesystem>
 namespace fs = std::experimental::filesystem;
+#else
+#include <filesystem>
+namespace fs = std::filesystem;
+#endif
 
 #ifdef __linux
 #include <unistd.h>

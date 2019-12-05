@@ -589,7 +589,7 @@ void w2xconv_free(void *p)
 static void setPathError(W2XConv *conv, enum W2XConvErrorCode code, _tstring const &path)
 {
 	std::string strpath;
-	strpath.assign(path.begin(), path.end());
+	_tstr2str(&strpath, &path)
 	clearError(conv);
 
 	conv->last_error.code = code;
@@ -2100,10 +2100,10 @@ void w2xconv_convert_mat
 	{
 		FILE* pFile;
 		std::vector<uchar> imageBuffer;
-		std::string ext;
 		std::wstring ext_w = std::wstring(filepath);
 		ext_w = ext_w.substr(ext_w.find_last_of(L'.'));
-		ext.assign(ext_w.begin(), ext_w.end());
+		std::string ext;
+		wstr2str(&ext, &ext_w);
 		
 		if(!cv::imencode(ext.c_str(),img, imageBuffer, imwrite_params))
 		{

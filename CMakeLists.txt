@@ -69,14 +69,24 @@ message(STATUS "System is: ${CMAKE_SYSTEM_NAME} (${LOCAL_SYS_TYPE})")
 ### ########
 
 ### Get binary paths for APPLE users
-if(APPLE)
+if(APPLE AND CMAKE_CXX_COMPILER_ID MATCHES "^(Apple)?Clang$")
 	set(CMAKE_C_COMPILER "/usr/local/opt/llvm/bin/clang")
 	set(CMAKE_CXX_COMPILER "/usr/local/opt/llvm/bin/clang++")
 	set(CMAKE_EXE_LINKER_FLAGS "-L/usr/local/opt/llvm/lib -Wl,-rpath,/usr/local/opt/llvm/lib")
 	set(CMAKE_SHARED_LINKER_FLAGS "-L/usr/local/opt/llvm/lib -Wl,-rpath,/usr/local/opt/llvm/lib")
-	set(FILE_SYSTEM_LIB "c++fs")
+	if (CMAKE_CXX_COMPILER_VERSION VERSION_LESS 9.0)
+		set(FILE_SYSTEM_LIB "c++fs")
+	endif()
 elseif(UNIX OR MINGW)
 	set(FILE_SYSTEM_LIB "stdc++fs")
+elseif(MSVC)
+	include(CheckCXXCompilerFlag)
+	CHECK_CXX_COMPILER_FLAG("/std:c++latest" have_std_cpp_latest)
+	if (have_std_cpp_latest)
+		add_compile_options("/std:c++latest")
+	else()
+		message(FATAL_ERROR "The compile option '/std:c++latest' is not supported by your MSVC Version, please update.")
+	endif()
 endif()
 ### ########
 
@@ -300,12 +310,13 @@ add_library(w2xc SHARED
 	src/modelHandler_CUDA.cpp src/w2xconv.cpp src/common.cpp
 	src/cvwrap.cpp
 	src/Env.cpp src/Buffer.cpp
+	src/tstring.cpp
 )
 
 add_dependencies(w2xc gensrcs)
 
 
-if(CMAKE_COMPILER_IS_GNUCXX OR ${CMAKE_CXX_COMPILER_ID} MATCHES "^(Apple)?Clang$")
+if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "^(Apple)?Clang$")
 	set(CMAKE_CXX_STANDARD 17)
 	if(CMAKE_COMPILER_IS_GNUCXX)
 		set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=gnu++17")
@@ -362,7 +373,7 @@ if(WIN32) # We build FOR windows.
 		target_link_libraries(w2xcr w2xc user32 shlwapi gdi32)
 	endif()
 elseif(APPLE)
-	target_link_libraries(w2xc ${OPENCV_LIBRARIES} ${CMAKE_DL_LIBS} pthread c++ c++fs)
+	target_link_libraries(w2xc ${OPENCV_LIBRARIES} ${CMAKE_DL_LIBS} pthread c++ ${FILE_SYSTEM_LIB})
 else() # We are on linux and build for linux
 	target_link_libraries(w2xc ${OPENCV_LIBRARIES} ${CMAKE_DL_LIBS} pthread stdc++fs stdc++)
 endif()
@@ -411,7 +422,7 @@ add_custom_target(gensrcs ALL DEPENDS ${GPU_CODE})
 enable_testing()
 
 if(HAVE_OPENCV)
-	add_executable(waifu2x-converter-cpp src/main.cpp)
+	add_executable(waifu2x-converter-cpp src/main.cpp src/tstring.cpp)
 
 	if(MSVC)
 		target_link_libraries(waifu2x-converter-cpp LINK_PUBLIC w2xc)

@@ -32,8 +32,16 @@
 #include <map>
 #include <stdio.h>
 #include <stdlib.h>
-#include <experimental/filesystem>
 #include <algorithm>
+
+// Support ancient versions of GCC still used in stubborn distros.
+#if __GNUC__ < 8 && __linux__
+#include <experimental/filesystem>
+namespace fs = std::experimental::filesystem;
+#else
+#include <filesystem>
+namespace fs = std::filesystem;
+#endif
 
 #include "tclap/CmdLine.h"
 #include "sec.hpp"
@@ -55,8 +63,6 @@
 #ifdef HAVE_OPENCV
 #include <opencv2/opencv.hpp>
 #endif
-
-namespace fs = std::experimental::filesystem;
 
 
 class CustomFailOutput : public TCLAP::StdOutput
@@ -235,13 +241,14 @@ bool validate_format_extension(std::string ext)
 bool validate_format_extension(std::wstring ext_w)
 {
 	std::string ext;
+	
 	if(ext_w.length() == 0)
 		return false;
 	
 	if(ext_w.at(0) == L'.')
 		ext_w=ext_w.substr(1);
 	
-	ext.assign(ext_w.begin(), ext_w.end());
+	wstr2str(&ext, &ext_w);
 	return validate_format_extension(ext);
 }
 #endif
@@ -890,7 +897,7 @@ int main(int argc, char** argv)
 	};
 
 	_tstring outputFormat;
-	outputFormat.assign(cmdOutputFormat.getValue().begin(), cmdOutputFormat.getValue().end());
+	_str2tstr(&outputFormat, &cmdOutputFormat.getValue());
 	
 	int convMode = CONV_NONE;
 	

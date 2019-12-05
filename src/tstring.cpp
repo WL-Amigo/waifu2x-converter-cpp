@@ -21,36 +21,23 @@
 * SOFTWARE.
 */
 
-#ifndef __TSTRING_H__
-#define __TSTRING_H__
 
-#include <string>
-#include <clocale>
-#include "tchar.h"
+#include "tstring.hpp"
 
-void wstr2str(std::string* s, const std::wstring* ws);
-void str2wstr(std::wstring* ws, const std::string* s);
+void wstr2str(std::string* s, const std::wstring* ws){
+	std::setlocale(LC_ALL, "en_US.utf8");
+	char *buf = new char[ws->size()];
+	size_t num_chars = wcstombs(buf, ws->c_str(), ws->size());
+	
+	*s = std::string( buf, num_chars );
+	delete[] buf;
+}
 
-#if defined(_WIN32) && defined(_UNICODE)
-	typedef	std::wstring		_tstring;
-	typedef	std::wstringstream	_tstringstream;
-	#define _tstr2wstr(T,X) X;
-	#define _tstr2str(T,X) wstr2str(T,X);
-	#define _wstr2tstr(T,X) X;
-	#define _str2tstr(T,X) str2wstr(T,X);
-#else
-	typedef	std::string			_tstring;
-	typedef	std::stringstream	_tstringstream;
-	#define _tstr2wstr(T,X) str2wstr(T,X);
-	#define _tstr2str(T,X) X;
-	#define _wstr2tstr(T,X) wstr2str(T,X);
-	#define _str2tstr(T,X) X;
-#endif
-
-#if defined(_WIN32) && defined(_UNICODE)
-	#define	TSTRING_METHOD	wstring
-#else
-	#define	TSTRING_METHOD	string
-#endif
-
-#endif
+void str2wstr(std::wstring* ws, const std::string* s){
+	std::setlocale(LC_ALL, "en_US.utf8");
+	wchar_t *buf = new wchar_t[s->size()];
+	size_t num_chars = mbstowcs(buf, s->c_str(), s->size());
+	
+	*ws = std::wstring( buf, num_chars );
+	delete[] buf;
+}

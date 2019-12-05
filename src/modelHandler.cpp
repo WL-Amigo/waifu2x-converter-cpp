@@ -1189,7 +1189,7 @@ namespace w2xc
 			if (!jsonFile.is_open())
 			{
 				std::string fname;
-				fname.assign(fileName.begin(), fileName.end());
+				_tstr2str(&fname, &fileName);
 				std::cerr << "Error : couldn't open " << fname << std::endl;
 				return false;
 			}
