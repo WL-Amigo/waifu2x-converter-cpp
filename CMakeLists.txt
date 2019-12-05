@@ -310,6 +310,7 @@ add_library(w2xc SHARED
 	src/modelHandler_CUDA.cpp src/w2xconv.cpp src/common.cpp
 	src/cvwrap.cpp
 	src/Env.cpp src/Buffer.cpp
+	src/tstring.cpp
 )
 
 add_dependencies(w2xc gensrcs)
@@ -421,7 +422,7 @@ add_custom_target(gensrcs ALL DEPENDS ${GPU_CODE})
 enable_testing()
 
 if(HAVE_OPENCV)
-	add_executable(waifu2x-converter-cpp src/main.cpp)
+	add_executable(waifu2x-converter-cpp src/main.cpp src/tstring.cpp)
 
 	if(MSVC)
 		target_link_libraries(waifu2x-converter-cpp LINK_PUBLIC w2xc)

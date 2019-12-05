@@ -21,36 +21,25 @@
 * SOFTWARE.
 */
 
-#ifndef __TSTRING_H__
-#define __TSTRING_H__
 
-#include <string>
-#include <clocale>
-#include "tchar.h"
+#include "tstring.hpp"
 
-std::string wstr2str(std::wstring ws);
-std::wstring str2wstr(std::string s);
+std::string wstr2str(std::wstring ws){
+	std::setlocale(LC_ALL, "en_US.utf8");
+	char *buf = new char[ws.size()];
+	size_t num_chars = wcstombs(buf, ws.c_str(), ws.size());
+	
+	std::string s( buf, num_chars );
+	delete[] buf;
+	return s;
+}
 
-#if defined(_WIN32) && defined(_UNICODE)
-	typedef	std::wstring		_tstring;
-	typedef	std::wstringstream	_tstringstream;
-	#define _tstr2wstr(X) X;
-	#define _tstr2str(X) wstr2str(X);
-	#define _wstr2tstr(X) X;
-	#define _str2tstr(X) str2wstr(X);
-#else
-	typedef	std::string			_tstring;
-	typedef	std::stringstream	_tstringstream;
-	#define _tstr2wstr(X) str2wstr(X);
-	#define _tstr2str(X) X;
-	#define _wstr2tstr(X) wstr2str(X);
-	#define _str2tstr(X) X;
-#endif
-
-#if defined(_WIN32) && defined(_UNICODE)
-	#define	TSTRING_METHOD	wstring
-#else
-	#define	TSTRING_METHOD	string
-#endif
-
-#endif
+std::wstring str2wstr(std::string s){
+	std::setlocale(LC_ALL, "en_US.utf8");
+	wchar_t *buf = new wchar_t[s.size()];
+	size_t num_chars = mbstowcs(buf, s.c_str(), s.size());
+	
+	std::wstring ws( buf, num_chars );
+	delete[] buf;
+	return ws;
+}
