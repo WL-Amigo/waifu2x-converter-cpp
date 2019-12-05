@@ -54,3 +54,15 @@ jobs:
       run: cmake .
     - name: build
       run: make
+  macos-build:
+    runs-on: macOS-latest
+    steps:
+    - uses: actions/checkout@master
+    - name: llvm-dep
+      run: brew install llvm
+    - name: llvm-dep
+      run: brew install opencv
+    - name: run-cmake
+      run: cmake .
+    - name: build
+      run: make
