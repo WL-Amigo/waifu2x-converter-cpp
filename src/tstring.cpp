@@ -24,20 +24,22 @@
 
 #include "tstring.hpp"
 
-void wstr2str(std::string* s, const std::wstring* ws){
+std::string wstr2str(std::wstring ws){
 	std::setlocale(LC_ALL, "en_US.utf8");
-	char *buf = new char[ws->size()];
-	size_t num_chars = wcstombs(buf, ws->c_str(), ws->size());
+	char *buf = new char[ws.size()];
+	size_t num_chars = wcstombs(buf, ws.c_str(), ws.size());
 	
-	*s = std::string( buf, num_chars );
+	std::string s( buf, num_chars );
 	delete[] buf;
+	return s;
 }
 
-void str2wstr(std::wstring* ws, const std::string* s){
+std::wstring str2wstr(std::string s){
 	std::setlocale(LC_ALL, "en_US.utf8");
-	wchar_t *buf = new wchar_t[s->size()];
-	size_t num_chars = mbstowcs(buf, s->c_str(), s->size());
+	wchar_t *buf = new wchar_t[s.size()];
+	size_t num_chars = mbstowcs(buf, s.c_str(), s.size());
 	
-	*ws = std::wstring( buf, num_chars );
+	std::wstring ws( buf, num_chars );
 	delete[] buf;
+	return ws;
 }
