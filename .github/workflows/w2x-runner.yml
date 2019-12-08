@@ -11,6 +11,8 @@ on:
       - '**.cl'
       - '**.cu'
   push:
+    branches:
+      - master
     paths:
       - 'CMakeLists.txt'
       - '**.c'
