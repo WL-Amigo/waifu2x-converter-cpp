@@ -95,7 +95,7 @@ https://github.com/DeadSix27/waifu2x-converter-cpp/releases
    
 #### AMD GPUs:
 - Arch: `opencl-mesa`
-- Ubuntu: `mesa-opencl-icd opencl-headers opencl-dev`
+- Ubuntu: `mesa-opencl-icd opencl-headers ocl-icd-opencl-dev`
 
 #### nVidia GPUs:
 - Arch: `opencl-nvidia opencl-headers ocl-icd`
