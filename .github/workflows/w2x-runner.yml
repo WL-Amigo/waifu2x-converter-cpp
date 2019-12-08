@@ -2,13 +2,23 @@ name: w2x-runner
 
 on:
   pull_request:
-    branches:
-      - '**'
-    tags:
-      - '**'
+    paths:
+      - 'CMakeLists.txt'
+      - '**.c'
+      - '**.h'
+      - '**.cpp'
+      - '**.hpp'
+      - '**.cl'
+      - '**.cu'
   push:
-    branches:
-      - master
+    paths:
+      - 'CMakeLists.txt'
+      - '**.c'
+      - '**.h'
+      - '**.cpp'
+      - '**.hpp'
+      - '**.cl'
+      - '**.cu'
   release:
     types: [published, created]
 
@@ -17,8 +27,6 @@ jobs:
     runs-on: windows-latest
     steps:
     - uses: actions/checkout@master
-    - name: cuda-dep-install
-      run: choco install cuda
     - name: opencv-dep-install
       run: choco install opencv
     - name: opencl-dep-install
@@ -62,9 +70,10 @@ jobs:
     - uses: actions/checkout@master
     - name: llvm-dep
       run: brew install llvm
-    - name: llvm-dep
+    - name: opencv-dep
       run: brew install opencv
     - name: run-cmake
       run: cmake .
     - name: build
       run: make
+    
