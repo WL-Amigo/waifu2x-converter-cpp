@@ -237,7 +237,7 @@ W2XCONV_EXPORT void w2xconv_set_model_3x3
 
 W2XCONV_EXPORT void w2xconv_fini(struct W2XConv *conv);
 
-
+#ifdef HAVE_OPENCV
 W2XCONV_EXPORT int w2xconv_convert_file
 (
 	struct W2XConv *conv,
@@ -280,6 +280,7 @@ W2XCONV_EXPORT int w2xconv_convert_yuv
 	double scale,
 	int block_size
 );
+#endif
 
 W2XCONV_EXPORT int w2xconv_apply_filter_y
 (
