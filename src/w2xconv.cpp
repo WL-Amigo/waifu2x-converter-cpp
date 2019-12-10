@@ -9,6 +9,10 @@
 //#if (defined __GNUC__) || (defined __clang__)
 #ifndef _WIN32
 #include <cpuid.h>
+#else
+#ifndef HAVE_OPENCV
+#include <intrin.h>
+#endif
 #endif
 #endif // X86OPT
 
