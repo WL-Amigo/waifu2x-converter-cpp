@@ -59,6 +59,10 @@ namespace fs = std::filesystem;
 #include <sys/types.h>
 #include <pwd.h>
 #include <errno.h>
+#elif defined(__DragonFly__) || defined(__FreeBSD__) || defined(__FreeBSD_kernel__) || defined(__NetBSD__)
+#include <sys/types.h>
+#include <sys/sysctl.h> // KERN_PROC_PATHNAME
+#include <errno.h>
 #endif
 
 static const char prog[] =
@@ -313,7 +317,7 @@ namespace w2xc
 		const char *dev_name = proc->dev_name;
 		bool bin_avaiable = false;
 
-#if ((defined __linux) && !(defined __ANDROID__)) || _WIN32
+#if ((defined __linux) && !(defined __ANDROID__)) || defined(_WIN32) || defined(KERN_PROC_PATHNAME)
 #define GENERATE_BINARY
 #endif
 
@@ -335,6 +339,38 @@ namespace w2xc
 
 			path_len *= 2;
 			self_path = (char*)realloc(self_path, path_len + 1);
+		}
+
+		struct stat self_st;
+		stat(self_path, &self_st);
+		self_path = dirname(self_path);
+#elif defined(KERN_PROC_PATHNAME)
+		int mib[] = {
+			CTL_KERN,
+#if defined(__NetBSD__)
+			KERN_PROC_ARGS,
+			-1,
+			KERN_PROC_PATHNAME,
+#else
+			KERN_PROC,
+			KERN_PROC_PATHNAME,
+			-1,
+#endif
+		};
+		u_int mib_len = sizeof(mib)/sizeof(mib[0]);
+		size_t path_len = 4;
+		char *self_path = (char*)malloc(path_len + 1);
+
+		while (true)
+		{
+			if (!sysctl(mib, mib_len, self_path, &path_len, NULL, 0)) {
+				break;
+			}
+			if (sysctl(mib, mib_len, NULL, &path_len, NULL, 0)) {
+				printf("Error getting path to executable: %s\n", strerror(errno));
+				exit(EXIT_FAILURE);
+			}
+			self_path = (char*)realloc(self_path, path_len);
 		}
 
 		struct stat self_st;
@@ -378,7 +414,7 @@ namespace w2xc
 		FILE *binfp = fopen(bin_path.c_str(), "rb");
 		if (binfp)
 		{
-#if (defined __linux)
+#if !defined(_WIN32)
 			struct stat bin_st;
 			stat(bin_path.c_str(), &bin_st);
 
@@ -517,7 +553,7 @@ namespace w2xc
 
 				if (fp == NULL)
 				{
-#if (defined __linux)
+#if !defined(_WIN32)
 						if (errno == EACCES || errno == EROFS)
 						{
 							std::string user_folder("/tmp/.waifu2x");
