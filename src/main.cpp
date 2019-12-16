@@ -35,7 +35,7 @@
 #include <algorithm>
 
 // Support ancient versions of GCC still used in stubborn distros.
-#if __GNUC__ < 8 && __linux__
+#if defined(__GNUC__) && !__has_include(<filesystem>)
 #include <experimental/filesystem>
 namespace fs = std::experimental::filesystem;
 #else
