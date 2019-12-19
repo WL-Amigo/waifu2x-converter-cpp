@@ -426,6 +426,7 @@ if(HAVE_OPENCV)
 
 	if(MSVC)
 		target_link_libraries(waifu2x-converter-cpp LINK_PUBLIC w2xc)
+		set_property(TARGET waifu2x-converter-cpp PROPERTY MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
 	elseif(MINGW)
 		target_link_libraries(waifu2x-converter-cpp LINK_PUBLIC w2xc ${FILE_SYSTEM_LIB})
 	elseif(UNIX)
