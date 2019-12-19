@@ -370,6 +370,7 @@ if(WIN32) # We build FOR windows.
 	endif()
 	if(ENABLE_GUI AND ENABLE_UNICODE AND ENABLE_OPENCV)
 		add_executable(w2xcr WIN32 w32-apps/w2xcr.c w32-apps/w2xcr.rc)
+		set_property(TARGET w2xcr PROPERTY MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
 		target_link_libraries(w2xcr w2xc user32 shlwapi gdi32)
 	endif()
 elseif(APPLE)
