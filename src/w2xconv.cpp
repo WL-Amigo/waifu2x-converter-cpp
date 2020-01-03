@@ -19,13 +19,13 @@
 #ifdef ARMOPT
 #if defined __ANDROID__
 #include <cpu-features.h>
-#elif (defined(__linux))
+#elif __has_include(<sys/auxv.h>)
 #include <sys/auxv.h>
 #endif
 #endif
 
 #ifdef PPCOPT
-#ifdef HAVE_AUXV
+#if __has_include(<sys/auxv.h>)
 #include <sys/auxv.h>
 #endif
 #endif
@@ -125,8 +125,20 @@ static void global_init2(void)
 		{
 			have_neon = true;
 		}
-#elif defined(__linux)
-		int hwcap = getauxval(AT_HWCAP);
+#elif __has_include(<sys/auxv.h>)
+		unsigned long hwcap = 0;
+#ifdef __FreeBSD__
+		elf_aux_info(AT_HWCAP, &hwcap, sizeof(hwcap));
+#else
+		hwcap = getauxval(AT_HWCAP);
+#endif
+#ifndef HWCAP_ARM_NEON
+#ifdef HWCAP_NEON
+#define HWCAP_ARM_NEON HWCAP_NEON
+#else
+#define HWCAP_ARM_NEON (1UL << 12)
+#endif
+#endif
 		if (hwcap & HWCAP_ARM_NEON)
 		{
 			have_neon = true;
@@ -141,17 +153,24 @@ static void global_init2(void)
 
 #ifdef PPCOPT
 		bool have_altivec = false;
-#ifdef HAVE_AUXV
-		unsigned long cap = getauxval(AT_HWCAP);
-		if (cap & (1U << 28)) /* HWCAP_ALTIVEC */
+#if defined(__ALTIVEC__)
+// powerpc64 or -maltivec for all files
+		have_altivec = true;
+#elif __has_include(<sys/auxv.h>)
+		unsigned long hwcap = 0;
+#ifdef __FreeBSD__
+		elf_aux_info(AT_HWCAP, &hwcap, sizeof(hwcap));
+#else
+		hwcap = getauxval(AT_HWCAP);
+#endif
+#ifndef PPC_FEATURE_HAS_ALTIVEC
+#define PPC_FEATURE_HAS_ALTIVEC (1UL << 28)
+#endif
+		if (hwcap & PPC_FEATURE_HAS_ALTIVEC)
 		{
 			have_altivec = true;
 		}
-#else
-		/* Assume that the machine has AltiVec
-		 * since it passed the compile-time check. */
-		have_altivec = true;
-#endif // HAVE_AUXV
+#endif // __has_include(<sys/auxv.h>)
 		if (have_altivec)
 		{
 			host.dev_name = "PowerPC AltiVec";

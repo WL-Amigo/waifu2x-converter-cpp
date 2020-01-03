@@ -241,7 +241,7 @@ if(CMAKE_SYSTEM_PROCESSOR STREQUAL "amd64" OR
 	set(X86_TRUE true)
 elseif(CMAKE_SYSTEM_PROCESSOR MATCHES "^aarch|^arm")
 	set(ARM_TRUE true)
-elseif(CMAKE_SYSTEM_PROCESSOR MATCHES "^ppc")
+elseif(CMAKE_SYSTEM_PROCESSOR MATCHES "^ppc|^powerpc")
 	set(PPC_TRUE true)
 else()
 	set(X86_TRUE false)
@@ -272,36 +272,8 @@ endif()
 
 option(PPCOPT "Enable PowerPC SIMD optimizations" ${PPC_TRUE})
 if(PPCOPT)
-	include("CheckCSourceRuns")
-
-	check_c_source_runs("
-		#include <sys/auxv.h>
-		int main(void) {
-			return 0;
-		}" HAVE_AUXV)
-
-	set(CMAKE_REQUIRED_FLAGS -maltivec)
-
-	check_c_source_runs("
-		#include <altivec.h>
-		int main(void) {
-			__vector int vi = { 0, 0, 0, 0 };
-			int i[4];
-			vec_st(vi, 0, i);
-			return i[0];
-		}" HAVE_ALTIVEC)
-
-	unset(CMAKE_REQUIRED_FLAGS)
-
-	if(HAVE_AUXV)
-		add_definitions(-DPPCOPT -DHAVE_AUXV)
-		set(OPT_SOURCES src/modelHandler_altivec.cpp)
-	elseif(HAVE_ALTIVEC)
-		add_definitions(-DPPCOPT)
-		set(OPT_SOURCES src/modelHandler_altivec.cpp)
-	else()
-		message(STATUS "AltiVec not found. disabled.")
-	endif()
+	add_definitions(-DPPCOPT)
+	set(OPT_SOURCES src/modelHandler_altivec.cpp)
 endif()
 
 add_library(w2xc SHARED
