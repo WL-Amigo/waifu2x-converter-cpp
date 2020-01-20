@@ -2244,7 +2244,7 @@ int w2xconv_convert_file
 	// with max_scale is 2048, it only can converts less then (w+20) x (h+20) = 42 px, which is no meaning to run w2x.
 	// with max_scale is 4096, you cannot convert it at all.
 	
-	if (image_src.rows * image_src.cols > OUTPUT_SIZE_MAX / max_scale / max_scale)
+	if (max_scale > 1 && image_src.rows * image_src.cols > OUTPUT_SIZE_MAX / max_scale / max_scale)
 	{
 		if (max_scale >= 512)
 		{
