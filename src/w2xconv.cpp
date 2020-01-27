@@ -1821,9 +1821,9 @@ void w2xconv_convert_mat
 	
 	int w2x_total_steps = 0;
 	int w2x_current_step = 1;
-	int iterTimesTwiceScaling;
+	int iterTimesTwiceScaling = 0;
 	
-	if (scale != 1.0)
+	if (scale > 1.0)
 	{
 		iterTimesTwiceScaling = static_cast<int>(std::ceil(std::log2(scale)));
 		w2x_total_steps += iterTimesTwiceScaling;
@@ -1917,7 +1917,6 @@ void w2xconv_convert_mat
 		{
 			shrinkRatio = scale / std::pow(2.0, static_cast<double>(iterTimesTwiceScaling));
 		}
-		int max_scale = static_cast<int>(std::pow(2, std::ceil(std::log2(scale))));
 		
 		for(int ld = 0; ld < iterTimesTwiceScaling ; ld++)
 		{
@@ -2244,7 +2243,7 @@ int w2xconv_convert_file
 	// with max_scale is 2048, it only can converts less then (w+20) x (h+20) = 42 px, which is no meaning to run w2x.
 	// with max_scale is 4096, you cannot convert it at all.
 	
-	if (image_src.rows * image_src.cols > OUTPUT_SIZE_MAX / max_scale / max_scale)
+	if (max_scale > 1 && image_src.rows * image_src.cols > OUTPUT_SIZE_MAX / max_scale / max_scale)
 	{
 		if (max_scale >= 512)
 		{
