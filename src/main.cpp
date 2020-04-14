@@ -1092,19 +1092,45 @@ int main(int argc, char** argv)
 			}
 		
 			double elapsed = files_count * timeAvg - time_all;
-			int el_h = (int) elapsed / (60 * 60);
-			int el_m = (int) (elapsed - el_h * 60 * 60) / 60;
-			int el_s = (int) (elapsed - el_h * 60 * 60 - el_m * 60);
+			int el_D = (int) elapsed / (24 *60 * 60);
+			int el_h = (int) (elapsed - el_D * 24 * 60 * 60) / (60 * 60);
+			int el_m = (int) (elapsed - el_D * 24 * 60 * 60 - el_h * 60 * 60) / 60;
+			int el_s = (int) (elapsed - el_D * 24 * 60 * 60 - el_h * 60 * 60 - el_m * 60);
+
+			double eta = (files_count - numFilesProcessed) * timeAvg;
+			int eta_D = (int) eta / (24 * 60 * 60);
+			int eta_h = (int) (eta - eta_D * 24 * 60 * 60) / (60 * 60);
+			int eta_m = (int) (eta - eta_D * 24 * 60 * 60 - eta_h * 60 * 60) / 60;
+			int eta_s = (int) (eta - eta_D * 24 * 60 * 60 - eta_h * 60 * 60 - eta_m * 60);
+
 			printf("Done, took: ");
+			if (el_D)
+			{
+				printf("%dD", el_D);
+			}
 			if (el_h)
 			{
 				printf("%dh", el_h);
 			}
 			if (el_m)
 			{
-				printf("%dm", el_h);
+				printf("%dm", el_m);
 			}
-			printf("%ds total, file: %.3fs avg: %.3fs\n", el_s, time_file, timeAvg);
+			printf("%ds total, ", el_s);
+			printf("ETA: ");
+			if (eta_D)
+			{
+				printf("%dD", eta_D);
+			}
+			if (eta_h)
+			{
+				printf("%dh", eta_h);
+			}
+			if (eta_m)
+			{
+				printf("%dm", eta_m);
+			}
+			printf("%ds, file: %.3fs avg: %.3fs\n", eta_s, time_file, timeAvg);
 		}
 	}
 
