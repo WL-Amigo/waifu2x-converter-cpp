@@ -182,7 +182,9 @@ static void global_init2(void)
 	}
 
 	w2xc::initOpenCLGlobal(&processor_list);
+#ifdef HAVE_CUDA
 	w2xc::initCUDAGlobal(&processor_list);
+#endif
 
 
 	/*
