@@ -222,7 +222,13 @@ static void global_init2(void)
 				{
 					if (p0.sub_type != p1.sub_type)
 					{
-						if (p0_is_opencl_gpu)
+							
+						if (!p0_is_opencl_gpu)
+						{
+							return false;
+						}
+						
+						if (!p0_is_opencl_intel_gpu)
 						{
 							return true;
 						}
@@ -251,25 +257,19 @@ static void global_init2(void)
 					return false;
 				}
 
-				if (p0_is_opencl_intel_gpu)
+				if (p0_is_opencl_intel_gpu && p1_host_avx)
 				{
-					if (p1_host_avx)
-					{
-					  return false;
-					}
+					return false;
 				}
 
-				if (p1_is_opencl_intel_gpu)
+				if (p1_is_opencl_intel_gpu && p0_host_avx)
 				{
-					if (p0_host_avx)
-					{
-					  return false;
-					}
+					return false;
 				}
 
 				if (p0_is_opencl_gpu)
 				{
-				return true;
+					return true;
 				}
 
 				if (p1_is_opencl_gpu)
@@ -359,14 +359,15 @@ static int select_device(enum W2XConvGPUMode gpu)
 	}
 
 	if (gpu == W2XCONV_GPU_AUTO)
-	{
+		return 0;
+//	{
 		/* 1. CUDA
-		 * 2. AMD GPU OpenCL
+		 * 2. AMD/NVIDIA GPU OpenCL
 		 * 3. FMA
 		 * 4. AVX
 		 * 5. Intel GPU OpenCL
 		 */
-
+/*
 		for (int i=0; i<n; i++)
 		{
 			if (processor_list[i].type == W2XCONV_PROC_CUDA)
@@ -377,7 +378,7 @@ static int select_device(enum W2XConvGPUMode gpu)
 
 		for (int i=0; i<n; i++)
 		{
-			if ((processor_list[i].type == W2XCONV_PROC_OPENCL) && (processor_list[i].sub_type == W2XCONV_PROC_OPENCL_AMD_GPU))
+			if ((processor_list[i].type == W2XCONV_PROC_OPENCL) && ((processor_list[i].sub_type == W2XCONV_PROC_OPENCL_AMD_GPU) || (processor_list[i].sub_type == W2XCONV_PROC_OPENCL_NVIDIA_GPU)))
 			{
 				return i;
 			}
@@ -398,6 +399,7 @@ static int select_device(enum W2XConvGPUMode gpu)
 
 		return host_proc;
 	}
+*/
 
 	/* (gpu == GPU_DISABLE) */
 	for (int i=0; i<n; i++)
