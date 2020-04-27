@@ -957,7 +957,7 @@ int main(int argc, char** argv)
 		}
 	}
 
-	int error = w2xconv_load_models(converter, modelDir.c_str());
+	int error = w2xconv_load_model(cmdNRLevel.getValue(), converter, modelDir.c_str());
 	check_for_errors(converter, error);
 
 	//This includes errored files.

@@ -624,6 +624,52 @@ static void setError(W2XConv *conv, enum W2XConvErrorCode code)
 	conv->last_error.code = code;
 }
 
+int w2xconv_load_model(const int denoise_level, W2XConv *conv, const TCHAR *model_dir)
+{
+	struct W2XConvImpl *impl = conv->impl;
+
+	_tstring modelFileName(model_dir);
+
+	impl->noise0_models.clear();
+	impl->noise1_models.clear();
+	impl->noise2_models.clear();
+	impl->noise3_models.clear();
+	impl->scale2_models.clear();
+	
+	//FutureNote: Maybe use loop instead of if-spam?
+	if (denoise_level == 0 && !w2xc::modelUtility::generateModelFromJSON(modelFileName + _T("/noise0_model.json"), impl->noise0_models))
+	{
+		setPathError(conv, W2XCONV_ERROR_MODEL_LOAD_FAILED, modelFileName + _T("/noise0_model.json"));
+		return -1;
+	}
+
+	if (denoise_level == 1 && !w2xc::modelUtility::generateModelFromJSON(modelFileName + _T("/noise1_model.json"), impl->noise1_models))
+	{
+		setPathError(conv, W2XCONV_ERROR_MODEL_LOAD_FAILED, modelFileName + _T("/noise1_model.json"));
+		return -1;
+	}
+
+	if (denoise_level == 2 && !w2xc::modelUtility::generateModelFromJSON(modelFileName + _T("/noise2_model.json"), impl->noise2_models))
+	{
+		setPathError(conv, W2XCONV_ERROR_MODEL_LOAD_FAILED, modelFileName + _T("/noise2_model.json"));
+		return -1;
+	}
+
+	if (denoise_level == 3 && !w2xc::modelUtility::generateModelFromJSON(modelFileName + _T("/noise3_model.json"), impl->noise3_models))
+	{
+		setPathError(conv, W2XCONV_ERROR_MODEL_LOAD_FAILED, modelFileName + _T("/noise3_model.json"));
+		return -1;
+	}
+
+	if (!w2xc::modelUtility::generateModelFromJSON(modelFileName + _T("/scale2.0x_model.json"), impl->scale2_models))
+	{
+		setPathError(conv, W2XCONV_ERROR_MODEL_LOAD_FAILED, modelFileName + _T("/scale2.0x_model.json"));
+		return -1;
+	}
+
+	return 0;
+}
+
 int w2xconv_load_models(W2XConv *conv, const TCHAR *model_dir)
 {
 	struct W2XConvImpl *impl = conv->impl;
