@@ -51,6 +51,11 @@ This software was originally made by @WL-Amigo and has been improved a lot over 
 
 See [BUILDING.md](BUILDING.md) for more information.
 
+## How to Train Own Model
+
+waifu2x-conveter only supports vgg models.
+See [nagadomi/waifu2x](https://github.com/nagadomi/waifu2x#train-your-own-model) for more information.
+
 ## Usage
 
 Usage of this program can be seen by executing `waifu2x-converter-cpp --help`
