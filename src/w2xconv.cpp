@@ -222,20 +222,19 @@ static void global_init2(void)
 				{
 					if (p0.sub_type != p1.sub_type)
 					{
+						if (p1_is_opencl_gpu && !p1_is_opencl_intel_gpu)
+						{
+							return false;
+						}
 							
 						if (!p0_is_opencl_gpu)
 						{
 							return false;
 						}
 						
-						if (!p0_is_opencl_intel_gpu)
+						if (p0_is_opencl_gpu && !p0_is_opencl_intel_gpu)
 						{
 							return true;
-						}
-
-						if (p1_is_opencl_gpu)
-						{
-							return false;
 						}
 					}
 				}
@@ -267,14 +266,14 @@ static void global_init2(void)
 					return false;
 				}
 
-				if (p0_is_opencl_gpu)
-				{
-					return true;
-				}
-
 				if (p1_is_opencl_gpu)
 				{
 					return false;
+				}
+
+				if (p0_is_opencl_gpu)
+				{
+					return true;
 				}
 			}
 
