@@ -150,6 +150,54 @@ static void dump_procs()
 			case W2XCONV_PROC_OPENCL:
 			{
 				type = "OpenCL";
+				switch (p->sub_type)
+				{
+					case W2XCONV_PROC_OPENCL_AMD_GPU:
+					{
+						type = "OpenCL-AMD-GPU";
+						break;
+					}
+					case W2XCONV_PROC_OPENCL_NVIDIA_GPU:
+					{
+						type = "OpenCL-NVIDIA-GPU";
+						break;
+					}
+					case W2XCONV_PROC_OPENCL_INTEL_GPU:
+					{
+						type = "OpenCL-INTEL-GPU";
+						break;
+					}
+					case W2XCONV_PROC_OPENCL_UNKNOWN_GPU:
+					{
+						type = "OpenCL-UNKOWN-GPU";
+						break;
+					}
+					case W2XCONV_PROC_OPENCL_AMD_CPU:
+					{
+						type = "OpenCL-AMD-CPU";
+						break;
+					}
+					case W2XCONV_PROC_OPENCL_INTEL_CPU:
+					{
+						type = "OpenCL-INTEL-CPU";
+						break;
+					}
+					case W2XCONV_PROC_OPENCL_UNKNOWN_CPU:
+					{
+						type = "OpenCL-UNKOWN-CPU";
+						break;
+					}
+					case W2XCONV_PROC_OPENCL_DEVICE_UNKNOWN:
+					{
+						type = "OpenCL-UNKOWN";
+						break;
+					}
+					default:
+					{
+						type = "OpenCV";
+						break;
+					}
+				}
 				break;
 			}
 			default:
