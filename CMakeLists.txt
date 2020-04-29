@@ -323,7 +323,9 @@ elseif(MSVC)
 endif()
 
 if(CMAKE_SIZEOF_VOID_P EQUAL 4)
-	list(APPEND CUDA_NVCC_FLAGS "-m32")
+	if(CUDA_FOUND)
+		list(APPEND CUDA_NVCC_FLAGS "-m32")
+	endif()
 endif()
 
 if(WIN32)
