@@ -1,4 +1,5 @@
 cmake_minimum_required(VERSION 3.8)
+enable_language(CXX)
 
 project(waifu2xcpp)
 
@@ -347,6 +348,7 @@ if(WIN32) # We build FOR windows.
 	endif()
 	if(ENABLE_GUI AND ENABLE_UNICODE AND ENABLE_OPENCV)
 		add_executable(w2xcr WIN32 w32-apps/w2xcr.c w32-apps/w2xcr.rc)
+		set_property(TARGET w2xcr PROPERTY MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
 		target_link_libraries(w2xcr w2xc user32 shlwapi gdi32)
 	endif()
 else()
@@ -401,6 +403,7 @@ if(HAVE_OPENCV)
 
 	if(MSVC)
 		target_link_libraries(waifu2x-converter-cpp LINK_PUBLIC w2xc)
+		set_property(TARGET waifu2x-converter-cpp PROPERTY MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
 	elseif(MINGW)
 		target_link_libraries(waifu2x-converter-cpp LINK_PUBLIC w2xc ${FILE_SYSTEM_LIB})
 	elseif(UNIX)
