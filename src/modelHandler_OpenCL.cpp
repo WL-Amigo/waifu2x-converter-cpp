@@ -232,11 +232,11 @@ namespace w2xc
 				}
 				else if (is_apple)
 				{
-					if(strstr(&dev_name[0], "AMD") != NULL)
+					if(strstr(&dev_name[0], "AMD") != NULL || strstr(&dev_name[0], "Radeon") != NULL)
 					{
 						sub_type = W2XCONV_PROC_OPENCL_PLATFORM_AMD;
 					}
-					else if(strstr(&dev_name[0], "NVIDIA") != NULL)
+					else if(strstr(&dev_name[0], "NVIDIA") != NULL || strstr(&dev_name[0], "GeForce") != NULL)
 					{
 						sub_type = W2XCONV_PROC_OPENCL_PLATFORM_NVIDIA;
 					}
