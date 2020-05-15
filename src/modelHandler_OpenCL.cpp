@@ -210,6 +210,12 @@ namespace w2xc
 				cl_device_type dtype;
 
 				clGetDeviceInfo(dev, CL_DEVICE_TYPE, sizeof(dtype), &dtype, NULL);
+
+				size_t dev_name_len;
+				clGetDeviceInfo(dev, CL_DEVICE_NAME, 0, nullptr, &dev_name_len);
+				std::vector<char> dev_name(dev_name_len + 1);
+				clGetDeviceInfo(dev, CL_DEVICE_NAME, dev_name_len, &dev_name[0], &dev_name_len);
+				
 				int sub_type = 0;
 
 				if (is_amd)
@@ -223,6 +229,25 @@ namespace w2xc
 				else if (is_intel)
 				{
 					sub_type = W2XCONV_PROC_OPENCL_PLATFORM_INTEL;
+				}
+				else if (is_apple)
+				{
+					if(strstr(&dev_name[0], "AMD") != NULL)
+					{
+						sub_type = W2XCONV_PROC_OPENCL_PLATFORM_AMD;
+					}
+					else if(strstr(&dev_name[0], "NVIDIA") != NULL)
+					{
+						sub_type = W2XCONV_PROC_OPENCL_PLATFORM_NVIDIA;
+					}
+					else if(strstr(&dev_name[0], "Intel") != NULL)
+					{
+						sub_type = W2XCONV_PROC_OPENCL_PLATFORM_INTEL;
+					}
+					else
+					{
+						sub_type = W2XCONV_PROC_OPENCL_PLATFORM_UNKNOWN;
+					}
 				}
 				else
 				{
@@ -243,11 +268,6 @@ namespace w2xc
 				}
 
 				proc.sub_type = sub_type;
-
-				size_t dev_name_len;
-				clGetDeviceInfo(dev, CL_DEVICE_NAME, 0, nullptr, &dev_name_len);
-				std::vector<char> dev_name(dev_name_len + 1);
-				clGetDeviceInfo(dev, CL_DEVICE_NAME, dev_name_len, &dev_name[0], &dev_name_len);
 				
 				proc.dev_name = strdup(&dev_name[0]);
 				proc.dev_id = cur_dev_id++;
