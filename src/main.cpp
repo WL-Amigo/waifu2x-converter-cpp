@@ -545,11 +545,11 @@ _tstring generate_output_location(
 	return outputFileName;
 }
 
-void convert_file(ConvInfo info, fs::path inputName, fs::path output)
+void convert_file(ConvInfo info, fs::path inputName, _tstring outputName)
 {
-	//std::cout << "Operating on: " << fs::absolute(inputName).string() << std::endl;
+	// std::cout << "Operating on: " << fs::absolute(inputName).string() << std::endl;
 
-	_tstring outputName = generate_output_location(info.origPath, fs::absolute(inputName).TSTRING_METHOD(), output.TSTRING_METHOD(), info.postfix, info.outputFormat, info.outputOption);
+	// _tstring outputName = generate_output_location(info.origPath, fs::absolute(inputName).TSTRING_METHOD(), output.TSTRING_METHOD(), info.postfix, info.outputFormat, info.outputOption);
 
 	int _nrLevel = -1;
 	if (info.convMode & CONV_NOISE)
@@ -1085,10 +1085,10 @@ int main(int argc, char** argv)
 	for (auto &fn : files_list)
 	{
 		++numFilesProcessed;
-        _tstring outputName = generate_output_location(convInfo.origPath, fs::absolute(fn).TSTRING_METHOD(), output.TSTRING_METHOD(), convInfo.postfix, convInfo.outputFormat, convInfo.outputOption);
+		_tstring outputName = generate_output_location(convInfo.origPath, fs::absolute(fn).TSTRING_METHOD(), output.TSTRING_METHOD(), convInfo.postfix, convInfo.outputFormat, convInfo.outputOption);
         if(cmdResume.getValue() && fs::exists(outputName)){
             if (log_level >= 1) {
-                printf("Ignored %s\n", fn.c_str());
+                _tprintf(_T("Skipped %s, existing output with --resume flag\n"), fn.TSTRING_METHOD().c_str());
             }
             numIgnored++;
             continue;
@@ -1116,7 +1116,7 @@ int main(int argc, char** argv)
 
 		try
 		{
-            convert_file(convInfo, fn, output);
+            convert_file(convInfo, fn, outputName);
 		}
 		catch (const std::exception& e)
 		{
@@ -1186,16 +1186,15 @@ int main(int argc, char** argv)
 	{
 		double time_end = getsec();
 
-		double gflops_proc = (converter->flops.flop / (1000.0*1000.0*1000.0)) / converter->flops.filter_sec;
+		double gflops_proc = (converter->flops.flop / (1000.0*1000.0*1000.0)) / converter->flops.filter_sec ? converter->flops.filter_sec : 1;
 		double gflops_all = (converter->flops.flop / (1000.0*1000.0*1000.0)) / (time_end - time_start);
 
-		printf("Finished processing %d files%s%.3fsecs total, filter: %.3fsecs; %d files ignored, %d files skipped, %d files errored. [GFLOPS: %7.2f, GFLOPS-Filter: %7.2f]\n",
+		printf("Finished processing %d files%s%.3fs total, filter: %.3fs; %d files skipped, %d files errored. [GFLOPS: %.2f, GFLOPS-Filter: %.2f]\n",
 			numFilesProcessed,
 			(log_level >=2 ? "\nTook: " : ", took: "),
 			(time_end - time_start),
 			converter->flops.filter_sec,
-			numIgnored,
-			numSkipped,
+			numSkipped + numIgnored,
 			numErrors,
 			gflops_all,
 			gflops_proc
