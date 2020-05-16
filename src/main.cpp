@@ -814,9 +814,9 @@ int main(int argc, char** argv)
 	TCLAP::SwitchArg cmdForceOpenCL("", "force-OpenCL", "force to use OpenCL on Intel Platform",
 		cmd, false
 	);
-    TCLAP::SwitchArg cmdResume("z", "resume", "Ignores files in input stream that have already been converted",
-                                    cmd, false
-    );
+	TCLAP::SwitchArg cmdResume("z", "resume", "Ignores files in input stream that have already been converted",
+		cmd, false
+	);
 	TCLAP::SwitchArg cmdDisableGPU("", "disable-gpu", "disable GPU",
 		cmd, false
 	);
@@ -1086,14 +1086,14 @@ int main(int argc, char** argv)
 	{
 		++numFilesProcessed;
 		_tstring outputName = generate_output_location(convInfo.origPath, fs::absolute(fn).TSTRING_METHOD(), output.TSTRING_METHOD(), convInfo.postfix, convInfo.outputFormat, convInfo.outputOption);
-        if(cmdResume.getValue() && fs::exists(outputName)){
-            if (log_level >= 1) {
-                _tprintf(_T("Skipped %s, existing output with --resume flag\n"), fn.TSTRING_METHOD().c_str());
-            }
-            numIgnored++;
-            continue;
-        }
-        double time_file_start = getsec();
+		if(cmdResume.getValue() && fs::exists(outputName)){
+			if (log_level >= 1) {
+				_tprintf(_T("Skipped %s, existing output with --resume flag\n"), fn.TSTRING_METHOD().c_str());
+			}
+			numIgnored++;
+			continue;
+		}
+		double time_file_start = getsec();
 			
 		if (log_level >= 1)
 		{
