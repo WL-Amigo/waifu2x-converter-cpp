@@ -1116,7 +1116,7 @@ int main(int argc, char** argv)
 
 		try
 		{
-            convert_file(convInfo, fn, outputName);
+			convert_file(convInfo, fn, outputName);
 		}
 		catch (const std::exception& e)
 		{
