@@ -21,6 +21,9 @@
 * SOFTWARE.
 */
 
+#if defined __linux
+#include <stdio.h>
+#endif
 #include <thread>
 #include <atomic>
 #include "threadPool.hpp"
