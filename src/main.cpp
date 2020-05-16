@@ -545,11 +545,11 @@ _tstring generate_output_location(
 	return outputFileName;
 }
 
-void convert_file(ConvInfo info, fs::path inputName, fs::path output)
+void convert_file(ConvInfo info, fs::path inputName, _tstring outputName)
 {
-	//std::cout << "Operating on: " << fs::absolute(inputName).string() << std::endl;
+	// std::cout << "Operating on: " << fs::absolute(inputName).string() << std::endl;
 
-	_tstring outputName = generate_output_location(info.origPath, fs::absolute(inputName).TSTRING_METHOD(), output.TSTRING_METHOD(), info.postfix, info.outputFormat, info.outputOption);
+	// _tstring outputName = generate_output_location(info.origPath, fs::absolute(inputName).TSTRING_METHOD(), output.TSTRING_METHOD(), info.postfix, info.outputFormat, info.outputOption);
 
 	int _nrLevel = -1;
 	if (info.convMode & CONV_NOISE)
@@ -814,6 +814,9 @@ int main(int argc, char** argv)
 	TCLAP::SwitchArg cmdForceOpenCL("", "force-OpenCL", "force to use OpenCL on Intel Platform",
 		cmd, false
 	);
+	TCLAP::SwitchArg cmdResume("z", "resume", "Ignores files in input stream that have already been converted",
+		cmd, false
+	);
 	TCLAP::SwitchArg cmdDisableGPU("", "disable-gpu", "disable GPU",
 		cmd, false
 	);
@@ -1012,6 +1015,7 @@ int main(int argc, char** argv)
 	int numFilesProcessed = 0;
 	int numErrors = 0;
 	int numSkipped = 0;
+	int numIgnored = 0;
 	
 	//Build files list
 	std::deque<fs::path> files_list;
@@ -1081,6 +1085,14 @@ int main(int argc, char** argv)
 	for (auto &fn : files_list)
 	{
 		++numFilesProcessed;
+		_tstring outputName = generate_output_location(convInfo.origPath, fs::absolute(fn).TSTRING_METHOD(), output.TSTRING_METHOD(), convInfo.postfix, convInfo.outputFormat, convInfo.outputOption);
+		if(cmdResume.getValue() && fs::exists(outputName)){
+			if (log_level >= 1) {
+				_tprintf(_T("Skipped %s, existing output with --resume flag\n"), fn.TSTRING_METHOD().c_str());
+			}
+			numIgnored++;
+			continue;
+		}
 		double time_file_start = getsec();
 			
 		if (log_level >= 1)
@@ -1104,7 +1116,7 @@ int main(int argc, char** argv)
 
 		try
 		{
-			convert_file(convInfo, fn, output);
+			convert_file(convInfo, fn, outputName);
 		}
 		catch (const std::exception& e)
 		{
@@ -1120,27 +1132,53 @@ int main(int argc, char** argv)
 			double time_all = time_end - time_start;
 			if (timeAvg > 0.0)
 			{
-				timeAvg = time_all / numFilesProcessed;
+				timeAvg = time_all / (numFilesProcessed - numIgnored);
 			}
 			else
 			{
 				timeAvg = time_all;
 			}
 		
-			double elapsed = files_count * timeAvg - time_all;
-			int el_h = (int) elapsed / (60 * 60);
-			int el_m = (int) (elapsed - el_h * 60 * 60) / 60;
-			int el_s = (int) (elapsed - el_h * 60 * 60 - el_m * 60);
+			double elapsed = time_all;
+			int el_D = (int) elapsed / (24 *60 * 60);
+			int el_h = (int) (elapsed - el_D * 24 * 60 * 60) / (60 * 60);
+			int el_m = (int) (elapsed - el_D * 24 * 60 * 60 - el_h * 60 * 60) / 60;
+			double el_s = (double) (elapsed - el_D * 24 * 60 * 60 - el_h * 60 * 60 - el_m * 60);
+
+			double eta = (files_count - numFilesProcessed) * timeAvg;
+			int eta_D = (int) eta / (24 * 60 * 60);
+			int eta_h = (int) (eta - eta_D * 24 * 60 * 60) / (60 * 60);
+			int eta_m = (int) (eta - eta_D * 24 * 60 * 60 - eta_h * 60 * 60) / 60;
+			double eta_s = (double) (eta - eta_D * 24 * 60 * 60 - eta_h * 60 * 60 - eta_m * 60);
+
 			printf("Done, took: ");
+			if (el_D)
+			{
+				printf("%dD ", el_D);
+			}
 			if (el_h)
 			{
-				printf("%dh", el_h);
+				printf("%dh ", el_h);
 			}
 			if (el_m)
 			{
-				printf("%dm", el_h);
+				printf("%dm ", el_m);
 			}
-			printf("%ds total, file: %.3fs avg: %.3fs\n", el_s, time_file, timeAvg);
+			printf("%.3lfs total, ", el_s);
+			printf("ETA: ");
+			if (eta_D)
+			{
+				printf("%dD ", eta_D);
+			}
+			if (eta_h)
+			{
+				printf("%dh ", eta_h);
+			}
+			if (eta_m)
+			{
+				printf("%dm ", eta_m);
+			}
+			printf("%.3lfs, file: %.3fs avg: %.3fs\n", eta_s, time_file, timeAvg);
 		}
 	}
 
@@ -1148,15 +1186,15 @@ int main(int argc, char** argv)
 	{
 		double time_end = getsec();
 
-		double gflops_proc = (converter->flops.flop / (1000.0*1000.0*1000.0)) / converter->flops.filter_sec;
+		double gflops_proc = (converter->flops.flop / (1000.0*1000.0*1000.0)) / converter->flops.filter_sec ? converter->flops.filter_sec : 1;
 		double gflops_all = (converter->flops.flop / (1000.0*1000.0*1000.0)) / (time_end - time_start);
 
-		printf("Finished processing %d files%s%.3fsecs total, filter: %.3fsecs; %d files skipped, %d files errored. [GFLOPS: %7.2f, GFLOPS-Filter: %7.2f]\n",
+		printf("Finished processing %d files%s%.3fs total, filter: %.3fs; %d files skipped, %d files errored. [GFLOPS: %.2f, GFLOPS-Filter: %.2f]\n",
 			numFilesProcessed,
 			(log_level >=2 ? "\nTook: " : ", took: "),
 			(time_end - time_start),
 			converter->flops.filter_sec,
-			numSkipped,
+			numSkipped + numIgnored,
 			numErrors,
 			gflops_all,
 			gflops_proc
