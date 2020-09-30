@@ -377,21 +377,35 @@ if(CUDA_FOUND)
             COMMAND ${CUDA_NVCC_EXECUTABLE} ${CUDA_NVCC_FLAGS} -arch=sm_20 -ptx -o ${CMAKE_CURRENT_BINARY_DIR}/modelHandler_CUDA.ptx20 ${CMAKE_CURRENT_SOURCE_DIR}/src/modelHandler_CUDA.cu
             DEPENDS src/modelHandler_CUDA.cu
         )
-    endif()
-    add_custom_command(
-        OUTPUT modelHandler_CUDA.ptx30.h
-        COMMAND ${CONV_EXE} modelHandler_CUDA.ptx30 modelHandler_CUDA.ptx30.h str
-        DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/modelHandler_CUDA.ptx30 conv
+	endif()
+	if (CUDA_VERSION_MAJOR LESS 10)
+		add_custom_command(
+			OUTPUT modelHandler_CUDA.ptx30.h
+			COMMAND ${CONV_EXE} modelHandler_CUDA.ptx30 modelHandler_CUDA.ptx30.h str
+			DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/modelHandler_CUDA.ptx30 conv
+		)
+		add_custom_command(
+			OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/modelHandler_CUDA.ptx30
+			COMMAND ${CUDA_NVCC_EXECUTABLE} ${CUDA_NVCC_FLAGS} -arch=sm_30 -ptx -o ${CMAKE_CURRENT_BINARY_DIR}/modelHandler_CUDA.ptx30 ${CMAKE_CURRENT_SOURCE_DIR}/src/modelHandler_CUDA.cu
+			DEPENDS src/modelHandler_CUDA.cu
+		)
+	endif()
+	add_custom_command(
+        OUTPUT modelHandler_CUDA.ptx53.h
+        COMMAND ${CONV_EXE} modelHandler_CUDA.ptx53 modelHandler_CUDA.ptx53.h str
+        DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/modelHandler_CUDA.ptx53 conv
     )
     add_custom_command(
-        OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/modelHandler_CUDA.ptx30
-        COMMAND ${CUDA_NVCC_EXECUTABLE} ${CUDA_NVCC_FLAGS} -arch=sm_30 -ptx -o ${CMAKE_CURRENT_BINARY_DIR}/modelHandler_CUDA.ptx30 ${CMAKE_CURRENT_SOURCE_DIR}/src/modelHandler_CUDA.cu
+        OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/modelHandler_CUDA.ptx53
+        COMMAND ${CUDA_NVCC_EXECUTABLE} ${CUDA_NVCC_FLAGS} -arch=sm_53 -ptx -o ${CMAKE_CURRENT_BINARY_DIR}/modelHandler_CUDA.ptx53 ${CMAKE_CURRENT_SOURCE_DIR}/src/modelHandler_CUDA.cu
         DEPENDS src/modelHandler_CUDA.cu
     )
     if (CUDA_VERSION_MAJOR LESS 9)
         set(GPU_CODE ${GPU_CODE} modelHandler_CUDA.ptx30.h modelHandler_CUDA.ptx20.h)
-    else()
-        set(GPU_CODE ${GPU_CODE} modelHandler_CUDA.ptx30.h)
+	elseif (CUDA_VERSION_MAJOR LESS 10)
+		set(GPU_CODE ${GPU_CODE} modelHandler_CUDA.ptx30.h)
+	else()
+		set(GPU_CODE ${GPU_CODE} modelHandler_CUDA.ptx53.h)
     endif()
 endif()
 
