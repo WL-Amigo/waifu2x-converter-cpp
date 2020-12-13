@@ -51,7 +51,11 @@
 namespace fs = std::experimental::filesystem;
 #else
 #include <filesystem>
+#ifdef __APPLE__
+namespace fs = std::__fs::filesystem;
+#else
 namespace fs = std::filesystem;
+#endif
 #endif
 
 #ifdef __linux
