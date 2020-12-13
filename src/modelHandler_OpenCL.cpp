@@ -190,7 +190,7 @@ namespace w2xc
 			std::vector<char> name(sz);
 			clGetPlatformInfo(plts[i], CL_PLATFORM_NAME, sz, &name[0], &sz);
 			
-			printf("Platform: %s\n",&name[0]);
+			//printf("Platform: %s\n",&name[0]);
 
 			bool is_amd = strstr(&name[0], "AMD") != NULL;
 			bool is_apple = strstr(&name[0], "Apple") != NULL;
