@@ -47,9 +47,15 @@ static void *handle;
         static const char prog20[] =
             #include "modelHandler_CUDA.ptx20.h"
             ;
-    #endif // CUDART_VERSION < 9000
+	#endif
+	// Cuda 11.0+ doesn't support Compute 3.0
+	#if CUDART_VERSION < 11000
     static const char prog30[] =
         #include "modelHandler_CUDA.ptx30.h"
+	;
+	#endif
+	static const char prog52[] =
+        #include "modelHandler_CUDA.ptx52.h"
 	;
 #endif // HAVE_CUDA
 
@@ -172,15 +178,22 @@ namespace w2xc
 			return false;
 		}
 
-		const char *prog = prog30;
-		// cuda 9.0 doesn't support Compute 20
-
+		const char *prog = prog52;
+		// cuda 11.0+ doesn't support Compute 3.0
+#if CUDART_VERSION < 11000
+		if (cap_major < 5)
+		{
+			prog = prog30;
+		}
+#endif
+		// cuda 9.0+ doesn't support Compute 2.0
 #if CUDART_VERSION < 9000
 		if (cap_major < 3)
 		{
 			prog = prog20;
+			
 		}
-#endif // CUDART_VERSION < 9000
+#endif
 
 		r = cuStreamCreate(&stream, 0);
 
