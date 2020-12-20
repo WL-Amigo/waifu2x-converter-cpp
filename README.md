@@ -1,4 +1,4 @@
-[![Discord](https://img.shields.io/badge/Discord-Join-blue.svg)](https://discord.gg/gAvufS2) :: [![Downloads522](https://img.shields.io/github/downloads/DeadSix27/waifu2x-converter-cpp/latest/total.svg)](https://github.com/DeadSix27/waifu2x-converter-cpp/releases) :: [![TotalDownloads](https://img.shields.io/github/downloads/DeadSix27/waifu2x-converter-cpp/total.svg)](https://github.com/DeadSix27/waifu2x-converter-cpp/releases)
+[![Discord](https://img.shields.io/badge/Discord-Join-blue.svg)](https://discord.gg/jCAFvHM2WK) :: [![Downloads522](https://img.shields.io/github/downloads/DeadSix27/waifu2x-converter-cpp/latest/total.svg)](https://github.com/DeadSix27/waifu2x-converter-cpp/releases) :: [![TotalDownloads](https://img.shields.io/github/downloads/DeadSix27/waifu2x-converter-cpp/total.svg)](https://github.com/DeadSix27/waifu2x-converter-cpp/releases)
 
 # ---------- Work stalled for now ----------
 ### @YukihoAA has push rights in case anything important comes up, if he finds the time that is.
