@@ -27,7 +27,11 @@ This software was originally made by @WL-Amigo and has been improved a lot over 
 - #### Fedora
   - [waifu2x-converter-cpp](https://apps.fedoraproject.org/packages/waifu2x-converter-cpp)
   - This is maintained by [eclipseo](https://fedoraproject.org/wiki/User:Eclipseo). If you have issues with the Fedora package, please contact him.
-  
+
+- #### NixOS
+  - [waifu2x-converter-cpp](https://search.nixos.org/packages?show=waifu2x-converter-cpp&query=waifu2x-converter-cpp)
+  - If you have issues with the NixOS package, please create an [issue](https://github.com/NixOS/nixpkgs/issues) on the [nixpkgs repo](https://github.com/NixOS/nixpkgs).
+
 - ####  Other Linux
 	 - Please build from source. See [BUILDING.md](BUILDING.md) for help.
 
