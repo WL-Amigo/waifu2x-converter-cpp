@@ -1,0 +1,103 @@
+<使いかた>
+
+install.bat を実行してください
+エクスプローラの「送る」にショートカットが追加されます。
+ここに画像かディレクトリを送ってください。
+
+(w2xcr.exe にドラッグドロップしてもよいです) 
+
+
+ - CUDAある環境ではCUDA
+ - AMD OpenCLある環境では OpenCL
+ - FMA あればFMA
+ - AVX あればAVX
+ - どれもなければOpenCVのfilter2D
+が実行されます。
+
+最速ではないですが、まあそこそこ速いのではないかと思います。
+
+waifu2x-converter-cpp を使うアプリケーションとあわせて使う場合は、
+ - waifu2x-converter_x64.exe
+ - w2xc.dll
+の両方をコピーして使ってください
+
+
+<モデルデータ更新>
+更新した場合は models/*.bin を消してください。
+
+今のモデルのパラメータにあわせて作っているので変更があると
+動かなかったり遅くなったりする場合があります。
+その場合はソース変更するしかないのであきらめてください。
+
+
+<バグレポ>
+
+動かないときは、
+tanakmura@gmail か、
+http://d.hatena.ne.jp/w_o/ のコメントか、
+twitter の @tanakmura
+などに向けてメッセージを送ってもらえると届くと思います。
+
+動かない原因は、おそらく画像サイズかデバイスの問題なので、
+ - 画像サイズ
+ - CPU 名
+ - GPU 名
+を一緒に送ってもらえると助かります。
+
+
+<w2xc.dll>
+
+他のアプリケーションで使う場合は、
+samples/ 以下を参考にして w2xc.dll をリンクしてください。
+
+使いかたは
+https://github.com/tanakamura/waifu2x-converter-cpp/blob/master/src/w2xconv.cpp#L511
+これを見てなんとかしてください。
+
+
+
+<謝辞>
+
+以下のソフトウェアが無ければ作っていなかったと思います。
+
+
+オリジナルはこちらです
+http://ultraist.hatenablog.com/entry/2015/05/17/183436
+学習データもお借りしています。
+
+
+コードの大半は、@WL_Amigo さんの
+https://github.com/WL-Amigo/waifu2x-converter-cpp
+を使用してます。
+
+
+速度目標用に
+ * @logicmachine さんの https://github.com/logicmachine/waifu2x-opt
+ * @mhhpnvu さんの https://github.com/lltcggie/waifu2x-caffe
+を参考にしました。
+
+
+
+<再配布>
+配布はLICENSEに従ってください
+
+tanakmuraが書いた部分
+
+ - src/modelhandler_CUDA.cu
+ - src/modelhandler_CUDA.cpp
+ - src/modelhandler_OpenCL.cl
+ - src/modelhandler_OpenCL.cpp
+ - src/modelhandler_avx_func.hpp
+ - src/modelhandler_avx.cpp
+ - src/modelhandler_fma.cpp
+ - src/threadPool.cpp
+ - src/threadPool.hpp
+ - src/Buffer.hpp
+ - w32-apps/*
+
+は好きにしてもらってよいです。
+役に立ったという人はコーヒーおごってください
+
+
+--
+tanakmura<tanakmura@gmail.com>

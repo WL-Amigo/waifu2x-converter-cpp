@@ -1,117 +1,174 @@
 /*
- * modelHandler.hpp
- *   (ここにファイルの簡易説明を記入)
- *
- *  Created on: 2015/05/24
- *      Author: wlamigo
- * 
- *   (ここにファイルの説明を記入)
- */
+* The MIT License (MIT)
+* This file is part of waifu2x-converter-cpp
+* 
+* Permission is hereby granted, free of charge, to any person obtaining a copy
+* of this software and associated documentation files (the "Software"), to deal
+* in the Software without restriction, including without limitation the rights
+* to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+* copies of the Software, and to permit persons to whom the Software is
+* furnished to do so, subject to the following conditions:
+* 
+* The above copyright notice and this permission notice shall be included in all
+* copies or substantial portions of the Software.
+* 
+* THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+* IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+* FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+* AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+* LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+* OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+* SOFTWARE.
+*/
 
 #ifndef MODEL_HANDLER_HPP_
 #define MODEL_HANDLER_HPP_
 
-#include <opencv2/opencv.hpp>
-#include <opencv2/core/ocl.hpp>
-#include "picojson.h"
 #include <iostream>
 #include <memory>
 #include <cstdint>
 #include <cstdlib>
+#include "picojson.h"
+#include "Buffer.hpp"
+#include "filters.hpp"
+#include "w2xconv.h"
+#include "cvwrap.hpp"
+#include "tstring.hpp"
 
-namespace w2xc {
+namespace w2xc
+{
 
-class Model {
+	class Model
+	{
+		private:
+			int nInputPlanes;
+			int nOutputPlanes;
+			std::vector<W2Mat> weights;
+			std::vector<double> biases;
+			int kernelSize;
 
-private:
-	int nInputPlanes;
-	int nOutputPlanes;
-	std::vector<cv::Mat> weights;
-	std::vector<double> biases;
-	int kernelSize;
+			Model() {}; // cannot use no-argument constructor
 
-	Model() {
-	}
-	; // cannot use no-argument constructor
+			// class inside operation function
+			bool loadModelFromJSONObject(picojson::object& jsonObj);
 
-	// class inside operation function
-	bool loadModelFromJSONObject(picojson::object& jsonObj);
+			// thread worker function
+			bool filterWorker
+			(
+				std::vector<W2Mat> &inputPlanes,
+				std::vector<W2Mat> &weightMatrices,
+				std::vector<W2Mat> &outputPlanes,
+				unsigned int beginningIndex,
+				unsigned int nWorks
+			);
 
-	// thread worker function
-	bool filterWorker(std::vector<cv::Mat> &inputPlanes,
-			std::vector<cv::Mat> &weightMatrices,
-			std::vector<cv::Mat> &outputPlanes, unsigned int beginningIndex,
-			unsigned int nWorks);
+			bool filter_CV(
+				ComputeEnv *env,
+				Buffer *packed_input,
+				Buffer *packed_output,
+				const W2Size &size
+			);
 
-public:
-	// ctor and dtor
-	Model(picojson::object &jsonObj) {
-		// preload nInputPlanes,nOutputPlanes, and preserve required size vector
-		nInputPlanes = static_cast<int>(jsonObj["nInputPlane"].get<double>());
-		nOutputPlanes = static_cast<int>(jsonObj["nOutputPlane"].get<double>());
-		if ((kernelSize = static_cast<int>(jsonObj["kW"].get<double>()))
-				!= static_cast<int>(jsonObj["kH"].get<double>())) {
-			std::cerr << "Error : Model-Constructor : \n"
-					"kernel in model is not square.\n"
-					"stop." << std::endl;
-			std::exit(-1);
-		} // kH == kW
+			bool filter_AVX_OpenCL(
+				W2XConv *conv,
+				ComputeEnv *env,
+				Buffer *packed_input,
+				Buffer *packed_output,
+				const W2Size &size
+			);
 
-		weights = std::vector<cv::Mat>(nInputPlanes * nOutputPlanes,
-				cv::Mat(kernelSize, kernelSize, CV_32FC1));
-		biases = std::vector<double>(nOutputPlanes, 0.0);
+		public:
+			// ctor and dtor
+			Model(picojson::object &jsonObj)
+			{
+				// preload nInputPlanes,nOutputPlanes, and preserve required size vector
+				nInputPlanes = static_cast<int>(jsonObj["nInputPlane"].get<double>());
+				nOutputPlanes = static_cast<int>(jsonObj["nOutputPlane"].get<double>());
 
-		if (!loadModelFromJSONObject(jsonObj)) {
-			std::cerr
-					<< "Error : Model-Constructor : \n"
-							"something error has been occured in loading model from JSON-Object.\n"
-							"stop." << std::endl;
-			std::exit(-1);
-		}
-	}
-	;
-	~Model() {
-	}
+				if ((kernelSize = static_cast<int>(jsonObj["kW"].get<double>()))
+					!= static_cast<int>(jsonObj["kH"].get<double>()))
+				{
+					std::cerr <<
+						"Error : Model-Constructor : \nkernel in model is not square.\nstop." <<
+						std::endl;
+					std::exit(-1);
+				} // kH == kW
 
-	// for debugging
-	void printWeightMatrix();
-	void printBiases();
+				biases = std::vector<double>(nOutputPlanes, 0.0);
 
-	// getter function
-	int getNInputPlanes();
-	int getNOutputPlanes();
+				if (!loadModelFromJSONObject(jsonObj))
+				{
+					std::cerr <<
+						"Error : Model-Constructor : \nsomething error has been occured in loading model from JSON-Object.\nstop." <<
+						std::endl;
+					std::exit(-1);
+				}
+			}
+			Model(FILE *binfp);
+			Model(
+				int nInputPlane,
+				int nOutputPlane,
+				const float *coef_list,
+				const float *bias
+			);
 
-	// setter function
+			~Model() {}
 
-	// public operation function
-	bool filter(std::vector<cv::Mat> &inputPlanes,
-			std::vector<cv::Mat> &outputPlanes);
+			// for debugging
+			void printWeightMatrix();
+			void printBiases();
 
-};
+			// getter function
+			int getNInputPlanes();
+			int getNOutputPlanes();
 
-class modelUtility {
+			std::vector<W2Mat> &getWeigts()
+			{
+				return weights;
+			}
+			std::vector<double> &getBiases()
+			{
+				return biases;
+			}
+			// setter function
 
-private:
-	static modelUtility* instance;
-	int nJob;
-	cv::Size blockSplittingSize;
-	modelUtility() :
-			nJob(4), blockSplittingSize(512,512) {
-	}
-	;
+			// public operation function
+			bool filter
+			(
+				W2XConv *conv,
+				ComputeEnv *env,
+				Buffer *packed_input,
+				Buffer *packed_output,
+				const W2Size &size
+			);
+	};
 
-public:
-	static bool generateModelFromJSON(const std::string &fileName,
-			std::vector<std::unique_ptr<Model> > &models);
-	static modelUtility& getInstance();
-	bool setNumberOfJobs(int setNJob);
-	int getNumberOfJobs();
-	bool setBlockSize(cv::Size size);
-	bool setBlockSizeExp2Square(int exp);
-	cv::Size getBlockSize();
+	class modelUtility
+	{
+		private:
+			static modelUtility* instance;
+			int nJob;
+			modelUtility() : nJob(4) {};
+		public:
+			static bool generateModelFromJSON
+			(
+				const _tstring &fileName,
+				std::vector<std::unique_ptr<Model> > &models
+			);
+			static void generateModelFromMEM
+			(
+				int layer_depth,
+				int num_input_plane,
+				const int *num_map, // num_map[layer_depth]
+				const float *coef_list, // coef_list[layer_depth][num_map][3x3]
+				const float *bias, // bias[layer_depth][num_map]
+				std::vector<std::unique_ptr<Model> > &models
+			);
 
-};
-
+			static modelUtility& getInstance();
+			bool setNumberOfJobs(int setNJob);
+			int getNumberOfJobs();
+	};
 }
 
 #endif /* MODEL_HANDLER_HPP_ */

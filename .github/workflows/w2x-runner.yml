@@ -1,0 +1,80 @@
+name: w2x-runner
+
+on:
+  pull_request:
+    paths:
+      - 'CMakeLists.txt'
+      - '**.c'
+      - '**.h'
+      - '**.cpp'
+      - '**.hpp'
+      - '**.cl'
+      - '**.cu'
+  push:
+    branches:
+      - master
+    paths:
+      - 'CMakeLists.txt'
+      - '**.c'
+      - '**.h'
+      - '**.cpp'
+      - '**.hpp'
+      - '**.cl'
+      - '**.cu'
+  release:
+    types: [published, created]
+
+jobs:
+  windows-build:
+    runs-on: windows-latest
+    steps:
+    - uses: actions/checkout@master
+    - name: opencv-dep-install
+      run: choco install opencv
+    - name: opencl-dep-install
+      run: git clone https://github.com/KhronosGroup/OpenCL-Headers opencl
+    - name: cmake
+      run: mkdir _build && cd _build && cmake .. -DCMAKE_BUILD_TYPE=Release -DENABLE_UNICODE=ON -DCMAKE_GENERATOR="Visual Studio 16 2019" -A x64 -DOPENCV_PREFIX="C:/tools/opencv/build" -DOpenCL_INCLUDE_DIR="../opencl/" -DCUDA_TOOLKIT_ROOT_DIR="C:/Program Files/NVIDIA GPU Computing Toolkit/CUDA/v10.1"
+      shell: cmd
+    - name: msbuild
+      run: |
+        cd _build
+        call "C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\VC\Auxiliary\Build\vcvarsall.bat" x64
+        msbuild waifu2xcpp.sln /p:Configuration=Release /p:Platform=x64 -m
+      shell: cmd
+    - name: upload build artifact waifu2x-converter-cpp.exe
+      uses: actions/upload-artifact@v1
+      with:
+        name: waifu2x-converter-cpp.exe
+        path: _build/Release/waifu2x-converter-cpp.exe
+    - name: upload build artifact w2xc.dll
+      uses: actions/upload-artifact@v1
+      with:
+        name: w2xc.dll
+        path: _build/Release/w2xc.dll
+  linux-build:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@master
+    - name: apt-update
+      run: sudo apt update
+    - name: opencl-dep
+      run: sudo apt -y install ocl-icd-opencl-dev
+    - name: opencv-dep
+      run: sudo apt -y install libopencv-dev libopencv-imgcodecs-dev libopencv-imgproc-dev libopencv-core-dev
+    - name: run-cmake
+      run: cmake .
+    - name: build
+      run: make
+  macos-build:
+    runs-on: macos-latest
+    steps:
+    - uses: actions/checkout@master
+    - name: llvm-dep
+      run: brew install llvm
+    - name: opencv-dep
+      run: brew install opencv
+    - name: run-cmake
+      run: cmake .
+    - name: build
+      run: make    
